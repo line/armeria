@@ -62,8 +62,8 @@ import com.linecorp.armeria.server.docs.Markup;
 class AnnotatedServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
-    private static final String ANNOTATED_DESCRIPTION = "This is a description from the annotation";
-    private static final String ANNOTATED_DESCRIPTION_SUPER = "This is a super description from the annotation";
+    private static final String ANNOTATED_DESCRIPTION = "Description from annotation";
+    private static final String ANNOTATED_DESCRIPTION_SUPER = "Description from super annotation";
 
     @Test
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
@@ -217,7 +217,51 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the properties file");
+                .isEqualTo("Description from properties");
+    }
+
+    @Test
+    void testReturnDescriptionLoadingPriority() throws NoSuchMethodException {
+        // When both @ReturnDescription annotation and Javadoc @return tag exist,
+        // the annotation should take precedence
+        final Method method =
+                DescriptionAnnotatedTestClass.class.getMethod("methodWithBothReturnDescriptions");
+        final DescriptionInfo descriptionInfo = findReturnDescription(method);
+        assertThat(descriptionInfo.docString()).isEqualTo("Return value from annotation");
+    }
+
+    @Test
+    void testReturnDescriptionLoadFromFile() throws NoSuchMethodException {
+        // When only Javadoc @return tag exists (no @ReturnDescription annotation),
+        // the Javadoc should be used
+        final Method method = DescriptionAnnotatedTestClass.class.getMethod("methodWithJavadocReturn");
+        final DescriptionInfo descriptionInfo = findReturnDescription(method);
+        assertThat(descriptionInfo.docString()).isEqualTo("Return value from properties");
+    }
+
+    @Test
+    void testThrowsDescriptionLoadingPriority() throws NoSuchMethodException {
+        // When both @ThrowsDescription annotation and Javadoc @throws tag exist,
+        // the annotation should take precedence
+        final Method method =
+                DescriptionAnnotatedTestClass.class.getMethod("methodWithBothThrowsDescriptions");
+        final Map<Class<? extends Throwable>, DescriptionInfo> throwsDescriptions =
+                findThrowsDescriptions(method);
+        assertThat(throwsDescriptions).hasSize(1);
+        assertThat(throwsDescriptions.get(IllegalStateException.class).docString())
+                .isEqualTo("Exception from annotation");
+    }
+
+    @Test
+    void testThrowsDescriptionLoadFromFile() throws NoSuchMethodException {
+        // When @ThrowsDescription annotation has no description specified,
+        // the Javadoc @throws tag should be used as fallback
+        final Method method = DescriptionAnnotatedTestClass.class.getMethod("methodWithJavadocThrows");
+        final Map<Class<? extends Throwable>, DescriptionInfo> throwsDescriptions =
+                findThrowsDescriptions(method);
+        assertThat(throwsDescriptions).hasSize(1);
+        assertThat(throwsDescriptions.get(IllegalArgumentException.class).docString())
+                .isEqualTo("Exception description from properties");
     }
 
     @Test
@@ -227,7 +271,7 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -237,7 +281,7 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a super description from the annotation");
+                .isEqualTo("Description from super annotation");
     }
 
     @Test
@@ -247,7 +291,7 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -256,7 +300,7 @@ class AnnotatedServiceFactoryTest {
                                                                             String.class, String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -265,7 +309,7 @@ class AnnotatedServiceFactoryTest {
                                                                             String.class, String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a super description from the annotation");
+                .isEqualTo("Description from super annotation");
     }
 
     @Test
@@ -274,7 +318,7 @@ class AnnotatedServiceFactoryTest {
                                                                             String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -282,7 +326,7 @@ class AnnotatedServiceFactoryTest {
         final Class<DescriptionAnnotatedTestClass> clazz = DescriptionAnnotatedTestClass.class;
         final DescriptionInfo descriptionInfo = findDescription(clazz);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a super description from the annotation");
+                .isEqualTo("Description from super annotation");
     }
 
     @Test
@@ -486,6 +530,31 @@ class AnnotatedServiceFactoryTest {
         @Get("/some/path")
         public void testMethod5(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param1,
                                 String param2) {}
+
+        // Method with Javadoc @return tag in properties file (no @ReturnDescription annotation)
+        @Get("/javadoc/return")
+        public String methodWithJavadocReturn() {
+            return "";
+        }
+
+        // Method with Javadoc @throws tag in properties file (empty @ThrowsDescription annotation)
+        @Get("/javadoc/throws")
+        @ThrowsDescription(IllegalArgumentException.class)
+        public void methodWithJavadocThrows() {}
+
+        // Method with both @ReturnDescription annotation and Javadoc @return tag
+        // Annotation should take precedence
+        @Get("/both/return")
+        @ReturnDescription("Return value from annotation")
+        public String methodWithBothReturnDescriptions() {
+            return "";
+        }
+
+        // Method with both @ThrowsDescription annotation and Javadoc @throws tag
+        // Annotation should take precedence
+        @Get("/both/throws")
+        @ThrowsDescription(value = IllegalStateException.class, description = "Exception from annotation")
+        public void methodWithBothThrowsDescriptions() {}
     }
 
     private static List<AnnotatedServiceElement> getServiceElements(

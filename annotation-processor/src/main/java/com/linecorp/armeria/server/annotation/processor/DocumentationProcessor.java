@@ -50,6 +50,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.Description;
 
 /**
@@ -90,7 +91,7 @@ public final class DocumentationProcessor extends AbstractProcessor {
     private final Map<String, Properties> propertiesMap = new HashMap<>();
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    public boolean process(@Nullable Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (annotations == null || annotations.isEmpty()) {
             return false;
         }
