@@ -512,7 +512,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Set<String> loadedClasses = new HashSet<>();
 
         for (ServiceConfig serviceConfig : serviceConfigs) {
-            final DefaultAnnotatedService service = serviceConfig.service().as(DefaultAnnotatedService.class);
+            final AnnotatedService service = serviceConfig.service().as(AnnotatedService.class);
             if (service == null) {
                 continue;
             }

@@ -122,7 +122,10 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
             }
 
             final String comment = location.getLeadingComments();
-            result.putIfAbsent(fullName, comment);
+            if (result.putIfAbsent(fullName, comment) != null) {
+                logger.warn("Duplicate key found while parsing proto comments, " +
+                            "skipping entry '{}': {}", fullName, comment);
+            }
 
             // If this is a method comment, also extract @return docstring
             if (isMethodPath(location.getPathList())) {

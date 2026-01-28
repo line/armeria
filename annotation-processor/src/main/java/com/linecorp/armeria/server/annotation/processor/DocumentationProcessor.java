@@ -47,6 +47,7 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.server.annotation.Description;
@@ -198,20 +199,21 @@ public final class DocumentationProcessor extends AbstractProcessor {
                 JavaDocParserState state = JavaDocParserState.SEARCHING;
                 for (List<String> line : lines) {
                     final List<String> subLine;
-                    if ((line.size() < 3 ||
-                         !"@param".equals(line.get(0)) ||
-                         !param.getSimpleName().toString().equals(line.get(1))) &&
-                        state == JavaDocParserState.SEARCHING) {
-                        continue;
-                    } else if (state == JavaDocParserState.IN_DESCRIPTION &&
-                               !line.isEmpty() &&
-                               line.get(0).startsWith("@")) {
-                        break;
-                    } else if (state == JavaDocParserState.SEARCHING) {
+                    if (state == JavaDocParserState.SEARCHING) {
+                        if (line.size() < 3 ||
+                            !"@param".equals(line.get(0)) ||
+                            !param.getSimpleName().toString().equals(line.get(1))) {
+                            continue;
+                        }
                         subLine = line.subList(2, line.size());
                         state = JavaDocParserState.IN_DESCRIPTION;
                     } else {
-                        subLine = line;
+                        assert state == JavaDocParserState.IN_DESCRIPTION;
+                        if (!line.isEmpty() && line.get(0).startsWith("@")) {
+                            break;
+                        } else {
+                            subLine = line;
+                        }
                     }
                     for (String word : subLine) {
                         stringBuilder.append(word);
@@ -227,7 +229,7 @@ public final class DocumentationProcessor extends AbstractProcessor {
             final Matcher returnMatcher = RETURN_PATTERN.matcher(docComment);
             if (returnMatcher.find()) {
                 final String returnDescription = returnMatcher.group(1);
-                if (returnDescription != null && !returnDescription.isEmpty()) {
+                if (!Strings.isNullOrEmpty(returnDescription)) {
                     properties.setProperty(methodName + ":return", returnDescription);
                 }
             }
@@ -239,7 +241,7 @@ public final class DocumentationProcessor extends AbstractProcessor {
             while (throwsMatcher.find()) {
                 final String exceptionType = throwsMatcher.group(1);
                 final String throwsDescription = throwsMatcher.group(2);
-                if (throwsDescription != null && !throwsDescription.isEmpty()) {
+                if (!Strings.isNullOrEmpty(throwsDescription)) {
                     properties.setProperty(methodName + ":throws/" + exceptionType, throwsDescription);
                 }
             }
