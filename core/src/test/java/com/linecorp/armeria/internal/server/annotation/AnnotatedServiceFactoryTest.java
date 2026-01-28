@@ -20,6 +20,8 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFacto
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.create;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.find;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findReturnDescription;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findThrowsDescriptions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -27,6 +29,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,8 +53,11 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.ReturnDescription;
+import com.linecorp.armeria.server.annotation.ThrowsDescription;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.Markup;
 
 class AnnotatedServiceFactoryTest {
 
@@ -277,6 +283,172 @@ class AnnotatedServiceFactoryTest {
         final DescriptionInfo descriptionInfo = findDescription(clazz);
         assertThat(descriptionInfo.docString())
                 .isEqualTo("This is a super description from the annotation");
+    }
+
+    @Test
+    void testFindDescription() throws NoSuchMethodException {
+        // Test method with @Description annotation
+        final Method methodWithDesc = DescriptionTestClass.class.getMethod("methodWithDescription");
+        final DescriptionInfo descInfo = findDescription(methodWithDesc);
+        assertThat(descInfo.docString()).isEqualTo("Method description");
+        assertThat(descInfo.markup()).isEqualTo(Markup.NONE);
+
+        // Test method with @Description annotation with markup
+        final Method methodWithMarkdown = DescriptionTestClass.class.getMethod("methodWithMarkdownDescription");
+        final DescriptionInfo markdownInfo = findDescription(methodWithMarkdown);
+        assertThat(markdownInfo.docString()).isEqualTo("**Markdown** description");
+        assertThat(markdownInfo.markup()).isEqualTo(Markup.MARKDOWN);
+
+        // Test method without @Description annotation
+        final Method methodWithoutDesc = DescriptionTestClass.class.getMethod("methodWithoutDescription");
+        final DescriptionInfo emptyInfo = findDescription(methodWithoutDesc);
+        assertThat(emptyInfo.docString()).isEmpty();
+
+        // Test method with @Description with empty string
+        final Method methodWithEmptyDesc = DescriptionTestClass.class.getMethod("methodWithEmptyDescription");
+        final DescriptionInfo emptyStringInfo = findDescription(methodWithEmptyDesc);
+        assertThat(emptyStringInfo.docString()).isEmpty();
+    }
+
+    @Test
+    void testFindReturnDescription() throws NoSuchMethodException {
+        // Test method with @ReturnDescription annotation
+        final Method methodWithReturn =
+                ReturnDescriptionTestClass.class.getMethod("methodWithReturnDescription");
+        final DescriptionInfo returnInfo = findReturnDescription(methodWithReturn);
+        assertThat(returnInfo.docString()).isEqualTo("The user name");
+        assertThat(returnInfo.markup()).isEqualTo(Markup.NONE);
+
+        // Test method with @ReturnDescription annotation with markup
+        final Method methodWithMarkdown =
+                ReturnDescriptionTestClass.class.getMethod("methodWithMarkdownReturn");
+        final DescriptionInfo markdownInfo = findReturnDescription(methodWithMarkdown);
+        assertThat(markdownInfo.docString()).isEqualTo("**bold** return value");
+        assertThat(markdownInfo.markup()).isEqualTo(Markup.MARKDOWN);
+
+        // Test method without @ReturnDescription annotation
+        final Method methodWithoutReturn =
+                ReturnDescriptionTestClass.class.getMethod("methodWithoutReturnDescription");
+        final DescriptionInfo emptyInfo = findReturnDescription(methodWithoutReturn);
+        assertThat(emptyInfo.docString()).isEmpty();
+
+        // Test method with @ReturnDescription with empty string
+        final Method methodWithEmptyReturn =
+                ReturnDescriptionTestClass.class.getMethod("methodWithEmptyReturnDescription");
+        final DescriptionInfo emptyStringInfo = findReturnDescription(methodWithEmptyReturn);
+        assertThat(emptyStringInfo.docString()).isEmpty();
+    }
+
+    @Test
+    void testFindThrowsDescriptions() throws NoSuchMethodException {
+        // Test method with @ThrowsDescription annotations
+        final Method methodWithThrows =
+                ThrowsDescriptionTestClass.class.getMethod("methodWithThrowsDescriptions");
+        final Map<Class<? extends Throwable>, DescriptionInfo> throwsInfo =
+                findThrowsDescriptions(methodWithThrows);
+        assertThat(throwsInfo).hasSize(2);
+        assertThat(throwsInfo.get(IllegalArgumentException.class).docString())
+                .isEqualTo("If the argument is invalid");
+        assertThat(throwsInfo.get(IllegalStateException.class).docString())
+                .isEqualTo("If the state is wrong");
+
+        // Test method with @ThrowsDescription annotation with markup
+        final Method methodWithMarkdown =
+                ThrowsDescriptionTestClass.class.getMethod("methodWithMarkdownThrows");
+        final Map<Class<? extends Throwable>, DescriptionInfo> markdownThrowsInfo =
+                findThrowsDescriptions(methodWithMarkdown);
+        assertThat(markdownThrowsInfo).hasSize(1);
+        assertThat(markdownThrowsInfo.get(RuntimeException.class).docString())
+                .isEqualTo("*runtime error*");
+        assertThat(markdownThrowsInfo.get(RuntimeException.class).markup()).isEqualTo(Markup.MARKDOWN);
+
+        // Test method without @ThrowsDescription annotation
+        final Method methodWithoutThrows =
+                ThrowsDescriptionTestClass.class.getMethod("methodWithoutThrowsDescription");
+        final Map<Class<? extends Throwable>, DescriptionInfo> emptyThrowsInfo =
+                findThrowsDescriptions(methodWithoutThrows);
+        assertThat(emptyThrowsInfo).isEmpty();
+
+        // Test method with @ThrowsDescription but no description specified (uses default)
+        final Method methodWithUnspecifiedThrows =
+                ThrowsDescriptionTestClass.class.getMethod("methodWithUnspecifiedThrowsDescription");
+        final Map<Class<? extends Throwable>, DescriptionInfo> unspecifiedThrowsInfo =
+                findThrowsDescriptions(methodWithUnspecifiedThrows);
+        assertThat(unspecifiedThrowsInfo).hasSize(1);
+        assertThat(unspecifiedThrowsInfo.get(NullPointerException.class).docString()).isEmpty();
+
+        // Test method with @ThrowsDescription with empty string description
+        final Method methodWithEmptyStringThrows =
+                ThrowsDescriptionTestClass.class.getMethod("methodWithEmptyStringThrowsDescription");
+        final Map<Class<? extends Throwable>, DescriptionInfo> emptyStringThrowsInfo =
+                findThrowsDescriptions(methodWithEmptyStringThrows);
+        assertThat(emptyStringThrowsInfo).hasSize(1);
+        assertThat(emptyStringThrowsInfo.get(ArithmeticException.class).docString()).isEmpty();
+    }
+
+    private static class ReturnDescriptionTestClass {
+        @Get("/test1")
+        @ReturnDescription("The user name")
+        public String methodWithReturnDescription() {
+            return "";
+        }
+
+        @Get("/test2")
+        @ReturnDescription(value = "**bold** return value", markup = Markup.MARKDOWN)
+        public String methodWithMarkdownReturn() {
+            return "";
+        }
+
+        @Get("/test3")
+        public String methodWithoutReturnDescription() {
+            return "";
+        }
+
+        @Get("/test4")
+        @ReturnDescription("")
+        public String methodWithEmptyReturnDescription() {
+            return "";
+        }
+    }
+
+    private static class ThrowsDescriptionTestClass {
+        @Get("/test1")
+        @ThrowsDescription(value = IllegalArgumentException.class, description = "If the argument is invalid")
+        @ThrowsDescription(value = IllegalStateException.class, description = "If the state is wrong")
+        public void methodWithThrowsDescriptions() {}
+
+        @Get("/test2")
+        @ThrowsDescription(value = RuntimeException.class,
+                           description = "*runtime error*", markup = Markup.MARKDOWN)
+        public void methodWithMarkdownThrows() {}
+
+        @Get("/test3")
+        public void methodWithoutThrowsDescription() {}
+
+        @Get("/test4")
+        @ThrowsDescription(NullPointerException.class)
+        public void methodWithUnspecifiedThrowsDescription() {}
+
+        @Get("/test5")
+        @ThrowsDescription(value = ArithmeticException.class, description = "")
+        public void methodWithEmptyStringThrowsDescription() {}
+    }
+
+    private static class DescriptionTestClass {
+        @Get("/test1")
+        @Description("Method description")
+        public void methodWithDescription() {}
+
+        @Get("/test2")
+        @Description(value = "**Markdown** description", markup = Markup.MARKDOWN)
+        public void methodWithMarkdownDescription() {}
+
+        @Get("/test3")
+        public void methodWithoutDescription() {}
+
+        @Get("/test4")
+        @Description("")
+        public void methodWithEmptyDescription() {}
     }
 
     @Description(ANNOTATED_DESCRIPTION_SUPER)

@@ -73,6 +73,7 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
@@ -183,11 +184,26 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
+
+        // Get return description from @ReturnDescription annotation
+        final DescriptionInfo returnDescription = AnnotatedServiceFactory.findReturnDescription(method);
+        final DescribedTypeSignature returnInfo =
+                DescribedTypeSignature.of(returnTypeSignature, returnDescription);
+
+        // Get exception descriptions from @ThrowsDescription annotations
+        final Map<Class<? extends Throwable>, DescriptionInfo> throwsDescriptions =
+                AnnotatedServiceFactory.findThrowsDescriptions(method);
+        final List<DescribedTypeSignature> exceptions = throwsDescriptions.entrySet().stream()
+                .map(entry -> DescribedTypeSignature.of(
+                        TypeSignature.ofStruct(entry.getKey()),
+                        entry.getValue()))
+                .collect(toImmutableList());
+
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
-                            serviceClass.getName(), method.getName(), overloadId, returnTypeSignature,
-                            fieldInfos, ImmutableList.of(),
+                            serviceClass.getName(), method.getName(), overloadId, returnInfo,
+                            fieldInfos, exceptions,
                             ImmutableList.of(endpoint), httpMethod,
                             AnnotatedServiceFactory.findDescription(method));
 

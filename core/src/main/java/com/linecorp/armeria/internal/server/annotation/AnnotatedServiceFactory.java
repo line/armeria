@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
@@ -105,7 +104,9 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.ReturnDescription;
 import com.linecorp.armeria.server.annotation.StatusCode;
+import com.linecorp.armeria.server.annotation.ThrowsDescription;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 
@@ -597,8 +598,7 @@ public final class AnnotatedServiceFactory {
         final Description description = AnnotationUtil.findFirstDescription(annotatedElement);
         if (description != null) {
             final String value = description.value();
-            if (DefaultValues.isSpecified(value)) {
-                checkArgument(!value.isEmpty(), "value is empty.");
+            if (DefaultValues.isSpecified(value) && !value.isEmpty()) {
                 return DescriptionInfo.from(description);
             }
         } else if (annotatedElement instanceof Parameter) {
@@ -645,6 +645,48 @@ public final class AnnotatedServiceFactory {
         final String pathPrefixFromAnnotation = pathPrefixAnnotation.value();
         ensureAbsolutePath(pathPrefixFromAnnotation, "pathPrefixFromAnnotation");
         return concatPaths(pathPrefix, pathPrefixFromAnnotation);
+    }
+
+    /**
+     * Returns the {@link DescriptionInfo} for the return value of the specified {@link Method},
+     * extracted from the {@link ReturnDescription} annotation.
+     */
+    static DescriptionInfo findReturnDescription(Method method) {
+        requireNonNull(method, "method");
+        final ReturnDescription returnDescription = AnnotationUtil.findFirst(method, ReturnDescription.class);
+        if (returnDescription != null) {
+            final String value = returnDescription.value();
+            if (DefaultValues.isSpecified(value) && !value.isEmpty()) {
+                return DescriptionInfo.of(value, returnDescription.markup());
+            }
+        }
+        return DescriptionInfo.empty();
+    }
+
+    /**
+     * Returns a map of exception types to their {@link DescriptionInfo} for the specified {@link Method},
+     * extracted from {@link ThrowsDescription} annotations.
+     */
+    static Map<Class<? extends Throwable>, DescriptionInfo> findThrowsDescriptions(Method method) {
+        requireNonNull(method, "method");
+        final List<ThrowsDescription> throwsDescriptions =
+                AnnotationUtil.findAll(method, ThrowsDescription.class);
+        if (throwsDescriptions.isEmpty()) {
+            return ImmutableMap.of();
+        }
+
+        final ImmutableMap.Builder<Class<? extends Throwable>, DescriptionInfo> builder =
+                ImmutableMap.builder();
+        for (ThrowsDescription throwsDescription : throwsDescriptions) {
+            final Class<? extends Throwable> exceptionType = throwsDescription.value();
+            final String description = throwsDescription.description();
+            if (DefaultValues.isSpecified(description) && !description.isEmpty()) {
+                builder.put(exceptionType, DescriptionInfo.of(description, throwsDescription.markup()));
+            } else {
+                builder.put(exceptionType, DescriptionInfo.empty());
+            }
+        }
+        return builder.build();
     }
 
     private AnnotatedServiceFactory() {}

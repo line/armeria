@@ -144,6 +144,24 @@ public final class MethodInfo {
              createId(serviceName, name, 0, httpMethod));
     }
 
+    /**
+     * Creates a new instance with {@link DescribedTypeSignature} and overload ID.
+     */
+    public MethodInfo(String serviceName, String name,
+                      int overloadId,
+                      DescribedTypeSignature returnInfo,
+                      Iterable<FieldInfo> parameters,
+                      Iterable<DescribedTypeSignature> exceptions,
+                      Iterable<EndpointInfo> endpoints,
+                      HttpMethod httpMethod,
+                      DescriptionInfo descriptionInfo) {
+        this(name, returnInfo,
+             parameters, false,
+             exceptions, endpoints, ImmutableList.of(),
+             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
+             createId(serviceName, name, overloadId, httpMethod));
+    }
+
     MethodInfo(String name, DescribedTypeSignature returnInfo,
                Iterable<FieldInfo> parameters, boolean useParameterAsRoot,
                Iterable<DescribedTypeSignature> exceptions, Iterable<EndpointInfo> endpoints,
