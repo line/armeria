@@ -48,11 +48,11 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
         return new AthenzServiceDecoratorFactoryBuilder(ztsBaseClient);
     }
 
-    private final MinifiedAuthZpeClient authZpeClient;
+    private final AthenzAuthorizer authorizer;
     private final MeterIdPrefix meterIdPrefix;
 
-    AthenzServiceDecoratorFactory(MinifiedAuthZpeClient authZpeClient, MeterIdPrefix meterIdPrefix) {
-        this.authZpeClient = authZpeClient;
+    AthenzServiceDecoratorFactory(AthenzAuthorizer authorizer, MeterIdPrefix meterIdPrefix) {
+        this.authorizer = authorizer;
         this.meterIdPrefix = meterIdPrefix;
     }
 
@@ -68,7 +68,7 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
         checkArgument(!action.isEmpty(), "action must not be empty");
         checkArgument(!tokenTypes.isEmpty(), "tokenType must not be empty");
 
-        return delegate -> new AthenzService(delegate, authZpeClient, resource, action, tokenTypes,
+        return delegate -> new AthenzService(delegate, authorizer, resource, action, tokenTypes,
                                              meterIdPrefix);
     }
 }

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
@@ -79,5 +80,12 @@ final class JsonBodyFieldAthenzResourceProvider implements AthenzResourceProvide
             throw new IllegalArgumentException("Missing required json node field: " + jsonPointer);
         }
         return node.asText("");
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("jsonPointer", jsonPointer)
+                          .toString();
     }
 }

@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -43,5 +45,12 @@ final class HeaderAthenzResourceProvider implements AthenzResourceProvider {
             throw new IllegalArgumentException("Missing required header: " + headerName);
         }
         return UnmodifiableFuture.completedFuture(value);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("headerName", headerName)
+                          .toString();
     }
 }
