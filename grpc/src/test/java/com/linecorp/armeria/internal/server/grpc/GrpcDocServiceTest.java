@@ -295,4 +295,64 @@ class GrpcDocServiceTest {
             json.forEach(GrpcDocServiceTest::removeDescriptionInfos);
         }
     }
+
+    @Test
+    void returnInfoStructure() throws Exception {
+        if (TestUtil.isDocServiceDemoMode()) {
+            return;
+        }
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final JsonNode servicesNode = actualJson.get("services");
+        assertThat(servicesNode).isNotNull();
+
+        // Verify that all methods have returnInfo with the expected structure
+        for (JsonNode service : servicesNode) {
+            for (JsonNode method : service.get("methods")) {
+                // Every method should have a returnInfo
+                final JsonNode returnInfo = method.get("returnInfo");
+                assertThat(returnInfo).isNotNull();
+                assertThat(returnInfo.get("typeSignature")).isNotNull();
+                // descriptionInfo should exist (even if empty)
+                assertThat(returnInfo.get("descriptionInfo")).isNotNull();
+
+                // Every method should have an exceptions list (empty for gRPC)
+                final JsonNode exceptions = method.get("exceptions");
+                assertThat(exceptions).isNotNull();
+                assertThat(exceptions.isArray()).isTrue();
+            }
+        }
+
+        // Verify that TestService.UnaryCall has the @return docstring from test.proto
+        // The test.proto has: "// @return a response containing the payload"
+        JsonNode testService = null;
+        for (JsonNode service : servicesNode) {
+            if (TestServiceGrpc.SERVICE_NAME.equals(service.get("name").textValue())) {
+                testService = service;
+                break;
+            }
+        }
+        assertThat(testService).isNotNull();
+
+        JsonNode unaryCallMethod = null;
+        for (JsonNode method : testService.get("methods")) {
+            if ("UnaryCall".equals(method.get("name").textValue())) {
+                unaryCallMethod = method;
+                break;
+            }
+        }
+        assertThat(unaryCallMethod).isNotNull();
+
+        final JsonNode unaryCallReturnInfo = unaryCallMethod.get("returnInfo");
+        assertThat(unaryCallReturnInfo.get("typeSignature").textValue())
+                .isEqualTo("armeria.grpc.testing.SimpleResponse");
+        // Verify the @return docstring is present
+        final JsonNode unaryCallReturnDescriptionInfo = unaryCallReturnInfo.get("descriptionInfo");
+        assertThat(unaryCallReturnDescriptionInfo.get("docString").textValue())
+                .isEqualTo("a response containing the payload");
+    }
 }

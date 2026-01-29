@@ -22,12 +22,15 @@ import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isKFunc
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isReturnTypeNothing;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionGenericReturnType;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
+import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldLocation.UNSPECIFIED;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -41,8 +44,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
@@ -66,6 +73,7 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
@@ -90,6 +98,8 @@ import io.netty.buffer.ByteBuf;
  * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedService}.
  */
 public final class AnnotatedDocServicePlugin implements DocServicePlugin {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnnotatedDocServicePlugin.class);
 
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
@@ -174,11 +184,26 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
+
+        // Get return description from @ReturnDescription annotation
+        final DescriptionInfo returnDescription = AnnotatedServiceFactory.findReturnDescription(method);
+        final DescribedTypeSignature returnInfo =
+                DescribedTypeSignature.of(returnTypeSignature, returnDescription);
+
+        // Get exception descriptions from @ThrowsDescription annotations
+        final Map<Class<? extends Throwable>, DescriptionInfo> throwsDescriptions =
+                AnnotatedServiceFactory.findThrowsDescriptions(method);
+        final List<DescribedTypeSignature> exceptions = throwsDescriptions.entrySet().stream()
+                .map(entry -> DescribedTypeSignature.of(
+                        TypeSignature.ofStruct(entry.getKey()),
+                        entry.getValue()))
+                .collect(toImmutableList());
+
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
-                            serviceClass.getName(), method.getName(), overloadId, returnTypeSignature,
-                            fieldInfos, ImmutableList.of(),
+                            serviceClass.getName(), method.getName(), overloadId, returnInfo,
+                            fieldInfos, exceptions,
                             ImmutableList.of(endpoint), httpMethod,
                             AnnotatedServiceFactory.findDescription(method));
 
@@ -495,6 +520,55 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             // An unresolved StructInfo.
             return new StructInfo(typeSignature.name(), ImmutableList.of());
         }
+    }
+
+    @Override
+    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+        final Map<String, DescriptionInfo> docStrings = new HashMap<>();
+        final Set<String> loadedClasses = new HashSet<>();
+
+        for (ServiceConfig serviceConfig : serviceConfigs) {
+            final AnnotatedService service = serviceConfig.service().as(AnnotatedService.class);
+            if (service == null) {
+                continue;
+            }
+
+            final Class<?> serviceClass = service.serviceClass();
+            final String className = serviceClass.getName();
+            if (!loadedClasses.add(className)) {
+                // Already processed this class
+                continue;
+            }
+
+            final String fileName = getFileName(className);
+            try (InputStream stream = getClass().getClassLoader().getResourceAsStream(fileName)) {
+                if (stream == null) {
+                    continue;
+                }
+                final Properties properties = new Properties();
+                properties.load(stream);
+
+                // Convert properties to docstrings with the correct key format
+                for (String propertyName : properties.stringPropertyNames()) {
+                    final String value = properties.getProperty(propertyName);
+                    if (value == null || value.isEmpty()) {
+                        continue;
+                    }
+
+                    // Convert property name to full key:
+                    // - "methodName:return" -> "className/methodName:return"
+                    // - "methodName:throws/ExceptionType" -> "className/methodName:throws/ExceptionType"
+                    // - "methodName.paramName" is for parameters (handled by AnnotatedServiceFactory)
+                    if (propertyName.contains(":return") || propertyName.contains(":throws/")) {
+                        final String fullKey = className + '/' + propertyName;
+                        docStrings.put(fullKey, DescriptionInfo.of(value));
+                    }
+                }
+            } catch (IOException e) {
+                logger.warn("Failed to load an API description file: {}", fileName, e);
+            }
+        }
+        return docStrings;
     }
 
     @Override

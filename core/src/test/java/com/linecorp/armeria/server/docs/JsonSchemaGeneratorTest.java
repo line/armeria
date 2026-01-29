@@ -51,7 +51,7 @@ class JsonSchemaGeneratorTest {
         return new MethodInfo(
                 "test-service",
                 methodName,
-                TypeSignature.ofBase("void"),
+                DescribedTypeSignature.of(TypeSignature.ofBase("void")),
                 Arrays.asList(parameters),
                 true,
                 ImmutableList.of(),

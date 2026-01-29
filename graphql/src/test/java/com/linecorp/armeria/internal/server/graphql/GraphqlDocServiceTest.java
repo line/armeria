@@ -112,7 +112,7 @@ class GraphqlDocServiceTest {
                 .when(IGNORING_ARRAY_ORDER)
                 .node("services[0].name").isEqualTo("com.linecorp.armeria.server.graphql.DefaultGraphqlService")
                 .node("services[0].methods[0].name").isEqualTo(DEFAULT_METHOD_NAME)
-                .node("services[0].methods[0].returnTypeSignature").isEqualTo("json")
+                .node("services[0].methods[0].returnInfo.typeSignature").isEqualTo("json")
                 .node("services[0].methods[0].parameters[0]").matches(
                         new CustomTypeSafeMatcher<Map<String, Object>>("query") {
                             @Override

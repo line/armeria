@@ -242,8 +242,8 @@ class ThriftDocServicePluginTest {
 
         final MethodInfo bar1 = methods.get("bar1");
         assertThat(bar1.parameters()).isEmpty();
-        assertThat(bar1.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
-        assertThat(bar1.exceptionTypeSignatures()).hasSize(1);
+        assertThat(bar1.returnInfo().typeSignature()).isEqualTo(TypeSignature.ofBase("void"));
+        assertThat(bar1.exceptions()).hasSize(1);
         assertThat(bar1.exampleRequests()).isEmpty();
         assertThat(bar1.endpoints()).containsExactlyInAnyOrder(
                 EndpointInfo.builder("*", "/foo")
@@ -258,8 +258,8 @@ class ThriftDocServicePluginTest {
         final TypeSignature string = TypeSignature.ofBase("string");
         final MethodInfo bar2 = methods.get("bar2");
         assertThat(bar2.parameters()).isEmpty();
-        assertThat(bar2.returnTypeSignature()).isEqualTo(string);
-        assertThat(bar2.exceptionTypeSignatures()).hasSize(1);
+        assertThat(bar2.returnInfo().typeSignature()).isEqualTo(string);
+        assertThat(bar2.exceptions()).hasSize(1);
         assertThat(bar2.exampleRequests()).isEmpty();
 
         final TypeSignature foo = TypeSignature.ofStruct(FooStruct.class);
@@ -267,22 +267,22 @@ class ThriftDocServicePluginTest {
         assertThat(bar3.parameters()).containsExactly(
                 FieldInfo.of("intVal", TypeSignature.ofBase("i32")),
                 FieldInfo.of("foo", foo));
-        assertThat(bar3.returnTypeSignature()).isEqualTo(foo);
-        assertThat(bar3.exceptionTypeSignatures()).hasSize(1);
+        assertThat(bar3.returnInfo().typeSignature()).isEqualTo(foo);
+        assertThat(bar3.exceptions()).hasSize(1);
         assertThat(bar3.exampleRequests()).isEmpty();
 
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.parameters()).containsExactly(
                 FieldInfo.of("foos", TypeSignature.ofList(foo)));
-        assertThat(bar4.returnTypeSignature()).isEqualTo(TypeSignature.ofList(foo));
-        assertThat(bar4.exceptionTypeSignatures()).hasSize(1);
+        assertThat(bar4.returnInfo().typeSignature()).isEqualTo(TypeSignature.ofList(foo));
+        assertThat(bar4.exceptions()).hasSize(1);
         assertThat(bar4.exampleRequests()).isEmpty();
 
         final MethodInfo bar5 = methods.get("bar5");
         assertThat(bar5.parameters()).containsExactly(
                 FieldInfo.of("foos", TypeSignature.ofMap(string, foo)));
-        assertThat(bar5.returnTypeSignature()).isEqualTo(TypeSignature.ofMap(string, foo));
-        assertThat(bar5.exceptionTypeSignatures()).hasSize(1);
+        assertThat(bar5.returnInfo().typeSignature()).isEqualTo(TypeSignature.ofMap(string, foo));
+        assertThat(bar5.exceptions()).hasSize(1);
         assertThat(bar5.exampleRequests()).isEmpty();
 
         final MethodInfo bar6 = methods.get("bar6");
@@ -298,8 +298,8 @@ class ThriftDocServicePluginTest {
                 FieldInfo.of("foo8", TypeSignature.ofList(TypeSignature.ofList(
                         TypeSignature.ofStruct(FooStruct.class)))));
 
-        assertThat(bar6.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
-        assertThat(bar6.exceptionTypeSignatures()).isEmpty();
+        assertThat(bar6.returnInfo().typeSignature()).isEqualTo(TypeSignature.ofBase("void"));
+        assertThat(bar6.exceptions()).isEmpty();
         assertThat(bar6.exampleRequests()).isEmpty();
 
         final List<HttpHeaders> exampleHeaders = service.exampleHeaders();

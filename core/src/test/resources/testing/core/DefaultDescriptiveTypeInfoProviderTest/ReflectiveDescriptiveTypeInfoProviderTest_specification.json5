@@ -4,7 +4,13 @@
     "methods" : [ {
       "name" : "param",
       "id" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamService/param/GET",
-      "returnTypeSignature" : "CompletableFuture<string>",
+      "returnInfo" : {
+        "typeSignature" : "CompletableFuture<string>",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      },
       "parameters" : [ {
         "name" : "id",
         "location" : "PATH",
@@ -24,7 +30,7 @@
           "markup" : "NONE"
         }
       } ],
-      "exceptionTypeSignatures" : [ ],
+      "exceptions" : [ ],
       "endpoints" : [ {
         "hostnamePattern" : "*",
         "pathMapping" : "/param/:id",

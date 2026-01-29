@@ -57,9 +57,11 @@ option java_package = "testing.grpc";
 // performance with various types of payload.
 service TestService {
   // One empty request followed by one empty response.
+  // @return an empty response
   rpc EmptyCall(armeria.grpc.testing.Empty) returns (armeria.grpc.testing.Empty);
 
   // One request followed by one response.
+  // @return a response containing the payload
   rpc UnaryCall(SimpleRequest) returns (SimpleResponse);
 
   // Another method with one request followed by one response.
@@ -184,4 +186,11 @@ service UnitTestFooService {
 service UnitTestBarService {
   rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
   rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
+}
+
+// Tests that mid-line @return tags are ignored.
+service MidLineTagTestService {
+  // A call with mid-line @return should be ignored because the tag must be at line start.
+  // @return valid return description
+  rpc MidLineTagIgnored(SimpleRequest) returns (SimpleResponse);
 }

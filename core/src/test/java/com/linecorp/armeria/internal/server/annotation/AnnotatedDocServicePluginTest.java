@@ -55,11 +55,15 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.annotation.ReturnDescription;
+import com.linecorp.armeria.server.annotation.ThrowsDescription;
+import com.linecorp.armeria.server.docs.DescribedTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -312,6 +316,85 @@ class AnnotatedDocServicePluginTest {
         assertThat(paths).containsOnly("exact:/path1", "exact:/path2");
     }
 
+    @Test
+    void testReturnAndThrowsDescriptionAnnotations() {
+        final Map<String, ServiceInfo> services = services(new DescriptionAnnotatedClass());
+        final ServiceInfo serviceInfo = services.get(DescriptionAnnotatedClass.class.getName());
+        assertThat(serviceInfo).isNotNull();
+
+        final Map<String, MethodInfo> methods = serviceInfo.methods().stream()
+                .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+
+        // Test method with @ReturnDescription and @ThrowsDescription annotations
+        final MethodInfo getUserMethod = methods.get("getUser");
+        assertThat(getUserMethod).isNotNull();
+
+        // Verify return description
+        final DescribedTypeSignature returnInfo = getUserMethod.returnInfo();
+        assertThat(returnInfo.typeSignature()).isEqualTo(STRING);
+        assertThat(returnInfo.descriptionInfo().docString()).isEqualTo("The user name");
+
+        // Verify exceptions
+        final List<DescribedTypeSignature> exceptions = getUserMethod.exceptions();
+        assertThat(exceptions).hasSize(2);
+
+        // Find IllegalArgumentException
+        final DescribedTypeSignature illegalArgException = exceptions.stream()
+                .filter(e -> e.typeSignature().signature().contains("IllegalArgumentException"))
+                .findFirst()
+                .orElse(null);
+        assertThat(illegalArgException).isNotNull();
+        assertThat(illegalArgException.descriptionInfo().docString()).isEqualTo("If the ID is invalid");
+
+        // Find IllegalStateException
+        final DescribedTypeSignature illegalStateException = exceptions.stream()
+                .filter(e -> e.typeSignature().signature().contains("IllegalStateException"))
+                .findFirst()
+                .orElse(null);
+        assertThat(illegalStateException).isNotNull();
+        assertThat(illegalStateException.descriptionInfo().docString()).isEqualTo("If the user is not found");
+
+        // Test method with only @ReturnDescription annotation
+        final MethodInfo simpleMethod = methods.get("simpleMethod");
+        assertThat(simpleMethod).isNotNull();
+        assertThat(simpleMethod.returnInfo().descriptionInfo().docString()).isEqualTo("Simple return value");
+        assertThat(simpleMethod.exceptions()).isEmpty();
+
+        // Test method without description annotations
+        final MethodInfo noDescriptionMethod = methods.get("noDescriptionMethod");
+        assertThat(noDescriptionMethod).isNotNull();
+        assertThat(noDescriptionMethod.returnInfo().descriptionInfo().docString()).isEmpty();
+        assertThat(noDescriptionMethod.exceptions()).isEmpty();
+
+        // Test method with exception only (no description specified)
+        final MethodInfo exceptionOnlyMethod = methods.get("exceptionOnlyMethod");
+        assertThat(exceptionOnlyMethod).isNotNull();
+        assertThat(exceptionOnlyMethod.exceptions()).hasSize(1);
+        final DescribedTypeSignature npeException = exceptionOnlyMethod.exceptions().get(0);
+        assertThat(npeException.typeSignature().signature()).contains("NullPointerException");
+        assertThat(npeException.descriptionInfo().docString()).isEmpty();
+    }
+
+    @Test
+    void testEmptyDescriptions() {
+        final Map<String, ServiceInfo> services = services(new EmptyDescriptionClass());
+        final ServiceInfo serviceInfo = services.get(EmptyDescriptionClass.class.getName());
+        assertThat(serviceInfo).isNotNull();
+
+        final MethodInfo method = serviceInfo.methods().iterator().next();
+        assertThat(method.name()).isEqualTo("emptyDescriptionsMethod");
+
+        // Empty @Description should result in empty method description
+        assertThat(method.descriptionInfo().docString()).isEmpty();
+        // Empty @ReturnDescription should result in empty return description
+        assertThat(method.returnInfo().descriptionInfo().docString()).isEmpty();
+        // Empty @ThrowsDescription should result in exception with empty description
+        assertThat(method.exceptions()).hasSize(1);
+        final DescribedTypeSignature runtimeException = method.exceptions().get(0);
+        assertThat(runtimeException.typeSignature().signature()).contains("RuntimeException");
+        assertThat(runtimeException.descriptionInfo().docString()).isEmpty();
+    }
+
     private static void checkFooService(ServiceInfo fooServiceInfo) {
         assertThat(fooServiceInfo.exampleHeaders()).isEmpty();
         final Map<String, MethodInfo> methods =
@@ -332,7 +415,7 @@ class AnnotatedDocServicePluginTest {
                          .location(HEADER)
                          .build());
 
-        assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
+        assertThat(fooMethod.returnInfo().typeSignature()).isEqualTo(VOID);
 
         assertThat(fooMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/foo")
                                                                       .defaultMimeType(MediaType.JSON)
@@ -349,7 +432,7 @@ class AnnotatedDocServicePluginTest {
         final MethodInfo barMethod = methods.get("barMethod");
         assertThat(barMethod.exampleHeaders()).isEmpty();
         assertThat(barMethod.exampleRequests()).isEmpty();
-        assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
+        assertThat(barMethod.returnInfo().typeSignature()).isEqualTo(VOID);
 
         assertThat(barMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/bar")
                                                                       .defaultMimeType(MediaType.JSON)
@@ -451,6 +534,42 @@ class AnnotatedDocServicePluginTest {
         @Path("/path1")
         @Path("/path2")
         public void multiGet() {}
+    }
+
+    private static class DescriptionAnnotatedClass {
+        @Get("/user")
+        @ReturnDescription("The user name")
+        @ThrowsDescription(value = IllegalArgumentException.class, description = "If the ID is invalid")
+        @ThrowsDescription(value = IllegalStateException.class, description = "If the user is not found")
+        public String getUser(@Param String id) {
+            return "user";
+        }
+
+        @Get("/simple")
+        @ReturnDescription("Simple return value")
+        public String simpleMethod() {
+            return "simple";
+        }
+
+        @Get("/no-description")
+        public String noDescriptionMethod() {
+            return "no description";
+        }
+
+        // Test case: exception only (no description specified)
+        @Get("/exception-only")
+        @ThrowsDescription(NullPointerException.class)
+        public void exceptionOnlyMethod() {}
+    }
+
+    private static class EmptyDescriptionClass {
+        @Get("/empty-descriptions")
+        @Description("")
+        @ReturnDescription("")
+        @ThrowsDescription(value = RuntimeException.class, description = "")
+        public String emptyDescriptionsMethod() {
+            return "empty";
+        }
     }
 
     static class CompositeBean {

@@ -6,7 +6,13 @@
         {
           "name": "json",
           "id": "com.linecorp.armeria.server.protobuf.ScalaPbDescriptiveTypeInfoProviderTest$ScalaPbService/json/POST",
-          "returnTypeSignature": "Future<testing.scalapb.messages.TestMessage>",
+          "returnInfo": {
+            "typeSignature": "Future<testing.scalapb.messages.TestMessage>",
+            "descriptionInfo": {
+              "docString": "",
+              "markup": "NONE"
+            }
+          },
           "parameters": [
             {
               "name": "req",
@@ -19,7 +25,7 @@
               }
             }
           ],
-          "exceptionTypeSignatures": [ ],
+          "exceptions": [ ],
           "endpoints": [
             {
               "hostnamePattern": "*",

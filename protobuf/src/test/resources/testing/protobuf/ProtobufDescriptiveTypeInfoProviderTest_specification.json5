@@ -4,7 +4,13 @@
     "methods" : [ {
       "name" : "json",
       "id" : "com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProviderTest$ProtobufService/json/POST",
-      "returnTypeSignature" : "CompletableFuture<testing.protobuf.Messages$TestMessage>",
+      "returnInfo" : {
+        "typeSignature" : "CompletableFuture<testing.protobuf.Messages$TestMessage>",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      },
       "parameters" : [ {
         "name" : "req",
         "location" : "UNSPECIFIED",
@@ -15,7 +21,7 @@
           "markup" : "NONE"
         }
       } ],
-      "exceptionTypeSignatures" : [ ],
+      "exceptions" : [ ],
       "endpoints" : [ {
         "hostnamePattern" : "*",
         "pathMapping" : "exact:/json",

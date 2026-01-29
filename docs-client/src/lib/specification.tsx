@@ -22,6 +22,11 @@ export interface DescriptionInfo {
   markup: string;
 }
 
+export interface DescribedTypeSignature {
+  typeSignature: string;
+  descriptionInfo: DescriptionInfo;
+}
+
 export interface Endpoint {
   hostnamePattern: string;
   pathMapping: string;
@@ -34,9 +39,9 @@ export interface Endpoint {
 export interface Method {
   name: string;
   id: string;
-  returnTypeSignature: string;
+  returnInfo: DescribedTypeSignature;
   parameters: Field[];
-  exceptionTypeSignatures: string[];
+  exceptions: DescribedTypeSignature[];
   endpoints: Endpoint[];
   exampleHeaders: { [name: string]: string }[];
   exampleRequests: string[];
@@ -288,7 +293,6 @@ export class Specification {
   }
 
   private updateStructDocStrings(structs: Struct[]) {
-    // TODO(trustin): Handle the docstrings of return values and exceptions.
     for (const struct of structs) {
       const childDocStrings = this.parseParamDocStrings(
         struct.descriptionInfo.docString as string,

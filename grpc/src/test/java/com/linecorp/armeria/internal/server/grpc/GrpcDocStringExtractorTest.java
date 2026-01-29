@@ -39,7 +39,19 @@ class GrpcDocStringExtractorTest {
     void method() {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.TestService/UnaryCall",
-                " One request followed by one response.\n");
+                " One request followed by one response.\n" +
+                " @return a response containing the payload\n");
+    }
+
+    @Test
+    void methodReturnDocString() {
+        // Test that @return docstrings are extracted from method comments
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.TestService/EmptyCall:return",
+                "an empty response");
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.TestService/UnaryCall:return",
+                "a response containing the payload");
     }
 
     @Test
@@ -110,5 +122,21 @@ class GrpcDocStringExtractorTest {
         assertThat(DOCSTRINGS).containsEntry(
                 "armeria.grpc.testing.SimpleRequest.NestedEnum/OK",
                 " We're ok.\n");
+    }
+
+    @Test
+    void midLineTagIgnored() {
+        // Test that @return appearing in the middle of a line is ignored
+        // MidLineTagIgnored has mid-line "@return" which should be ignored,
+        // but also has a valid "@return valid return description" at line start
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.MidLineTagTestService/MidLineTagIgnored",
+                " A call with mid-line @return should be ignored because the tag " +
+                "must be at line start.\n" +
+                " @return valid return description\n");
+        // The :return entry should only capture the valid line-start @return tag
+        assertThat(DOCSTRINGS).containsEntry(
+                "armeria.grpc.testing.MidLineTagTestService/MidLineTagIgnored:return",
+                "valid return description");
     }
 }
