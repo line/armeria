@@ -35,9 +35,10 @@ import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.Cancelable;
 import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 
-class WatchServiceTest {
+class DirectoryWatchServiceTest {
 
     @RegisterExtension
     static TemporaryFolderExtension folder = new TemporaryFolderExtension();
@@ -58,17 +59,17 @@ class WatchServiceTest {
         final Path file = folder.newFile("temp-file.properties");
         final Path file2 = folder.newFile("temp-file2.properties");
 
-        try (WatchService watchService = new WatchService()) {
-            final WatchKey key1 = watchService.register(file.getParent(), (path, event) -> {});
-            final WatchKey key2 = watchService.register(file2.getParent(), (path, event) -> {});
+        try (DirectoryWatchService watchService = new DirectoryWatchService()) {
+            final Cancelable key1 = watchService.register(file.getParent(), (path, event) -> {});
+            final Cancelable key2 = watchService.register(file2.getParent(), (path, event) -> {});
 
             assertThat(watchService.hasWatchers()).isTrue();
 
-            watchService.unregister(key1);
+            key1.cancel();
 
             assertThat(watchService.hasWatchers()).isTrue();
 
-            watchService.unregister(key2);
+            key2.cancel();
 
             assertThat(watchService.hasWatchers()).isFalse();
         }
@@ -79,7 +80,7 @@ class WatchServiceTest {
 
         final Path file = folder.newFile("temp-file.properties");
 
-        final WatchService watchService = new WatchService();
+        final DirectoryWatchService watchService = new DirectoryWatchService();
         watchService.register(file.getParent(), (path, event) -> {});
 
         assertThat(watchService.hasWatchers()).isTrue();
@@ -90,14 +91,14 @@ class WatchServiceTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 DirectoryWatchService doesn't work reliably on older Java.
     void runnableWithExceptionContinuesRun() throws Exception {
 
         final Path file = folder.newFile("temp-file.properties");
-        final WatchService watchService = new WatchService();
+        final DirectoryWatchService watchService = new DirectoryWatchService();
 
         final AtomicInteger val = new AtomicInteger(0);
-        final WatchKey key = watchService.register(file.getParent(), (path, event) -> {
+        final Cancelable key = watchService.register(file.getParent(), (path, event) -> {
             try {
                 final BufferedReader bufferedReader = new BufferedReader(new FileReader(file.toFile()));
                 val.set(Integer.valueOf(bufferedReader.readLine()));
@@ -123,7 +124,7 @@ class WatchServiceTest {
 
         assertThat(watchService.hasWatchers()).isTrue();
 
-        watchService.unregister(key);
+        key.cancel();
 
         assertThat(watchService.hasWatchers()).isFalse();
 

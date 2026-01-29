@@ -20,29 +20,15 @@ import java.nio.file.Path;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.Cancelable;
 
-/**
- * A key that is equivalent to {@link java.nio.file.WatchKey}.
- * A {@link WatchKey} is issued when a watch is registered to a {@link WatchService},
- * and can be used later when unregistering.
- * <pre>{@code
- * WatchService registry = ...
- * Path dirPath = ...
- * DirectoryWatcher callback = ...
- * WatchKey key = registry.register(dirPath, callback);
- * ...
- * key.cancel()
- * }</pre>
- */
-@UnstableApi
-public final class WatchKey {
+final class WatchKey implements Cancelable {
 
     private final Path path;
-    private final WatchService registry;
+    private final DirectoryWatchService registry;
     private final DirectoryWatcher callback;
 
-    WatchKey(Path path, WatchService registry, DirectoryWatcher callback) {
+    WatchKey(Path path, DirectoryWatchService registry, DirectoryWatcher callback) {
         this.path = path;
         this.registry = registry;
         this.callback = callback;
@@ -59,6 +45,7 @@ public final class WatchKey {
     /**
      * Cancels the watch registration, stopping the callback from receiving further events.
      */
+    @Override
     public void cancel() {
         registry.unregister(this);
     }

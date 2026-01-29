@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.file;
 
-import static com.linecorp.armeria.common.file.DirectoryWatcher.WATCHER_REGISTERED;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
@@ -269,7 +268,7 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
 
         @Override
         public Kind<Path> kind() {
-            return WATCHER_REGISTERED;
+            return WatcherRegisteredKind.of();
         }
 
         @Override

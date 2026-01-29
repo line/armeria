@@ -32,26 +32,26 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Cancelable;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.file.DirectoryWatcher;
-import com.linecorp.armeria.common.file.WatchKey;
-import com.linecorp.armeria.common.file.WatchService;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
-    private static WatchService registry = new WatchService();
+    private static DirectoryWatchService registry = new DirectoryWatchService();
 
     /**
      * Resets the registry for {@link PropertiesEndpointGroup}.
-     * @throws Exception when an exception occurs while closing the {@link WatchService}.
+     * @throws Exception when an exception occurs while closing the {@link DirectoryWatchService}.
      */
     @VisibleForTesting
     static void resetRegistry() throws Exception {
         registry.close();
-        registry = new WatchService();
+        registry = new DirectoryWatchService();
     }
 
     /**
@@ -180,7 +180,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Nullable
-    private WatchKey watchRegisterKey;
+    private Cancelable watchRegisterKey;
 
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy, List<Endpoint> endpoints) {
         super(selectionStrategy);

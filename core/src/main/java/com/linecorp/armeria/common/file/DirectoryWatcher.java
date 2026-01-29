@@ -20,35 +20,19 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
-import java.nio.file.WatchEvent.Kind;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A callback that is invoked when a file or directory watch event occurs.
- * Use this interface to respond to file system changes detected by a {@link WatchService}.
+ * Use this interface to respond to file system changes detected by a {@link DirectoryWatchService}.
  */
 @UnstableApi
 @FunctionalInterface
 public interface DirectoryWatcher {
-
-    /**
-     * A synthetic event kind that is triggered after registration.
-     * There is no guarantee that this event is the first event triggered.
-     * i.e. a different event may be triggered before the initial event.
-     */
-    Kind<Path> WATCHER_REGISTERED = new Kind<Path>() {
-        @Override
-        public String name() {
-            return "WATCHER_REGISTERED";
-        }
-
-        @Override
-        public Class<Path> type() {
-            return Path.class;
-        }
-    };
 
     /**
      * Invoked when a watch event occurs on the registered directory or file.
@@ -66,11 +50,29 @@ public interface DirectoryWatcher {
      *
      * @param filePath the path to the file to read
      * @param callback the consumer to invoke with the file content as bytes
+     * @param executor an executor used to read the file
+     * @return a new caching {@link DirectoryWatcher}
+     */
+    static DirectoryWatcher fileWatcher(Path filePath, Consumer<byte[]> callback,
+                                        Executor executor) {
+        requireNonNull(filePath, "filePath");
+        requireNonNull(callback, "callback");
+        return new FileWatcher(filePath, callback, executor);
+    }
+
+    /**
+     * Creates a caching {@link DirectoryWatcher} that reads the file content when the watched directory
+     * changes and invokes the callback with the file bytes. The callback caches the last modified time
+     * to avoid redundant reads when the file hasn't changed. Note that the watched directory is not
+     * necessarily the parent directory of the file path.
+     *
+     * @param filePath the path to the file to read
+     * @param callback the consumer to invoke with the file content as bytes
      * @return a new caching {@link DirectoryWatcher}
      */
     static DirectoryWatcher fileWatcher(Path filePath, Consumer<byte[]> callback) {
         requireNonNull(filePath, "filePath");
         requireNonNull(callback, "callback");
-        return new FileWatcher(filePath, callback);
+        return new FileWatcher(filePath, callback, CommonPools.blockingTaskExecutor());
     }
 }

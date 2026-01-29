@@ -18,34 +18,45 @@ package com.linecorp.armeria.common.file;
 
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
+import java.nio.file.WatchService;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.Cancelable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
- * A registry which wraps a {@link java.nio.file.WatchService} and allows paths to be registered.
+ * A registry which wraps a {@link WatchService} and allows paths to be registered.
  */
 @UnstableApi
-public final class WatchService implements AutoCloseable {
+public final class DirectoryWatchService implements AutoCloseable {
 
     private final Map<FileSystem, DirectoryWatcherRegistry> registryMap = new HashMap<>();
     private final ReentrantLock lock = new ReentrantShortLock();
 
     /**
-     * Registers a {@code path} and {@code callback} to the {@link java.nio.file.WatchService}. When the
+     * Registers a {@code path} and {@code callback} to the {@link WatchService}. When the
      * contents of the registered file are changed, then the {@code callback} function
      * is invoked. This method is thread safe.
+     * <pre>{@code
+     * DirectoryWatchService registry = ...
+     * Path dirPath = ...
+     * DirectoryWatcher callback = ...
+     * Cancelable key = registry.register(dirPath, callback);
+     * ...
+     * key.cancel();
+     * }</pre>
+     *
      * @param path the directory path that which will be watched for changes.
      * @param callback the function which is invoked when the file is changed.
      *
-     * @return a key which is used to unregister from watching.
+     * @return a {@link Cancelable} which is used to unregister from watching.
      */
-    public WatchKey register(Path path, DirectoryWatcher callback) {
+    public Cancelable register(Path path, DirectoryWatcher callback) {
         final Path normalizedPath = path.toAbsolutePath().normalize();
         lock.lock();
         try {

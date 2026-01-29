@@ -27,6 +27,7 @@ import java.nio.file.WatchEvent;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -35,21 +36,27 @@ final class FileWatcher implements DirectoryWatcher {
 
     private final Path filePath;
     private final Consumer<byte[]> handler;
+    private final Executor executor;
 
     @Nullable
     private FileTime lastModifiedTime;
 
-    FileWatcher(Path filePath, Consumer<byte[]> handler) {
+    FileWatcher(Path filePath, Consumer<byte[]> handler, Executor executor) {
         this.filePath = filePath;
         this.handler = handler;
+        this.executor = executor;
     }
 
     @Override
     public void onEvent(Path dirPath, WatchEvent<?> event) {
+        executor.execute(() -> onEvent0(dirPath, event));
+    }
+
+    private void onEvent0(Path dirPath, WatchEvent<?> event) {
         if (event.kind() == ENTRY_CREATE ||
             event.kind() == ENTRY_MODIFY ||
             event.kind() == OVERFLOW ||
-            event.kind() == WATCHER_REGISTERED) {
+            event.kind() == WatcherRegisteredKind.of()) {
             final BasicFileAttributes basicFileAttributes;
             try {
                 basicFileAttributes = Files.readAttributes(filePath, BasicFileAttributes.class);
