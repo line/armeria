@@ -128,4 +128,43 @@ public interface AthenzTokenHeader {
      * @return {@code true} if this is a role token, {@code false} if it's an access token
      */
     boolean isRoleToken();
+
+    /**
+     * Returns an {@link AthenzTokenHeader} for Access Token (OAuth2 Bearer token).
+     *
+     * <p>This is a convenience factory method that returns {@link TokenType#ACCESS_TOKEN}.
+     * It allows users to discover predefined token types through IDE autocomplete
+     * without needing to know about the {@link TokenType} enum.
+     *
+     * @return {@link TokenType#ACCESS_TOKEN}
+     */
+    static AthenzTokenHeader ofAccessToken() {
+        return TokenType.ACCESS_TOKEN;
+    }
+
+    /**
+     * Returns an {@link AthenzTokenHeader} for Athenz Role Token.
+     *
+     * <p>This is a convenience factory method that returns {@link TokenType#ATHENZ_ROLE_TOKEN}.
+     * It allows users to discover predefined token types through IDE autocomplete
+     * without needing to know about the {@link TokenType} enum.
+     *
+     * @return {@link TokenType#ATHENZ_ROLE_TOKEN}
+     */
+    static AthenzTokenHeader ofAthenzRoleToken() {
+        return TokenType.ATHENZ_ROLE_TOKEN;
+    }
+
+    /**
+     * Returns an {@link AthenzTokenHeader} for Yahoo Role Token (legacy).
+     *
+     * <p>This is a convenience factory method that returns {@link TokenType#YAHOO_ROLE_TOKEN}.
+     * It allows users to discover predefined token types through IDE autocomplete
+     * without needing to know about the {@link TokenType} enum.
+     *
+     * @return {@link TokenType#YAHOO_ROLE_TOKEN}
+     */
+    static AthenzTokenHeader ofYahooRoleToken() {
+        return TokenType.YAHOO_ROLE_TOKEN;
+    }
 }
