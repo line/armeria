@@ -121,7 +121,7 @@ final class ListenerManager implements SafeCloseable, SnapshotWatcher<ListenerSn
     }
 
     @Override
-    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable Throwable t) {
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable XdsResourceException t) {
         // noop
     }
 }

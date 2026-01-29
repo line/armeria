@@ -37,21 +37,14 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     private final LinkedBlockingDeque<List<Object>> events = new LinkedBlockingDeque<>();
 
     @Override
-    public void onUpdate(@Nullable Snapshot<?> snapshot, @Nullable Throwable t) {
+    public void onUpdate(@Nullable Snapshot<?> snapshot, @Nullable XdsResourceException t) {
         if (snapshot == null) {
-            if (t instanceof XdsResourceException) {
-                final XdsResourceException xdsError = (XdsResourceException) t;
-                if (t instanceof MissingXdsResourceException) {
-                    logger.info("onMissing: {}", xdsError.name());
-                    events.add(ImmutableList.of("onMissing", ImmutableList.of(xdsError.type(),
-                                                                              xdsError.name())));
-                } else {
-                    logger.info("onError: {}", Status.fromThrowable(t));
-                    events.add(ImmutableList.of("onError", Status.fromThrowable(t)));
-                }
+            if (t instanceof MissingXdsResourceException) {
+                logger.info("onMissing: {}", t.name());
+                events.add(ImmutableList.of("onMissing", ImmutableList.of(t.type(), t.name())));
             } else {
-                logger.info("onError: {}", t);
-                events.add(ImmutableList.of("onError", t));
+                logger.info("onError: {}", Status.fromThrowable(t));
+                events.add(ImmutableList.of("onError", Status.fromThrowable(t)));
             }
             return;
         }

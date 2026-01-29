@@ -68,7 +68,7 @@ public final class XdsBootstrapBuilder {
     static final SnapshotWatcher<Object> DEFAULT_SNAPSHOT_WATCHER = new SnapshotWatcher<Object>() {
 
         @Override
-        public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
+        public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
             if (t != null) {
                 logger.warn("Error fetching resource e: ", t);
             }

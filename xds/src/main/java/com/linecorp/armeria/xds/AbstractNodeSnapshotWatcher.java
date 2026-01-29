@@ -24,7 +24,7 @@ abstract class AbstractNodeSnapshotWatcher<T> implements SnapshotWatcher<T>, Saf
     private boolean preClosed;
 
     @Override
-    public final void onUpdate(@Nullable T snapshot, @Nullable Throwable t) {
+    public final void onUpdate(@Nullable T snapshot, @Nullable XdsResourceException t) {
         if (preClosed) {
             return;
         }
