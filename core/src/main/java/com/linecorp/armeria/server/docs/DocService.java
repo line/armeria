@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -352,14 +352,14 @@ public final class DocService extends SimpleDecoratingHttpService {
                 CompletableFuture<ServiceSpecification> specificationFuture) {
             return files.computeIfAbsent(SCHEMAS_PATH, key -> specificationFuture.thenApply(spec -> {
                 try {
-                    final ArrayNode jsonSpec = JsonSchemaGenerator.generate(spec);
+                    final ObjectNode jsonSpec = JsonSchemaGenerator.generate(spec);
 
                     final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
                                                      .writeValueAsBytes(jsonSpec);
                     return toFile(content, MediaType.JSON_UTF_8);
                 } catch (JsonProcessingException e) {
                     logger.warn("Failed to generate JSON schemas:", e);
-                    return toFile("[]".getBytes(), MediaType.JSON_UTF_8);
+                    return toFile("{}".getBytes(), MediaType.JSON_UTF_8);
                 }
             }));
         }
