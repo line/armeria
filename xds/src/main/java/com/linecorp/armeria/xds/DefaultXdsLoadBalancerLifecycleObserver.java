@@ -61,24 +61,25 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
     }
 
     @Override
-    public void resourceUpdated(ClusterSnapshot snapshot) {
-        resourceUpdatedRecorder.onUpdate(snapshot);
+    public void resourceUpdated(ClusterXdsResource clusterXdsResource) {
+        resourceUpdatedRecorder.onUpdate(clusterXdsResource);
     }
 
     @Override
-    public void endpointsUpdated(ClusterSnapshot snapshot, List<Endpoint> endpoints) {
-        endpointsUpdatedRecorder.onUpdate(snapshot);
+    public void endpointsUpdated(ClusterXdsResource clusterXdsResource, List<Endpoint> endpoints) {
+        endpointsUpdatedRecorder.onUpdate(clusterXdsResource);
     }
 
     @Override
-    public void stateUpdated(ClusterSnapshot snapshot, LoadBalancerState state) {
-        stateUpdatedRecorder.onUpdate(snapshot);
+    public void stateUpdated(ClusterXdsResource clusterXdsResource, LoadBalancerState state) {
+        stateUpdatedRecorder.onUpdate(clusterXdsResource);
         loadBalancerRecorder.stateUpdated(state);
     }
 
     @Override
-    public void stateRejected(ClusterSnapshot snapshot, List<Endpoint> endpoints, Throwable cause) {
-        stateRejectedRecorder.onUpdate(snapshot);
+    public void stateRejected(ClusterXdsResource clusterXdsResource, List<Endpoint> endpoints,
+                              Throwable cause) {
+        stateRejectedRecorder.onUpdate(clusterXdsResource);
     }
 
     @Override
@@ -292,8 +293,8 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
                                     .register(meterRegistry);
         }
 
-        void onUpdate(ClusterSnapshot snapshot) {
-            revision = snapshot.xdsResource().revision();
+        void onUpdate(ClusterXdsResource clusterXdsResource) {
+            revision = clusterXdsResource.revision();
             updatedCounter.increment();
         }
 

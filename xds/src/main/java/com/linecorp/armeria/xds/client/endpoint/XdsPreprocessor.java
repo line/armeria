@@ -19,10 +19,8 @@ package com.linecorp.armeria.xds.client.endpoint;
 import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CONFIG;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.Preprocessor;
@@ -44,14 +42,11 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
     private final RouteConfigSelector routeConfigSelector;
     private final String listenerName;
     private final Function<CompletableFuture<O>, O> futureConverter;
-    private final BiFunction<ClientPreprocessors, PreClient<I, O>, PreClient<I, O>> filterFunction;
 
     XdsPreprocessor(String listenerName, XdsBootstrap xdsBootstrap,
-                    Function<CompletableFuture<O>, O> futureConverter,
-                    BiFunction<ClientPreprocessors, PreClient<I, O>, PreClient<I, O>> filterFunction) {
+                    Function<CompletableFuture<O>, O> futureConverter) {
         this.listenerName = listenerName;
         this.futureConverter = futureConverter;
-        this.filterFunction = filterFunction;
         listenerRoot = xdsBootstrap.listenerRoot(listenerName);
         routeConfigSelector = new RouteConfigSelector(listenerRoot);
     }

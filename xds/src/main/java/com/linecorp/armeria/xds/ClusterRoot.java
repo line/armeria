@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.SnapshotStream.Subscription;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 
@@ -28,23 +30,22 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 @UnstableApi
 public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
-    private final SubscriptionContext context;
-    private final String resourceName;
+    @Nullable
+    private Subscription subscription;
 
     ClusterRoot(SubscriptionContext context, String resourceName, SnapshotWatcher<Object> defaultWatcher) {
         super(context.eventLoop(), defaultWatcher);
-        this.context = context;
-        this.resourceName = resourceName;
-        eventLoop().execute(safeRunnable(() -> context.clusterManager().register(resourceName, context, this),
-                                         t -> onUpdate(null,
-                                                       XdsResourceException.maybeWrap(XdsType.CLUSTER,
-                                                                                      resourceName, t))));
+        eventLoop().execute(safeRunnable(
+                () -> subscription = context.clusterManager().register(resourceName, context, this),
+                t -> onUpdate(null, XdsResourceException.maybeWrap(XdsType.CLUSTER, resourceName, t))));
     }
 
     @Override
     public void close() {
         eventLoop().execute(() -> {
-            context.clusterManager().unregister(resourceName, this);
+            if (subscription != null) {
+                subscription.close();
+            }
             super.close();
         });
     }
