@@ -190,9 +190,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                             Path filePath, String endpointKeyPrefix, int defaultPort) {
         super(selectionStrategy);
-        final Path watchDir = filePath.getParent();
+        final Path normalizedPath = filePath.toAbsolutePath().normalize();
+        final Path watchDir = normalizedPath.getParent();
         checkArgument(watchDir != null, "Cannot watch parent directory for '%s'", filePath);
-        watchRegisterKey = registry.register(watchDir, DirectoryWatcher.fileWatcher(filePath, bytes -> {
+        watchRegisterKey = registry.register(watchDir, DirectoryWatcher.fileWatcher(normalizedPath, bytes -> {
             setEndpoints(loadEndpoints(bytes, endpointKeyPrefix, defaultPort));
         }));
     }

@@ -24,6 +24,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -38,9 +39,10 @@ public interface DirectoryWatcher {
      * Invoked when a watch event occurs on the registered directory or file.
      *
      * @param dirPath the directory path being watched
+     * @param filePath the file path that triggered the watch if exists
      * @param event the {@link WatchEvent} that occurred
      */
-    void onEvent(Path dirPath, WatchEvent<?> event);
+    void onEvent(Path dirPath, @Nullable Path filePath, WatchEvent<?> event);
 
     /**
      * Creates a caching {@link DirectoryWatcher} that reads the file content when the watched directory
@@ -57,6 +59,7 @@ public interface DirectoryWatcher {
                                         Executor executor) {
         requireNonNull(filePath, "filePath");
         requireNonNull(callback, "callback");
+        requireNonNull(executor, "executor");
         return new FileWatcher(filePath, callback, executor);
     }
 

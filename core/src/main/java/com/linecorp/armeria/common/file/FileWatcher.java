@@ -48,7 +48,7 @@ final class FileWatcher implements DirectoryWatcher {
     }
 
     @Override
-    public void onEvent(Path dirPath, WatchEvent<?> event) {
+    public void onEvent(Path dirPath, @Nullable Path filePath, WatchEvent<?> event) {
         executor.execute(() -> onEvent0(dirPath, event));
     }
 

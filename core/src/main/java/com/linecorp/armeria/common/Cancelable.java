@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A handle that allows an ongoing operation (e.g. a subscription, watch, or scheduled task)
  * to be canceled.
@@ -24,6 +26,7 @@ package com.linecorp.armeria.common;
  * where possible. Implementations should be idempotent, meaning calling {@link #cancel()} multiple
  * times has no additional effect.
  */
+@UnstableApi
 @FunctionalInterface
 public interface Cancelable {
 

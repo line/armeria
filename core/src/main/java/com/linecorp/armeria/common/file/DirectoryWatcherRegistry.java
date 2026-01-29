@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -82,7 +83,9 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
                 final java.nio.file.WatchKey key = watchKeys.take();
                 final Path dirPath = (Path) key.watchable();
                 for (WatchEvent<?> event : key.pollEvents()) {
-                    if (event.kind().type() == Path.class) {
+                    if (event instanceof InitialWatchEvent) {
+                        ((InitialWatchEvent) event).notifyWatcher();
+                    } else if (event.kind().type() == Path.class) {
                         runCallbacks(dirPath, event);
                     } else if (event.kind().equals(OVERFLOW)) {
                         runCallbacks(dirPath, event);
@@ -133,7 +136,7 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
             }
             currWatchEventMap.computeIfAbsent(path, ignored -> new WatchCallbacks(watchKey, path))
                              .register(key);
-            watchKeys.add(new InitialWatchKey(path));
+            watchKeys.add(new InitialWatchKey(path, key));
         } finally {
             lock.unlock();
         }
@@ -190,17 +193,27 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
         } finally {
             lock.unlock();
         }
+        final Path filePath = maybeFilePath(dirPath, event);
         for (DirectoryWatcher callback : copiedCallbacks.values()) {
-            runSafely(dirPath, event, callback);
+            runSafely(dirPath, filePath, event, callback);
         }
     }
 
-    private static void runSafely(Path dirPath, WatchEvent<?> event, DirectoryWatcher callback) {
+    private static void runSafely(Path dirPath, @Nullable Path filePath,
+                                  WatchEvent<?> event, DirectoryWatcher callback) {
         try {
-            callback.onEvent(dirPath, event);
+            callback.onEvent(dirPath, filePath, event);
         } catch (Exception e) {
             logger.warn("Unexpected error from listener for: {} ", dirPath, e);
         }
+    }
+
+    @Nullable
+    private static Path maybeFilePath(Path dirPath, WatchEvent<?> event) {
+        if (event.context() instanceof Path) {
+            return dirPath.resolve((Path) event.context());
+        }
+        return null;
     }
 
     @Override
@@ -261,9 +274,15 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
     private static final class InitialWatchEvent implements WatchEvent<Path> {
 
         private final Path dirPath;
+        private final WatchKey watchKey;
 
-        InitialWatchEvent(Path dirPath) {
+        InitialWatchEvent(Path dirPath, WatchKey watchKey) {
             this.dirPath = dirPath;
+            this.watchKey = watchKey;
+        }
+
+        void notifyWatcher() {
+            runSafely(dirPath, null, this, watchKey.callback());
         }
 
         @Override
@@ -286,8 +305,8 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
 
         private final InitialWatchEvent initialWatchEvent;
 
-        InitialWatchKey(Path dirPath) {
-            initialWatchEvent = new InitialWatchEvent(dirPath);
+        InitialWatchKey(Path dirPath, WatchKey watchKey) {
+            initialWatchEvent = new InitialWatchEvent(dirPath, watchKey);
         }
 
         @Override

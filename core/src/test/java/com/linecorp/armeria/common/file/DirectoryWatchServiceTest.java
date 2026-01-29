@@ -24,15 +24,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.Cancelable;
@@ -43,16 +38,6 @@ class DirectoryWatchServiceTest {
     @RegisterExtension
     static TemporaryFolderExtension folder = new TemporaryFolderExtension();
 
-    @BeforeAll
-    static void before() {
-        Awaitility.setDefaultTimeout(1, TimeUnit.MINUTES);
-    }
-
-    @AfterAll
-    static void after() {
-        Awaitility.setDefaultTimeout(10, TimeUnit.SECONDS);
-    }
-
     @Test
     void emptyGroupStopsBackgroundThread() throws Exception {
 
@@ -60,8 +45,8 @@ class DirectoryWatchServiceTest {
         final Path file2 = folder.newFile("temp-file2.properties");
 
         try (DirectoryWatchService watchService = new DirectoryWatchService()) {
-            final Cancelable key1 = watchService.register(file.getParent(), (path, event) -> {});
-            final Cancelable key2 = watchService.register(file2.getParent(), (path, event) -> {});
+            final Cancelable key1 = watchService.register(file.getParent(), (path, filePath, event) -> {});
+            final Cancelable key2 = watchService.register(file2.getParent(), (path, filePath, event) -> {});
 
             assertThat(watchService.hasWatchers()).isTrue();
 
@@ -81,7 +66,7 @@ class DirectoryWatchServiceTest {
         final Path file = folder.newFile("temp-file.properties");
 
         final DirectoryWatchService watchService = new DirectoryWatchService();
-        watchService.register(file.getParent(), (path, event) -> {});
+        watchService.register(file.getParent(), (path, filePath, event) -> {});
 
         assertThat(watchService.hasWatchers()).isTrue();
 
@@ -91,16 +76,37 @@ class DirectoryWatchServiceTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 DirectoryWatchService doesn't work reliably on older Java.
+    void filePathVerification() throws Exception {
+
+        final Path file = folder.newFile("temp-file1.properties");
+        final DirectoryWatchService watchService = new DirectoryWatchService();
+        final AtomicReference<Path> filePathRef = new AtomicReference<>();
+
+        final Cancelable key = watchService.register(file.getParent(), (path, filePath, event) -> {
+            System.out.println(event);
+            if (filePath != null) {
+                filePathRef.set(filePath);
+            }
+        });
+
+        try (PrintWriter printWriter = new PrintWriter(file.toFile())) {
+            printWriter.print(1);
+            printWriter.flush();
+        }
+        await().untilAsserted(() -> assertThat(filePathRef.get()).isEqualTo(file));
+        key.cancel();
+        watchService.close();
+    }
+
+    @Test
     void runnableWithExceptionContinuesRun() throws Exception {
 
         final Path file = folder.newFile("temp-file.properties");
         final DirectoryWatchService watchService = new DirectoryWatchService();
 
         final AtomicInteger val = new AtomicInteger(0);
-        final Cancelable key = watchService.register(file.getParent(), (path, event) -> {
-            try {
-                final BufferedReader bufferedReader = new BufferedReader(new FileReader(file.toFile()));
+        final Cancelable key = watchService.register(file.getParent(), (path, filePath, event) -> {
+            try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file.toFile()))) {
                 val.set(Integer.valueOf(bufferedReader.readLine()));
             } catch (IOException e) {
                 // do nothing
@@ -108,17 +114,17 @@ class DirectoryWatchServiceTest {
             throw new RuntimeException();
         });
 
-        PrintWriter printWriter = new PrintWriter(file.toFile());
-        printWriter.print(1);
-        printWriter.close();
+        try (PrintWriter printWriter = new PrintWriter(file.toFile())) {
+            printWriter.print(1);
+        }
 
         await().untilAsserted(() -> assertThat(val.get()).isEqualTo(1));
 
         assertThat(watchService.hasWatchers()).isTrue();
 
-        printWriter = new PrintWriter(file.toFile());
-        printWriter.print(2);
-        printWriter.close();
+        try (PrintWriter printWriter = new PrintWriter(file.toFile())) {
+            printWriter.print(2);
+        }
 
         await().untilAsserted(() -> assertThat(val.get()).isEqualTo(2));
 
