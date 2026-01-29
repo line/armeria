@@ -61,7 +61,7 @@ import io.micrometer.core.instrument.Timer;
  *   .builder()
  *   .decorator(AthenzClient.builder(ztsBaseClient)
  *                          .domainName("my-domain")
- *                          .header(tokenHeader)
+ *                          .tokenHeader(tokenHeader)
  *                          .newDecorator())
  *   ...
  *   .build();

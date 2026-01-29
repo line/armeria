@@ -81,7 +81,7 @@ class AthenzClientTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(customHeader)
+                                                    .tokenHeader(customHeader)
                                                     .newDecorator())
                              .build()
                              .blocking();
@@ -101,7 +101,7 @@ class AthenzClientTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(TokenType.ACCESS_TOKEN)
+                                                    .tokenHeader(TokenType.ACCESS_TOKEN)
                                                     .newDecorator())
                              .build()
                              .blocking();

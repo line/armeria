@@ -69,7 +69,7 @@ import io.netty.util.AsciiString;
  * // Usage example:
  * AthenzClient.builder(ztsBaseClient)
  *             .domainName("my-domain")
- *             .header(new CustomAthenzHeader())
+ *             .tokenHeader(new CustomAthenzHeader())
  *             .newDecorator();
  * }</pre>
  *

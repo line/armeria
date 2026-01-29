@@ -148,7 +148,7 @@ class AthenzAnnotatedServiceTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(customHeader)
+                                                    .tokenHeader(customHeader)
                                                     .newDecorator())
                              .build()
                              .blocking();

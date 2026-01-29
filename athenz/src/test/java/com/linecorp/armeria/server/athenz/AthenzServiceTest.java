@@ -66,9 +66,9 @@ class AthenzServiceTest {
                                                      .action("read")
                                                      .resource("data")
                                                      .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
-                                                     .header(new CustomHeader("X-Company-Token"))
-                                                     .header(new CustomHeader("X-Alt-Token"))
-                                                     .header(TokenType.ACCESS_TOKEN)
+                                                     .tokenHeader(new CustomHeader("X-Company-Token"))
+                                                     .tokenHeader(new CustomHeader("X-Alt-Token"))
+                                                     .tokenHeader(TokenType.ACCESS_TOKEN)
                                                      .newDecorator());
 
             // Test service with header varargs
@@ -77,9 +77,9 @@ class AthenzServiceTest {
                                                       .action("read")
                                                       .resource("data")
                                                       .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
-                                                      .header(new CustomHeader("X-Token-1"),
-                                                              new CustomHeader("X-Token-2"),
-                                                              TokenType.ATHENZ_ROLE_TOKEN)
+                                                      .tokenHeader(new CustomHeader("X-Token-1"),
+                                                                   new CustomHeader("X-Token-2"),
+                                                                   TokenType.ATHENZ_ROLE_TOKEN)
                                                       .newDecorator());
 
             // Test service with header Iterable
@@ -88,7 +88,7 @@ class AthenzServiceTest {
                                                        .action("read")
                                                        .resource("data")
                                                        .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
-                                                       .header(Arrays.asList(
+                                                       .tokenHeader(Arrays.asList(
                                                                new CustomHeader("X-List-Token-1"),
                                                                new CustomHeader("X-List-Token-2"),
                                                                TokenType.YAHOO_ROLE_TOKEN))
@@ -105,7 +105,7 @@ class AthenzServiceTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(customHeader)
+                                                    .tokenHeader(customHeader)
                                                     .newDecorator())
                              .build()
                              .blocking();
@@ -126,7 +126,7 @@ class AthenzServiceTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(altHeader)
+                                                    .tokenHeader(altHeader)
                                                     .newDecorator())
                              .build()
                              .blocking();
@@ -146,7 +146,7 @@ class AthenzServiceTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(TokenType.ACCESS_TOKEN)
+                                                    .tokenHeader(TokenType.ACCESS_TOKEN)
                                                     .newDecorator())
                              .build()
                              .blocking();
@@ -166,7 +166,7 @@ class AthenzServiceTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(header1)
+                                                    .tokenHeader(header1)
                                                     .newDecorator())
                              .build()
                              .blocking();
@@ -186,7 +186,7 @@ class AthenzServiceTest {
                              .decorator(AthenzClient.builder(ztsBaseClient)
                                                     .domainName(TEST_DOMAIN_NAME)
                                                     .roleNames(USER_ROLE)
-                                                    .header(header2)
+                                                    .tokenHeader(header2)
                                                     .newDecorator())
                              .build()
                              .blocking();

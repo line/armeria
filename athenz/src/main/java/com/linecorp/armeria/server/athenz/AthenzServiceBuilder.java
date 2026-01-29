@@ -133,26 +133,26 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      * Sets the {@link TokenType}s to be used for access checks.
      * If not set, all token types are checked by default.
      *
-     * @deprecated Use {@link #header(AthenzTokenHeader...)} instead.
+     * @deprecated Use {@link #tokenHeader(AthenzTokenHeader...)} instead.
      */
     @Deprecated
     public AthenzServiceBuilder tokenType(TokenType... tokenTypes) {
         requireNonNull(tokenTypes, "tokenTypes");
         checkArgument(tokenTypes.length > 0, "tokenTypes must not be empty");
-        return header(tokenTypes);
+        return tokenHeader(tokenTypes);
     }
 
     /**
      * Sets the {@link TokenType}s to be used for access checks.
      * If not set, all token types are checked by default.
      *
-     * @deprecated Use {@link #header(Iterable)} instead.
+     * @deprecated Use {@link #tokenHeader(Iterable)} instead.
      */
     @Deprecated
     public AthenzServiceBuilder tokenType(Iterable<TokenType> tokenTypes) {
         requireNonNull(tokenTypes, "tokenTypes");
         checkArgument(!Iterables.isEmpty(tokenTypes), "tokenTypes must not be empty");
-        return header(tokenTypes);
+        return tokenHeader(tokenTypes);
     }
 
     /**
@@ -165,7 +165,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      * @param tokenHeaders the token header configurations
      * @return this builder
      */
-    public AthenzServiceBuilder header(AthenzTokenHeader... tokenHeaders) {
+    public AthenzServiceBuilder tokenHeader(AthenzTokenHeader... tokenHeaders) {
         requireNonNull(tokenHeaders, "tokenHeaders");
         checkArgument(tokenHeaders.length > 0, "tokenHeaders must not be empty");
         this.tokenHeaders = ImmutableList.copyOf(tokenHeaders);
@@ -182,7 +182,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
      * @param tokenHeaders the token header configurations
      * @return this builder
      */
-    public AthenzServiceBuilder header(Iterable<? extends AthenzTokenHeader> tokenHeaders) {
+    public AthenzServiceBuilder tokenHeader(Iterable<? extends AthenzTokenHeader> tokenHeaders) {
         requireNonNull(tokenHeaders, "tokenHeaders");
         checkArgument(!Iterables.isEmpty(tokenHeaders), "tokenHeaders must not be empty");
         this.tokenHeaders = ImmutableList.copyOf(tokenHeaders);

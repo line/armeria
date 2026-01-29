@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
  * AthenzClient.builder(ztsBaseClient)
  *             .domainName("my-domain")
  *             .roleNames("my-role")
- *             .header(TokenType.ACCESS_TOKEN)
+ *             .tokenHeader(TokenType.ACCESS_TOKEN)
  *             .refreshBefore(Duration.ofMinutes(5))
  *             .newDecorator();
  * }</pre>
@@ -99,15 +99,15 @@ public final class AthenzClientBuilder {
      * Sets the type of Athenz token to obtain.
      * If not set, the default is {@link TokenType#ACCESS_TOKEN}.
      *
-     * @deprecated Use {@link #header(AthenzTokenHeader)} instead.
+     * @deprecated Use {@link #tokenHeader(AthenzTokenHeader)} instead.
      */
     @Deprecated
     public AthenzClientBuilder tokenType(TokenType tokenType) {
-        return header(tokenType);
+        return tokenHeader(tokenType);
     }
 
     /**
-     * Sets the header to use for the Athenz token.
+     * Sets the HTTP header to use for the Athenz token.
      * If not set, the default is {@link TokenType#ACCESS_TOKEN}.
      *
      * <p>This method allows you to specify either a predefined {@link TokenType} or a custom
@@ -116,7 +116,7 @@ public final class AthenzClientBuilder {
      * @param tokenHeader the token header configuration
      * @return this builder
      */
-    public AthenzClientBuilder header(AthenzTokenHeader tokenHeader) {
+    public AthenzClientBuilder tokenHeader(AthenzTokenHeader tokenHeader) {
         this.tokenHeader = requireNonNull(tokenHeader, "tokenHeader");
         return this;
     }
