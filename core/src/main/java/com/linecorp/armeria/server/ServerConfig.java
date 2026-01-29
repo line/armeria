@@ -118,6 +118,15 @@ public interface ServerConfig {
     boolean shutdownWorkerGroupOnStop();
 
     /**
+     * Returns the factory that creates boss {@link EventLoopGroup}s for accepting incoming connections.
+     * Default implementation is defined in {@link DefaultServerConfig#DEFAULT_BOSS_GROUP_FACTORY}.
+     *
+     * @see ServerBuilder#bossGroupFactory(Function)
+     */
+    @UnstableApi
+    Function<? super String, ? extends EventLoopGroup> bossGroupFactory();
+
+    /**
      * Returns the {@link ChannelOption}s and their values of {@link Server}'s server sockets.
      */
     Map<ChannelOption<?>, ?> channelOptions();

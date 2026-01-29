@@ -128,6 +128,8 @@ public final class ServiceSpecification {
     private final Set<StructInfo> structs;
     private final Set<ExceptionInfo> exceptions;
     private final List<HttpHeaders> exampleHeaders;
+    private Map<String, String> docServiceExtraInfo = new HashMap<>();
+
     @Nullable
     private final Route docServiceRoute;
 
@@ -248,5 +250,21 @@ public final class ServiceSpecification {
     @Nullable
     public Route docServiceRoute() {
         return docServiceRoute;
+    }
+
+    /**
+     * Returns the extra info in this specification.
+     */
+    @JsonProperty
+    public Map<String, String> docServiceExtraInfo() {
+        return docServiceExtraInfo;
+    }
+
+    /**
+     * Sets the additional information for the document service.
+     * @param docServiceExtraInfo a map containing the extra information for the document service.
+     */
+    public void setDocServiceExtraInfo(Map<String, String> docServiceExtraInfo) {
+        this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo,"docServiceExtraInfo");
     }
 }

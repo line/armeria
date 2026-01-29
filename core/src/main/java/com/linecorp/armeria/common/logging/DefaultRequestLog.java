@@ -774,6 +774,34 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void requestCause(Throwable cause) {
+        if (isAvailable(RequestLogProperty.REQUEST_CAUSE)) {
+            return;
+        }
+
+        requireNonNull(cause, "cause");
+        setRequestCause(cause);
+        updateFlags(RequestLogProperty.REQUEST_CAUSE);
+    }
+
+    private void setRequestCause(@Nullable Throwable requestCause) {
+        if (this.requestCause != null) {
+            return;
+        }
+        if (requestCause instanceof ResponseCompleteException) {
+            return;
+        }
+        if (requestCause instanceof HttpStatusException ||
+           requestCause instanceof HttpResponseException) {
+            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
+            requestCause = requestCause.getCause();
+        }
+        if (requestCause != null) {
+            this.requestCause = requestCause;
+        }
+    }
+
+    @Override
     public void session(@Nullable Channel channel, SessionProtocol sessionProtocol,
                         @Nullable ClientConnectionTimings connectionTimings) {
         if (isAvailable(SESSION)) {
@@ -1157,12 +1185,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.requestEndTimeNanos = requestEndTimeNanos;
 
-        if (requestCause instanceof HttpStatusException || requestCause instanceof HttpResponseException) {
-            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
-            this.requestCause = requestCause.getCause();
-        } else if (!(requestCause instanceof ResponseCompleteException)) {
-            this.requestCause = requestCause;
-        }
+        setRequestCause(requestCause);
         updateFlags(flags);
     }
 

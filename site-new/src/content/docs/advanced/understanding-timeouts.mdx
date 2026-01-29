@@ -1,0 +1,76 @@
+# Understanding timeout and cancellation origins
+
+When working with Armeria's timeout mechanisms, it's important to understand that timeouts and cancellations
+can originate from either the client or server side, and these signals propagate between them. This page
+explains how timeout and cancellation signals flow between clients and servers.
+
+## Timeout origins
+
+### Client perspective
+
+When a client receives a timeout-related error, the timeout may not have originated on the client side.
+A [ResponseTimeoutException](type) on the client can occur in two scenarios:
+
+1. **Client-side timeout**: The client's response timeout expired before receiving a complete response.
+2. **Server-side timeout**: The server's request timeout expired, and the server sent a `503 Service Unavailable`
+   response (or closed the connection), which the client then receives as an error.
+
+By default, Armeria configures the client response timeout (15 seconds) to be slightly greater than the
+server request timeout (10 seconds). This ensures that when a server-side timeout occurs, the client
+receives a proper `503 Service Unavailable` response rather than experiencing its own timeout first.
+
+### Server perspective
+
+When a server experiences a request cancellation, the cancellation may not have originated on the server side.
+A [RequestTimeoutException](type) or request cancellation on the server can occur
+in multiple scenarios:
+
+1. **Server-side timeout**: The server's request timeout expired before the response was fully sent.
+   This results in a `503 Service Unavailable` response being sent to the client.
+2. **Client-side cancellation**: The client cancelled the request (e.g., due to its own response timeout,
+   user action, or connection closure), and this cancellation propagated back to the server.
+
+## Cancellation propagation
+
+### Client-to-server cancellation
+
+When a client cancels a request (due to timeout, user action, or any other reason), the cancellation is
+propagated to the server. This applies to **both unary (request-response) and streaming calls** as long as
+the underlying connection/stream is still open:
+
+- **HTTP/2**: The client sends an `RST_STREAM` frame with the `CANCEL` error code to notify the server.
+  The server receives this as a [ClosedStreamException](type).
+- **HTTP/1.1**: The client closes the connection, which the server detects as a closed session,
+  resulting in a [ClosedSessionException](type).
+
+This propagation allows the server to stop processing the request early and free up resources. For example,
+if a client times out while waiting for a slow database query, the server can detect the cancellation and
+abort the query instead of completing unnecessary work.
+
+### Server-to-client timeout notification
+
+When a server-side timeout occurs, the server sends a `503 Service Unavailable` response to the client
+(if the response headers haven't been sent yet) or closes the connection/stream. The client then receives
+this as an error, which may appear as a [ResponseTimeoutException](type) or
+connection-related exception depending on the timing.
+
+## Debugging timeout issues
+
+Due to Armeria's highly asynchronous nature, it can be challenging to determine whether a timeout or
+cancellation was initiated by the client or server side.
+
+:::tip
+
+When debugging timeout issues, set a breakpoint in
+`com.linecorp.armeria.internal.common.DefaultCancellationScheduler#invokeTask` to determine where the
+cancellation was initiated. This is often the most reliable way to trace the origin of a timeout or
+cancellation.
+
+:::
+
+## Related documentation
+
+- [Overriding client timeouts](/docs/client/timeouts) - Configure client-side timeout settings
+- [Configuring server timeouts](/docs/server/timeouts) - Configure server-side timeout settings
+- [Timeout control](/docs/advanced/request-context#timeout-control) - Dynamically adjust timeouts using
+  [TimeoutMode](type)

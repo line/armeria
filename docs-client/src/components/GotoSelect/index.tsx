@@ -122,7 +122,7 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   );
 
   return (
-    <div className={classes.root}>
+    <div className={classes.root} data-js-target="goto-app-bar">
       <Autocomplete
         autoHighlight
         blurOnSelect
