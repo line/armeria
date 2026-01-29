@@ -83,6 +83,9 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+
+        // EmptyContentDecodedHttpRequest does not have any additional data to read.
+        ctx.logBuilder().requestEnd();
     }
 
     @Nullable
