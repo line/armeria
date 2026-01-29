@@ -26,9 +26,19 @@ import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.cors.CorsService;
 
 /**
- * wraps ServerErrorHandler for adding CORS headers to error responses.
+ * A {@link DecoratingErrorHandlerFunction} for adding CORS headers to error responses.
  */
-final class CorsServerErrorHandler implements DecoratingServerErrorHandlerFunction {
+final class CorsErrorHandler implements DecoratingErrorHandlerFunction {
+
+    private static void maybeSetCorsHeaders(ServiceRequestContext ctx) {
+        final CorsService corsService = ctx.findService(CorsService.class);
+        if (shouldSetCorsHeaders(corsService, ctx)) {
+            assert corsService != null;
+            ctx.mutateAdditionalResponseHeaders(builder -> {
+                CorsHeaderUtil.setCorsResponseHeaders(ctx, ctx.request(), builder, corsService.config());
+            });
+        }
+    }
 
     /**
      * Sets CORS headers for <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests">
@@ -60,13 +70,15 @@ final class CorsServerErrorHandler implements DecoratingServerErrorHandlerFuncti
     @Override
     public HttpResponse onServiceException(ServerErrorHandler delegate,
                                            ServiceRequestContext ctx, Throwable cause) {
-        final CorsService corsService = ctx.findService(CorsService.class);
-        if (shouldSetCorsHeaders(corsService, ctx)) {
-            assert corsService != null;
-            ctx.mutateAdditionalResponseHeaders(builder -> {
-                CorsHeaderUtil.setCorsResponseHeaders(ctx, ctx.request(), builder, corsService.config());
-            });
-        }
+        maybeSetCorsHeaders(ctx);
+        return delegate.onServiceException(ctx, cause);
+    }
+
+    @Nullable
+    @Override
+    public HttpResponse onServiceException(ServiceErrorHandler delegate,
+                                           ServiceRequestContext ctx, Throwable cause) {
+        maybeSetCorsHeaders(ctx);
         return delegate.onServiceException(ctx, cause);
     }
 }
