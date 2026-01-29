@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * An exception that indicates an xDS resource does not exist.
  * This can occur when a timeout expires while waiting for a resource,
  * or when the xDS control plane explicitly signals that a resource is missing.
  */
+@UnstableApi
 public final class MissingXdsResourceException extends XdsResourceException {
 
     private static final long serialVersionUID = -3769529407892638288L;
