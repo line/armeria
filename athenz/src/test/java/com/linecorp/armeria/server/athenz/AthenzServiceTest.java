@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.athenz;
 
+import static com.linecorp.armeria.server.athenz.AthenzDocker.FOO_SERVICE;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_SERVICE;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
@@ -34,7 +35,9 @@ import com.linecorp.armeria.client.athenz.AthenzClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -63,30 +66,19 @@ class AthenzServiceTest {
             // Test service with multiple custom headers
             sb.service("/api/custom", (ctx, req) -> HttpResponse.of("OK"));
             sb.decorator("/api/custom", AthenzService.builder(ztsBaseClient)
-                                                     .action("read")
-                                                     .resource("data")
+                                                     .action("obtain")
+                                                     .resource("files")
                                                      .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
-                                                     .tokenHeader(new CustomHeader("X-Company-Token"))
-                                                     .tokenHeader(new CustomHeader("X-Alt-Token"))
-                                                     .tokenHeader(TokenType.ACCESS_TOKEN)
+                                                     .tokenHeader(new CustomHeader("X-Company-Token"),
+                                                                  new CustomHeader("X-Alt-Token"),
+                                                                  TokenType.ACCESS_TOKEN)
                                                      .newDecorator());
-
-            // Test service with header varargs
-            sb.service("/api/varargs", (ctx, req) -> HttpResponse.of("OK"));
-            sb.decorator("/api/varargs", AthenzService.builder(ztsBaseClient)
-                                                      .action("read")
-                                                      .resource("data")
-                                                      .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
-                                                      .tokenHeader(new CustomHeader("X-Token-1"),
-                                                                   new CustomHeader("X-Token-2"),
-                                                                   TokenType.ATHENZ_ROLE_TOKEN)
-                                                      .newDecorator());
 
             // Test service with header Iterable
             sb.service("/api/iterable", (ctx, req) -> HttpResponse.of("OK"));
             sb.decorator("/api/iterable", AthenzService.builder(ztsBaseClient)
-                                                       .action("read")
-                                                       .resource("data")
+                                                       .action("obtain")
+                                                       .resource("files")
                                                        .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                        .tokenHeader(Arrays.asList(
                                                                new CustomHeader("X-List-Token-1"),
@@ -98,113 +90,73 @@ class AthenzServiceTest {
 
     @Test
     void customHeaderIsAcceptedByServer() {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("foo-service")) {
-            final CustomHeader customHeader = new CustomHeader("X-Company-Token");
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.builder(ztsBaseClient)
-                                                    .domainName(TEST_DOMAIN_NAME)
-                                                    .roleNames(USER_ROLE)
-                                                    .tokenHeader(customHeader)
-                                                    .newDecorator())
-                             .build()
-                             .blocking();
-
-            final AggregatedHttpResponse response = client.get("/api/custom");
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("OK");
-        }
-    }
-
-    @Test
-    void multipleHeadersAreCheckedInOrder() {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("foo-service")) {
-            // Send token via second header (X-Alt-Token)
-            final CustomHeader altHeader = new CustomHeader("X-Alt-Token");
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.builder(ztsBaseClient)
-                                                    .domainName(TEST_DOMAIN_NAME)
-                                                    .roleNames(USER_ROLE)
-                                                    .tokenHeader(altHeader)
-                                                    .newDecorator())
-                             .build()
-                             .blocking();
-
-            final AggregatedHttpResponse response = client.get("/api/custom");
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("OK");
-        }
+        final AggregatedHttpResponse response =
+                get("/api/custom", new CustomHeader("X-Company-Token"), FOO_SERVICE);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("OK");
     }
 
     @Test
     void accessTokenHeaderIsAcceptedInMultiHeaderConfig() {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("foo-service")) {
-            // Send token via Authorization header (ACCESS_TOKEN)
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.builder(ztsBaseClient)
-                                                    .domainName(TEST_DOMAIN_NAME)
-                                                    .roleNames(USER_ROLE)
-                                                    .tokenHeader(TokenType.ACCESS_TOKEN)
-                                                    .newDecorator())
-                             .build()
-                             .blocking();
-
-            final AggregatedHttpResponse response = client.get("/api/custom");
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("OK");
-        }
-    }
-
-    @Test
-    void varargsHeadersAreAccepted() {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("foo-service")) {
-            final CustomHeader header1 = new CustomHeader("X-Token-1");
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.builder(ztsBaseClient)
-                                                    .domainName(TEST_DOMAIN_NAME)
-                                                    .roleNames(USER_ROLE)
-                                                    .tokenHeader(header1)
-                                                    .newDecorator())
-                             .build()
-                             .blocking();
-
-            final AggregatedHttpResponse response = client.get("/api/varargs");
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("OK");
-        }
+        // Send token via Authorization header (ACCESS_TOKEN)
+        final AggregatedHttpResponse response =
+                get("/api/custom", TokenType.ACCESS_TOKEN, FOO_SERVICE);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("OK");
     }
 
     @Test
     void iterableHeadersAreAccepted() {
-        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("foo-service")) {
-            final CustomHeader header2 = new CustomHeader("X-List-Token-2");
-            final BlockingWebClient client =
-                    WebClient.builder(server.httpUri())
-                             .decorator(AthenzClient.builder(ztsBaseClient)
-                                                    .domainName(TEST_DOMAIN_NAME)
-                                                    .roleNames(USER_ROLE)
-                                                    .tokenHeader(header2)
-                                                    .newDecorator())
-                             .build()
-                             .blocking();
+        final AggregatedHttpResponse response =
+                get("/api/iterable", new CustomHeader("X-List-Token-2"), FOO_SERVICE);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+    }
 
-            final AggregatedHttpResponse response = client.get("/api/iterable");
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("OK");
-        }
+    @Test
+    void unauthorizedWithUnknownHeader() {
+        final AggregatedHttpResponse response =
+                get("/api/custom", new CustomHeader("X-Unknown-Token"), FOO_SERVICE);
+        assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void unauthorizedWithInvalidTokenValue() {
+        final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                  .build()
+                                                  .blocking();
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.builder()
+                                             .method(HttpMethod.GET)
+                                             .path("/api/custom")
+                                             .add("X-Company-Token", "invalid-token")
+                                             .build());
+        assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
     void unauthorizedWhenNoValidHeaderPresent() {
         final BlockingWebClient client = WebClient.builder(server.httpUri())
-                                                   .build()
-                                                   .blocking();
+                                                  .build()
+                                                  .blocking();
 
         final AggregatedHttpResponse response = client.get("/api/custom");
         assertThat(response.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    private AggregatedHttpResponse get(String path, AthenzTokenHeader header, String serviceName) {
+        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient(serviceName)) {
+            final BlockingWebClient client =
+                    WebClient.builder(server.httpUri())
+                             .decorator(AthenzClient.builder(ztsBaseClient)
+                                                    .domainName(TEST_DOMAIN_NAME)
+                                                    .roleNames(USER_ROLE)
+                                                    .tokenHeader(header)
+                                                    .newDecorator())
+                             .build()
+                             .blocking();
+            return client.get(path);
+        }
     }
 
     private static final class CustomHeader implements AthenzTokenHeader {
