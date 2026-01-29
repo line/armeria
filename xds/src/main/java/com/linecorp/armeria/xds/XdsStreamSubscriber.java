@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.SubscriberStorage.ResourceCache;
 
-import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -101,14 +100,14 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
         }
     }
 
-    void onError(String resourceName, Status status) {
+    void onError(String resourceName, Throwable t) {
         maybeCancelAbsentTimer();
         for (ResourceWatcher<?> watcher: resourceWatchers) {
             try {
-                watcher.onError(type, resourceName, status);
+                watcher.onError(type, resourceName, t);
             } catch (Exception e) {
                 logger.warn("Unexpected exception while invoking {}.onError() with ({}, {}) for ({}).",
-                            getClass().getSimpleName(), type, resource, status, e);
+                            getClass().getSimpleName(), type, resource, t, e);
             }
         }
     }

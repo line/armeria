@@ -35,8 +35,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -139,6 +137,7 @@ class PropertiesEndpointGroupTest {
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(
                 resourcePath, "serverA.hosts").defaultPort(80).build();
+        await().untilAsserted(() -> assertThat(endpointGroupA.whenReady()).isDone());
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                          Endpoint.parse("127.0.0.1:8081"),
                                                                          Endpoint.parse("127.0.0.1:80"));
@@ -152,6 +151,7 @@ class PropertiesEndpointGroupTest {
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 resourcePath, "serverA.hosts");
+        await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                         Endpoint.parse("127.0.0.1:8081"),
                                                                         Endpoint.parse("127.0.0.1"));
@@ -187,8 +187,6 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17)
-    // NIO.2 WatchService doesn't work reliably on older Java.
     void propertiesFileUpdatesCorrectly() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 
@@ -228,8 +226,6 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17)
-    // NIO.2 WatchService doesn't work reliably on older Java.
     void propertiesFileRestart() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 
@@ -260,8 +256,6 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17)
-    // NIO.2 WatchService doesn't work reliably on older Java.
     void endpointChangePropagatesToListeners() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 

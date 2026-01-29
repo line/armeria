@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.file.WatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
@@ -57,18 +58,19 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
+        final WatchService watchService = new WatchService();
         final BootstrapClusters bootstrapClusters =
-                new BootstrapClusters(bootstrap, eventLoop, clusterManager,
-                                      defaultWatcher, meterIdPrefix, meterRegistry);
+                new BootstrapClusters(bootstrap, clusterManager, defaultWatcher);
+        final BootstrapSecrets bootstrapSecrets = new BootstrapSecrets(bootstrap);
+
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
                 bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
                 configSourceMapper, meterRegistry, meterIdPrefix);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
-                meterRegistry, meterIdPrefix);
-
-        bootstrapClusters.initializeSecondary(subscriptionContext);
+                meterRegistry, meterIdPrefix, watchService, bootstrapSecrets);
+        bootstrapClusters.initializeStaticClusters(subscriptionContext);
         listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);
     }
 

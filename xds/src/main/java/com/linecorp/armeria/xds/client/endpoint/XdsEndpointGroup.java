@@ -119,8 +119,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
     }
 
     @Override
-    public void snapshotUpdated(ListenerSnapshot listenerSnapshot) {
-        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable Throwable t) {
+        if (snapshot == null) {
+            return;
+        }
+        final RouteSnapshot routeSnapshot = snapshot.routeSnapshot();
         if (routeSnapshot == null) {
             return;
         }
@@ -141,17 +144,10 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
             return;
         }
 
-        stateLock.lock();
-        try {
-            final XdsLoadBalancer prevLoadBalancer = this.loadBalancer;
-            if (prevLoadBalancer != null) {
-                prevLoadBalancer.removeEndpointsListener(this);
-            }
-            this.loadBalancer = loadBalancer;
-            loadBalancer.addEndpointsListener(this);
-        } finally {
-            stateLock.unlock();
-        }
+        this.loadBalancer = loadBalancer;
+        endpoints = loadBalancer.allEndpoints();
+        notifyListeners(endpoints);
+        maybeCompleteInitialEndpointsFuture(endpoints);
     }
 
     private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {

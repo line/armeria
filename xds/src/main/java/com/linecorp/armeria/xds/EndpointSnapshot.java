@@ -28,6 +28,9 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  */
 @UnstableApi
 public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
+
+    static final EndpointSnapshot EMPTY = new EndpointSnapshot(new EndpointXdsResource());
+
     private final EndpointXdsResource endpoint;
 
     EndpointSnapshot(EndpointXdsResource endpoint) {

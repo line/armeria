@@ -40,8 +40,11 @@ final class RouteConfigSelector extends AbstractAsyncSelector<RouteConfig>
     }
 
     @Override
-    public void snapshotUpdated(ListenerSnapshot newSnapshot) {
-        routeConfig = new RouteConfig(newSnapshot);
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable Throwable t) {
+        if (snapshot == null) {
+            return;
+        }
+        routeConfig = new RouteConfig(snapshot);
         refresh();
     }
 }
