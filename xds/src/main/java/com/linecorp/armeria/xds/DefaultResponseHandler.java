@@ -76,7 +76,7 @@ final class DefaultResponseHandler implements XdsResponseHandler {
 
             final Throwable errorCause = holder.invalidResources().get(resourceName);
             if (errorCause != null) {
-                subscriber.onError(resourceName, Status.UNAVAILABLE.withCause(errorCause));
+                subscriber.onError(resourceName, Status.UNAVAILABLE.withCause(errorCause).asException());
                 continue;
             }
 

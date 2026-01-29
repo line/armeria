@@ -29,7 +29,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.grpc.Status;
 
 abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>> implements ResourceNode<T> {
 
@@ -91,7 +90,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     final void addWatcher(SnapshotWatcher<? super S> watcher) {
         watchers.add(watcher);
         if (snapshot != null) {
-            watcher.snapshotUpdated(snapshot);
+            watcher.onUpdate(snapshot, null);
         }
     }
 
@@ -104,15 +103,16 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     @Override
-    public final void onError(XdsType type, String resourceName, Status error) {
-        notifyOnError(type, resourceName, error);
+    public final void onError(XdsType type, String resourceName, Throwable error) {
+        notifyOnError(error);
         meterBinder.onError(type, resourceName, error);
     }
 
-    final void notifyOnError(XdsType type, String resourceName, Status error) {
+    final void notifyOnError(Throwable error) {
+        final XdsResourceException exception = XdsResourceException.maybeWrap(type(), name(), error);
         for (SnapshotWatcher<? super S> watcher : watchers) {
             try {
-                watcher.onError(type, resourceName, error);
+                watcher.onUpdate(null, exception);
             } catch (Exception e) {
                 logger.warn("Unexpected exception notifying <{}> for 'onError' <{},{}> for error <{}> e: ",
                             watcher, resourceName, type, error, e);
@@ -127,9 +127,10 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
     }
 
     final void notifyOnMissing(XdsType type, String resourceName) {
+        final MissingXdsResourceException exception = new MissingXdsResourceException(type, resourceName);
         for (SnapshotWatcher<? super S> watcher : watchers) {
             try {
-                watcher.onMissing(type, resourceName);
+                watcher.onUpdate(null, exception);
             } catch (Exception e) {
                 logger.warn("Unexpected exception notifying <{}> for 'onMissing' <{},{}> e: ",
                             watcher, resourceName, type, e);
@@ -144,9 +145,8 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
             doOnChanged(update);
             meterBinder.onChanged(update);
         } catch (Throwable t) {
-            final Status status = Status.fromThrowable(t);
-            notifyOnError(type, resourceName, status);
-            meterBinder.onError(type, resourceName, status);
+            notifyOnError(t);
+            meterBinder.onError(type, resourceName, t);
         }
     }
 
@@ -156,7 +156,7 @@ abstract class AbstractResourceNode<T extends XdsResource, S extends Snapshot<T>
         this.snapshot = snapshot;
         for (SnapshotWatcher<? super S> watcher : watchers) {
             try {
-                watcher.snapshotUpdated(snapshot);
+                watcher.onUpdate(snapshot, null);
             } catch (Exception e) {
                 logger.warn("Unexpected exception notifying <{}> for 'snapshotUpdated' <{}> e: ",
                             watcher, snapshot, e);

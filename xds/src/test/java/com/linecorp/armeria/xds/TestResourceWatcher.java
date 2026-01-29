@@ -27,6 +27,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.grpc.Status;
 
 class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
@@ -35,21 +37,19 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     private final LinkedBlockingDeque<List<Object>> events = new LinkedBlockingDeque<>();
 
     @Override
-    public void onError(XdsType type, String resourceName, Status error) {
-        logger.info("onError: {}", error);
-        events.add(ImmutableList.of("onError", error));
-    }
-
-    @Override
-    public void onMissing(XdsType type, String resourceName) {
-        logger.info("onMissing: {}", resourceName);
-        events.add(ImmutableList.of("onMissing", ImmutableList.of(type, resourceName)));
-    }
-
-    @Override
-    public void snapshotUpdated(Snapshot<?> newSnapshot) {
-        logger.info("snapshotUpdated: {}", newSnapshot);
-        events.add(ImmutableList.of("snapshotUpdated", newSnapshot));
+    public void onUpdate(@Nullable Snapshot<?> snapshot, @Nullable XdsResourceException t) {
+        if (snapshot == null) {
+            if (t instanceof MissingXdsResourceException) {
+                logger.info("onMissing: {}", t.name());
+                events.add(ImmutableList.of("onMissing", ImmutableList.of(t.type(), t.name())));
+            } else {
+                logger.info("onError: {}", Status.fromThrowable(t));
+                events.add(ImmutableList.of("onError", Status.fromThrowable(t)));
+            }
+            return;
+        }
+        logger.info("snapshotUpdated: {}", snapshot);
+        events.add(ImmutableList.of("snapshotUpdated", snapshot));
     }
 
     List<Object> blockingMissing() {

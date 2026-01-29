@@ -26,7 +26,6 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.grpc.Status;
 
 final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource, ClusterSnapshot> {
 
@@ -118,13 +117,8 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterXdsResource,
         }
 
         @Override
-        protected void doOnError(XdsType type, String resourceName, Status status) {
-            parentNode.notifyOnError(type, resourceName, status);
-        }
-
-        @Override
-        protected void doOnMissing(XdsType type, String resourceName) {
-            parentNode.notifyOnMissing(type, resourceName);
+        protected void doOnError(Throwable t) {
+            parentNode.notifyOnError(t);
         }
 
         @Override

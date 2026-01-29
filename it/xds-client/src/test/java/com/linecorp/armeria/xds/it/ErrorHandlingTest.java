@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -35,11 +34,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceException;
 import com.linecorp.armeria.xds.XdsType;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
@@ -51,7 +52,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.pgv.ValidationException;
-import io.grpc.Status;
+import io.grpc.StatusException;
 
 class ErrorHandlingTest {
 
@@ -163,14 +164,14 @@ class ErrorHandlingTest {
     @MethodSource("rootFailure_args")
     void rootFailure(Consumer<XdsBootstrap> rootGenFn, XdsType type, String expectedName) throws Exception {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(rootFailure_bootstrapYaml, Bootstrap.class);
-        final AtomicReference<List<Object>> errorRef = new AtomicReference<>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         final var watcher = new SnapshotWatcher<>() {
-            @Override
-            public void snapshotUpdated(Object newSnapshot) {}
 
             @Override
-            public void onError(XdsType type, String resourceName, Status status) {
-                errorRef.set(ImmutableList.of(type, resourceName, status));
+            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+                if (t != null) {
+                    errorRef.set(t);
+                }
             }
         };
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
@@ -178,11 +179,14 @@ class ErrorHandlingTest {
                                                      .build()) {
             rootGenFn.accept(xdsBootstrap);
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
-            assertThat(errorRef.get().get(0)).isEqualTo(type);
-            assertThat(errorRef.get().get(1)).isEqualTo(expectedName);
-            final Status status = (Status) errorRef.get().get(2);
-            assertThat(status.getCause()).isInstanceOf(IllegalArgumentException.class)
-                                         .hasMessageMatching("Unsupported .* config source .*");
+            assertThat(errorRef.get()).isInstanceOf(XdsResourceException.class);
+            final XdsResourceException xdsResourceException = (XdsResourceException) errorRef.get();
+            assertThat(xdsResourceException.type()).isEqualTo(type);
+            assertThat(xdsResourceException.name()).isEqualTo(expectedName);
+            assertThat(xdsResourceException)
+                    .cause()
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Unsupported");
         }
     }
 
@@ -272,14 +276,14 @@ class ErrorHandlingTest {
                                                   ImmutableList.of(), version.toString());
         cache.setSnapshot(GROUP, snapshot);
 
-        final AtomicReference<List<Object>> errorRef = new AtomicReference<>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         final var watcher = new SnapshotWatcher<>() {
-            @Override
-            public void snapshotUpdated(Object newSnapshot) {}
 
             @Override
-            public void onError(XdsType type, String resourceName, Status status) {
-                errorRef.set(ImmutableList.of(type, resourceName, status));
+            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+                if (t != null) {
+                    errorRef.set(t);
+                }
             }
         };
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
@@ -288,11 +292,14 @@ class ErrorHandlingTest {
             rootGenFn.accept(xdsBootstrap);
 
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
-            assertThat(errorRef.get().get(0)).isEqualTo(type);
-            assertThat(errorRef.get().get(1)).isEqualTo(expectedName);
-            final Status status = (Status) errorRef.get().get(2);
-            assertThat(status.getCause()).isInstanceOf(IllegalStateException.class)
-                                         .hasMessageContaining("Cannot find endpoints for ");
+            assertThat(errorRef.get()).isInstanceOf(XdsResourceException.class);
+            final XdsResourceException xdsResourceException = (XdsResourceException) errorRef.get();
+            assertThat(xdsResourceException.type()).isEqualTo(type);
+            assertThat(xdsResourceException.name()).isEqualTo(expectedName);
+            assertThat(xdsResourceException)
+                    .cause()
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Cannot find");
         }
     }
 
@@ -523,14 +530,14 @@ class ErrorHandlingTest {
         version.incrementAndGet();
         cache.setSnapshot(GROUP, snapshot);
 
-        final AtomicReference<List<Object>> errorRef = new AtomicReference<>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         final var watcher = new SnapshotWatcher<>() {
-            @Override
-            public void snapshotUpdated(Object newSnapshot) {}
 
             @Override
-            public void onError(XdsType type, String resourceName, Status status) {
-                errorRef.set(ImmutableList.of(type, resourceName, status));
+            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+                if (t != null) {
+                    errorRef.set(t);
+                }
             }
         };
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
@@ -538,13 +545,17 @@ class ErrorHandlingTest {
                                                      .build()) {
             xdsBootstrap.listenerRoot("my-listener");
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
-            assertThat(errorRef.get().get(0)).isEqualTo(type);
-            assertThat(errorRef.get().get(1)).isEqualTo(name);
-            final Status status = (Status) errorRef.get().get(2);
-            assertThat(status.getCause()).isInstanceOf(IllegalArgumentException.class)
-                                         .cause()
-                                         .isInstanceOf(ValidationException.class)
-                                         .hasMessageContaining(errorMsg);
+            assertThat(errorRef.get()).isInstanceOf(XdsResourceException.class);
+            final XdsResourceException xdsResourceException = (XdsResourceException) errorRef.get();
+            assertThat(xdsResourceException.type()).isEqualTo(type);
+            assertThat(xdsResourceException.name()).isEqualTo(name);
+            assertThat(xdsResourceException).cause()
+                                            .isInstanceOf(StatusException.class)
+                                            .cause()
+                                            .isInstanceOf(IllegalArgumentException.class)
+                                            .cause()
+                                            .isInstanceOf(ValidationException.class)
+                                            .hasMessageContaining(errorMsg);
         }
     }
 
@@ -579,14 +590,14 @@ class ErrorHandlingTest {
         version.incrementAndGet();
         cache.setSnapshot(GROUP, snapshot);
 
-        final AtomicReference<List<Object>> errorRef = new AtomicReference<>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         final var watcher = new SnapshotWatcher<>() {
-            @Override
-            public void snapshotUpdated(Object newSnapshot) {}
 
             @Override
-            public void onError(XdsType type, String resourceName, Status status) {
-                errorRef.set(ImmutableList.of(type, resourceName, status));
+            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+                if (t != null) {
+                    errorRef.set(t);
+                }
             }
         };
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
@@ -594,13 +605,17 @@ class ErrorHandlingTest {
                                                      .build()) {
             xdsBootstrap.clusterRoot("my-cluster");
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
-            assertThat(errorRef.get().get(0)).isEqualTo(type);
-            assertThat(errorRef.get().get(1)).isEqualTo(name);
-            final Status status = (Status) errorRef.get().get(2);
-            assertThat(status.getCause()).isInstanceOf(IllegalArgumentException.class)
-                                         .cause()
-                                         .isInstanceOf(ValidationException.class)
-                                         .hasMessageContaining(errorMsg);
+            assertThat(errorRef.get()).isInstanceOf(XdsResourceException.class);
+            final XdsResourceException xdsResourceException = (XdsResourceException) errorRef.get();
+            assertThat(xdsResourceException.type()).isEqualTo(type);
+            assertThat(xdsResourceException.name()).isEqualTo(name);
+            assertThat(xdsResourceException).cause()
+                                            .isInstanceOf(StatusException.class)
+                                            .cause()
+                                            .isInstanceOf(IllegalArgumentException.class)
+                                            .cause()
+                                            .isInstanceOf(ValidationException.class)
+                                            .hasMessageContaining(errorMsg);
         }
     }
 }
