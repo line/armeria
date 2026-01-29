@@ -65,7 +65,7 @@ public final class DirectoryWatchService implements AutoCloseable {
                             "armeria-file-watcher-" + fileSystem.getClass().getName(),
                             fileSystem));
             final WatchKey key = new WatchKey(normalizedPath, this, callback);
-            watchServiceContext.register(path, key);
+            watchServiceContext.register(normalizedPath, key);
             return key;
         } finally {
             lock.unlock();
