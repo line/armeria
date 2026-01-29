@@ -81,7 +81,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
     }
 
     @Override
-    public void onUpdate(@Nullable T snapshot, @Nullable XdsResourceException t) {
+    public void onUpdate(@Nullable T snapshot, @Nullable Throwable t) {
         if (closed) {
             return;
         }

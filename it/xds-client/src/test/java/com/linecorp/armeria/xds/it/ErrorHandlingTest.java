@@ -167,7 +167,7 @@ class ErrorHandlingTest {
         final var watcher = new SnapshotWatcher<>() {
 
             @Override
-            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
                 if (t != null) {
                     errorRef.set(t);
                 }
@@ -279,7 +279,7 @@ class ErrorHandlingTest {
         final var watcher = new SnapshotWatcher<>() {
 
             @Override
-            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
                 if (t != null) {
                     errorRef.set(t);
                 }
@@ -533,7 +533,7 @@ class ErrorHandlingTest {
         final var watcher = new SnapshotWatcher<>() {
 
             @Override
-            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
                 if (t != null) {
                     errorRef.set(t);
                 }
@@ -591,7 +591,7 @@ class ErrorHandlingTest {
         final var watcher = new SnapshotWatcher<>() {
 
             @Override
-            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
                 if (t != null) {
                     errorRef.set(t);
                 }
