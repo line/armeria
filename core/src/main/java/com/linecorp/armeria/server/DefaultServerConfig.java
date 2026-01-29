@@ -332,8 +332,9 @@ final class DefaultServerConfig implements ServerConfig {
         // Set virtual host definitions and initialize their domain name mapping.
         final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
         for (VirtualHost h : virtualHosts) {
-            if (h.port() > 0) {
+            if (h.port() > 0 || h.serverPort() != null) {
                 // A port-based virtual host will be handled by buildDomainAndPortMapping().
+                // A ServerPort-based virtual host (with port 0) will be resolved at runtime.
                 continue;
             }
             mappingBuilder.add(h.hostnamePattern(), h);
@@ -425,6 +426,24 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Override
     public VirtualHost findVirtualHost(String hostname, int port) {
+        // Check if any ServerPort-based virtual host matches the port.
+        // We need to look up the activePorts to find which original ServerPort was bound to this port.
+        if (server != null) {
+            for (ServerPort activePort : server.activePorts().values()) {
+                if (activePort.localAddress().getPort() == port) {
+                    final ServerPort originalPort = activePort.originalServerPort();
+                    if (originalPort != null) {
+                        // Find the VirtualHost that has this original ServerPort
+                        for (VirtualHost vh : virtualHosts) {
+                            if (vh.serverPort() == originalPort) {
+                                return vh;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (virtualHostAndPortMapping == null) {
             return defaultVirtualHost;
         }
@@ -437,6 +456,7 @@ final class DefaultServerConfig implements ServerConfig {
                 return virtualHost;
             }
         }
+
         // No port-based virtual host is configured. Look for named-based virtual host.
         final Mapping<String, VirtualHost> nameBasedMapping = virtualHostAndPortMapping.get(-1);
         assert nameBasedMapping != null;
