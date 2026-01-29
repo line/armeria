@@ -145,7 +145,7 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
                     watcher.onUpdate(null, t);
                     return;
                 }
-                watcher.onUpdate(new RouteEntry(route, snapshot, index), t);
+                watcher.onUpdate(new RouteEntry(route, snapshot, index), null);
             };
             return context.clusterManager().register(clusterName, context, mapped);
         }

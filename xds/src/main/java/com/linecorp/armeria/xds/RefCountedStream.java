@@ -37,7 +37,10 @@ abstract class RefCountedStream<T> implements SnapshotStream<T> {
             watcher.onUpdate(latestValue, null);
         }
 
-        watchers.add(watcher);
+        if (!watchers.add(watcher)) {
+            return Subscription.noop();
+        }
+
         if (watchers.size() == 1) {
             try {
                 upstreamSub = onStart(this::emit);

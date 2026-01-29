@@ -19,10 +19,12 @@ package com.linecorp.armeria.xds.client.endpoint;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An xDS-based load balancer that selects endpoints based on xDS configuration.
  */
+@UnstableApi
 public interface XdsLoadBalancer extends LoadBalancerState {
 
     /**

@@ -35,9 +35,7 @@ public final class RouteXdsResource extends AbstractXdsResource {
     }
 
     RouteXdsResource(RouteConfiguration routeConfiguration) {
-        super("", 0);
-        XdsValidatorIndexRegistry.assertValid(routeConfiguration);
-        this.routeConfiguration = routeConfiguration;
+        this(routeConfiguration, "", 0);
     }
 
     @Override

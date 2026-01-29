@@ -55,7 +55,11 @@ public interface XdsLoadBalancerFactory extends SafeCloseable {
     }
 
     /**
-     * Updates the {@link XdsLoadBalancer} state with the input {@link ClusterSnapshot}.
+     * Registers a {@link SnapshotWatcher} to watch for {@link XdsLoadBalancer}s created using
+     * the supplied cluster and endpoint information.
+     * A {@link XdsLoadBalancer} is immutable, and a new {@link XdsLoadBalancer} will be generated
+     * when endpoints change. (e.g. if an endpoint becomes unhealthy, a new {@link XdsLoadBalancer}
+     * will be passed to the {@link SnapshotWatcher}).
      * Note that there are no thread-safety guarantees with this method.
      */
     void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,

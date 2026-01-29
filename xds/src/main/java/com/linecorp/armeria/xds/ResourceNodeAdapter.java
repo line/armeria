@@ -83,8 +83,8 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
             }
         }
         return () -> {
-            context.unsubscribe(this);
             resourceNodeMeterBinder.close();
+            context.unsubscribe(this);
         };
     }
 }

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
 
@@ -32,8 +31,6 @@ import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
-
-    private Consumer<List<Endpoint>> updateEndpointsCallback = endpoints -> {};
 
     @Nullable
     private XdsLoadBalancer delegate;
@@ -55,17 +52,17 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
     public void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
                          SnapshotWatcher<XdsLoadBalancer> watcher,
                          @Nullable XdsLoadBalancer localLoadBalancer) {
-
-        // First remove the listener for the previous endpointGroup and close it
-        endpointGroup.removeListener(updateEndpointsCallback);
         endpointGroup.closeAsync();
 
         observer.resourceUpdated(clusterXdsResource);
         endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterXdsResource, endpointSnapshot);
-        updateEndpointsCallback = endpoints0 -> eventLoop.execute(
-                () -> updateEndpoints(clusterXdsResource,
-                                      endpointSnapshot, endpoints0, watcher, localLoadBalancer));
-        endpointGroup.addListener(updateEndpointsCallback, true);
+        final EndpointGroup currentGroup = endpointGroup;
+        endpointGroup.addListener(endpoints -> eventLoop.execute(() -> {
+            if (currentGroup != endpointGroup) {
+                return;
+            }
+            updateEndpoints(clusterXdsResource, endpointSnapshot, endpoints, watcher, localLoadBalancer);
+        }), true);
     }
 
     private void updateEndpoints(ClusterXdsResource clusterXdsResource,
@@ -95,7 +92,6 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
 
     @Override
     public void close() {
-        endpointGroup.removeListener(updateEndpointsCallback);
         endpointGroup.closeAsync();
         observer.close();
     }
