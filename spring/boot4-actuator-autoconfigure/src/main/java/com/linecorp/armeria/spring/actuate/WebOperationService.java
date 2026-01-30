@@ -28,7 +28,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +59,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
@@ -144,9 +142,10 @@ final class WebOperationService implements HttpService {
 
     @Override
     public ExchangeType exchangeType(RoutingContext routingContext) {
-        final Collection<String> produces = operation.getRequestPredicate().getProduces();
-        if (produces.contains(MediaTypeNames.OCTET_STREAM)) {
-            return ExchangeType.RESPONSE_STREAMING;
+        for (String produce : operation.getRequestPredicate().getProduces()) {
+            if (MediaType.parse(produce).belongsTo(MediaType.OCTET_STREAM)) {
+                return ExchangeType.RESPONSE_STREAMING;
+            }
         }
         return ExchangeType.UNARY;
     }
