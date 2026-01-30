@@ -77,7 +77,7 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
         callbackThread.start();
     }
 
-    public void callbackLoop() {
+    void callbackLoop() {
         while (!closed) {
             try {
                 final java.nio.file.WatchKey key = watchKeys.take();
@@ -100,15 +100,14 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
             } catch (ClosedWatchServiceException e) {
                 break;
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+                // ignore
             } catch (Exception e) {
                 logger.warn("Unexpected exception: ", e);
             }
         }
     }
 
-    public void watchServiceLoop() {
+    void watchServiceLoop() {
         while (!closed) {
             try {
                 final java.nio.file.WatchKey key = watchService.take();
@@ -116,8 +115,7 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
             } catch (ClosedWatchServiceException e) {
                 break;
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+                // ignore
             } catch (Exception e) {
                 logger.warn("Unexpected exception: ", e);
             }
@@ -147,17 +145,17 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
      * contents of the file for the {@code filePath} is changed. If no paths are watched by the
      * {@link WatchService}, then the background thread is stopped.
      *
-     * @param watchRegisterKey the key for which the {@link WatchService} will stop watching.
+     * @param watchKey the key for which the {@link WatchService} will stop watching.
      */
-    void unregister(WatchKey watchRegisterKey) {
+    void unregister(WatchKey watchKey) {
         lock.lock();
         try {
-            final Path path = watchRegisterKey.path();
+            final Path path = watchKey.path();
             final WatchCallbacks entry = currWatchEventMap.get(path);
             if (entry == null) {
                 return;
             }
-            entry.unregisterCallback(watchRegisterKey);
+            entry.unregisterCallback(watchKey);
             if (!entry.hasCallback()) {
                 currWatchEventMap.remove(path);
                 entry.cancel();
@@ -182,7 +180,7 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
     }
 
     private void runCallbacks(Path dirPath, WatchEvent<?> event) {
-        final Map<WatchKey, DirectoryWatcher> copiedCallbacks;
+        final Map<WatchKey, PathWatcher> copiedCallbacks;
         lock.lock();
         try {
             final WatchCallbacks watchCallbacks = currWatchEventMap.get(dirPath);
@@ -194,13 +192,13 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
             lock.unlock();
         }
         final Path filePath = maybeFilePath(dirPath, event);
-        for (DirectoryWatcher callback : copiedCallbacks.values()) {
+        for (PathWatcher callback : copiedCallbacks.values()) {
             runSafely(dirPath, filePath, event, callback);
         }
     }
 
     private static void runSafely(Path dirPath, @Nullable Path filePath,
-                                  WatchEvent<?> event, DirectoryWatcher callback) {
+                                  WatchEvent<?> event, PathWatcher callback) {
         try {
             callback.onEvent(dirPath, filePath, event);
         } catch (Exception e) {
@@ -225,18 +223,19 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
             watchService.close();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        }
-        lock.lock();
-        try {
-            currWatchEventMap.clear();
         } finally {
-            lock.unlock();
+            lock.lock();
+            try {
+                currWatchEventMap.clear();
+            } finally {
+                lock.unlock();
+            }
         }
     }
 
     static class WatchCallbacks {
         private final java.nio.file.WatchKey watchKey;
-        private final Map<WatchKey, DirectoryWatcher> callbacks;
+        private final Map<WatchKey, PathWatcher> callbacks;
         private final Path dirPath;
 
         WatchCallbacks(java.nio.file.WatchKey watchKey, Path dirPath) {

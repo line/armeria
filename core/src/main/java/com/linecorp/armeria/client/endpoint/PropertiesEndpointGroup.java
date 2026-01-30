@@ -32,17 +32,17 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.Cancelable;
+import com.linecorp.armeria.common.Cancellable;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
-import com.linecorp.armeria.common.file.DirectoryWatcher;
+import com.linecorp.armeria.common.file.PathWatcher;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
-    private static DirectoryWatchService registry = new DirectoryWatchService();
+    private static DirectoryWatchService watchService = new DirectoryWatchService();
 
     /**
      * Resets the registry for {@link PropertiesEndpointGroup}.
@@ -50,8 +50,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      */
     @VisibleForTesting
     static void resetRegistry() throws Exception {
-        registry.close();
-        registry = new DirectoryWatchService();
+        watchService.close();
+        watchService = new DirectoryWatchService();
     }
 
     /**
@@ -180,7 +180,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Nullable
-    private Cancelable watchRegisterKey;
+    private Cancellable watchKey;
 
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy, List<Endpoint> endpoints) {
         super(selectionStrategy);
@@ -193,7 +193,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         final Path normalizedPath = filePath.toAbsolutePath().normalize();
         final Path watchDir = normalizedPath.getParent();
         checkArgument(watchDir != null, "Cannot watch parent directory for '%s'", filePath);
-        watchRegisterKey = registry.register(watchDir, DirectoryWatcher.fileWatcher(normalizedPath, bytes -> {
+        watchKey = watchService.register(watchDir, PathWatcher.ofFile(normalizedPath, bytes -> {
             setEndpoints(loadEndpoints(bytes, endpointKeyPrefix, defaultPort));
         }));
     }
@@ -228,14 +228,14 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
-        if (watchRegisterKey != null) {
-            watchRegisterKey.cancel();
+        if (watchKey != null) {
+            watchKey.cancel();
         }
         future.complete(null);
     }
 
     @Override
     public String toString() {
-        return toString(buf -> buf.append(", watchRegisterKey=").append(watchRegisterKey));
+        return toString(buf -> buf.append(", watchKey=").append(watchKey));
     }
 }

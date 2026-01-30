@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.Cancelable;
+import com.linecorp.armeria.common.Cancellable;
 import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 
 class DirectoryWatchServiceTest {
@@ -45,8 +45,8 @@ class DirectoryWatchServiceTest {
         final Path file2 = folder.newFile("temp-file2.properties");
 
         try (DirectoryWatchService watchService = new DirectoryWatchService()) {
-            final Cancelable key1 = watchService.register(file.getParent(), (path, filePath, event) -> {});
-            final Cancelable key2 = watchService.register(file2.getParent(), (path, filePath, event) -> {});
+            final Cancellable key1 = watchService.register(file.getParent(), (path, filePath, event) -> {});
+            final Cancellable key2 = watchService.register(file2.getParent(), (path, filePath, event) -> {});
 
             assertThat(watchService.hasWatchers()).isTrue();
 
@@ -82,8 +82,7 @@ class DirectoryWatchServiceTest {
         final DirectoryWatchService watchService = new DirectoryWatchService();
         final AtomicReference<Path> filePathRef = new AtomicReference<>();
 
-        final Cancelable key = watchService.register(file.getParent(), (path, filePath, event) -> {
-            System.out.println(event);
+        final Cancellable key = watchService.register(file.getParent(), (path, filePath, event) -> {
             if (filePath != null) {
                 filePathRef.set(filePath);
             }
@@ -105,7 +104,7 @@ class DirectoryWatchServiceTest {
         final DirectoryWatchService watchService = new DirectoryWatchService();
 
         final AtomicInteger val = new AtomicInteger(0);
-        final Cancelable key = watchService.register(file.getParent(), (path, filePath, event) -> {
+        final Cancellable key = watchService.register(file.getParent(), (path, filePath, event) -> {
             try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file.toFile()))) {
                 val.set(Integer.valueOf(bufferedReader.readLine()));
             } catch (IOException e) {

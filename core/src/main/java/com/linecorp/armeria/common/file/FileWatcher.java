@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class FileWatcher implements DirectoryWatcher {
+final class FileWatcher implements PathWatcher {
 
     private final Path filePath;
     private final Consumer<byte[]> handler;

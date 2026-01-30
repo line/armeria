@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 @FunctionalInterface
-public interface Cancelable {
+public interface Cancellable {
 
     /**
      * Cancels the associated operation.

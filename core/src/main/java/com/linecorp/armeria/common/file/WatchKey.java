@@ -20,21 +20,21 @@ import java.nio.file.Path;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.Cancelable;
+import com.linecorp.armeria.common.Cancellable;
 
-final class WatchKey implements Cancelable {
+final class WatchKey implements Cancellable {
 
     private final Path path;
     private final DirectoryWatchService registry;
-    private final DirectoryWatcher callback;
+    private final PathWatcher callback;
 
-    WatchKey(Path path, DirectoryWatchService registry, DirectoryWatcher callback) {
+    WatchKey(Path path, DirectoryWatchService registry, PathWatcher callback) {
         this.path = path;
         this.registry = registry;
         this.callback = callback;
     }
 
-    DirectoryWatcher callback() {
+    PathWatcher callback() {
         return callback;
     }
 

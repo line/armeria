@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.Cancelable;
+import com.linecorp.armeria.common.Cancellable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -45,8 +45,8 @@ public final class DirectoryWatchService implements AutoCloseable {
      * <pre>{@code
      * DirectoryWatchService registry = ...
      * Path dirPath = ...
-     * DirectoryWatcher callback = ...
-     * Cancelable key = registry.register(dirPath, callback);
+     * PathWatcher callback = ...
+     * Cancellable key = registry.register(dirPath, callback);
      * ...
      * key.cancel();
      * }</pre>
@@ -54,9 +54,9 @@ public final class DirectoryWatchService implements AutoCloseable {
      * @param path the directory path that which will be watched for changes.
      * @param callback the function which is invoked when the file is changed.
      *
-     * @return a {@link Cancelable} which is used to unregister from watching.
+     * @return a {@link Cancellable} which is used to unregister from watching.
      */
-    public Cancelable register(Path path, DirectoryWatcher callback) {
+    public Cancellable register(Path path, PathWatcher callback) {
         final Path normalizedPath = path.toAbsolutePath().normalize();
         lock.lock();
         try {

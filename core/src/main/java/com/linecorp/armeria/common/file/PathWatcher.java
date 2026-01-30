@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 @FunctionalInterface
-public interface DirectoryWatcher {
+public interface PathWatcher {
 
     /**
      * Invoked when a watch event occurs on the registered directory or file.
@@ -45,7 +45,7 @@ public interface DirectoryWatcher {
     void onEvent(Path dirPath, @Nullable Path filePath, WatchEvent<?> event);
 
     /**
-     * Creates a caching {@link DirectoryWatcher} that reads the file content when the watched directory
+     * Creates a caching {@link PathWatcher} that reads the file content when the watched directory
      * changes and invokes the callback with the file bytes. The callback caches the last modified time
      * to avoid redundant reads when the file hasn't changed. Note that the watched directory is not
      * necessarily the parent directory of the file path.
@@ -53,10 +53,10 @@ public interface DirectoryWatcher {
      * @param filePath the path to the file to read
      * @param callback the consumer to invoke with the file content as bytes
      * @param executor an executor used to read the file
-     * @return a new caching {@link DirectoryWatcher}
+     * @return a new caching {@link PathWatcher}
      */
-    static DirectoryWatcher fileWatcher(Path filePath, Consumer<byte[]> callback,
-                                        Executor executor) {
+    static PathWatcher ofFile(Path filePath, Consumer<byte[]> callback,
+                              Executor executor) {
         requireNonNull(filePath, "filePath");
         requireNonNull(callback, "callback");
         requireNonNull(executor, "executor");
@@ -64,16 +64,16 @@ public interface DirectoryWatcher {
     }
 
     /**
-     * Creates a caching {@link DirectoryWatcher} that reads the file content when the watched directory
+     * Creates a caching {@link PathWatcher} that reads the file content when the watched directory
      * changes and invokes the callback with the file bytes. The callback caches the last modified time
      * to avoid redundant reads when the file hasn't changed. Note that the watched directory is not
      * necessarily the parent directory of the file path.
      *
      * @param filePath the path to the file to read
      * @param callback the consumer to invoke with the file content as bytes
-     * @return a new caching {@link DirectoryWatcher}
+     * @return a new caching {@link PathWatcher}
      */
-    static DirectoryWatcher fileWatcher(Path filePath, Consumer<byte[]> callback) {
+    static PathWatcher ofFile(Path filePath, Consumer<byte[]> callback) {
         requireNonNull(filePath, "filePath");
         requireNonNull(callback, "callback");
         return new FileWatcher(filePath, callback, CommonPools.blockingTaskExecutor());
