@@ -33,9 +33,9 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A variant of {@link XdsLoadBalancer} which allows updates.
- * This may be useful if the cluster doesn't have a static {@link ClusterLoadAssignment}
- * and needs to be continuously updated.
+ * A {@link XdsLoadBalancer} factory.
+ * A factory maintains a state which can be propagated across different
+ * {@link ClusterLoadAssignment}s with the same identifier.
  * Users are encouraged to use {@link XdsBootstrap} to retrieve an instance of {@link XdsLoadBalancer}
  * instead of using this class directly.
  */
