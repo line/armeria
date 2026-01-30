@@ -49,10 +49,10 @@ final class FileWatcher implements PathWatcher {
 
     @Override
     public void onEvent(Path dirPath, @Nullable Path filePath, WatchEvent<?> event) {
-        executor.execute(() -> onEvent0(dirPath, event));
+        executor.execute(() -> onEvent0(event));
     }
 
-    private void onEvent0(Path dirPath, WatchEvent<?> event) {
+    private void onEvent0(WatchEvent<?> event) {
         if (event.kind() == ENTRY_CREATE ||
             event.kind() == ENTRY_MODIFY ||
             event.kind() == OVERFLOW ||
@@ -66,13 +66,13 @@ final class FileWatcher implements PathWatcher {
             if (Objects.equals(basicFileAttributes.lastModifiedTime(), lastModifiedTime)) {
                 return;
             }
-            lastModifiedTime = basicFileAttributes.lastModifiedTime();
             final byte[] fileContent;
             try {
                 fileContent = Files.readAllBytes(filePath);
             } catch (IOException e) {
                 return;
             }
+            lastModifiedTime = basicFileAttributes.lastModifiedTime();
             handler.accept(fileContent);
         }
     }
