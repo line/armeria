@@ -61,8 +61,8 @@ class AthenzClientTest {
                 // Capture the first matching header
                 req.headers().forEach(entry -> {
                     final String headerName = entry.getKey().toString();
-                    if (headerName.equalsIgnoreCase("X-Company-Token") ||
-                        headerName.equalsIgnoreCase("Authorization")) {
+                    if ("X-Company-Token".equalsIgnoreCase(headerName) ||
+                        "Authorization".equalsIgnoreCase(headerName)) {
                         capturedHeaderName.set(headerName);
                         capturedHeaderValue.set(entry.getValue());
                     }

@@ -49,7 +49,7 @@ class AthenzTokenHeaderTest {
     @Test
     void customImplementation() {
         final AthenzTokenHeader customHeader = new CustomAthenzHeader("X-Company-Token");
-        
+
         assertThat(customHeader.name()).isEqualTo("CUSTOM_X_COMPANY_TOKEN");
         assertThat(customHeader.headerName().toString()).isEqualToIgnoringCase("X-Company-Token");
         assertThat(customHeader.authScheme()).isNull();
@@ -59,7 +59,7 @@ class AthenzTokenHeaderTest {
     @Test
     void customImplementationWithAuthScheme() {
         final AthenzTokenHeader customHeader = new CustomHeaderWithScheme("X-Custom-Auth", "CustomBearer");
-        
+
         assertThat(customHeader.name()).isEqualTo("CUSTOM_AUTH");
         assertThat(customHeader.headerName().toString()).isEqualToIgnoringCase("X-Custom-Auth");
         assertThat(customHeader.authScheme()).isEqualTo("CustomBearer");
