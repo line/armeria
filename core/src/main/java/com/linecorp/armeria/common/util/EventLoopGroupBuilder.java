@@ -76,7 +76,7 @@ public final class EventLoopGroupBuilder {
      * Sets a custom {@link ThreadFactory} for creating event loop threads.
      *
      * @param threadFactory the thread factory to use
-     * @see ThreadFactories for convenient factory methods to create a {@link ThreadFactory}
+     * @see ThreadFactories for convenient factory methods to create a {@code ThreadFactory}
      */
     public EventLoopGroupBuilder threadFactory(ThreadFactory threadFactory) {
         this.threadFactory = requireNonNull(threadFactory, "threadFactory");
