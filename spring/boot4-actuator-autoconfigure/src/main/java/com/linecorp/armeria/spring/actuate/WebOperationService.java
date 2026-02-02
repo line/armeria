@@ -142,12 +142,7 @@ final class WebOperationService implements HttpService {
 
     @Override
     public ExchangeType exchangeType(RoutingContext routingContext) {
-        for (String produce : operation.getRequestPredicate().getProduces()) {
-            if (MediaType.parse(produce).belongsTo(MediaType.OCTET_STREAM)) {
-                return ExchangeType.RESPONSE_STREAMING;
-            }
-        }
-        return ExchangeType.UNARY;
+        return ExchangeType.RESPONSE_STREAMING;
     }
 
     private Function<AggregatedHttpRequest, HttpResponse> invoke(ServiceRequestContext ctx) {
