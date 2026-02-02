@@ -90,7 +90,7 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
      * A custom {@link AthenzTokenHeader} implementation for user-defined header names.
      */
     private static final class CustomAthenzTokenHeader implements AthenzTokenHeader {
-        
+
         private final String headerName;
         private final AsciiString asciiHeaderName;
 
