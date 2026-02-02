@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -71,6 +72,12 @@ class AthenzClientTest {
             });
         }
     };
+
+    @BeforeEach
+    void setUp() {
+        capturedHeaderName.set(null);
+        capturedHeaderValue.set(null);
+    }
 
     @Test
     void customHeaderIsUsedInRequest() {
