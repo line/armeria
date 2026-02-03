@@ -12,8 +12,8 @@
 /reports
 /site/public
 /site/.cache
-/site-new/.docusaurus
-/site-new/.cache-loader
+/site/.docusaurus
+/site/.cache-loader
 
 # Package Files #
 *.jar
