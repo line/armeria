@@ -16,8 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
+import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Optional;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.ClientTlsSpecBuilder;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -36,11 +46,14 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     private final TlsCertificateSnapshot tlsCertificate;
     @Nullable
     private final CertificateValidationContextSnapshot validationContext;
+    @Nullable
+    private final ClientTlsSpec clientTlsSpec;
 
     TransportSocketSnapshot(TransportSocket transportSocket) {
         this.transportSocket = transportSocket;
         tlsCertificate = null;
         validationContext = null;
+        clientTlsSpec = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
@@ -49,6 +62,7 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         this.transportSocket = transportSocket;
         this.tlsCertificate = tlsCertificate.orElse(null);
         this.validationContext = validationContext.orElse(null);
+        clientTlsSpec = buildClientTlsSpec(this.tlsCertificate, this.validationContext);
     }
 
     @Override
@@ -70,5 +84,77 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
      */
     public @Nullable CertificateValidationContextSnapshot validationContext() {
         return validationContext;
+    }
+
+    /**
+     * Returns the {@link ClientTlsSpec} resolved for this transport socket, or {@code null}
+     * if this transport socket does not configure TLS.
+     */
+    public @Nullable ClientTlsSpec clientTlsSpec() {
+        return clientTlsSpec;
+    }
+
+    private static ClientTlsSpec buildClientTlsSpec(
+            @Nullable TlsCertificateSnapshot tlsCertificate,
+            @Nullable CertificateValidationContextSnapshot validationContext) {
+        final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder();
+        final ImmutableList.Builder<TlsPeerVerifierFactory> verifiersBuilder = ImmutableList.builder();
+        if (validationContext != null) {
+            final boolean systemRootCerts = validationContext.xdsResource().hasSystemRootCerts();
+            final List<X509Certificate> trustedCa = validationContext.trustedCa();
+            if (trustedCa != null) {
+                specBuilder.trustedCertificates(trustedCa);
+            } else if (systemRootCerts) {
+                // use java default
+            } else {
+                verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
+            }
+            final List<TlsPeerVerifierFactory> verifierFactories = validationContext.peerVerifierFactories();
+            if (!verifierFactories.isEmpty()) {
+                verifiersBuilder.addAll(verifierFactories);
+            }
+        } else {
+            verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
+        }
+        if (tlsCertificate != null) {
+            final TlsKeyPair tlsKeyPair = tlsCertificate.tlsKeyPair();
+            if (tlsKeyPair != null) {
+                specBuilder.tlsKeyPair(tlsKeyPair);
+            }
+        }
+        final List<TlsPeerVerifierFactory> verifierFactories = verifiersBuilder.build();
+        if (!verifierFactories.isEmpty()) {
+            specBuilder.verifierFactories(verifierFactories);
+        }
+        return specBuilder.build();
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final TransportSocketSnapshot that = (TransportSocketSnapshot) object;
+        return Objects.equal(transportSocket, that.transportSocket) &&
+               Objects.equal(tlsCertificate, that.tlsCertificate) &&
+               Objects.equal(validationContext, that.validationContext);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(transportSocket, tlsCertificate, validationContext);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("transportSocket", transportSocket)
+                          .add("tlsCertificate", tlsCertificate)
+                          .add("validationContext", validationContext)
+                          .toString();
     }
 }

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.List;
+
 import javax.annotation.concurrent.NotThreadSafe;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -26,6 +28,8 @@ import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
+import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
+import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
@@ -63,6 +67,8 @@ public interface XdsLoadBalancerFactory extends SafeCloseable {
      * Note that there are no thread-safety guarantees with this method.
      */
     void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+                  TransportSocketSnapshot transportSocket,
+                  List<TransportSocketMatchSnapshot> transportSocketMatches,
                   SnapshotWatcher<XdsLoadBalancer> watcher,
                   @Nullable XdsLoadBalancer localLoadBalancer);
 }

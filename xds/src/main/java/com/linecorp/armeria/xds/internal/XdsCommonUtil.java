@@ -20,11 +20,21 @@ import com.google.common.primitives.Ints;
 import com.google.protobuf.Duration;
 import com.google.protobuf.UInt32Value;
 
+import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.TransportSocketSnapshot;
+
+import io.netty.util.AttributeKey;
 
 public final class XdsCommonUtil {
+
+    public static final AttributeKey<TransportSocketSnapshot> TRANSPORT_SOCKET_SNAPSHOT_KEY =
+            AttributeKey.valueOf(XdsCommonUtil.class, "TRANSPORT_SOCKET_SNAPSHOT_KEY");
 
     public static long durationToMillis(Duration duration, long defaultValue) {
         if (duration == Duration.getDefaultInstance()) {
@@ -76,6 +86,19 @@ public final class XdsCommonUtil {
         }
         final String subtype = contentType.subtype();
         return "grpc".equals(subtype) || subtype.startsWith("grpc+");
+    }
+
+    public static void setTlsParams(PreClientRequestContext ctx, Endpoint endpoint) {
+        final TransportSocketSnapshot transportSocket =
+                endpoint.attr(TRANSPORT_SOCKET_SNAPSHOT_KEY);
+        assert transportSocket != null;
+        final ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
+        if (clientTlsSpec == null) {
+            ctx.setSessionProtocol(SessionProtocol.HTTP);
+            return;
+        }
+        ctx.setSessionProtocol(SessionProtocol.HTTPS);
+        ctx.setClientTlsSpec(clientTlsSpec);
     }
 
     private XdsCommonUtil() {}

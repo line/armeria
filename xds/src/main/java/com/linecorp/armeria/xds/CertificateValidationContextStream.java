@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -57,9 +59,9 @@ final class CertificateValidationContextStream extends RefCountedStream<Certific
                                 return new CertificateValidationContextSnapshot(validationContext, null);
                             }
                             final List<X509Certificate> caCerts;
-                            try {
-                                caCerts = CertificateUtil.toX509Certificates(bs.get().newInput());
-                            } catch (CertificateException e) {
+                            try (InputStream inputStream = bs.get().newInput()) {
+                                caCerts = CertificateUtil.toX509Certificates(inputStream);
+                            } catch (CertificateException | IOException e) {
                                 return Exceptions.throwUnsafely(e);
                             }
                             return new CertificateValidationContextSnapshot(validationContext, caCerts);
