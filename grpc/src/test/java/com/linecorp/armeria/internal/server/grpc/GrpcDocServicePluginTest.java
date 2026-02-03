@@ -495,6 +495,24 @@ class GrpcDocServicePluginTest {
                 .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Proto comments include leading space and trailing newline
+        // For :param/request and :return, only the first sentence is used
+        final DescriptionInfo emptyMessageFirstSentence = DescriptionInfo.of(
+                "An empty message that you can re-use to avoid defining duplicated empty\n" +
+                " messages in your project.");
+        final DescriptionInfo simpleRequestFirstSentence = DescriptionInfo.of("Unary request.");
+        final DescriptionInfo simpleResponseFirstSentence =
+                DescriptionInfo.of("Unary response, as configured by the request.");
+        final DescriptionInfo streamingOutputCallRequestFirstSentence =
+                DescriptionInfo.of("Server-streaming request.");
+        final DescriptionInfo streamingOutputCallResponseFirstSentence =
+                DescriptionInfo.of("Server-streaming response, as configured by the request and parameters.");
+        final DescriptionInfo streamingInputCallRequestFirstSentence =
+                DescriptionInfo.of("Client-streaming request.");
+        final DescriptionInfo streamingInputCallResponseFirstSentence =
+                DescriptionInfo.of("Client-streaming response.");
+        final DescriptionInfo reconnectInfoFirstSentence =
+                DescriptionInfo.of("For reconnect interop test only.");
+
         final Map<String, DescriptionInfo> expectedDocStrings = ImmutableMap.<String, DescriptionInfo>builder()
                 // TestService
                 .put(serviceName,
@@ -505,49 +523,67 @@ class GrpcDocServicePluginTest {
                      DescriptionInfo.of(
                              " One empty request followed by one empty response.\n" +
                              " @return an empty response\n"))
+                .put(serviceName + "/EmptyCall:param/request", emptyMessageFirstSentence)
                 .put(serviceName + "/EmptyCall:return",
                      DescriptionInfo.of("an empty response"))
                 .put(serviceName + "/UnaryCall",
                      DescriptionInfo.of(
                              " One request followed by one response.\n" +
                              " @return a response containing the payload\n"))
+                .put(serviceName + "/UnaryCall:param/request", simpleRequestFirstSentence)
                 .put(serviceName + "/UnaryCall:return",
                      DescriptionInfo.of("a response containing the payload"))
                 .put(serviceName + "/UnaryCall2",
                      DescriptionInfo.of(
                              " Another method with one request followed by one response.\n"))
-                // Note: No @return for UnaryCall2
+                .put(serviceName + "/UnaryCall2:param/request", simpleRequestFirstSentence)
+                .put(serviceName + "/UnaryCall2:return", simpleResponseFirstSentence)
                 .put(serviceName + "/StreamingOutputCall",
                      DescriptionInfo.of(
                              " One request followed by a sequence of responses (streamed download).\n" +
                              " The server returns the payload with client desired type and sizes.\n"))
+                .put(serviceName + "/StreamingOutputCall:param/request", streamingOutputCallRequestFirstSentence)
+                .put(serviceName + "/StreamingOutputCall:return", streamingOutputCallResponseFirstSentence)
                 .put(serviceName + "/StreamingInputCall",
                      DescriptionInfo.of(
                              " A sequence of requests followed by one response (streamed upload).\n" +
                              " The server returns the aggregated size of client payload as the result.\n"))
+                .put(serviceName + "/StreamingInputCall:param/request", streamingInputCallRequestFirstSentence)
+                .put(serviceName + "/StreamingInputCall:return", streamingInputCallResponseFirstSentence)
                 .put(serviceName + "/FullDuplexCall",
                      DescriptionInfo.of(
                              " A sequence of requests with each request served by the server immediately.\n" +
                              " As one request could lead to multiple responses, this interface\n" +
                              " demonstrates the idea of full duplexing.\n"))
+                .put(serviceName + "/FullDuplexCall:param/request", streamingOutputCallRequestFirstSentence)
+                .put(serviceName + "/FullDuplexCall:return", streamingOutputCallResponseFirstSentence)
                 .put(serviceName + "/HalfDuplexCall",
                      DescriptionInfo.of(
                              " A sequence of requests followed by a sequence of responses.\n" +
                              " The server buffers all the client requests and then serves them in order. A\n" +
                              " stream of responses are returned to the client when the server starts with\n" +
                              " first request.\n"))
+                .put(serviceName + "/HalfDuplexCall:param/request", streamingOutputCallRequestFirstSentence)
+                .put(serviceName + "/HalfDuplexCall:return", streamingOutputCallResponseFirstSentence)
                 .put(serviceName + "/UnimplementedCall",
                      DescriptionInfo.of(
                              " The test server will not implement this method. It will be used\n" +
                              " to test the behavior when clients call unimplemented methods.\n"))
+                .put(serviceName + "/UnimplementedCall:param/request", emptyMessageFirstSentence)
+                .put(serviceName + "/UnimplementedCall:return", emptyMessageFirstSentence)
                 .put(serviceName + "/UnaryCallWithAllDifferentParameterTypes",
                      DescriptionInfo.of(
                              " This method's parameter message contains all different types of parameters\n" +
                              " as well as the response type contains all different types of parameters.\n" +
                              " Can be used to check any kind of serialization issues.\n"))
+                // Note: ExtendedTestMessage has no docstring, so no :param/request or :return
                 // ReconnectService
                 .put(ReconnectServiceGrpc.SERVICE_NAME,
                      DescriptionInfo.of(" A service used to control reconnect server.\n"))
+                .put(ReconnectServiceGrpc.SERVICE_NAME + "/Start:param/request", emptyMessageFirstSentence)
+                .put(ReconnectServiceGrpc.SERVICE_NAME + "/Start:return", emptyMessageFirstSentence)
+                .put(ReconnectServiceGrpc.SERVICE_NAME + "/Stop:param/request", emptyMessageFirstSentence)
+                .put(ReconnectServiceGrpc.SERVICE_NAME + "/Stop:return", reconnectInfoFirstSentence)
                 .build();
 
         assertThat(actualDocStrings).isEqualTo(expectedDocStrings);

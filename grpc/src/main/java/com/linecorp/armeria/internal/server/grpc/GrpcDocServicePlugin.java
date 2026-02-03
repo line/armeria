@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -373,18 +374,94 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Override
     public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
-        return serviceConfigs.stream()
-                             .flatMap(c -> {
-                                 final GrpcService grpcService = c.service().as(GrpcService.class);
-                                 assert grpcService != null;
-                                 return grpcService.services().stream();
-                             })
-                             .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
-                                                             .entrySet().stream())
-                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
-                                                     (Map.Entry<String, String> entry) ->
-                                                             DescriptionInfo.of(entry.getValue()),
-                                                     (a, b) -> a));
+        // Collect all services and their class loaders
+        final Set<ServerServiceDefinition> allServices = new HashSet<>();
+        final Set<ClassLoader> classLoaders = new HashSet<>();
+
+        for (ServiceConfig c : serviceConfigs) {
+            final GrpcService grpcService = c.service().as(GrpcService.class);
+            assert grpcService != null;
+            for (ServerServiceDefinition service : grpcService.services()) {
+                allServices.add(service);
+                classLoaders.add(service.getClass().getClassLoader());
+            }
+        }
+
+        // Load base docstrings from all class loaders
+        final Map<String, DescriptionInfo> docStrings = new HashMap<>();
+        for (ClassLoader classLoader : classLoaders) {
+            docstringExtractor.getAllDocStrings(classLoader).forEach((key, value) ->
+                    docStrings.putIfAbsent(key, DescriptionInfo.of(value)));
+        }
+
+        // Add :param/request entries using input message type descriptions
+        for (ServerServiceDefinition service : allServices) {
+            final io.grpc.ServiceDescriptor serviceDescriptor = service.getServiceDescriptor();
+            if (!(serviceDescriptor.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)) {
+                continue;
+            }
+
+            final ProtoFileDescriptorSupplier supplier =
+                    (ProtoFileDescriptorSupplier) serviceDescriptor.getSchemaDescriptor();
+            final FileDescriptor fileDescriptor = supplier.getFileDescriptor();
+            final ServiceDescriptor protoServiceDescriptor =
+                    fileDescriptor.getServices().stream()
+                                  .filter(sd -> sd.getFullName().equals(serviceDescriptor.getName()))
+                                  .findFirst()
+                                  .orElse(null);
+
+            if (protoServiceDescriptor == null) {
+                continue;
+            }
+
+            for (MethodDescriptor method : protoServiceDescriptor.getMethods()) {
+                final String methodKey = protoServiceDescriptor.getFullName() + '/' + method.getName();
+                final String paramKey = methodKey + ":param/request";
+                final String returnKey = methodKey + ":return";
+
+                // Add :param/request using first sentence of input message type description
+                final String inputTypeName = method.getInputType().getFullName();
+                final DescriptionInfo inputTypeDescription = docStrings.get(inputTypeName);
+                if (inputTypeDescription != null) {
+                    docStrings.putIfAbsent(paramKey, firstSentence(inputTypeDescription));
+                }
+
+                // Add :return using first sentence of output message type description (if not already set)
+                final String outputTypeName = method.getOutputType().getFullName();
+                final DescriptionInfo outputTypeDescription = docStrings.get(outputTypeName);
+                if (outputTypeDescription != null && !docStrings.containsKey(returnKey)) {
+                    docStrings.put(returnKey, firstSentence(outputTypeDescription));
+                }
+            }
+        }
+
+        return docStrings;
+    }
+
+    /**
+     * Extracts the first sentence from a {@link DescriptionInfo}.
+     * A sentence is considered to end with a period followed by whitespace or end of string.
+     */
+    private static DescriptionInfo firstSentence(DescriptionInfo descriptionInfo) {
+        final String docString = descriptionInfo.docString();
+        if (docString == null || docString.isEmpty()) {
+            return descriptionInfo;
+        }
+
+        // Find the first period followed by whitespace or end of string
+        final int length = docString.length();
+        for (int i = 0; i < length; i++) {
+            if (docString.charAt(i) == '.') {
+                // Check if this is end of string or followed by whitespace
+                if (i + 1 >= length || Character.isWhitespace(docString.charAt(i + 1))) {
+                    final String firstSentence = docString.substring(0, i + 1).trim();
+                    return DescriptionInfo.of(firstSentence, descriptionInfo.markup());
+                }
+            }
+        }
+
+        // No period found, return original (trimmed)
+        return DescriptionInfo.of(docString.trim(), descriptionInfo.markup());
     }
 
     @Override

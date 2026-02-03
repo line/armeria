@@ -23,7 +23,7 @@ import TableContainer from '@material-ui/core/TableContainer';
 import { makeStyles } from '@material-ui/core';
 import * as React from 'react';
 import {
-  DescribedTypeSignature,
+  DescriptionInfo,
   Method,
   Specification,
 } from '../../lib/specification';
@@ -40,32 +40,34 @@ const useStyles = makeStyles({
 interface Props {
   method: Method;
   specification: Specification;
+  serviceName: string;
 }
 
 interface ExceptionRowProps {
-  exception: DescribedTypeSignature;
+  exceptionTypeSignature: string;
+  descriptionInfo: DescriptionInfo | undefined;
   specification: Specification;
 }
 
 const ExceptionRow: React.FunctionComponent<ExceptionRowProps> = ({
-  exception,
+  exceptionTypeSignature,
+  descriptionInfo,
   specification,
 }) => {
   const styles = useStyles();
-  const hasDescription =
-    exception.descriptionInfo && exception.descriptionInfo.docString;
+  const hasDescription = descriptionInfo && descriptionInfo.docString;
 
   return (
     <TableRow>
       <TableCell>
         <code>
-          {specification.getTypeSignatureHtml(exception.typeSignature)}
+          {specification.getTypeSignatureHtml(exceptionTypeSignature)}
         </code>
       </TableCell>
       <TableCell>
         {hasDescription && (
           <pre className={styles.description}>
-            <Description descriptionInfo={exception.descriptionInfo} />
+            <Description descriptionInfo={descriptionInfo} />
           </pre>
         )}
       </TableCell>
@@ -79,14 +81,21 @@ const Exceptions: React.FunctionComponent<Props> = (props) => (
     <TableContainer>
       <Table>
         <TableBody>
-          {props.method.exceptions.length > 0 ? (
-            props.method.exceptions.map((exception) => (
-              <ExceptionRow
-                key={exception.typeSignature}
-                exception={exception}
-                specification={props.specification}
-              />
-            ))
+          {props.method.exceptionTypeSignatures.length > 0 ? (
+            props.method.exceptionTypeSignatures.map(
+              (exceptionTypeSignature) => (
+                <ExceptionRow
+                  key={exceptionTypeSignature}
+                  exceptionTypeSignature={exceptionTypeSignature}
+                  descriptionInfo={props.specification.getThrowsDescription(
+                    props.serviceName,
+                    props.method.name,
+                    exceptionTypeSignature,
+                  )}
+                  specification={props.specification}
+                />
+              ),
+            )
           ) : (
             <TableRow key="empty exception">
               <TableCell>There are no exceptions</TableCell>

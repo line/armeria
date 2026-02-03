@@ -84,7 +84,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                         final Collection<Object> castChildren = (Collection<Object>) children;
                         castChildren.forEach(
                                 grandChild -> traverseChildren(docStrings, packageName, FQCN_DELIM,
-                                                               grandChild, packageName));
+                                                               grandChild, packageName, false));
                     }
                 });
             } catch (IOException e) {
@@ -95,21 +95,28 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
     }
 
     private static void traverseChildren(ImmutableMap.Builder<String, String> docStrings, String prefix,
-                                         String delimiter, Object node, String packageName) {
+                                         String delimiter, Object node, String packageName,
+                                         boolean isArgument) {
         if (node instanceof Map) {
             @SuppressWarnings("unchecked")
             final Map<String, Object> map = (Map<String, Object>) node;
             final String name = (String) map.get("name");
             final String doc = (String) map.get("doc");
             final String childPrefix;
+            final boolean isFunction = map.containsKey("returnTypeId");
             if (name != null) {
-                childPrefix = prefix + delimiter + name;
+                if (isArgument) {
+                    // For function arguments, use :param/ format
+                    childPrefix = prefix + ":param/" + name;
+                } else {
+                    childPrefix = prefix + delimiter + name;
+                }
                 if (doc != null) {
                     final String trimmedDoc = doc.trim();
                     docStrings.put(childPrefix, trimmedDoc);
 
                     // Check if this is a function (has returnTypeId field)
-                    if (map.containsKey("returnTypeId")) {
+                    if (isFunction) {
                         // Parse @param tags from docstring
                         parseParamDocStrings(docStrings, childPrefix, trimmedDoc, getParameterNames(map));
 
@@ -124,11 +131,17 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
             } else {
                 childPrefix = prefix;
             }
-            map.forEach((key, value) -> traverseChildren(docStrings, childPrefix, DELIM, value, packageName));
+            // When traversing into "arguments" of a function, mark children as arguments
+            map.forEach((key, value) -> {
+                final boolean childIsArgument = isFunction && "arguments".equals(key);
+                traverseChildren(docStrings, childPrefix, DELIM, value, packageName, childIsArgument);
+            });
         } else if (node instanceof Iterable) {
             @SuppressWarnings("unchecked")
             final Iterable<Object> children = (Iterable<Object>) node;
-            children.forEach(child -> traverseChildren(docStrings, prefix, DELIM, child, packageName));
+            // Preserve the isArgument flag when iterating over argument list
+            children.forEach(child -> traverseChildren(docStrings, prefix, DELIM, child, packageName,
+                                                       isArgument));
         }
     }
 

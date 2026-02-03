@@ -85,6 +85,24 @@ class ThriftDocStringExtractorTest {
     }
 
     @Test
+    void testParamDocString() throws Exception {
+        final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+                ImmutableMap.of(
+                        "META-INF/armeria/thrift/hbase.json",
+                        Resources.toByteArray(Resources.getResource(
+                                "META-INF/armeria/thrift/hbase.json"))));
+        // Test that parameter docstrings from Thrift IDL are extracted with :param/ format
+        // The enableTable method has a tableName parameter with doc "name of the table"
+        assertThat(docStrings.get("testing.thrift.hbase.Hbase/enableTable:param/tableName"))
+                .isEqualTo("name of the table");
+        // The disableTable method also has a tableName parameter with doc "name of the table"
+        assertThat(docStrings.get("testing.thrift.hbase.Hbase/disableTable:param/tableName"))
+                .isEqualTo("name of the table");
+        // Verify the old incorrect format is not present
+        assertThat(docStrings.containsKey("testing.thrift.hbase.Hbase/enableTable/tableName")).isFalse();
+    }
+
+    @Test
     void testGetAllDocStrings() throws IOException {
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();

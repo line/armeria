@@ -46,14 +46,19 @@ const useStyles = makeStyles({
 interface Props {
   method: Method;
   specification: Specification;
+  serviceName: string;
 }
 
 const ReturnType: React.FunctionComponent<Props> = ({
   method,
   specification,
+  serviceName,
 }) => {
-  const returnTypeSignature = method.returnInfo.typeSignature;
-  const returnDescriptionInfo = method.returnInfo.descriptionInfo;
+  const returnTypeSignature = method.returnTypeSignature;
+  const returnDescriptionInfo = specification.getReturnDescription(
+    serviceName,
+    method.name,
+  );
   const returnTypeVariables =
     specification.getStructByName(returnTypeSignature)?.fields || [];
 
