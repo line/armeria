@@ -91,7 +91,11 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                 throw new IllegalStateException(e);
             }
         }
-        return docStrings.build();
+        // Use buildKeepingLast() because duplicate keys can occur when:
+        // - A function argument has inline documentation AND
+        // - The function's docstring contains a @param tag for the same argument
+        // In this case, @param tags (added later) take precedence over inline docs.
+        return docStrings.buildKeepingLast();
     }
 
     private static void traverseChildren(ImmutableMap.Builder<String, String> docStrings, String prefix,
