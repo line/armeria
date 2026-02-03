@@ -58,6 +58,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
@@ -553,7 +554,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             extractParameterDescriptions(docStrings, className, methodName,
                                          service.annotatedValueResolvers());
         }
-        return docStrings;
+        return ImmutableMap.copyOf(docStrings);
     }
 
     private void loadDocStringsFromPropertiesFile(Map<String, DescriptionInfo> docStrings, String className) {

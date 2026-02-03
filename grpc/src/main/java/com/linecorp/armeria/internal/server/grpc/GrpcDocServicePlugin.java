@@ -39,6 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -435,7 +436,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             }
         }
 
-        return docStrings;
+        return ImmutableMap.copyOf(docStrings);
     }
 
     /**
