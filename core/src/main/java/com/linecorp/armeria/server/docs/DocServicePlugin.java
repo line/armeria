@@ -69,7 +69,7 @@ public interface DocServicePlugin {
      * <ul>
      *   <li>{@code "{service name}"} - a docstring that describes a service</li>
      *   <li>{@code "{service name}/{method name}"} - a docstring that describes a service method</li>
-     *   <li>{@code "{service name}/{method name}/{parameter name}"} - a docstring that describes
+     *   <li>{@code "{service name}/{method name}:param/{parameter name}"} - a docstring that describes
      *       a service method parameter</li>
      *   <li>{@code "{service name}/{method name}:return"} - a docstring that describes
      *       a service method return value</li>

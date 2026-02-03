@@ -572,24 +572,12 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                     continue;
                 }
 
-                // Convert property name to full key:
+                // Convert property name to full key by prepending "className/":
                 // - "methodName" -> "className/methodName" (method description)
+                // - "methodName:param/paramName" -> "className/methodName:param/paramName"
                 // - "methodName:return" -> "className/methodName:return"
                 // - "methodName:throws/ExceptionType" -> "className/methodName:throws/ExceptionType"
-                // - "methodName.paramName" -> "className/methodName:param/paramName"
-                final String fullKey;
-                if (propertyName.contains(":return") || propertyName.contains(":throws/")) {
-                    fullKey = className + '/' + propertyName;
-                } else if (propertyName.contains(".")) {
-                    // Parameter: "methodName.paramName" -> "className/methodName:param/paramName"
-                    final int dotIndex = propertyName.indexOf('.');
-                    final String methodNamePart = propertyName.substring(0, dotIndex);
-                    final String paramName = propertyName.substring(dotIndex + 1);
-                    fullKey = className + '/' + methodNamePart + ":param/" + paramName;
-                } else {
-                    // Method description: "methodName" -> "className/methodName"
-                    fullKey = className + '/' + propertyName;
-                }
+                final String fullKey = className + '/' + propertyName;
                 docStrings.put(fullKey, DescriptionInfo.of(value));
             }
         } catch (IOException e) {

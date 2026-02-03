@@ -62,6 +62,7 @@ import testing.thrift.main.FileService;
 import testing.thrift.main.FooService;
 import testing.thrift.main.HelloService;
 import testing.thrift.main.HelloService.hello_args;
+import testing.thrift.main.MidLineTagTestService;
 import testing.thrift.main.OnewayHelloService;
 import testing.thrift.main.SleepService;
 
@@ -102,6 +103,8 @@ public class ThriftDocServiceTest {
                     THttpService.of(mock(OnewayHelloService.AsyncIface.class));
             final THttpService fileService =
                     THttpService.of(mock(FileService.AsyncIface.class));
+            final THttpService midLineTagTestService =
+                    THttpService.of(mock(MidLineTagTestService.AsyncIface.class));
 
             sb.service("/", helloAndSleepService);
             sb.service("/foo", fooService);
@@ -110,6 +113,7 @@ public class ThriftDocServiceTest {
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
             sb.service("/file", fileService);
+            sb.service("/midline", midLineTagTestService);
 
             sb.serviceUnder(
                     "/docs/",
@@ -155,6 +159,12 @@ public class ThriftDocServiceTest {
                         .build(),
                 new EntryBuilder(Hbase.class)
                         .endpoint(EndpointInfo.builder("*", "/hbase")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
+                        .build(),
+                new EntryBuilder(MidLineTagTestService.class)
+                        .endpoint(EndpointInfo.builder("*", "/midline")
                                               .defaultFormat(BINARY)
                                               .availableFormats(allThriftFormats)
                                               .build())

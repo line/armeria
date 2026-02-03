@@ -1305,7 +1305,7 @@
           "name": "testException",
           "returnTypeId": "void",
           "oneway": false,
-          "doc": "Print 'testException(%s)' with arg as '%s'\n@param string arg - a string indication what type of exception to throw\nif arg == \"Xception\" throw Xception with errorCode = 1001 and message = arg\nelsen if arg == \"TException\" throw TException\nelse do not throw anything\n@throws Xception - when arg is \"Xception\"\n",
+          "doc": "Print 'testException(%s)' with arg as '%s'\n@param string arg - a string indication what type of exception to throw\nif arg == \"Xception\" throw Xception with errorCode = 1001 and message = arg\nelse if arg == \"TException\" throw TException\nelse do not throw anything\n@throws Xception - when arg is \"Xception\"\n",
           "arguments": [
             {
               "key": 1,
@@ -1335,7 +1335,7 @@
             "class": "Xtruct"
           },
           "oneway": false,
-          "doc": "Print 'testMultiException(%s, %s)' with arg0 as '%s' and arg1 as '%s'\n@param string arg - a string indication what type of exception to throw\nif arg0 == \"Xception\" throw Xception with errorCode = 1001 and message = \"This is an Xception\"\nelsen if arg0 == \"Xception2\" throw Xception2 with errorCode = 2002 and struct_thing.string_thing = \"This is an Xception2\"\nelse do not throw anything\n@return Xtruct - an Xtruct with string_thing = arg1\n@throws Xception - when arg0 is \"Xception\"\n@throws Xception2 - when arg0 is \"Xception2\"\n",
+          "doc": "Print 'testMultiException(%s, %s)' with arg0 as '%s' and arg1 as '%s'\n@param string arg0 - a string indication what type of exception to throw\n@param string arg1 - the value used to populate string_thing\nif arg0 == \"Xception\" throw Xception with errorCode = 1001 and message = \"This is an Xception\"\nelse if arg0 == \"Xception2\" throw Xception2 with errorCode = 2002 and struct_thing.string_thing = \"This is an Xception2\"\nelse do not throw anything\n@return Xtruct - an Xtruct with string_thing = arg1\n@throws Xception - when arg0 is \"Xception\"\n@throws Xception2 - when arg0 is \"Xception2\"\n",
           "arguments": [
             {
               "key": 1,

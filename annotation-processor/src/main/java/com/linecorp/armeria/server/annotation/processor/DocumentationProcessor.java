@@ -204,8 +204,11 @@ public final class DocumentationProcessor extends AbstractProcessor {
                         stringBuilder.append(' ');
                     }
                 }
-                final String paramName = param.getSimpleName().toString();
-                properties.setProperty(methodName + '.' + paramName, stringBuilder.toString().trim());
+                final String description = stringBuilder.toString().trim();
+                if (!description.isEmpty()) {
+                    final String paramName = param.getSimpleName().toString();
+                    properties.setProperty(methodName + ":param/" + paramName, description);
+                }
             });
         }
 
