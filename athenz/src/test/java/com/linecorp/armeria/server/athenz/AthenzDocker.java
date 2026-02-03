@@ -71,6 +71,7 @@ public class AthenzDocker implements SafeCloseable {
     public static final String USER_ROLE = "test_role_users";
     public static final String ADMIN_POLICY = "admin-policy";
     public static final String USER_POLICY = "user-policy";
+    public static final String CUSTOM_POLICY = "custom-policy";
 
     public static final String ADMIN_PATH_POLICY = "admin-path-policy";
     public static final String ADMIN_HEADER_POLICY = "admin-header-policy";
@@ -160,6 +161,7 @@ public class AthenzDocker implements SafeCloseable {
 
         createPolicy(USER_POLICY, USER_ROLE, "files", "obtain");
         createPolicy(ADMIN_POLICY, ADMIN_ROLE, "secrets", "obtain");
+        createPolicy(CUSTOM_POLICY, USER_ROLE, "custom", "read");
 
         // Additional policies for testing athenzResourceProvider
         createPolicy(ADMIN_PATH_POLICY, ADMIN_ROLE, "/admin/path/**", "obtain");

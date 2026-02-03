@@ -25,11 +25,15 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
+
+import io.netty.util.AsciiString;
 
 /**
  * A factory for creating a decorator that checks access permissions using Athenz policies.
@@ -60,15 +64,64 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
     public Function<? super HttpService, ? extends HttpService> newDecorator(RequiresAthenzRole parameter) {
         final String resource = parameter.resource();
         final String action = parameter.action();
-        final List<TokenType> tokenTypes = ImmutableList.copyOf(parameter.tokenType());
+        final TokenType[] tokenTypes = parameter.tokenType();
+        final String[] customHeaders = parameter.customHeaders();
 
         requireNonNull(resource, "resource");
         requireNonNull(action, "action");
         checkArgument(!resource.isEmpty(), "resource must not be empty");
         checkArgument(!action.isEmpty(), "action must not be empty");
-        checkArgument(!tokenTypes.isEmpty(), "tokenType must not be empty");
 
-        return delegate -> new AthenzService(delegate, authorizer, resource, action, tokenTypes,
+        final ImmutableList.Builder<AthenzTokenHeader> headersBuilder = ImmutableList.builder();
+        if (tokenTypes.length > 0) {
+            headersBuilder.add(tokenTypes);
+        }
+        for (String customHeader : customHeaders) {
+            headersBuilder.add(new CustomAthenzTokenHeader(customHeader));
+        }
+        final List<AthenzTokenHeader> tokenHeaders = headersBuilder.build();
+        checkArgument(!tokenHeaders.isEmpty(), "tokenType and customHeaders must not both be empty");
+
+        return delegate -> new AthenzService(delegate, authorizer, resource, action, tokenHeaders,
                                              meterIdPrefix);
+    }
+
+    /**
+     * A custom {@link AthenzTokenHeader} implementation for user-defined header names.
+     */
+    private static final class CustomAthenzTokenHeader implements AthenzTokenHeader {
+
+        private final String headerName;
+        private final AsciiString asciiHeaderName;
+
+        CustomAthenzTokenHeader(String headerName) {
+            requireNonNull(headerName, "headerName");
+            checkArgument(!headerName.isEmpty(), "headerName must not be empty");
+            this.headerName = headerName;
+            asciiHeaderName = AsciiString.of(headerName);
+        }
+
+        @Override
+        public String name() {
+            return "CUSTOM_" + headerName;
+        }
+
+        @Override
+        public AsciiString headerName() {
+            return asciiHeaderName;
+        }
+
+        @Nullable
+        @Override
+        public String authScheme() {
+            // Custom headers typically don't use an auth scheme
+            return null;
+        }
+
+        @Override
+        public boolean isRoleToken() {
+            // Treat custom headers as non-role tokens by default
+            return false;
+        }
     }
 }
