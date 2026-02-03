@@ -515,6 +515,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         }
     }
 
+    // TODO(trustin): Docstring keys currently use only className/methodName, so descriptions for
+    //                overloaded methods will overwrite each other. Consider incorporating overloadId
+    //                or a method signature token into the key to support overloaded methods properly.
     @Override
     public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         final Map<String, DescriptionInfo> docStrings = new HashMap<>();
