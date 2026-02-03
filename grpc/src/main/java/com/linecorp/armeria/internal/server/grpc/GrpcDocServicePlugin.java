@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
 import static java.util.Objects.requireNonNull;
