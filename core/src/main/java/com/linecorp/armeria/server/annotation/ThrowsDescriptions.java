@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -26,6 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * The containing annotation type for {@link ThrowsDescription}.
  */
+@Documented
 @UnstableApi
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

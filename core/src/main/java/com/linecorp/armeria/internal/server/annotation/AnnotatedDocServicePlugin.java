@@ -41,7 +41,6 @@ import java.lang.reflect.WildcardType;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,6 +84,7 @@ import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
@@ -196,16 +196,16 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static Set<TypeSignature> getExceptionTypeSignatures(Method method) {
-        final Set<TypeSignature> result = new LinkedHashSet<>();
+        final ImmutableSet.Builder<TypeSignature> builder = ImmutableSet.builder();
         // From @ThrowsDescription annotations
         for (ThrowsDescription td : AnnotationUtil.findAll(method, ThrowsDescription.class)) {
-            result.add(TypeSignature.ofStruct(td.value()));
+            builder.add(TypeSignature.ofStruct(td.value()));
         }
         // From method signature declared exceptions
         for (Class<?> exceptionType : method.getExceptionTypes()) {
-            result.add(TypeSignature.ofStruct(exceptionType));
+            builder.add(TypeSignature.ofStruct(exceptionType));
         }
-        return result;
+        return builder.build();
     }
 
     private static TypeSignature getReturnTypeSignature(Method method) {
@@ -673,12 +673,12 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     // Helper method to convert AnnotatedValueResolvers to FieldInfo for StructInfo
     // (used for RequestObject types where we still need FieldInfo with descriptions)
-    private static List<com.linecorp.armeria.server.docs.FieldInfo> fieldInfos(
+    private static List<FieldInfo> fieldInfos(
             List<AnnotatedValueResolver> resolvers) {
-        final ImmutableList.Builder<com.linecorp.armeria.server.docs.FieldInfo> fieldInfosBuilder =
+        final ImmutableList.Builder<FieldInfo> fieldInfosBuilder =
                 ImmutableList.builder();
         for (AnnotatedValueResolver resolver : resolvers) {
-            final com.linecorp.armeria.server.docs.FieldInfo fieldInfo = fieldInfo(resolver);
+            final FieldInfo fieldInfo = fieldInfo(resolver);
             if (fieldInfo != null) {
                 fieldInfosBuilder.add(fieldInfo);
             }
@@ -687,7 +687,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     @Nullable
-    private static com.linecorp.armeria.server.docs.FieldInfo fieldInfo(AnnotatedValueResolver resolver) {
+    private static FieldInfo fieldInfo(AnnotatedValueResolver resolver) {
         final Class<? extends Annotation> annotationType = resolver.annotationType();
         if (annotationType == RequestObject.class) {
             final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
@@ -711,7 +711,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             } else {
                 typeSignature = toTypeSignature(resolver.elementType());
             }
-            return com.linecorp.armeria.server.docs.FieldInfo.builder(resolver.httpElementName(), typeSignature)
+            return FieldInfo.builder(resolver.httpElementName(), typeSignature)
                             .requirement(resolver.shouldExist() ?
                                          FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
                             .descriptionInfo(resolver.description())
@@ -737,7 +737,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             signature = toTypeSignature(resolver.elementType());
         }
 
-        return com.linecorp.armeria.server.docs.FieldInfo.builder(resolver.httpElementName(), signature)
+        return FieldInfo.builder(resolver.httpElementName(), signature)
                         .location(location(resolver))
                         .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
                                                             : FieldRequirement.OPTIONAL)

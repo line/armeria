@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.server.docs.Markup;
  * }
  * }</pre>
  */
+@Documented
 @UnstableApi
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
