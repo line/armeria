@@ -98,7 +98,7 @@ final class HttpHeaderUtil {
                     });
                 } else {
                     headers.getAll(name).forEach(header -> {
-                        getAllValidAddress(header, Function.identity(), filter, builder);
+                        getAllValidAddress(header, String::trim, filter, builder);
                     });
                 }
 
