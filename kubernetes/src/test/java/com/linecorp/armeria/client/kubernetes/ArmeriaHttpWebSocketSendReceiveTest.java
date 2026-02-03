@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.kubernetes;
 
+import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
+
 import io.fabric8.kubernetes.client.http.AbstractWebSocketSendReceiveTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 
@@ -22,6 +24,12 @@ import io.fabric8.kubernetes.client.http.HttpClient;
 class ArmeriaHttpWebSocketSendReceiveTest extends AbstractWebSocketSendReceiveTest {
     @Override
     protected HttpClient.Factory getHttpClientFactory() {
-        return new ArmeriaHttpClientFactory();
+        return new ArmeriaHttpClientFactory() {
+            @Override
+            protected void additionalWebSocketConfig(WebSocketClientBuilder builder) {
+                // multiframeReceive() test needs a larger max frame payload length.
+                builder.maxFramePayloadLength(66000);
+            }
+        };
     }
 }
