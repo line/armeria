@@ -531,8 +531,6 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         }
     }
 
-    @VisibleForTesting
-
     @Override
     public String toString() {
         return GrpcDocServicePlugin.class.getSimpleName();
