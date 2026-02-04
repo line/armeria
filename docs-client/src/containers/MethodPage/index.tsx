@@ -254,13 +254,11 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         specification={props.specification}
         serviceName={service.name}
       />
-      {serviceType !== ServiceType.HTTP && (
-        <Exceptions
-          method={method}
-          specification={props.specification}
-          serviceName={service.name}
-        />
-      )}
+      <Exceptions
+        method={method}
+        specification={props.specification}
+        serviceName={service.name}
+      />
       <Endpoints method={method} />
       {debugTransport && (
         <DebugPage
