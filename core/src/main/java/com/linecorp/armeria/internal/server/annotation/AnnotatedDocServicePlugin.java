@@ -644,8 +644,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     private static DescriptionInfo classDescriptionInfo(@Nullable Object typeDescriptor) {
         if (typeDescriptor instanceof Class) {
-            final Description description =
-                    AnnotationUtil.findFirst((Class<?>) typeDescriptor, Description.class);
+            final Description description = AnnotationUtil.findFirstDescription((Class<?>) typeDescriptor);
             if (description != null) {
                 return DescriptionInfo.from(description);
             }
