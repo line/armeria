@@ -542,7 +542,8 @@ class GrpcDocServicePluginTest {
                      DescriptionInfo.of(
                              " One request followed by a sequence of responses (streamed download).\n" +
                              " The server returns the payload with client desired type and sizes.\n"))
-                .put(serviceName + "/StreamingOutputCall:param/request", streamingOutputCallRequestFirstSentence)
+                .put(serviceName + "/StreamingOutputCall:param/request",
+                     streamingOutputCallRequestFirstSentence)
                 .put(serviceName + "/StreamingOutputCall:return", streamingOutputCallResponseFirstSentence)
                 .put(serviceName + "/StreamingInputCall",
                      DescriptionInfo.of(

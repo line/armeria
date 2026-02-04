@@ -86,6 +86,7 @@ class ThriftDocStringExtractorTest {
 
     @Test
     void testParamDocString() throws Exception {
+        assumeDocStringsAvailable();
         final Map<String, String> docStrings = extractor.getDocStringsFromFiles(
                 ImmutableMap.of(
                         "META-INF/armeria/thrift/hbase.json",

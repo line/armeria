@@ -381,34 +381,56 @@ class GrpcDocServiceTest {
                                " performance with various types of payload.\n"));
 
         // Method descriptions (include @return in comment for methods that have it)
+        // Also include auto-generated :param/request and :return entries from message type descriptions
         expectedDocStrings.set(serviceName + "/EmptyCall",
                 descriptionInfo(" One empty request followed by one empty response.\n" +
                                " @return an empty response\n"));
+        expectedDocStrings.set(serviceName + "/EmptyCall:param/request",
+                descriptionInfo("An empty message that you can re-use to avoid defining duplicated empty\n" +
+                               " messages in your project."));
         expectedDocStrings.set(serviceName + "/EmptyCall:return",
                 descriptionInfo("an empty response"));
 
         expectedDocStrings.set(serviceName + "/UnaryCall",
                 descriptionInfo(" One request followed by one response.\n" +
                                " @return a response containing the payload\n"));
+        expectedDocStrings.set(serviceName + "/UnaryCall:param/request",
+                descriptionInfo("Unary request."));
         expectedDocStrings.set(serviceName + "/UnaryCall:return",
                 descriptionInfo("a response containing the payload"));
 
         expectedDocStrings.set(serviceName + "/UnaryCall2",
                 descriptionInfo(" Another method with one request followed by one response.\n"));
+        expectedDocStrings.set(serviceName + "/UnaryCall2:param/request",
+                descriptionInfo("Unary request."));
+        expectedDocStrings.set(serviceName + "/UnaryCall2:return",
+                descriptionInfo("Unary response, as configured by the request."));
 
         expectedDocStrings.set(serviceName + "/StreamingOutputCall",
                 descriptionInfo(" One request followed by a sequence of responses (streamed download).\n" +
                                " The server returns the payload with client desired type and sizes.\n"));
+        expectedDocStrings.set(serviceName + "/StreamingOutputCall:param/request",
+                descriptionInfo("Server-streaming request."));
+        expectedDocStrings.set(serviceName + "/StreamingOutputCall:return",
+                descriptionInfo("Server-streaming response, as configured by the request and parameters."));
 
         expectedDocStrings.set(serviceName + "/StreamingInputCall",
                 descriptionInfo(" A sequence of requests followed by one response (streamed upload).\n" +
                                " The server returns the aggregated size of client payload as the result.\n"));
+        expectedDocStrings.set(serviceName + "/StreamingInputCall:param/request",
+                descriptionInfo("Client-streaming request."));
+        expectedDocStrings.set(serviceName + "/StreamingInputCall:return",
+                descriptionInfo("Client-streaming response."));
 
         expectedDocStrings.set(serviceName + "/FullDuplexCall",
                 descriptionInfo(
                         " A sequence of requests with each request served by the server immediately.\n" +
                         " As one request could lead to multiple responses, this interface\n" +
                         " demonstrates the idea of full duplexing.\n"));
+        expectedDocStrings.set(serviceName + "/FullDuplexCall:param/request",
+                descriptionInfo("Server-streaming request."));
+        expectedDocStrings.set(serviceName + "/FullDuplexCall:return",
+                descriptionInfo("Server-streaming response, as configured by the request and parameters."));
 
         expectedDocStrings.set(serviceName + "/HalfDuplexCall",
                 descriptionInfo(
@@ -416,10 +438,20 @@ class GrpcDocServiceTest {
                         " The server buffers all the client requests and then serves them in order. A\n" +
                         " stream of responses are returned to the client when the server starts with\n" +
                         " first request.\n"));
+        expectedDocStrings.set(serviceName + "/HalfDuplexCall:param/request",
+                descriptionInfo("Server-streaming request."));
+        expectedDocStrings.set(serviceName + "/HalfDuplexCall:return",
+                descriptionInfo("Server-streaming response, as configured by the request and parameters."));
 
         expectedDocStrings.set(serviceName + "/UnimplementedCall",
                 descriptionInfo(" The test server will not implement this method. It will be used\n" +
                                " to test the behavior when clients call unimplemented methods.\n"));
+        expectedDocStrings.set(serviceName + "/UnimplementedCall:param/request",
+                descriptionInfo("An empty message that you can re-use to avoid defining duplicated empty\n" +
+                               " messages in your project."));
+        expectedDocStrings.set(serviceName + "/UnimplementedCall:return",
+                descriptionInfo("An empty message that you can re-use to avoid defining duplicated empty\n" +
+                               " messages in your project."));
 
         expectedDocStrings.set(serviceName + "/UnaryCallWithAllDifferentParameterTypes",
                 descriptionInfo(
