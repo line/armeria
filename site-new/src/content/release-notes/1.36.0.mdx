@@ -60,6 +60,15 @@ date: 2026-02-03
       .build();
   
   Server.builder()
+        .bossGroupFactory(threadName -> {
+          return EventLoopGroups
+            .builder()
+            .numThreads(1)
+            .threadFactory(ThreadFactories.newThreadFactory(threadName, false))
+            // Reduce quiet period and timeout to 0ms for immediate shutdown
+            .gracefulShutdownMillis(0L, 0L)
+            .build();
+        })
         .workerGroup(eventLoopGroup)
         ...
         .build();
