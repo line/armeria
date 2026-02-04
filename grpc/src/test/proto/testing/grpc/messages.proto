@@ -47,6 +47,14 @@ syntax = "proto3";
 
 package armeria.grpc.testing;
 
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
 option java_package = "testing.grpc";
 
 // The type of payload that should be returned.
@@ -279,4 +287,22 @@ message ExtendedTestMessage {
   ExtendedTestMessage self = 24;
   NestedSelf nested_self = 25;
   NestedNestedSelf nested_nested_self = 26;
+  google.protobuf.Any any = 27;
+  google.protobuf.BoolValue bool_value = 28;
+  google.protobuf.BytesValue bytes_value = 29;
+  google.protobuf.DoubleValue double_value = 30;
+  google.protobuf.Duration duration = 31;
+  google.protobuf.Empty empty = 32;
+  google.protobuf.FieldMask field_mask = 34;
+  google.protobuf.FloatValue float_value = 33;
+  google.protobuf.Int32Value int32_value = 35;
+  google.protobuf.Int64Value int64_value = 36;
+  google.protobuf.ListValue list_value = 37;
+  google.protobuf.NullValue null_value = 38;
+  google.protobuf.StringValue string_value = 39;
+  google.protobuf.Struct struct = 40;
+  google.protobuf.Timestamp timestamp = 41;
+  google.protobuf.UInt32Value uint32_value = 42;
+  google.protobuf.UInt64Value uint64_value = 43;
+  google.protobuf.Value value = 44;
 }
