@@ -34,8 +34,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.google.common.util.concurrent.ListenableFuture;
-
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -56,6 +54,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.CallOptions;
+import io.grpc.ClientCall;
+import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
@@ -68,7 +69,6 @@ import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
-import testing.grpc.TestServiceGrpc.TestServiceFutureStub;
 
 class GrpcMeterIdPrefixFunctionTest {
 
@@ -193,21 +193,26 @@ class GrpcMeterIdPrefixFunctionTest {
         // before receiving headers/trailers (the fallback path in GrpcMeterIdPrefixFunction)
         final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         clientFactory = ClientFactory.builder().meterRegistry(registry).build();
-        final TestServiceFutureStub client =
+        final TestServiceGrpc.TestServiceStub client =
                 GrpcClients.builder(server.uri(SessionProtocol.H2C, GrpcSerializationFormats.PROTO))
                            .factory(clientFactory)
                            .decorator(MetricCollectingClient.newDecorator(
                                    GrpcMeterIdPrefixFunction.of("client")))
-                           .build(TestServiceFutureStub.class);
+                           .build(TestServiceGrpc.TestServiceStub.class);
 
-        final ClientRequestContext ctx;
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final ListenableFuture<ExtendedTestMessage> future =
-                    client.unaryCallWithAllDifferentParameterTypes(ExtendedTestMessage.getDefaultInstance());
-            ctx = captor.get();
-            ctx.log().whenRequestComplete().join();
-            future.cancel(true);
-        }
+        // Use low-level ClientCall API to properly cancel with CANCELLED status
+        final ClientCall<ExtendedTestMessage, ExtendedTestMessage> call =
+                client.getChannel().newCall(
+                        TestServiceGrpc.getUnaryCallWithAllDifferentParameterTypesMethod(),
+                        CallOptions.DEFAULT);
+
+        call.start(new ClientCall.Listener<ExtendedTestMessage>() {}, new Metadata());
+        call.sendMessage(ExtendedTestMessage.getDefaultInstance());
+        call.halfClose();
+        call.request(1);
+
+        // Cancel the call to trigger CANCELLED status
+        call.cancel("Test cancellation", null);
 
         // grpc.status=1 (CANCELLED) confirms the responseContent fallback path is working
         given().ignoreExceptions().untilAsserted(() -> assertThat(
@@ -279,6 +284,7 @@ class GrpcMeterIdPrefixFunctionTest {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                return;
             }
             responseObserver.onNext(ExtendedTestMessage.getDefaultInstance());
             responseObserver.onCompleted();

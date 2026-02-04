@@ -123,7 +123,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
                 final Throwable cause = rpcResponse.cause();
                 if (cause != null) {
                     final Status grpcStatus = Status.fromThrowable(cause);
-                    tagListBuilder.add(statusTag(String.valueOf(grpcStatus.getCode().value())));
+                    tagListBuilder.add(statusTag(StringUtil.toString(grpcStatus.getCode().value())));
                     return;
                 }
             }
