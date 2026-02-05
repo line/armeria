@@ -39,19 +39,20 @@ import jakarta.servlet.Servlet;
 @SpringBootApplication
 public class SpringJettyApplication {
 
-    /**
-     * Bean to configure Armeria Jetty service.
-     */
     @Bean
-    public ArmeriaServerConfigurator armeriaTomcat(WebServerApplicationContext applicationContext) {
+    public JettyWebServer jettyWebServer(WebServerApplicationContext applicationContext) {
         final WebServer webServer = applicationContext.getWebServer();
         if (webServer instanceof JettyWebServer) {
-            final Server jettyServer = ((JettyWebServer) webServer).getServer();
-
-            return serverBuilder -> serverBuilder.service("prefix:/jetty/api/rest/v1",
-                                                          JettyService.of(jettyServer));
+            return ((JettyWebServer) webServer);
         }
-        return serverBuilder -> {};
+        throw new IllegalStateException("The web server is not Jetty: " + webServer);
+    }
+
+    @Bean
+    public ArmeriaServerConfigurator armeriaJetty(JettyWebServer jettyWebServer) {
+        final Server jettyServer = jettyWebServer.getServer();
+        return serverBuilder -> serverBuilder.service("prefix:/jetty/api/rest/v1",
+                                                      JettyService.of(jettyServer));
     }
 
     @Configuration(proxyBeanMethods = false)
