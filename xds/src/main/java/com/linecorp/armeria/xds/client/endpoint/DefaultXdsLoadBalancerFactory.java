@@ -52,6 +52,7 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
     public void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
                          SnapshotWatcher<XdsLoadBalancer> watcher,
                          @Nullable XdsLoadBalancer localLoadBalancer) {
+        assert eventLoop.inEventLoop();
         endpointGroup.closeAsync();
 
         observer.resourceUpdated(clusterXdsResource);

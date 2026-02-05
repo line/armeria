@@ -33,7 +33,9 @@ import io.netty.util.concurrent.ScheduledFuture;
  * A pool of {@link XdsLoadBalancerFactory} which defers closing factories.
  * This may be useful when users wish to propagate endpoint-specific properties
  * across xDS resource reloads. (e.g., preserve health/ramping up even if a route is updated)
- * All methods are expected to be run from the same {@link EventExecutor}.
+ * All methods are expected to be run from either:
+ * 1) The thread which creates {@link XdsBootstrap} for static resources
+ * 2) The designated {@link EventExecutor} when {@link AbstractRoot} subscribes to clusters.
  */
 final class LoadBalancerFactoryPool implements SafeCloseable {
     private final Map<String, XdsLoadBalancerFactory> factories = new HashMap<>();
@@ -53,7 +55,6 @@ final class LoadBalancerFactoryPool implements SafeCloseable {
     }
 
     XdsLoadBalancerFactory register(String name) {
-        assert eventLoop.inEventLoop();
         maybeRemoveDelayedClose(name);
         final XdsLoadBalancerFactory cached = factories.get(name);
         if (cached != null) {
@@ -69,7 +70,6 @@ final class LoadBalancerFactoryPool implements SafeCloseable {
     }
 
     void unregister(String name) {
-        assert eventLoop.inEventLoop();
         maybeRemoveDelayedClose(name);
         delayedCloses.put(name, new DelayedClose(name));
     }
