@@ -298,6 +298,14 @@ final class DirectoryWatcherRegistry implements SafeCloseable {
         public Path context() {
             return dirPath;
         }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("dirPath", dirPath)
+                              .add("watchKey", watchKey)
+                              .toString();
+        }
     }
 
     private static final class InitialWatchKey implements java.nio.file.WatchKey {

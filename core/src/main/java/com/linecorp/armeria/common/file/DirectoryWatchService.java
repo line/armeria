@@ -27,13 +27,14 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.Cancellable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A registry which wraps a {@link WatchService} and allows paths to be registered.
  */
 @UnstableApi
-public final class DirectoryWatchService implements AutoCloseable {
+public final class DirectoryWatchService implements SafeCloseable {
 
     private final Map<FileSystem, DirectoryWatcherRegistry> registryMap = new HashMap<>();
     private final ReentrantLock lock = new ReentrantShortLock();
@@ -96,7 +97,7 @@ public final class DirectoryWatchService implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         lock.lock();
         try {
             for (DirectoryWatcherRegistry context : registryMap.values()) {
