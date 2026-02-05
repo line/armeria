@@ -24,15 +24,17 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 
 class MethodInfoTest {
 
     private static MethodInfo newMethodInfo(List<String> examplePaths, List<String> exampleQueries) {
-        return new MethodInfo("foo", TypeSignature.ofBase("T"), ImmutableList.of(), false, ImmutableList.of(),
+        return new MethodInfo("foo", TypeSignature.ofBase("T"),
+                              ImmutableList.of(), false, ImmutableSet.of(),
                               ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), examplePaths,
-                              exampleQueries, HttpMethod.GET, DescriptionInfo.empty(), "id");
+                              exampleQueries, HttpMethod.GET, "id");
     }
 
     @Test
@@ -67,9 +69,42 @@ class MethodInfoTest {
         assertThat(methodInfo1.id()).isEqualTo("com.MyService/foo-1/GET");
     }
 
+    @Test
+    void returnTypeSignature() {
+        final TypeSignature returnTypeSignature = TypeSignature.ofBase("String");
+        final MethodInfo methodInfo = new MethodInfo(
+                "com.MyService", "foo",
+                returnTypeSignature,
+                ImmutableList.of(), false, ImmutableSet.of(),
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of(),
+                HttpMethod.GET);
+
+        assertThat(methodInfo.returnTypeSignature()).isEqualTo(returnTypeSignature);
+    }
+
+    @Test
+    void exceptionTypeSignatures() {
+        final TypeSignature exceptionType1 = TypeSignature.ofStruct(IllegalArgumentException.class);
+        final TypeSignature exceptionType2 = TypeSignature.ofStruct(IllegalStateException.class);
+
+        final MethodInfo methodInfo = new MethodInfo(
+                "com.MyService", "foo",
+                TypeSignature.ofBase("void"),
+                ImmutableList.of(), false,
+                ImmutableSet.of(exceptionType1, exceptionType2),
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of(),
+                HttpMethod.GET);
+
+        assertThat(methodInfo.exceptionTypeSignatures()).hasSize(2);
+        assertThat(methodInfo.exceptionTypeSignatures()).contains(exceptionType1, exceptionType2);
+    }
+
     private static MethodInfo methodInfo(int overloadId) {
-        return new MethodInfo("com.MyService", "foo", overloadId, TypeSignature.ofBase("T"),
-                              ImmutableList.of(), ImmutableList.of(),
-                              ImmutableList.of(), HttpMethod.GET, DescriptionInfo.empty());
+        return new MethodInfo("com.MyService", "foo", overloadId,
+                              TypeSignature.ofBase("T"),
+                              ImmutableList.of(), ImmutableSet.of(),
+                              ImmutableList.of(), HttpMethod.GET);
     }
 }

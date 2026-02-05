@@ -64,6 +64,7 @@ import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -247,10 +248,19 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         requireNonNull(exceptionClasses, "exceptionClasses");
         requireNonNull(endpoints, "endpoints");
 
-        final List<FieldInfo> parameters =
+        final List<FieldInfo> fieldInfoList =
                 ThriftMetadataAccess.getStructMetaDataMap(argsClass).values().stream()
                                     .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
                                     .collect(toImmutableList());
+
+        // Convert FieldInfo to ParamInfo for method parameters
+        final List<ParamInfo> parameters =
+                fieldInfoList.stream()
+                             .map(fieldInfo -> ParamInfo.builder(fieldInfo.name(), fieldInfo.typeSignature())
+                                                        .location(fieldInfo.location())
+                                                        .requirement(fieldInfo.requirement())
+                                                        .build())
+                             .collect(toImmutableList());
 
         // Find the 'success' field.
         FieldInfo fieldInfo = null;
@@ -273,19 +283,19 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             returnTypeSignature = fieldInfo.typeSignature();
         }
 
-        final List<TypeSignature> exceptionTypeSignatures =
+        final Set<TypeSignature> exceptionTypeSignatures =
                 Arrays.stream(exceptionClasses)
                       .filter(e -> e != TException.class)
                       .map(TypeSignature::ofStruct)
-                      .collect(toImmutableList());
+                      .collect(ImmutableSet.toImmutableSet());
 
-        return new MethodInfo(serviceName, name, returnTypeSignature, parameters, false,
-                              exceptionTypeSignatures,
+        return new MethodInfo(serviceName, name, returnTypeSignature,
+                              parameters, false, exceptionTypeSignatures,
                               endpoints,
                               ImmutableList.of(),
                               ImmutableList.of(),
                               ImmutableList.of(),
-                              ImmutableList.of(), HttpMethod.POST, DescriptionInfo.empty());
+                              ImmutableList.of(), HttpMethod.POST);
     }
 
     private static DescriptiveTypeInfo newDescriptiveTypeInfo(

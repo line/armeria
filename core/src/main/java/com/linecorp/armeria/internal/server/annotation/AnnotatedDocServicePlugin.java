@@ -22,12 +22,15 @@ import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isKFunc
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.isReturnTypeNothing;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionGenericReturnType;
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
+import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldLocation.UNSPECIFIED;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -41,8 +44,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
@@ -51,6 +58,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
@@ -63,9 +71,12 @@ import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.annotation.ReturnDescription;
+import com.linecorp.armeria.server.annotation.ThrowsDescription;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
@@ -78,6 +89,7 @@ import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.StructInfo;
@@ -90,6 +102,8 @@ import io.netty.buffer.ByteBuf;
  * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedService}.
  */
 public final class AnnotatedDocServicePlugin implements DocServicePlugin {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnnotatedDocServicePlugin.class);
 
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
@@ -141,7 +155,6 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");
 
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
-        final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final DefaultAnnotatedService service = sc.service().as(DefaultAnnotatedService.class);
             if (service != null) {
@@ -152,16 +165,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                     return;
                 }
                 addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), service, serviceClass);
-                addServiceDescription(serviceDescription, serviceClass);
             }
         });
 
-        return generate(serviceDescription, methodInfos, descriptiveTypeInfoProvider);
-    }
-
-    private static void addServiceDescription(Map<Class<?>, DescriptionInfo> serviceDescription,
-                                              Class<?> serviceClass) {
-        serviceDescription.computeIfAbsent(serviceClass, AnnotatedServiceFactory::findDescription);
+        return generate(methodInfos, descriptiveTypeInfoProvider);
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
@@ -173,17 +180,33 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Method method = service.method();
         final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
-        final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
+        final List<ParamInfo> paramInfos = paramInfos(service.annotatedValueResolvers());
+
+        // Get exception type signatures from @ThrowsDescription annotations and method signature
+        final Set<TypeSignature> exceptionTypeSignatures = getExceptionTypeSignatures(method);
+
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
                             serviceClass.getName(), method.getName(), overloadId, returnTypeSignature,
-                            fieldInfos, ImmutableList.of(),
-                            ImmutableList.of(endpoint), httpMethod,
-                            AnnotatedServiceFactory.findDescription(method));
+                            paramInfos, exceptionTypeSignatures,
+                            ImmutableList.of(endpoint), httpMethod);
 
                     methodInfos.computeIfAbsent(serviceClass, unused -> new HashSet<>()).add(methodInfo);
                 });
+    }
+
+    private static Set<TypeSignature> getExceptionTypeSignatures(Method method) {
+        final ImmutableSet.Builder<TypeSignature> builder = ImmutableSet.builder();
+        // From @ThrowsDescription annotations
+        for (ThrowsDescription td : AnnotationUtil.findAll(method, ThrowsDescription.class)) {
+            builder.add(TypeSignature.ofStruct(td.value()));
+        }
+        // From method signature declared exceptions
+        for (Class<?> exceptionType : method.getExceptionTypes()) {
+            builder.add(TypeSignature.ofStruct(exceptionType));
+        }
+        return builder.build();
     }
 
     private static TypeSignature getReturnTypeSignature(Method method) {
@@ -241,19 +264,19 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         return builder.build();
     }
 
-    private static List<FieldInfo> fieldInfos(List<AnnotatedValueResolver> resolvers) {
-        final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
+    private static List<ParamInfo> paramInfos(List<AnnotatedValueResolver> resolvers) {
+        final ImmutableList.Builder<ParamInfo> paramInfosBuilder = ImmutableList.builder();
         for (AnnotatedValueResolver resolver : resolvers) {
-            final FieldInfo fieldInfo = fieldInfo(resolver);
-            if (fieldInfo != null) {
-                fieldInfosBuilder.add(fieldInfo);
+            final ParamInfo paramInfo = paramInfo(resolver);
+            if (paramInfo != null) {
+                paramInfosBuilder.add(paramInfo);
             }
         }
-        return fieldInfosBuilder.build();
+        return paramInfosBuilder.build();
     }
 
     @Nullable
-    private static FieldInfo fieldInfo(AnnotatedValueResolver resolver) {
+    private static ParamInfo paramInfo(AnnotatedValueResolver resolver) {
         final Class<? extends Annotation> annotationType = resolver.annotationType();
         if (annotationType == RequestObject.class) {
             final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
@@ -266,7 +289,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 factory.fields().values().forEach(builder::add);
                 final List<AnnotatedValueResolver> resolvers = builder.build();
                 if (resolvers.isEmpty()) {
-                    // Do not create a FieldInfo if resolvers is empty.
+                    // Do not create a ParamInfo if resolvers is empty.
                     return null;
                 }
 
@@ -277,10 +300,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             } else {
                 typeSignature = toTypeSignature(resolver.elementType());
             }
-            return FieldInfo.builder(resolver.httpElementName(), typeSignature)
+            return ParamInfo.builder(resolver.httpElementName(), typeSignature)
                             .requirement(resolver.shouldExist() ?
                                          FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
-                            .descriptionInfo(resolver.description())
                             .build();
         }
 
@@ -303,11 +325,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         } else {
             signature = toTypeSignature(resolver.elementType());
         }
-        return FieldInfo.builder(resolver.httpElementName(), signature)
+        return ParamInfo.builder(resolver.httpElementName(), signature)
                         .location(location(resolver))
                         .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
                                                             : FieldRequirement.OPTIONAL)
-                        .descriptionInfo(resolver.description())
                         .build();
     }
 
@@ -440,16 +461,11 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(Map<Class<?>, DescriptionInfo> serviceDescription,
-                                         Map<Class<?>, Set<MethodInfo>> methodInfos,
+    static ServiceSpecification generate(Map<Class<?>, Set<MethodInfo>> methodInfos,
                                          DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         final Set<ServiceInfo> serviceInfos = methodInfos
                 .entrySet().stream()
-                .map(entry -> {
-                    final Class<?> service = entry.getKey();
-                    return new ServiceInfo(service.getName(), entry.getValue(),
-                                           serviceDescription.getOrDefault(service, DescriptionInfo.empty()));
-                })
+                .map(entry -> new ServiceInfo(entry.getKey().getName(), entry.getValue()))
                 .collect(toImmutableSet());
 
         final Set<DescriptiveTypeSignature> requestDescriptiveTypes =
@@ -475,7 +491,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             if (annotatedValueResolvers instanceof AnnotatedValueResolversWrapper) {
                 final AnnotatedValueResolversWrapper resolvers =
                         (AnnotatedValueResolversWrapper) annotatedValueResolvers;
-                return new StructInfo(typeSignature.name(), fieldInfos(resolvers.resolvers()));
+                final DescriptionInfo classDescription = classDescriptionInfo(typeDescriptor);
+                return new StructInfo(typeSignature.name(), fieldInfos(resolvers.resolvers()),
+                                      classDescription);
             }
         }
         DescriptiveTypeInfo descriptiveTypeInfo = provider.newDescriptiveTypeInfo(typeDescriptor);
@@ -495,6 +513,143 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             // An unresolved StructInfo.
             return new StructInfo(typeSignature.name(), ImmutableList.of());
         }
+    }
+
+    // TODO(trustin): Docstring keys currently use only className/methodName, so descriptions for
+    //                overloaded methods will overwrite each other. Consider incorporating overloadId
+    //                or a method signature token into the key to support overloaded methods properly.
+    @Override
+    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+        final Map<String, DescriptionInfo> docStrings = new HashMap<>();
+        final Set<String> loadedClasses = new HashSet<>();
+
+        for (ServiceConfig serviceConfig : serviceConfigs) {
+            final DefaultAnnotatedService service =
+                    serviceConfig.service().as(DefaultAnnotatedService.class);
+            if (service == null) {
+                continue;
+            }
+
+            final Class<?> serviceClass = service.serviceClass();
+            final String className = serviceClass.getName();
+            final Method method = service.method();
+            final String methodName = method.getName();
+
+            // 1. Load Javadoc fallback from properties file (lowest priority)
+            if (loadedClasses.add(className)) {
+                loadDocStringsFromPropertiesFile(docStrings, className);
+            }
+
+            // 2. Extract annotation-based descriptions (overwrites fallback)
+            // Service @Description
+            extractServiceDescription(docStrings, serviceClass);
+
+            // Method @Description
+            extractMethodDescription(docStrings, className, method);
+
+            // @ReturnDescription
+            extractReturnDescription(docStrings, className, methodName, method);
+
+            // @ThrowsDescription
+            extractThrowsDescriptions(docStrings, className, methodName, method);
+
+            // Parameter descriptions from resolvers
+            extractParameterDescriptions(docStrings, className, methodName,
+                                         service.annotatedValueResolvers());
+        }
+        return ImmutableMap.copyOf(docStrings);
+    }
+
+    private void loadDocStringsFromPropertiesFile(Map<String, DescriptionInfo> docStrings, String className) {
+        final String fileName = getFileName(className);
+        try (InputStream stream = getClass().getClassLoader().getResourceAsStream(fileName)) {
+            if (stream == null) {
+                return;
+            }
+            final Properties properties = new Properties();
+            properties.load(stream);
+
+            // Convert properties to docstrings with the correct key format
+            for (String propertyName : properties.stringPropertyNames()) {
+                final String value = properties.getProperty(propertyName);
+                if (value == null || value.isEmpty()) {
+                    continue;
+                }
+
+                // Convert property name to full key by prepending "className/":
+                // - "methodName" -> "className/methodName" (method description)
+                // - "methodName:param/paramName" -> "className/methodName:param/paramName"
+                // - "methodName:return" -> "className/methodName:return"
+                // - "methodName:throws/ExceptionType" -> "className/methodName:throws/ExceptionType"
+                final String fullKey = className + '/' + propertyName;
+                docStrings.put(fullKey, DescriptionInfo.of(value));
+            }
+        } catch (IOException e) {
+            logger.warn("Failed to load an API description file: {}", fileName, e);
+        }
+    }
+
+    private static void extractServiceDescription(Map<String, DescriptionInfo> docStrings,
+                                                  Class<?> serviceClass) {
+        final Description desc = AnnotationUtil.findFirstDescription(serviceClass);
+        if (desc != null && DefaultValues.isSpecified(desc.value()) && !desc.value().isEmpty()) {
+            docStrings.put(serviceClass.getName(), DescriptionInfo.from(desc));
+        }
+    }
+
+    private static void extractMethodDescription(Map<String, DescriptionInfo> docStrings,
+                                                 String className, Method method) {
+        final Description desc = AnnotationUtil.findFirstDescription(method);
+        if (desc != null && DefaultValues.isSpecified(desc.value()) && !desc.value().isEmpty()) {
+            docStrings.put(className + '/' + method.getName(), DescriptionInfo.from(desc));
+        }
+    }
+
+    private static void extractReturnDescription(Map<String, DescriptionInfo> docStrings,
+                                                 String className, String methodName, Method method) {
+        final ReturnDescription returnDesc = AnnotationUtil.findFirst(method, ReturnDescription.class);
+        if (returnDesc != null &&
+            DefaultValues.isSpecified(returnDesc.value()) && !returnDesc.value().isEmpty()) {
+            docStrings.put(className + '/' + methodName + ":return",
+                          DescriptionInfo.of(returnDesc.value(), returnDesc.markup()));
+        }
+    }
+
+    private static void extractThrowsDescriptions(Map<String, DescriptionInfo> docStrings,
+                                                  String className, String methodName, Method method) {
+        for (ThrowsDescription td : AnnotationUtil.findAll(method, ThrowsDescription.class)) {
+            if (DefaultValues.isSpecified(td.description()) && !td.description().isEmpty()) {
+                final DescriptionInfo descriptionInfo = DescriptionInfo.of(td.description(), td.markup());
+                final Class<? extends Throwable> exceptionClass = td.value();
+                // Use full class name as the canonical key
+                docStrings.put(className + '/' + methodName + ":throws/" + exceptionClass.getName(),
+                              descriptionInfo);
+                // Also override any entry with simple class name (from properties file)
+                docStrings.put(className + '/' + methodName + ":throws/" + exceptionClass.getSimpleName(),
+                              descriptionInfo);
+            }
+        }
+    }
+
+    private static void extractParameterDescriptions(Map<String, DescriptionInfo> docStrings,
+                                                     String className, String methodName,
+                                                     List<AnnotatedValueResolver> resolvers) {
+        for (AnnotatedValueResolver resolver : resolvers) {
+            final DescriptionInfo desc = resolver.description();
+            if (desc != null && desc != DescriptionInfo.empty()) {
+                docStrings.put(className + '/' + methodName + ":param/" + resolver.httpElementName(), desc);
+            }
+        }
+    }
+
+    private static DescriptionInfo classDescriptionInfo(@Nullable Object typeDescriptor) {
+        if (typeDescriptor instanceof Class) {
+            final Description description = AnnotationUtil.findFirstDescription((Class<?>) typeDescriptor);
+            if (description != null) {
+                return DescriptionInfo.from(description);
+            }
+        }
+        return DescriptionInfo.empty();
     }
 
     @Override
@@ -517,6 +672,80 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     @Override
     public String toString() {
         return AnnotatedDocServicePlugin.class.getSimpleName();
+    }
+
+    // Helper method to convert AnnotatedValueResolvers to FieldInfo for StructInfo
+    // (used for RequestObject types where we still need FieldInfo with descriptions)
+    private static List<FieldInfo> fieldInfos(
+            List<AnnotatedValueResolver> resolvers) {
+        final ImmutableList.Builder<FieldInfo> fieldInfosBuilder =
+                ImmutableList.builder();
+        for (AnnotatedValueResolver resolver : resolvers) {
+            final FieldInfo fieldInfo = fieldInfo(resolver);
+            if (fieldInfo != null) {
+                fieldInfosBuilder.add(fieldInfo);
+            }
+        }
+        return fieldInfosBuilder.build();
+    }
+
+    @Nullable
+    private static FieldInfo fieldInfo(AnnotatedValueResolver resolver) {
+        final Class<? extends Annotation> annotationType = resolver.annotationType();
+        if (annotationType == RequestObject.class) {
+            final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
+            final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            final TypeSignature typeSignature;
+            if (factory != null) {
+                final Builder<AnnotatedValueResolver> builder = ImmutableList.builder();
+                factory.constructor().getValue().forEach(builder::add);
+                factory.methods().values().forEach(rs -> rs.forEach(builder::add));
+                factory.fields().values().forEach(builder::add);
+                final List<AnnotatedValueResolver> childResolvers = builder.build();
+                if (childResolvers.isEmpty()) {
+                    return null;
+                }
+
+                assert beanFactoryId != null;
+                final Class<?> type = beanFactoryId.type();
+                final Object typeDescriptor = new AnnotatedValueResolversWrapper(childResolvers);
+                typeSignature = new RequestObjectTypeSignature(
+                        TypeSignatureType.STRUCT, type.getName(), type, typeDescriptor);
+            } else {
+                typeSignature = toTypeSignature(resolver.elementType());
+            }
+            return FieldInfo.builder(resolver.httpElementName(), typeSignature)
+                            .requirement(resolver.shouldExist() ?
+                                         FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
+                            .descriptionInfo(resolver.description())
+                            .build();
+        }
+
+        if (annotationType != Param.class && annotationType != Header.class) {
+            return null;
+        }
+        final TypeSignature signature;
+        if (resolver.hasContainer()) {
+            final Class<?> containerType = resolver.containerType();
+            assert containerType != null;
+            final TypeSignature parameterTypeSignature = toTypeSignature(resolver.elementType());
+            if (List.class.isAssignableFrom(containerType)) {
+                signature = TypeSignature.ofList(parameterTypeSignature);
+            } else if (Set.class.isAssignableFrom(containerType)) {
+                signature = TypeSignature.ofSet(parameterTypeSignature);
+            } else {
+                return null;
+            }
+        } else {
+            signature = toTypeSignature(resolver.elementType());
+        }
+
+        return FieldInfo.builder(resolver.httpElementName(), signature)
+                        .location(location(resolver))
+                        .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
+                                                            : FieldRequirement.OPTIONAL)
+                        .descriptionInfo(resolver.description())
+                        .build();
     }
 
     private static class AnnotatedValueResolversWrapper {

@@ -70,9 +70,11 @@ final class JsonSchemaGenerator {
     private final Set<ServiceInfo> serviceInfos;
     private final Map<String, StructInfo> typeSignatureToStructMapping;
     private final Map<String, EnumInfo> typeNameToEnumMapping;
+    private final Map<String, DescriptionInfo> docStrings;
 
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
         serviceInfos = serviceSpecification.services();
+        docStrings = serviceSpecification.docStrings();
         final ImmutableMap.Builder<String, StructInfo> typeSignatureToStructMappingBuilder =
                 ImmutableMap.builderWithExpectedSize(serviceSpecification.structs().size());
         for (StructInfo struct : serviceSpecification.structs()) {
@@ -92,7 +94,8 @@ final class JsonSchemaGenerator {
 
         final Set<ObjectNode> methodDefinitions =
                 serviceInfos.stream()
-                            .flatMap(serviceInfo -> serviceInfo.methods().stream().map(this::generate))
+                            .flatMap(serviceInfo -> serviceInfo.methods().stream()
+                                    .map(methodInfo -> generate(serviceInfo.name(), methodInfo)))
                             .collect(toImmutableSet());
 
         return definitions.addAll(methodDefinitions);
@@ -101,17 +104,25 @@ final class JsonSchemaGenerator {
     /**
      * Generate the JSON Schema for the given {@link MethodInfo}.
      *
+     * @param serviceName the name of the service containing the method.
      * @param methodInfo the method to generate the JSON Schema for.
      *
      * @return ObjectNode containing the JSON schema for the parameter type.
      */
-    private ObjectNode generate(MethodInfo methodInfo) {
+    private ObjectNode generate(String serviceName, MethodInfo methodInfo) {
         final ObjectNode root = mapper.createObjectNode();
 
         root.put("$id", methodInfo.id())
-            .put("title", methodInfo.name())
-            .put("description", methodInfo.descriptionInfo().docString())
-            .put("additionalProperties", false)
+            .put("title", methodInfo.name());
+
+        // Add method description from docStrings if available
+        final String methodDescKey = serviceName + '/' + methodInfo.name();
+        final DescriptionInfo methodDesc = docStrings.get(methodDescKey);
+        if (methodDesc != null && !methodDesc.docString().isEmpty()) {
+            root.put("description", methodDesc.docString());
+        }
+
+        root.put("additionalProperties", false)
             // TODO: Assumes every method takes an object, which is only valid for RPC based services
             //  and most of the REST services.
             .put("type", "object");
@@ -133,7 +144,20 @@ final class JsonSchemaGenerator {
             }
             visited.put(signature, currentPath);
         } else {
-            methodFields = methodInfo.parameters();
+            // Convert ParamInfo to FieldInfo for schema generation
+            // Look up parameter descriptions from docStrings
+            methodFields = methodInfo.parameters().stream()
+                    .map(p -> {
+                        final String paramDescKey = serviceName + '/' +
+                                                    methodInfo.name() + ":param/" + p.name();
+                        final DescriptionInfo paramDesc = docStrings.get(paramDescKey);
+                        return FieldInfo.builder(p.name(), p.typeSignature())
+                                .location(p.location())
+                                .requirement(p.requirement())
+                                .descriptionInfo(paramDesc != null ? paramDesc : DescriptionInfo.empty())
+                                .build();
+                    })
+                    .collect(ImmutableList.toImmutableList());
         }
 
         generateProperties(methodFields, visited, currentPath, root);

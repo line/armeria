@@ -52,12 +52,13 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.Markup;
 
 class AnnotatedServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
-    private static final String ANNOTATED_DESCRIPTION = "This is a description from the annotation";
-    private static final String ANNOTATED_DESCRIPTION_SUPER = "This is a super description from the annotation";
+    private static final String ANNOTATED_DESCRIPTION = "Description from annotation";
+    private static final String ANNOTATED_DESCRIPTION_SUPER = "Description from super annotation";
 
     @Test
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
@@ -197,22 +198,8 @@ class AnnotatedServiceFactoryTest {
         });
     }
 
-    @Test
-    void testDescriptionLoadingPriority() throws NoSuchMethodException {
-        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod1", String.class)
-                                                                       .getParameters()[0];
-        final DescriptionInfo descriptionInfo = findDescription(parameter);
-        assertThat(descriptionInfo.docString()).isEqualTo(ANNOTATED_DESCRIPTION);
-    }
-
-    @Test
-    void testDescriptionLoadFromFile() throws NoSuchMethodException {
-        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod2", String.class)
-                                                                       .getParameters()[0];
-        final DescriptionInfo descriptionInfo = findDescription(parameter);
-        assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the properties file");
-    }
+    // Note: Tests for findReturnDescription and findThrowsDescriptions have been moved to
+    // AnnotatedDocServicePluginTest as they are now part of loadDocStrings().
 
     @Test
     void testParameterDescriptionLoad() throws NoSuchMethodException {
@@ -221,7 +208,7 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -231,7 +218,7 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a super description from the annotation");
+                .isEqualTo("Description from super annotation");
     }
 
     @Test
@@ -241,7 +228,7 @@ class AnnotatedServiceFactoryTest {
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -250,7 +237,7 @@ class AnnotatedServiceFactoryTest {
                                                                             String.class, String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -259,7 +246,7 @@ class AnnotatedServiceFactoryTest {
                                                                             String.class, String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a super description from the annotation");
+                .isEqualTo("Description from super annotation");
     }
 
     @Test
@@ -268,7 +255,7 @@ class AnnotatedServiceFactoryTest {
                                                                             String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a description from the annotation");
+                .isEqualTo("Description from annotation");
     }
 
     @Test
@@ -276,7 +263,49 @@ class AnnotatedServiceFactoryTest {
         final Class<DescriptionAnnotatedTestClass> clazz = DescriptionAnnotatedTestClass.class;
         final DescriptionInfo descriptionInfo = findDescription(clazz);
         assertThat(descriptionInfo.docString())
-                .isEqualTo("This is a super description from the annotation");
+                .isEqualTo("Description from super annotation");
+    }
+
+    @Test
+    void testFindDescription() throws NoSuchMethodException {
+        // Test method with @Description annotation
+        final Method methodWithDesc = DescriptionTestClass.class.getMethod("methodWithDescription");
+        final DescriptionInfo descInfo = findDescription(methodWithDesc);
+        assertThat(descInfo.docString()).isEqualTo("Method description");
+        assertThat(descInfo.markup()).isEqualTo(Markup.NONE);
+
+        // Test method with @Description annotation with markup
+        final Method methodWithMarkdown = DescriptionTestClass.class.getMethod("methodWithMarkdownDescription");
+        final DescriptionInfo markdownInfo = findDescription(methodWithMarkdown);
+        assertThat(markdownInfo.docString()).isEqualTo("**Markdown** description");
+        assertThat(markdownInfo.markup()).isEqualTo(Markup.MARKDOWN);
+
+        // Test method without @Description annotation
+        final Method methodWithoutDesc = DescriptionTestClass.class.getMethod("methodWithoutDescription");
+        final DescriptionInfo emptyInfo = findDescription(methodWithoutDesc);
+        assertThat(emptyInfo.docString()).isEmpty();
+
+        // Test method with @Description with empty string
+        final Method methodWithEmptyDesc = DescriptionTestClass.class.getMethod("methodWithEmptyDescription");
+        final DescriptionInfo emptyStringInfo = findDescription(methodWithEmptyDesc);
+        assertThat(emptyStringInfo.docString()).isEmpty();
+    }
+
+    private static class DescriptionTestClass {
+        @Get("/test1")
+        @Description("Method description")
+        public void methodWithDescription() {}
+
+        @Get("/test2")
+        @Description(value = "**Markdown** description", markup = Markup.MARKDOWN)
+        public void methodWithMarkdownDescription() {}
+
+        @Get("/test3")
+        public void methodWithoutDescription() {}
+
+        @Get("/test4")
+        @Description("")
+        public void methodWithEmptyDescription() {}
     }
 
     @Description(ANNOTATED_DESCRIPTION_SUPER)
@@ -291,14 +320,6 @@ class AnnotatedServiceFactoryTest {
     }
 
     private static class DescriptionAnnotatedTestClass implements DescriptionAnnotatedTestInterface {
-        // Resource file from JavaDoc was already created
-        @Get("/some/path")
-        public void testMethod1(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param) {}
-
-        // Resource file from JavaDoc was already created
-        @Get("/some/path")
-        public void testMethod2(@Param("param") String param) {}
-
         @Override
         @Description(ANNOTATED_DESCRIPTION)
         @Get("/some/path")

@@ -286,18 +286,22 @@ service ThriftTest
    * Print 'testException(%s)' with arg as '%s'
    * @param string arg - a string indication what type of exception to throw
    * if arg == "Xception" throw Xception with errorCode = 1001 and message = arg
-   * elsen if arg == "TException" throw TException
+   * else if arg == "TException" throw TException
    * else do not throw anything
+   * @throws Xception - when arg is "Xception"
    */
   void testException(1: string arg) throws(1: Xception err1),
 
   /**
    * Print 'testMultiException(%s, %s)' with arg0 as '%s' and arg1 as '%s'
-   * @param string arg - a string indication what type of exception to throw
+   * @param string arg0 - a string indication what type of exception to throw
+   * @param string arg1 - the value used to populate string_thing
    * if arg0 == "Xception" throw Xception with errorCode = 1001 and message = "This is an Xception"
-   * elsen if arg0 == "Xception2" throw Xception2 with errorCode = 2002 and struct_thing.string_thing = "This is an Xception2"
+   * else if arg0 == "Xception2" throw Xception2 with errorCode = 2002 and struct_thing.string_thing = "This is an Xception2"
    * else do not throw anything
    * @return Xtruct - an Xtruct with string_thing = arg1
+   * @throws Xception - when arg0 is "Xception"
+   * @throws Xception2 - when arg0 is "Xception2"
    */
   Xtruct testMultiException(1: string arg0, 2: string arg1) throws(1: Xception err1, 2: Xception2 err2)
 

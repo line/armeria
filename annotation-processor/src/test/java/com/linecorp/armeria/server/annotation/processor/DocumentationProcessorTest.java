@@ -80,20 +80,41 @@ public class DocumentationProcessorTest {
         assertThat(Files.exists(path)).isTrue();
         final Properties properties = new Properties();
         properties.load(Files.newInputStream(path));
-        assertThat(properties.getProperty("a.x")).isEqualTo("The x variable in a");
-        assertThat(properties.getProperty("a.y")).isEqualTo("The y variable in a");
-        assertThat(properties.getProperty("b.x")).isEqualTo("The x variable in b");
-        assertThat(properties.getProperty("b.y")).isEqualTo("The y variable in b");
-        assertThat(properties.getProperty("c.x")).isEqualTo("The x variable in c");
-        assertThat(properties.getProperty("c.y")).isEqualTo("The y variable in c");
-        assertThat(properties.getProperty("d.x")).isEqualTo("The x variable in d");
-        assertThat(properties.getProperty("d.y")).isEqualTo("The y variable in d");
-        assertThat(properties.getProperty("hasReturn.x")).isEqualTo("The x variable in hasReturn");
-        assertThat(properties.getProperty("hasThrows.x")).isEqualTo("The x variable in hasThrows");
-        assertThat(properties.getProperty("hasReturnAndThrows.x"))
+
+        // Test @param extraction
+        assertThat(properties.getProperty("a:param/x")).isEqualTo("The x variable in a");
+        assertThat(properties.getProperty("a:param/y")).isEqualTo("The y variable in a");
+        assertThat(properties.getProperty("b:param/x")).isEqualTo("The x variable in b");
+        assertThat(properties.getProperty("b:param/y")).isEqualTo("The y variable in b");
+        assertThat(properties.getProperty("c:param/x")).isEqualTo("The x variable in c");
+        assertThat(properties.getProperty("c:param/y")).isEqualTo("The y variable in c");
+        assertThat(properties.getProperty("d:param/x")).isEqualTo("The x variable in d");
+        assertThat(properties.getProperty("d:param/y")).isEqualTo("The y variable in d");
+        assertThat(properties.getProperty("hasReturn:param/x")).isEqualTo("The x variable in hasReturn");
+        assertThat(properties.getProperty("hasThrows:param/x")).isEqualTo("The x variable in hasThrows");
+        assertThat(properties.getProperty("hasReturnAndThrows:param/x"))
                 .isEqualTo("The x variable in hasReturnAndThrows");
-        assertThat(properties.getProperty("hasMultilineComment.x"))
+        assertThat(properties.getProperty("hasMultilineComment:param/x"))
                 .isEqualTo("The x variable in hasMultilineComment and this continues on the next line");
+
+        // Test @return extraction
+        assertThat(properties.getProperty("hasReturn:return")).isEqualTo("The number 1");
+        assertThat(properties.getProperty("hasReturnAndThrows:return")).isEqualTo("The number 1");
+
+        // Test @throws extraction
+        assertThat(properties.getProperty("hasThrows:throws/IllegalArgumentException"))
+                .isEqualTo("when x is empty");
+        assertThat(properties.getProperty("hasReturnAndThrows:throws/IllegalArgumentException"))
+                .isEqualTo("when x is empty");
+
+        // Test type-only @throws (no description) should not create a property
+        assertThat(properties.getProperty("throwsTypeOnly:throws/IllegalArgumentException")).isNull();
+        assertThat(properties.getProperty("throwsTypeOnly:param/x")).isEqualTo("The x variable");
+
+        // Test mid-line tags should be ignored, only valid line-start tag should be captured
+        assertThat(properties.getProperty("midLineTagsIgnored:return"))
+                .isEqualTo("valid return description");
+        assertThat(properties.getProperty("midLineTagsIgnored:param/x")).isEqualTo("The x variable");
     }
 
     private String loadFile(String fileName) throws IOException {
