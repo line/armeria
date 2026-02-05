@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -23,7 +26,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -35,29 +37,22 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
 
     private final ClusterXdsResource clusterXdsResource;
+    private final TransportSocketSnapshot transportSocket;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
+    private final List<TransportSocketMatchSnapshot> transportSocketMatches;
     @Nullable
     private final XdsLoadBalancer loadBalancer;
 
-    static ClusterSnapshot of(ClusterXdsResource clusterXdsResource,
-                              EndpointSnapshot newSnapshot, UpdatableXdsLoadBalancer loadBalancer) {
-        final ClusterSnapshot snapshot = new ClusterSnapshot(clusterXdsResource, newSnapshot, loadBalancer);
-        loadBalancer.updateSnapshot(snapshot);
-        return snapshot;
-    }
-
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource,
+                    Optional<XdsLoadBalancer> loadBalancer,
+                    TransportSocketSnapshot transportSocket,
+                    List<TransportSocketMatchSnapshot> transportSocketMatches) {
         this.clusterXdsResource = clusterXdsResource;
-        endpointSnapshot = null;
-        loadBalancer = null;
-    }
-
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
-                    XdsLoadBalancer loadBalancer) {
-        this.clusterXdsResource = clusterXdsResource;
-        this.endpointSnapshot = endpointSnapshot;
-        this.loadBalancer = loadBalancer;
+        this.transportSocket = transportSocket;
+        this.loadBalancer = loadBalancer.orElse(null);
+        endpointSnapshot = loadBalancer.map(XdsLoadBalancer::endpointSnapshot).orElse(null);
+        this.transportSocketMatches = transportSocketMatches;
     }
 
     @Override
@@ -73,6 +68,16 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         return endpointSnapshot;
     }
 
+    /**
+     * Returns the list of {@link TransportSocketMatchSnapshot}s for this cluster.
+     * These snapshots define transport socket configurations that can be conditionally
+     * matched based on endpoint metadata.
+     */
+    @UnstableApi
+    public List<TransportSocketMatchSnapshot> transportSocketMatches() {
+        return transportSocketMatches;
+    }
+
     @Override
     public boolean equals(Object object) {
         if (this == object) {
@@ -84,7 +89,9 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         final ClusterSnapshot that = (ClusterSnapshot) object;
         return Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
                Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
-               Objects.equal(loadBalancer, that.loadBalancer);
+               Objects.equal(loadBalancer, that.loadBalancer) &&
+               Objects.equal(transportSocket, that.transportSocket) &&
+               Objects.equal(transportSocketMatches, that.transportSocketMatches);
     }
 
     /**
@@ -97,9 +104,18 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         return loadBalancer;
     }
 
+    /**
+     * Returns the default {@link TransportSocketSnapshot} for this cluster.
+     * This transport socket is used when no {@link #transportSocketMatches()} match the endpoint.
+     */
+    public TransportSocketSnapshot transportSocket() {
+        return transportSocket;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterXdsResource, endpointSnapshot, loadBalancer);
+        return Objects.hashCode(clusterXdsResource, endpointSnapshot, loadBalancer,
+                                transportSocket, transportSocketMatches);
     }
 
     @Override
@@ -109,6 +125,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .add("clusterXdsResource", clusterXdsResource)
                           .add("endpointSnapshot", endpointSnapshot)
                           .add("loadBalancer", loadBalancer)
+                          .add("tlsSnapshot", transportSocket)
+                          .add("transportSocketMatches", transportSocketMatches)
                           .toString();
     }
 }

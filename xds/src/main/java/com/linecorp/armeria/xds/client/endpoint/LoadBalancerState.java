@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.protobuf.Struct;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
+import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
  * Represents the state of an xDS-based load balancer.
@@ -65,4 +70,24 @@ public interface LoadBalancerState {
      * For load balancers which are not subset-based, this will return an empty map.
      */
     Map<Struct, LoadBalancerState> subsetStates();
+
+    /**
+     * Returns all endpoints from all priorities and localities.
+     *
+     * @deprecated will be removed once {@link XdsEndpointGroup} is removed
+     */
+    @Deprecated
+    List<Endpoint> allEndpoints();
+
+    /**
+     * Returns a snapshot of the {@link ClusterLoadAssignment} resource.
+     */
+    EndpointSnapshot endpointSnapshot();
+
+    /**
+     * Returns the load balancer state for the local locality, or {@code null} if zone-aware
+     * routing is not enabled or the local locality is not configured.
+     */
+    @Nullable
+    LoadBalancerState localLoadBalancer();
 }
