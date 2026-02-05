@@ -69,5 +69,4 @@ interface SnapshotStream<T> {
     static <T> SnapshotStream<T> error(Throwable error) {
         return new StaticSnapshotStream<>(null, error);
     }
-
 }
