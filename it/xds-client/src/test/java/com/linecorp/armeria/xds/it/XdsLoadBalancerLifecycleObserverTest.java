@@ -293,8 +293,6 @@ class XdsLoadBalancerLifecycleObserverTest {
                 ));
             });
 
-            Thread.sleep(3_000);
-
             // Step 2: Update endpoint to trigger revision increment
             version.incrementAndGet();
             cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(endpoint2),

@@ -79,7 +79,7 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
             if (t instanceof XdsResourceException) {
                 throw t;
             } else {
-                throw new XdsResourceException(type, name, t);
+                throw new XdsResourceException(type, name, t, "Failed to subscribe to '" + configSource + '\'');
             }
         }
         return () -> {

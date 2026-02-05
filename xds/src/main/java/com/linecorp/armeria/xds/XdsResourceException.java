@@ -46,6 +46,12 @@ public class XdsResourceException extends RuntimeException {
         this.name = name;
     }
 
+    XdsResourceException(XdsType type, String name, @Nullable Throwable t, String message) {
+        super(message, t);
+        this.type = type;
+        this.name = name;
+    }
+
     /**
      * Returns the {@link XdsType} of the resource that caused the error.
      */
