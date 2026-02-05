@@ -28,6 +28,7 @@ import { useReducer } from 'react';
 import { makeStyles } from '@material-ui/core';
 import VariableList from '../../components/VariableList';
 import Section from '../../components/Section';
+import Description from '../../components/Description';
 import { Method, Specification } from '../../lib/specification';
 
 const useStyles = makeStyles({
@@ -37,19 +38,29 @@ const useStyles = makeStyles({
       verticalAlign: 'middle',
     },
   },
+  description: {
+    margin: 0,
+  },
 });
 
 interface Props {
   method: Method;
   specification: Specification;
+  serviceName: string;
 }
 
 const ReturnType: React.FunctionComponent<Props> = ({
   method,
   specification,
+  serviceName,
 }) => {
+  const returnTypeSignature = method.returnTypeSignature;
+  const returnDescriptionInfo = specification.getReturnDescription(
+    serviceName,
+    method.name,
+  );
   const returnTypeVariables =
-    specification.getStructByName(method.returnTypeSignature)?.fields || [];
+    specification.getStructByName(returnTypeSignature)?.fields || [];
 
   const [returnTypeExpanded, toggleReturnTypeExpanded] = useReducer(
     (value) => !value,
@@ -58,6 +69,8 @@ const ReturnType: React.FunctionComponent<Props> = ({
 
   const styles = useStyles();
   const hasVariables = returnTypeVariables.length > 0;
+  const hasDescription =
+    returnDescriptionInfo && returnDescriptionInfo.docString;
 
   return (
     <Section>
@@ -68,11 +81,16 @@ const ReturnType: React.FunctionComponent<Props> = ({
             <TableRow onClick={toggleReturnTypeExpanded}>
               <TableCell>
                 <code>
-                  {specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
+                  {specification.getTypeSignatureHtml(returnTypeSignature)}
                 </code>
               </TableCell>
+              {hasDescription && (
+                <TableCell>
+                  <pre className={styles.description}>
+                    <Description descriptionInfo={returnDescriptionInfo} />
+                  </pre>
+                </TableCell>
+              )}
               {hasVariables && (
                 <TableCell className={styles.expand}>
                   {returnTypeExpanded ? <ExpandLess /> : <ExpandMore />}
@@ -84,7 +102,7 @@ const ReturnType: React.FunctionComponent<Props> = ({
       </TableContainer>
       {returnTypeExpanded && hasVariables && (
         <VariableList
-          key={method.returnTypeSignature}
+          key={returnTypeSignature}
           title=""
           variables={returnTypeVariables}
           specification={specification}

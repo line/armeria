@@ -176,17 +176,23 @@ class HttpHeaderUtilTest {
         assertThat(xForwardedFor("unknown,[2001:db8:cafe::17]:4711,[2001:db8:cafe::18]:4711"))
                 .containsExactly(new InetSocketAddress("2001:db8:cafe::17", 4711),
                                  new InetSocketAddress("2001:db8:cafe::18", 4711));
+
+        // IPv4 with leading and trailing spaces
+        assertThat(xForwardedFor("192.0.2.60, 192.0.2.61, 192.0.2.62"))
+                .containsExactly(new InetSocketAddress("192.0.2.60", 0),
+                                 new InetSocketAddress("192.0.2.61", 0),
+                                 new InetSocketAddress("192.0.2.62", 0));
     }
 
     @Nullable
     private static List<InetSocketAddress> xForwardedFor(String value) {
-        return getAllValidAddresses(value, Function.identity(), ACCEPT_ANY);
+        return getAllValidAddresses(value, String::trim, ACCEPT_ANY);
     }
 
     @Nullable
     private static List<InetSocketAddress> xForwardedFor(String value,
                                                          Predicate<InetAddress> clientAddressFilter) {
-        return getAllValidAddresses(value, Function.identity(), clientAddressFilter);
+        return getAllValidAddresses(value, String::trim, clientAddressFilter);
     }
 
     @Test

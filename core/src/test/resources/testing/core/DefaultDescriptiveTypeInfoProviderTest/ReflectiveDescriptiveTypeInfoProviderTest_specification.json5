@@ -9,20 +9,12 @@
         "name" : "id",
         "location" : "PATH",
         "requirement" : "REQUIRED",
-        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId",
-        "descriptionInfo" : {
-          "docString" : "",
-          "markup" : "NONE"
-        }
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId"
       }, {
         "name" : "query",
         "location" : "QUERY",
         "requirement" : "OPTIONAL",
-        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery",
-        "descriptionInfo" : {
-          "docString" : "",
-          "markup" : "NONE"
-        }
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery"
       } ],
       "exceptionTypeSignatures" : [ ],
       "endpoints" : [ {
@@ -34,17 +26,9 @@
       "exampleRequests" : [ ],
       "examplePaths" : [ ],
       "exampleQueries" : [ ],
-      "httpMethod" : "GET",
-      "descriptionInfo" : {
-        "docString" : "",
-        "markup" : "NONE"
-      }
+      "httpMethod" : "GET"
     } ],
-    "exampleHeaders" : [ ],
-    "descriptionInfo" : {
-      "docString" : "",
-      "markup" : "NONE"
-    }
+    "exampleHeaders" : [ ]
   } ],
   "enums" : [ ],
   "structs" : [ {

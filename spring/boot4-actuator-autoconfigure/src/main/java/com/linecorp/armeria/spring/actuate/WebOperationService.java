@@ -50,7 +50,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -65,7 +64,6 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -138,11 +136,6 @@ final class WebOperationService implements HttpService {
         } else {
             return HttpResponse.of(req.aggregate().thenApply(invoke(ctx)));
         }
-    }
-
-    @Override
-    public ExchangeType exchangeType(RoutingContext routingContext) {
-        return ExchangeType.UNARY;
     }
 
     private Function<AggregatedHttpRequest, HttpResponse> invoke(ServiceRequestContext ctx) {

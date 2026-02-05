@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
@@ -24,16 +23,13 @@ import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.server.annotation.AnnotationUtil.getAnnotatedInstances;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
-import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.withModifier;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Executable;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -46,9 +42,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -56,8 +50,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
@@ -117,12 +109,6 @@ import com.linecorp.armeria.server.docs.DescriptionInfo;
  */
 public final class AnnotatedServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedServiceFactory.class);
-
-    private static final Cache<String, Properties> DOCUMENTATION_PROPERTIES_CACHE =
-            CacheBuilder.newBuilder()
-                        .maximumSize(100)
-                        .expireAfterWrite(30, TimeUnit.SECONDS)
-                        .build();
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -591,43 +577,52 @@ public final class AnnotatedServiceFactory {
 
     /**
      * Returns the description of the specified {@link AnnotatedElement}.
+     * For parameters without explicit {@link Description} annotation,
+     * returns {@link DescriptionInfo#empty()} and lets DocStringSupport handle the Javadoc fallback.
      */
     static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
         final Description description = AnnotationUtil.findFirstDescription(annotatedElement);
         if (description != null) {
             final String value = description.value();
-            if (DefaultValues.isSpecified(value)) {
-                checkArgument(!value.isEmpty(), "value is empty.");
+            if (DefaultValues.isSpecified(value) && !value.isEmpty()) {
                 return DescriptionInfo.from(description);
             }
-        } else if (annotatedElement instanceof Parameter) {
-            // JavaDoc/KDoc descriptions only exist for method parameters
-            final Parameter parameter = (Parameter) annotatedElement;
-            final Executable executable = parameter.getDeclaringExecutable();
-            final Class<?> clazz = executable.getDeclaringClass();
-            final String fileName = getFileName(clazz.getCanonicalName());
-            final String propertyName = executable.getName() + '.' + parameter.getName();
-            final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
-            if (cachedProperties != null) {
-                final String propertyValue = cachedProperties.getProperty(propertyName);
-                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
-            }
-            try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
-                                                                   .getResourceAsStream(fileName)) {
-                if (stream == null) {
-                    return DescriptionInfo.empty();
-                }
-                final Properties properties = new Properties();
-                properties.load(stream);
-                DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
+        }
+        return DescriptionInfo.empty();
+    }
 
-                final String propertyValue = properties.getProperty(propertyName);
-                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
-            } catch (IOException exception) {
-                logger.warn("Failed to load an API description file: {}", fileName, exception);
+    /**
+     * Returns the description of the specified {@link AnnotatedElement}, with fallback to field lookup
+     * for bean parameters. This is used for bean constructor/method parameters where the description
+     * might be on the corresponding class field instead of the parameter itself.
+     */
+    static DescriptionInfo findDescriptionWithFieldFallback(AnnotatedElement annotatedElement) {
+        final DescriptionInfo description = findDescription(annotatedElement);
+        if (description != DescriptionInfo.empty()) {
+            return description;
+        }
+
+        // For parameters (e.g., constructor parameters in request beans), try to find description
+        // from the corresponding class field
+        if (annotatedElement instanceof Parameter) {
+            final Parameter parameter = (Parameter) annotatedElement;
+            final Class<?> declaringClass = parameter.getDeclaringExecutable().getDeclaringClass();
+            final String paramName = parameter.getName();
+            try {
+                final Field field = declaringClass.getDeclaredField(paramName);
+                final Description fieldDescription = AnnotationUtil.findFirst(field, Description.class);
+                if (fieldDescription != null) {
+                    final String value = fieldDescription.value();
+                    if (DefaultValues.isSpecified(value) && !value.isEmpty()) {
+                        return DescriptionInfo.from(fieldDescription);
+                    }
+                }
+            } catch (NoSuchFieldException ignored) {
+                // Field not found, continue with empty description
             }
         }
+
         return DescriptionInfo.empty();
     }
 

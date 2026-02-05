@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeDocStringsAvailable;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -57,9 +58,11 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import testing.thrift.hbase.Hbase;
+import testing.thrift.main.FileService;
 import testing.thrift.main.FooService;
 import testing.thrift.main.HelloService;
 import testing.thrift.main.HelloService.hello_args;
+import testing.thrift.main.MidLineTagTestService;
 import testing.thrift.main.OnewayHelloService;
 import testing.thrift.main.SleepService;
 
@@ -98,6 +101,10 @@ public class ThriftDocServiceTest {
                     THttpService.of(mock(Hbase.AsyncIface.class));
             final THttpService onewayHelloService =
                     THttpService.of(mock(OnewayHelloService.AsyncIface.class));
+            final THttpService fileService =
+                    THttpService.of(mock(FileService.AsyncIface.class));
+            final THttpService midLineTagTestService =
+                    THttpService.of(mock(MidLineTagTestService.AsyncIface.class));
 
             sb.service("/", helloAndSleepService);
             sb.service("/foo", fooService);
@@ -105,6 +112,8 @@ public class ThriftDocServiceTest {
             sb.serviceUnder("/foo", fooService);
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
+            sb.service("/file", fileService);
+            sb.service("/midline", midLineTagTestService);
 
             sb.serviceUnder(
                     "/docs/",
@@ -154,8 +163,20 @@ public class ThriftDocServiceTest {
                                               .availableFormats(allThriftFormats)
                                               .build())
                         .build(),
+                new EntryBuilder(MidLineTagTestService.class)
+                        .endpoint(EndpointInfo.builder("*", "/midline")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
+                        .build(),
                 new EntryBuilder(OnewayHelloService.class)
                         .endpoint(EndpointInfo.builder("*", "/oneway")
+                                              .defaultFormat(BINARY)
+                                              .availableFormats(allThriftFormats)
+                                              .build())
+                        .build(),
+                new EntryBuilder(FileService.class)
+                        .endpoint(EndpointInfo.builder("*", "/file")
                                               .defaultFormat(BINARY)
                                               .availableFormats(allThriftFormats)
                                               .build())
@@ -179,7 +200,8 @@ public class ThriftDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
+        // Ignore docServiceRoute (route path) and docStrings (loaded by DocStringSupport, not plugin)
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute", "docStrings").isEqualTo(expectedJson);
     }
 
     private static void addExamples(JsonNode json) {
@@ -240,7 +262,9 @@ public class ThriftDocServiceTest {
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   docServiceRoute));
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        // Note: docStrings are loaded from all services on the virtual host regardless of the filter,
+        // so we ignore them in this comparison. This test focuses on verifying services are excluded.
+        assertThatJson(actualJson).whenIgnoringPaths("docStrings").isEqualTo(expectedJson);
     }
 
     @Test
@@ -249,5 +273,170 @@ public class ThriftDocServiceTest {
                 WebClient.of(server.uri(SessionProtocol.H1C, SerializationFormat.NONE))
                          .blocking().post("/docs/specification.json", "");
         assertThat(res.status().code()).isEqualTo(405);
+    }
+
+    @Test
+    public void testReturnInfoAndExceptionsJsonStructure() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final JsonNode servicesNode = actualJson.get("services");
+        assertThat(servicesNode).isNotNull();
+
+        // Verify that all methods have returnTypeSignature and exceptionTypeSignatures
+        // with the expected structure
+        for (JsonNode service : servicesNode) {
+            for (JsonNode method : service.get("methods")) {
+                // Every method should have a returnTypeSignature (string)
+                final JsonNode returnTypeSignature = method.get("returnTypeSignature");
+                assertThat(returnTypeSignature).isNotNull();
+                assertThat(returnTypeSignature.isTextual()).isTrue();
+
+                // Every method should have an exceptionTypeSignatures list (array of strings)
+                final JsonNode exceptionTypeSignatures = method.get("exceptionTypeSignatures");
+                assertThat(exceptionTypeSignatures).isNotNull();
+                assertThat(exceptionTypeSignatures.isArray()).isTrue();
+                // Each exception should be a type signature string
+                for (JsonNode exception : exceptionTypeSignatures) {
+                    assertThat(exception.isTextual()).isTrue();
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testReturnInfoAndExceptionStructure() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final JsonNode servicesNode = actualJson.get("services");
+        assertThat(servicesNode).isNotNull();
+
+        // Verify that HelloService.hello has the expected return type
+        JsonNode helloService = null;
+        for (JsonNode service : servicesNode) {
+            if ("testing.thrift.main.HelloService".equals(service.get("name").textValue())) {
+                helloService = service;
+                break;
+            }
+        }
+        assertThat(helloService).isNotNull();
+
+        final JsonNode helloMethod = helloService.get("methods").get(0);
+        assertThat(helloMethod.get("name").textValue()).isEqualTo("hello");
+        final JsonNode helloReturnTypeSignature = helloMethod.get("returnTypeSignature");
+        assertThat(helloReturnTypeSignature.textValue()).isEqualTo("string");
+
+        // Verify that FileService.create has the expected exception type
+        JsonNode fileService = null;
+        for (JsonNode service : servicesNode) {
+            if ("testing.thrift.main.FileService".equals(service.get("name").textValue())) {
+                fileService = service;
+                break;
+            }
+        }
+        assertThat(fileService).isNotNull();
+
+        final JsonNode createMethod = fileService.get("methods").get(0);
+        assertThat(createMethod.get("name").textValue()).isEqualTo("create");
+        final JsonNode exceptionTypeSignatures = createMethod.get("exceptionTypeSignatures");
+        assertThat(exceptionTypeSignatures.size()).isEqualTo(1);
+        assertThat(exceptionTypeSignatures.get(0).textValue())
+                .isEqualTo("testing.thrift.main.FileServiceException");
+    }
+
+    @Test
+    public void docStringsAreLoaded() throws Exception {
+        assumeDocStringsAvailable();
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+
+        // Build expected docStrings for all services in testing.thrift.main namespace
+        // Note: Only Javadoc-style comments (/** ... */) are included, not single-line comments (//)
+        // The method docstrings include the full comment with @param, @return, @throws
+        final ObjectNode expectedDocStrings = mapper.createObjectNode();
+
+        // HelloService docstrings (has Javadoc comments)
+        expectedDocStrings.set("testing.thrift.main.HelloService",
+                              descriptionInfo("Tests a non-oneway method with a return value."));
+        expectedDocStrings.set("testing.thrift.main.HelloService/hello",
+                              descriptionInfo("Sends a greeting to the specified name.\n" +
+                                             "@param string name - the name to greet\n" +
+                                             "@return a greeting message"));
+        expectedDocStrings.set("testing.thrift.main.HelloService/hello:param/name",
+                              descriptionInfo("the name to greet"));
+        expectedDocStrings.set("testing.thrift.main.HelloService/hello:return",
+                              descriptionInfo("a greeting message"));
+
+        // OnewayHelloService - no Javadoc comments, only single-line comment which is not included
+
+        // FooService - no Javadoc comments on the service or methods
+
+        // FileService docstrings (has Javadoc comments)
+        expectedDocStrings.set("testing.thrift.main.FileService",
+                              descriptionInfo("Tests exception handling."));
+        expectedDocStrings.set("testing.thrift.main.FileService/create",
+                              descriptionInfo("Creates a file at the specified path.\n" +
+                                             "@param string path - the path to create\n" +
+                                             "@throws FileServiceException - when the file cannot be created"));
+        expectedDocStrings.set("testing.thrift.main.FileService/create:param/path",
+                              descriptionInfo("the path to create"));
+        expectedDocStrings.set("testing.thrift.main.FileService/create:throws/" +
+                              "testing.thrift.main.FileServiceException",
+                              descriptionInfo("when the file cannot be created"));
+
+        // FileServiceException docstring
+        expectedDocStrings.set("testing.thrift.main.FileServiceException",
+                              descriptionInfo("Exception thrown by FileService."));
+
+        // MidLineTagTestService docstrings (has Javadoc comments)
+        // Note: The service itself has only a single-line comment, so no service-level docstring
+        expectedDocStrings.set("testing.thrift.main.MidLineTagTestService/throwsTypeOnly",
+                              descriptionInfo("Method where only the type is specified in the throws tag.\n" +
+                                             "@param string value - the input value\n" +
+                                             "@throws FooServiceException"));
+        expectedDocStrings.set("testing.thrift.main.MidLineTagTestService/throwsTypeOnly:param/value",
+                              descriptionInfo("the input value"));
+        expectedDocStrings.set("testing.thrift.main.MidLineTagTestService/midLineTagsIgnored",
+                              descriptionInfo("Method with mid-line @return should be ignored because tags " +
+                                             "must be at line start.\n" +
+                                             "Similarly, mid-line @throws FooServiceException - " +
+                                             "should also be ignored.\n" +
+                                             "@param string value - the input value\n" +
+                                             "@return valid return description"));
+        expectedDocStrings.set("testing.thrift.main.MidLineTagTestService/midLineTagsIgnored:param/value",
+                              descriptionInfo("the input value"));
+        expectedDocStrings.set("testing.thrift.main.MidLineTagTestService/midLineTagsIgnored:return",
+                              descriptionInfo("valid return description"));
+
+        // Filter actual docStrings to only include testing.thrift.main namespace
+        final JsonNode actualDocStrings = actualJson.get("docStrings");
+        assertThat(actualDocStrings).isNotNull();
+
+        final ObjectNode filteredActualDocStrings = mapper.createObjectNode();
+        actualDocStrings.fields().forEachRemaining(entry -> {
+            final String key = entry.getKey();
+            if (key.startsWith("testing.thrift.main.")) {
+                filteredActualDocStrings.set(key, entry.getValue());
+            }
+        });
+
+        // Compare using assertThatJson for clear diff output
+        assertThatJson(filteredActualDocStrings).isEqualTo(expectedDocStrings);
+    }
+
+    private ObjectNode descriptionInfo(String docString) {
+        final ObjectNode node = mapper.createObjectNode();
+        node.put("docString", docString);
+        node.put("markup", "NONE");
+        return node;
     }
 }

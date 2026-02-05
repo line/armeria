@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNa
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescriptionWithFieldFallback;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
@@ -236,9 +237,9 @@ final class AnnotatedValueResolver {
                                               List<RequestObjectResolver> objectResolvers,
                                               DependencyInjector dependencyInjector) {
         // 'Field' is only used for converting a bean.
-        // So we always need to pass 'implicitRequestObjectAnnotation' as false.
+        // So we always need to pass 'implicitRequestObjectAnnotation' as false and 'isServiceMethod' as false.
         return of(field, field, field.getType(), pathParams,
-                  objectResolvers, false, false, dependencyInjector, null);
+                  objectResolvers, false, false, false, dependencyInjector, null);
     }
 
     /**
@@ -303,7 +304,7 @@ final class AnnotatedValueResolver {
 
             resolver = of(constructorOrMethod,
                           headParameter, headParameter.getType(), pathParams, objectResolvers,
-                          implicitRequestObjectAnnotation, useBlockingExecutor,
+                          implicitRequestObjectAnnotation, isServiceMethod, useBlockingExecutor,
                           dependencyInjector, queryDelimiter);
         } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
@@ -324,7 +325,7 @@ final class AnnotatedValueResolver {
             // void setter(Bean bean) { ... }
             //
             resolver = of(headParameter, pathParams, objectResolvers, true,
-                          useBlockingExecutor, dependencyInjector, queryDelimiter);
+                          isServiceMethod, useBlockingExecutor, dependencyInjector, queryDelimiter);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -353,7 +354,8 @@ final class AnnotatedValueResolver {
         } else {
             list = parameters.stream()
                              .map(p -> of(p, pathParams, objectResolvers, implicitRequestObjectAnnotation,
-                                          useBlockingExecutor, dependencyInjector, queryDelimiter))
+                                          isServiceMethod, useBlockingExecutor, dependencyInjector,
+                                          queryDelimiter))
                              .filter(Objects::nonNull)
                              .collect(toImmutableList());
         }
@@ -408,14 +410,16 @@ final class AnnotatedValueResolver {
      * {@code implicitRequestObjectAnnotation}.
      */
     @Nullable
-    static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
-                                     List<RequestObjectResolver> objectResolvers,
-                                     boolean implicitRequestObjectAnnotation,
-                                     boolean useBlockingExecutor,
-                                     DependencyInjector dependencyInjector,
-                                     @Nullable String queryDelimiter) {
+    private static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
+                                             List<RequestObjectResolver> objectResolvers,
+                                             boolean implicitRequestObjectAnnotation,
+                                             boolean isServiceMethod,
+                                             boolean useBlockingExecutor,
+                                             DependencyInjector dependencyInjector,
+                                             @Nullable String queryDelimiter) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
-                  implicitRequestObjectAnnotation, useBlockingExecutor, dependencyInjector, queryDelimiter);
+                  implicitRequestObjectAnnotation, isServiceMethod, useBlockingExecutor, dependencyInjector,
+                  queryDelimiter);
     }
 
     /**
@@ -434,6 +438,8 @@ final class AnnotatedValueResolver {
      *                                        with {@link RequestObject} so that conversion is always done.
      *                                        {@code false} if an element has to be annotated with
      *                                        {@link RequestObject} explicitly to get converted.
+     * @param isServiceMethod {@code true} if this resolver is for a service method parameter,
+     *                        {@code false} if for a bean parameter.
      * @param useBlockingExecutor whether to use blocking task executor
      */
     @Nullable
@@ -442,6 +448,7 @@ final class AnnotatedValueResolver {
                                              Set<String> pathParams,
                                              List<RequestObjectResolver> objectResolvers,
                                              boolean implicitRequestObjectAnnotation,
+                                             boolean isServiceMethod,
                                              boolean useBlockingExecutor,
                                              DependencyInjector dependencyInjector,
                                              @Nullable String queryDelimiter) {
@@ -452,7 +459,11 @@ final class AnnotatedValueResolver {
         requireNonNull(objectResolvers, "objectResolvers");
         requireNonNull(dependencyInjector, "dependencyInjector");
 
-        final DescriptionInfo description = findDescription(annotatedElement);
+        // For service method parameters, use basic description lookup.
+        // For bean parameters, use field fallback to find description from class field.
+        final DescriptionInfo description =
+                isServiceMethod ? findDescription(annotatedElement)
+                                : findDescriptionWithFieldFallback(annotatedElement);
 
         final Attribute attr = annotatedElement.getAnnotation(Attribute.class);
         if (attr != null) {

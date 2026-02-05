@@ -9,11 +9,7 @@
         "name" : "req",
         "location" : "UNSPECIFIED",
         "requirement" : "REQUIRED",
-        "typeSignature" : "testing.protobuf.Messages$TestMessage",
-        "descriptionInfo" : {
-          "docString" : "",
-          "markup" : "NONE"
-        }
+        "typeSignature" : "testing.protobuf.Messages$TestMessage"
       } ],
       "exceptionTypeSignatures" : [ ],
       "endpoints" : [ {
@@ -25,17 +21,9 @@
       "exampleRequests" : [ ],
       "examplePaths" : [ ],
       "exampleQueries" : [ ],
-      "httpMethod" : "POST",
-      "descriptionInfo" : {
-        "docString" : "",
-        "markup" : "NONE"
-      }
+      "httpMethod" : "POST"
     } ],
-    "exampleHeaders" : [ ],
-    "descriptionInfo" : {
-      "docString" : "",
-      "markup" : "NONE"
-    }
+    "exampleHeaders" : [ ]
   } ],
   "enums" : [ {
     "name" : "armeria.protobuf.testing.TestEnum",

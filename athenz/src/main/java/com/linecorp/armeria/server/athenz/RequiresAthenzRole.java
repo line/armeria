@@ -86,6 +86,27 @@ public @interface RequiresAthenzRole {
     };
 
     /**
+     * Custom header names to use for Athenz token extraction.
+     *
+     * <p>This allows you to specify custom HTTP header names for token extraction,
+     * in addition to or instead of the predefined {@link #tokenType()} values.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * @RequiresAthenzRole(resource = "admin", action = "write",
+     *                     customHeaders = {"X-Company-Token", "X-Custom-Auth"})
+     * @Post("/admin/users")
+     * public CompletableFuture<Void> createUser() {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>When both {@link #tokenType()} and {@code customHeaders} are specified,
+     * all headers will be checked in order (predefined types first, then custom headers).
+     */
+    String[] customHeaders() default {};
+
+    /**
      * A special parameter in order to specify the order of a {@link Decorator}.
      */
     int order() default 0;

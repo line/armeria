@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDocStringTestUtil.assumeDocStringsAvailable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -28,6 +29,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -36,20 +38,23 @@ import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
 
+import testing.thrift.main.FileService;
 import testing.thrift.main.FooEnum;
 import testing.thrift.main.FooService;
 import testing.thrift.main.FooStruct;
 import testing.thrift.main.HelloService;
 import testing.thrift.main.HelloService.AsyncIface;
+import testing.thrift.main.MidLineTagTestService;
 import testing.thrift.main.TypeDefService;
 
 class ThriftDocServicePluginTest {
@@ -259,37 +264,37 @@ class ThriftDocServicePluginTest {
         final TypeSignature foo = TypeSignature.ofStruct(FooStruct.class);
         final MethodInfo bar3 = methods.get("bar3");
         assertThat(bar3.parameters()).containsExactly(
-                FieldInfo.of("intVal", TypeSignature.ofBase("i32")),
-                FieldInfo.of("foo", foo));
+                ParamInfo.of("intVal", TypeSignature.ofBase("i32")),
+                ParamInfo.of("foo", foo));
         assertThat(bar3.returnTypeSignature()).isEqualTo(foo);
         assertThat(bar3.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar3.exampleRequests()).isEmpty();
 
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.parameters()).containsExactly(
-                FieldInfo.of("foos", TypeSignature.ofList(foo)));
+                ParamInfo.of("foos", TypeSignature.ofList(foo)));
         assertThat(bar4.returnTypeSignature()).isEqualTo(TypeSignature.ofList(foo));
         assertThat(bar4.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar4.exampleRequests()).isEmpty();
 
         final MethodInfo bar5 = methods.get("bar5");
         assertThat(bar5.parameters()).containsExactly(
-                FieldInfo.of("foos", TypeSignature.ofMap(string, foo)));
+                ParamInfo.of("foos", TypeSignature.ofMap(string, foo)));
         assertThat(bar5.returnTypeSignature()).isEqualTo(TypeSignature.ofMap(string, foo));
         assertThat(bar5.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar5.exampleRequests()).isEmpty();
 
         final MethodInfo bar6 = methods.get("bar6");
         assertThat(bar6.parameters()).containsExactly(
-                FieldInfo.of("foo1", string),
-                FieldInfo.of("foo2", TypeSignature.ofStruct(FooStruct.class)),
-                FieldInfo.of("foo3", TypeSignature.ofEnum(FooEnum.class)),
-                FieldInfo.of("foo4", TypeSignature.ofMap(string, string)),
-                FieldInfo.of("foo5", TypeSignature.ofList(string)),
-                FieldInfo.of("foo6", TypeSignature.ofSet(string)),
-                FieldInfo.of("foo7", TypeSignature.ofList(TypeSignature.ofList(
+                ParamInfo.of("foo1", string),
+                ParamInfo.of("foo2", TypeSignature.ofStruct(FooStruct.class)),
+                ParamInfo.of("foo3", TypeSignature.ofEnum(FooEnum.class)),
+                ParamInfo.of("foo4", TypeSignature.ofMap(string, string)),
+                ParamInfo.of("foo5", TypeSignature.ofList(string)),
+                ParamInfo.of("foo6", TypeSignature.ofSet(string)),
+                ParamInfo.of("foo7", TypeSignature.ofList(TypeSignature.ofList(
                         TypeSignature.ofStruct(FooStruct.class)))),
-                FieldInfo.of("foo8", TypeSignature.ofList(TypeSignature.ofList(
+                ParamInfo.of("foo8", TypeSignature.ofList(TypeSignature.ofList(
                         TypeSignature.ofStruct(FooStruct.class)))));
 
         assertThat(bar6.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
@@ -317,21 +322,105 @@ class ThriftDocServicePluginTest {
 
         final MethodInfo typeDefs = methods.get("typeDefs");
         assertThat(typeDefs.parameters()).containsExactly(
-                FieldInfo.of("td1", TypeSignature.ofBase("string")),
-                FieldInfo.of("td2", TypeSignature.ofList(TypeSignature.ofBase("string"))),
-                FieldInfo.of("td3", TypeSignature.ofBase("bool")),
-                FieldInfo.of("td4", TypeSignature.ofList(TypeSignature.ofBase("bool"))),
-                FieldInfo.of("td5", TypeSignature.ofBase("i8")),
-                FieldInfo.of("td6", TypeSignature.ofList(TypeSignature.ofBase("i8"))),
-                FieldInfo.of("td7", TypeSignature.ofBase("i16")),
-                FieldInfo.of("td8", TypeSignature.ofList(TypeSignature.ofBase("i16"))),
-                FieldInfo.of("td9", TypeSignature.ofBase("i32")),
-                FieldInfo.of("td10", TypeSignature.ofList(TypeSignature.ofBase("i32"))),
-                FieldInfo.of("td11", TypeSignature.ofBase("i64")),
-                FieldInfo.of("td12", TypeSignature.ofList(TypeSignature.ofBase("i64"))),
-                FieldInfo.of("td13", TypeSignature.ofBase("double")),
-                FieldInfo.of("td14", TypeSignature.ofList(TypeSignature.ofBase("double"))),
-                FieldInfo.of("td15", TypeSignature.ofBase("binary")),
-                FieldInfo.of("td16", TypeSignature.ofList(TypeSignature.ofBase("binary"))));
+                ParamInfo.of("td1", TypeSignature.ofBase("string")),
+                ParamInfo.of("td2", TypeSignature.ofList(TypeSignature.ofBase("string"))),
+                ParamInfo.of("td3", TypeSignature.ofBase("bool")),
+                ParamInfo.of("td4", TypeSignature.ofList(TypeSignature.ofBase("bool"))),
+                ParamInfo.of("td5", TypeSignature.ofBase("i8")),
+                ParamInfo.of("td6", TypeSignature.ofList(TypeSignature.ofBase("i8"))),
+                ParamInfo.of("td7", TypeSignature.ofBase("i16")),
+                ParamInfo.of("td8", TypeSignature.ofList(TypeSignature.ofBase("i16"))),
+                ParamInfo.of("td9", TypeSignature.ofBase("i32")),
+                ParamInfo.of("td10", TypeSignature.ofList(TypeSignature.ofBase("i32"))),
+                ParamInfo.of("td11", TypeSignature.ofBase("i64")),
+                ParamInfo.of("td12", TypeSignature.ofList(TypeSignature.ofBase("i64"))),
+                ParamInfo.of("td13", TypeSignature.ofBase("double")),
+                ParamInfo.of("td14", TypeSignature.ofList(TypeSignature.ofBase("double"))),
+                ParamInfo.of("td15", TypeSignature.ofBase("binary")),
+                ParamInfo.of("td16", TypeSignature.ofList(TypeSignature.ofBase("binary"))));
+    }
+
+    @Test
+    void testDocStrings() {
+        assumeDocStringsAvailable();
+
+        // Build a server with services that have Javadoc-style comments
+        final Server server =
+                Server.builder()
+                      .service(Route.builder().exact("/hello").build(),
+                               THttpService.of(mock(AsyncIface.class)))
+                      .service(Route.builder().exact("/file").build(),
+                               THttpService.of(mock(FileService.AsyncIface.class)))
+                      .service(Route.builder().exact("/midline").build(),
+                               THttpService.of(mock(MidLineTagTestService.AsyncIface.class)))
+                      .service(Route.builder().exact("/foo").build(),
+                               THttpService.of(mock(FooService.AsyncIface.class)))
+                      .build();
+
+        final Map<String, DescriptionInfo> allDocStrings = generator.loadDocStrings(
+                ImmutableSet.copyOf(server.serviceConfigs()));
+
+        // Filter to only include testing.thrift.main entries
+        final Map<String, DescriptionInfo> actualDocStrings = allDocStrings.entrySet().stream()
+                .filter(e -> e.getKey().startsWith("testing.thrift.main."))
+                .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        final Map<String, DescriptionInfo> expectedDocStrings = ImmutableMap.<String, DescriptionInfo>builder()
+                // HelloService (has Javadoc comments)
+                .put("testing.thrift.main.HelloService",
+                     DescriptionInfo.of("Tests a non-oneway method with a return value."))
+                .put("testing.thrift.main.HelloService/hello",
+                     DescriptionInfo.of(
+                             "Sends a greeting to the specified name.\n" +
+                             "@param string name - the name to greet\n" +
+                             "@return a greeting message"))
+                .put("testing.thrift.main.HelloService/hello:param/name",
+                     DescriptionInfo.of("the name to greet"))
+                .put("testing.thrift.main.HelloService/hello:return",
+                     DescriptionInfo.of("a greeting message"))
+
+                // FileService (has Javadoc comments)
+                .put("testing.thrift.main.FileService",
+                     DescriptionInfo.of("Tests exception handling."))
+                .put("testing.thrift.main.FileService/create",
+                     DescriptionInfo.of(
+                             "Creates a file at the specified path.\n" +
+                             "@param string path - the path to create\n" +
+                             "@throws FileServiceException - when the file cannot be created"))
+                .put("testing.thrift.main.FileService/create:param/path",
+                     DescriptionInfo.of("the path to create"))
+                .put("testing.thrift.main.FileService/create:throws/testing.thrift.main.FileServiceException",
+                     DescriptionInfo.of("when the file cannot be created"))
+
+                // FileServiceException
+                .put("testing.thrift.main.FileServiceException",
+                     DescriptionInfo.of("Exception thrown by FileService."))
+
+                // MidLineTagTestService (service has single-line comment only, methods have Javadoc)
+                // Note: Service itself has no Javadoc (only single-line comment)
+                .put("testing.thrift.main.MidLineTagTestService/throwsTypeOnly",
+                     DescriptionInfo.of(
+                             "Method where only the type is specified in the throws tag.\n" +
+                             "@param string value - the input value\n" +
+                             "@throws FooServiceException"))
+                .put("testing.thrift.main.MidLineTagTestService/throwsTypeOnly:param/value",
+                     DescriptionInfo.of("the input value"))
+                // Note: No description for throwsTypeOnly exception since only type is specified
+                .put("testing.thrift.main.MidLineTagTestService/midLineTagsIgnored",
+                     DescriptionInfo.of(
+                             "Method with mid-line @return should be ignored because tags must be at " +
+                             "line start.\n" +
+                             "Similarly, mid-line @throws FooServiceException - should also be ignored.\n" +
+                             "@param string value - the input value\n" +
+                             "@return valid return description"))
+                .put("testing.thrift.main.MidLineTagTestService/midLineTagsIgnored:param/value",
+                     DescriptionInfo.of("the input value"))
+                .put("testing.thrift.main.MidLineTagTestService/midLineTagsIgnored:return",
+                     DescriptionInfo.of("valid return description"))
+
+                // Note: FooService has no Javadoc comments on the service or methods
+                .build();
+
+        assertThat(actualDocStrings).isEqualTo(expectedDocStrings);
     }
 }

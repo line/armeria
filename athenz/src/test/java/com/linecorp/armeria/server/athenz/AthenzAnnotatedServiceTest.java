@@ -40,13 +40,17 @@ import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.athenz.AccessDeniedException;
+import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.util.AsciiString;
 
 @EnabledIfDockerAvailable
 class AthenzAnnotatedServiceTest {
@@ -131,6 +135,32 @@ class AthenzAnnotatedServiceTest {
         }
     }
 
+    @CsvSource({
+            "YAHOO_ROLE_TOKEN",
+            "ATHENZ_ROLE_TOKEN",
+            "ACCESS_TOKEN"
+    })
+    @ParameterizedTest
+    void testCustomHeaderInAnnotation(TokenType tokenType) {
+        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("foo-service")) {
+            final AthenzTokenHeader customHeader =
+                    new CustomHeader("X-Custom-Token", tokenType.isRoleToken(), tokenType.authScheme());
+            final BlockingWebClient client =
+                    WebClient.builder(server.httpUri())
+                             .decorator(AthenzClient.builder(ztsBaseClient)
+                                                    .domainName(TEST_DOMAIN_NAME)
+                                                    .roleNames(USER_ROLE)
+                                                    .tokenHeader(customHeader)
+                                                    .newDecorator())
+                             .build()
+                             .blocking();
+
+            final AggregatedHttpResponse response = client.get("/custom");
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("custom1", "custom2"));
+        }
+    }
+
     private static final class AthenzAnnotatedService {
 
         @RequiresAthenzRole(action = "obtain", resource = "secrets")
@@ -145,6 +175,48 @@ class AthenzAnnotatedServiceTest {
         @ProducesJson
         public List<String> getFiles() {
             return ImmutableList.of("foo.txt", "bar.txt");
+        }
+
+        @RequiresAthenzRole(action = "read", resource = "custom", customHeaders = { "X-Custom-Token" })
+        @Get("/custom")
+        @ProducesJson
+        public List<String> getCustom() {
+            return ImmutableList.of("custom1", "custom2");
+        }
+    }
+
+    private static final class CustomHeader implements AthenzTokenHeader {
+        private final String headerName;
+        private final AsciiString asciiHeaderName;
+        private final boolean roleToken;
+        @Nullable
+        private final String authScheme;
+
+        CustomHeader(String headerName, boolean roleToken, @Nullable String authScheme) {
+            this.headerName = headerName;
+            this.asciiHeaderName = AsciiString.of(headerName);
+            this.roleToken = roleToken;
+            this.authScheme = authScheme;
+        }
+
+        @Override
+        public String name() {
+            return "CUSTOM_" + headerName.toUpperCase().replace('-', '_');
+        }
+
+        @Override
+        public AsciiString headerName() {
+            return asciiHeaderName;
+        }
+
+        @Override
+        public String authScheme() {
+            return authScheme;
+        }
+
+        @Override
+        public boolean isRoleToken() {
+            return roleToken;
         }
     }
 }

@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.athenz.TokenType;
+import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -124,7 +124,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     private final AthenzAuthorizer authorizer;
     private final AthenzResourceProvider athenzResourceProvider;
     private final String athenzAction;
-    private final List<TokenType> tokenTypes;
+    private final List<AthenzTokenHeader> tokenHeaders;
     private final MeterIdPrefix meterIdPrefix;
     private final String resourceTagValue;
 
@@ -135,21 +135,23 @@ public final class AthenzService extends SimpleDecoratingHttpService {
 
     AthenzService(HttpService delegate, AthenzAuthorizer authorizer,
                   AthenzResourceProvider athenzResourceProvider, String athenzAction,
-                  List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix, String resourceTagValue) {
+                  List<AthenzTokenHeader> tokenHeaders, MeterIdPrefix meterIdPrefix,
+                  String resourceTagValue) {
         super(delegate);
 
         this.authorizer = authorizer;
         this.athenzResourceProvider = athenzResourceProvider;
         this.athenzAction = athenzAction;
-        this.tokenTypes = tokenTypes;
+        this.tokenHeaders = tokenHeaders;
         this.meterIdPrefix = meterIdPrefix;
         this.resourceTagValue = resourceTagValue;
     }
 
     AthenzService(HttpService delegate, AthenzAuthorizer authorizer, String athenzResource,
-                  String athenzAction, List<TokenType> tokenTypes, MeterIdPrefix meterIdPrefix) {
+                  String athenzAction, List<AthenzTokenHeader> tokenHeaders,
+                  MeterIdPrefix meterIdPrefix) {
         this(delegate, authorizer, (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource),
-             athenzAction, tokenTypes, meterIdPrefix, athenzResource);
+             athenzAction, tokenHeaders, meterIdPrefix, athenzResource);
     }
 
     @Override
@@ -220,8 +222,8 @@ public final class AthenzService extends SimpleDecoratingHttpService {
 
     @Nullable
     private String extractToken(RequestHeaders headers) {
-        for (TokenType tokenType : tokenTypes) {
-            final String token = headers.get(tokenType.headerName(), "");
+        for (AthenzTokenHeader tokenHeader : tokenHeaders) {
+            final String token = headers.get(tokenHeader.headerName(), "");
             if (token.isEmpty()) {
                 continue;
             }

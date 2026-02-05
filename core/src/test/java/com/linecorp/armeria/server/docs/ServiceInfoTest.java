@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -36,8 +37,10 @@ class ServiceInfoTest {
                                                String endpointPathMapping) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", endpointPathMapping)
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
-        return new MethodInfo("", methodName, 0, TypeSignature.ofBase("T"), ImmutableList.of(),
-                              ImmutableList.of(), ImmutableList.of(endpoint), method, DescriptionInfo.empty());
+        return new MethodInfo("", methodName, 0,
+                              TypeSignature.ofBase("T"),
+                              ImmutableList.of(), ImmutableSet.of(),
+                              ImmutableList.of(endpoint), method);
     }
 
     @Test
