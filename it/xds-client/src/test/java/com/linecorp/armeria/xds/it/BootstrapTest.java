@@ -35,7 +35,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.XdsResourceException;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -122,7 +121,7 @@ class BootstrapTest {
         final AtomicReference<Object> objRef = new AtomicReference<>();
         final SnapshotWatcher<Object> watcher = new SnapshotWatcher<>() {
             @Override
-            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
                 if (snapshot != null) {
                     objRef.set(snapshot);
                 }

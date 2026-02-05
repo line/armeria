@@ -189,26 +189,13 @@ class ResourceNodeMetricTest {
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
                                                      .meterRegistry(meterRegistry)
                                                      .build()) {
-            await().untilAsserted(() -> {
-                final var metrics = measureAll(meterRegistry);
-                assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
-                assertErrorAndMissingMetricsAreZero(metrics);
-            });
-            validatePrometheusTagConsistency(meterRegistry);
 
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
 
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=local_route,type=route}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 1.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 1.0
                 ));
@@ -219,21 +206,10 @@ class ResourceNodeMetricTest {
             listenerRoot.close();
 
             await().untilAsserted(() -> {
-                final var metrics = measureAll(meterRegistry, key ->
-                        key.startsWith("armeria.xds.resource.node.revision#value"));
-                assertThat(metrics).containsExactlyInAnyOrderEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
-                assertErrorAndMissingMetricsAreZero(metrics);
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).isEmpty();
             });
-            validatePrometheusTagConsistency(meterRegistry);
         }
-
-        await().untilAsserted(() -> {
-            final var metrics = measureAll(meterRegistry);
-            assertThat(metrics).isEmpty();
-        });
     }
 
     private static List<Snapshot> staticRouteSnapshots() {
@@ -354,14 +330,14 @@ class ResourceNodeMetricTest {
 
     static Stream<Arguments> listenerRootWithRouteUpdate_args() {
         return Stream.of(
-                Arguments.of(staticRouteSnapshots()),
-                Arguments.of(rdsRouteSnapshots())
+                Arguments.of(staticRouteSnapshots(), true),
+                Arguments.of(rdsRouteSnapshots(), false)
         );
     }
 
     @ParameterizedTest
     @MethodSource("listenerRootWithRouteUpdate_args")
-    void listenerRootWithRouteUpdate(List<Snapshot> snapshots) throws Exception {
+    void listenerRootWithRouteUpdate(List<Snapshot> snapshots, boolean staticRoute) throws Exception {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml.formatted(server.httpPort()),
                                                                Bootstrap.class);
         final MeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -378,14 +354,14 @@ class ResourceNodeMetricTest {
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 1.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 1.0
                 ));
+                if (!staticRoute) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 1.0);
+                }
                 assertErrorAndMissingMetricsAreZero(metrics);
             });
 
@@ -395,14 +371,14 @@ class ResourceNodeMetricTest {
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 2.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 2.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 2.0
                 ));
+                if (!staticRoute) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 2.0);
+                }
                 assertErrorAndMissingMetricsAreZero(metrics);
             });
 
@@ -412,14 +388,14 @@ class ResourceNodeMetricTest {
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 3.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 3.0,
                         "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 3.0
                 ));
+                if (!staticRoute) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 3.0);
+                }
                 assertErrorAndMissingMetricsAreZero(metrics);
             });
 
@@ -428,23 +404,12 @@ class ResourceNodeMetricTest {
             // Step 4: Close the node root
             listenerRoot.close();
 
+            // Step 5: Verify all metrics are cleaned up after XdsBootstrap closure
             await().untilAsserted(() -> {
-                final var metrics = measureAll(meterRegistry, key ->
-                        key.startsWith("armeria.xds.resource.node.revision#value"));
-                assertThat(metrics).containsExactlyInAnyOrderEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
-                assertErrorAndMissingMetricsAreZero(metrics);
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).isEmpty();
             });
-            validatePrometheusTagConsistency(meterRegistry);
         }
-
-        // Step 5: Verify all metrics are cleaned up after XdsBootstrap closure
-        await().untilAsserted(() -> {
-            final var metrics = measureAll(meterRegistry);
-            assertThat(metrics).isEmpty();
-        });
     }
 
     private static List<Snapshot> staticClusterSnapshots() {
@@ -540,14 +505,14 @@ class ResourceNodeMetricTest {
 
     static Stream<Arguments> clusterRootWithClusterUpdate_args() {
         return Stream.of(
-                Arguments.of(staticClusterSnapshots()),
-                Arguments.of(edsClusterSnapshots())
+                Arguments.of(staticClusterSnapshots(), true),
+                Arguments.of(edsClusterSnapshots(), false)
         );
     }
 
     @ParameterizedTest
     @MethodSource("clusterRootWithClusterUpdate_args")
-    void clusterRootWithClusterUpdate(List<Snapshot> snapshots) throws Exception {
+    void clusterRootWithClusterUpdate(List<Snapshot> snapshots, boolean staticEndpoints) throws Exception {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml.formatted(server.httpPort()),
                                                                Bootstrap.class);
         final MeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -563,13 +528,14 @@ class ResourceNodeMetricTest {
 
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
-                assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 1.0
-                ));
+                assertThat(metrics).containsEntry(
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0);
                 assertErrorAndMissingMetricsAreZero(metrics);
+
+                if (!staticEndpoints) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 1.0);
+                }
             });
 
             // Step 2: Change cluster endpoint port from 8080 to 9090
@@ -577,13 +543,14 @@ class ResourceNodeMetricTest {
 
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
-                assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 2.0
-                ));
+                assertThat(metrics).containsEntry(
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 2.0);
                 assertErrorAndMissingMetricsAreZero(metrics);
+
+                if (!staticEndpoints) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 2.0);
+                }
             });
 
             // Step 3: Change cluster endpoint port back to 8080
@@ -591,13 +558,14 @@ class ResourceNodeMetricTest {
 
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
-                assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 3.0
-                ));
+                assertThat(metrics).containsEntry(
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 3.0);
                 assertErrorAndMissingMetricsAreZero(metrics);
+
+                if (!staticEndpoints) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 3.0);
+                }
             });
 
             validatePrometheusTagConsistency(meterRegistry);
@@ -605,23 +573,12 @@ class ResourceNodeMetricTest {
             // Step 4: Close the cluster root
             clusterRoot.close();
 
+            // Step 5: Verify all metrics are cleaned up after XdsBootstrap closure
             await().untilAsserted(() -> {
-                final var metrics = measureAll(meterRegistry, key ->
-                        key.startsWith("armeria.xds.resource.node.revision#value"));
-                assertThat(metrics).containsExactlyInAnyOrderEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
-                assertErrorAndMissingMetricsAreZero(metrics);
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).isEmpty();
             });
-            validatePrometheusTagConsistency(meterRegistry);
         }
-
-        // Step 5: Verify all metrics are cleaned up after XdsBootstrap closure
-        await().untilAsserted(() -> {
-            final var metrics = measureAll(meterRegistry);
-            assertThat(metrics).isEmpty();
-        });
     }
 
     private static List<Snapshot> staticEndpointUpdateSnapshots() {
@@ -769,14 +726,14 @@ class ResourceNodeMetricTest {
 
     static Stream<Arguments> listenerRootWithEndpointUpdate_args() {
         return Stream.of(
-                Arguments.of(staticEndpointUpdateSnapshots()),
-                Arguments.of(edsEndpointUpdateSnapshots())
+                Arguments.of(staticEndpointUpdateSnapshots(), true),
+                Arguments.of(edsEndpointUpdateSnapshots(), false)
         );
     }
 
     @ParameterizedTest
     @MethodSource("listenerRootWithEndpointUpdate_args")
-    void listenerRootWithEndpointUpdate(List<Snapshot> snapshots) throws Exception {
+    void listenerRootWithEndpointUpdate(List<Snapshot> snapshots, boolean staticEndpoints) throws Exception {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml.formatted(server.httpPort()),
                                                                Bootstrap.class);
         final MeterRegistry meterRegistry = new SimpleMeterRegistry();
@@ -793,15 +750,14 @@ class ResourceNodeMetricTest {
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 1.0
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 1.0
                 ));
                 assertErrorAndMissingMetricsAreZero(metrics);
+                if (!staticEndpoints) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 1.0);
+                }
             });
 
             // Step 2: Change endpoint port from 8080 to 9090
@@ -810,15 +766,14 @@ class ResourceNodeMetricTest {
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 2.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 2.0
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 2.0
                 ));
                 assertErrorAndMissingMetricsAreZero(metrics);
+                if (!staticEndpoints) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 2.0);
+                }
             });
 
             // Step 3: Change endpoint port back to 8080
@@ -827,15 +782,14 @@ class ResourceNodeMetricTest {
             await().untilAsserted(() -> {
                 final var metrics = measureAll(meterRegistry);
                 assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0,
                         "armeria.xds.resource.node.revision#value{name=my-listener,type=listener}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=my-route,type=route}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=local_service1,type=virtual_host}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 3.0,
-                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 3.0
+                        "armeria.xds.resource.node.revision#value{name=my-cluster,type=cluster}", 3.0
                 ));
                 assertErrorAndMissingMetricsAreZero(metrics);
+                if (!staticEndpoints) {
+                    assertThat(metrics).containsEntry(
+                            "armeria.xds.resource.node.revision#value{name=my-cluster,type=endpoint}", 3.0);
+                }
             });
 
             validatePrometheusTagConsistency(meterRegistry);
@@ -843,23 +797,12 @@ class ResourceNodeMetricTest {
             // Step 4: Close the listener root
             listenerRoot.close();
 
+            // Step 5: Verify all metrics are cleaned up after XdsBootstrap closure
             await().untilAsserted(() -> {
-                final var metrics = measureAll(meterRegistry, key ->
-                    key.startsWith("armeria.xds.resource.node.revision#value"));
-                assertThat(metrics).containsExactlyInAnyOrderEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
-                assertErrorAndMissingMetricsAreZero(metrics);
+                final var metrics = measureAll(meterRegistry);
+                assertThat(metrics).isEmpty();
             });
-            validatePrometheusTagConsistency(meterRegistry);
         }
-
-        // Step 5: Verify all metrics are cleaned up after XdsBootstrap closure
-        await().untilAsserted(() -> {
-            final var metrics = measureAll(meterRegistry);
-            assertThat(metrics).isEmpty();
-        });
     }
 
     private static List<Arguments> listenerRootWithErrorData() {
@@ -1022,14 +965,6 @@ class ResourceNodeMetricTest {
                         .startsWith("armeria.xds.resource.node.error#count"));
                 assertThat(errorMetrics).containsKey(expectedErrorMetric);
                 assertThat(errorMetrics.get(expectedErrorMetric)).isGreaterThanOrEqualTo(1);
-
-                final var revisionMetrics = measureAll(meterRegistry, key -> key
-                        .startsWith("armeria.xds.resource.node.revision#value"));
-                // Verify bootstrap metrics remain zero, listener metric may be 0.0 for validation errors
-                assertThat(revisionMetrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
             });
 
             validatePrometheusTagConsistency(meterRegistry);
@@ -1037,23 +972,12 @@ class ResourceNodeMetricTest {
             // Close the listener root
             listenerRoot.close();
 
+            // Verify metrics are cleaned up
             await().untilAsserted(() -> {
-                final var metrics = measureAll(meterRegistry, key -> key
-                        .contains("armeria.xds.resource.node.revision#value"));
-                // After closing, only bootstrap metrics should remain
-                assertThat(metrics).containsAllEntriesOf(Map.of(
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=cluster}", 0.0,
-                        "armeria.xds.resource.node.revision#value{name=bootstrap-cluster,type=endpoint}", 0.0
-                ));
+                final var metrics = measureAll(meterRegistry, key -> key.contains("armeria.xds.resource.node"));
+                assertThat(metrics).isEmpty();
             });
-            validatePrometheusTagConsistency(meterRegistry);
         }
-
-        // Verify metrics are cleaned up after XdsBootstrap closure
-        await().untilAsserted(() -> {
-            final var metrics = measureAll(meterRegistry, key -> key.contains("revision#value"));
-            assertThat(metrics).isEmpty();
-        });
     }
 
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry) {

@@ -58,8 +58,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
         final BootstrapClusters bootstrapClusters =
-                new BootstrapClusters(bootstrap, eventLoop, clusterManager,
-                                      defaultWatcher, meterIdPrefix, meterRegistry);
+                new BootstrapClusters(bootstrap, clusterManager, defaultWatcher);
+
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
                 bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
@@ -67,8 +67,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
                 meterRegistry, meterIdPrefix);
-
-        bootstrapClusters.initializeSecondary(subscriptionContext);
+        bootstrapClusters.initializeStaticClusters(subscriptionContext);
         listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);
     }
 

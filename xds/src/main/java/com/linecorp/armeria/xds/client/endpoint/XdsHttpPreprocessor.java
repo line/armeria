@@ -54,8 +54,7 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
     }
 
     private XdsHttpPreprocessor(String listenerName, XdsBootstrap xdsBootstrap) {
-        super(listenerName, xdsBootstrap, HttpResponse::of,
-              (xdsFilter, preClient) -> xdsFilter.decorate(preClient::execute));
+        super(listenerName, xdsBootstrap, HttpResponse::of);
     }
 
     @Override

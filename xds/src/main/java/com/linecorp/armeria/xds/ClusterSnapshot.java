@@ -23,7 +23,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.xds.client.endpoint.UpdatableXdsLoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -40,24 +39,14 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @Nullable
     private final XdsLoadBalancer loadBalancer;
 
-    static ClusterSnapshot of(ClusterXdsResource clusterXdsResource,
-                              EndpointSnapshot newSnapshot, UpdatableXdsLoadBalancer loadBalancer) {
-        final ClusterSnapshot snapshot = new ClusterSnapshot(clusterXdsResource, newSnapshot, loadBalancer);
-        loadBalancer.updateSnapshot(snapshot);
-        return snapshot;
-    }
-
     ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
-        this.clusterXdsResource = clusterXdsResource;
-        endpointSnapshot = null;
-        loadBalancer = null;
+        this(clusterXdsResource, null);
     }
 
-    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
-                    XdsLoadBalancer loadBalancer) {
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, @Nullable XdsLoadBalancer loadBalancer) {
         this.clusterXdsResource = clusterXdsResource;
-        this.endpointSnapshot = endpointSnapshot;
         this.loadBalancer = loadBalancer;
+        endpointSnapshot = loadBalancer != null ? loadBalancer.endpointSnapshot() : null;
     }
 
     @Override

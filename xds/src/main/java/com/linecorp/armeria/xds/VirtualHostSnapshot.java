@@ -58,6 +58,15 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
         this.index = index;
     }
 
+    VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
+                        List<RouteEntry> routeEntries, int index) {
+        this.virtualHostXdsResource = virtualHostXdsResource;
+        final VirtualHost virtualHost = virtualHostXdsResource.resource();
+        filterConfigs = FilterUtil.toParsedFilterConfigs(virtualHost.getTypedPerFilterConfigMap());
+        this.routeEntries = routeEntries;
+        this.index = index;
+    }
+
     private VirtualHostSnapshot(VirtualHostXdsResource virtualHostXdsResource,
                                 List<RouteEntry> routeEntries, Map<String, ParsedFilterConfig> filterConfigs,
                                 int index) {
