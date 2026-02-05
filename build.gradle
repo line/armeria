@@ -68,10 +68,16 @@ allprojects {
         if (rootProject.hasProperty('leak')) {
             systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
             systemProperties 'io.netty.leakDetection.targetRecords': '256'
+            systemProperties 'io.netty.leakDetection.samplingInterval': '1'
         }
     }
 
     tasks.withType(Test) {
+        if (rootProject.hasProperty('leak')) {
+            forkEvery = 1
+            maxParallelForks = 1
+        }
+
         jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(project.buildDir))
 
         useJUnitPlatform()
