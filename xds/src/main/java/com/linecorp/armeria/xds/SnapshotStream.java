@@ -17,11 +17,17 @@
 package com.linecorp.armeria.xds;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CheckReturnValue;
 
+/**
+ * A stream of snapshots. In xDS usage, callbacks are driven by the event loop and
+ * are serialized; implementations may be re-entrant (e.g., a watcher can close its subscription
+ * during onUpdate).
+ */
 @FunctionalInterface
 interface SnapshotStream<T> {
 
@@ -55,7 +61,13 @@ interface SnapshotStream<T> {
         return new StaticSnapshotStream<>(value, null);
     }
 
+    @SuppressWarnings("unchecked")
+    static <T> SnapshotStream<Optional<T>> empty() {
+        return (SnapshotStream<Optional<T>>) StaticSnapshotStream.EMPTY;
+    }
+
     static <T> SnapshotStream<T> error(Throwable error) {
         return new StaticSnapshotStream<>(null, error);
     }
+
 }

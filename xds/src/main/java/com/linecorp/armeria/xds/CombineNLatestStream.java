@@ -26,11 +26,11 @@ final class CombineNLatestStream<T> extends RefCountedStream<List<T>> {
 
     private final Object[] latest;
     private final boolean[] ready;
-    private final List<SnapshotStream<T>> streams;
+    private final List<? extends SnapshotStream<T>> streams;
     private int readyCount;
 
     CombineNLatestStream(List<? extends SnapshotStream<T>> streams) {
-        this.streams = ImmutableList.copyOf(streams);
+        this.streams = streams;
         latest = new Object[streams.size()];
         ready = new boolean[streams.size()];
     }

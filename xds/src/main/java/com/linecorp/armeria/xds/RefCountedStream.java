@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 abstract class RefCountedStream<T> implements SnapshotStream<T> {
 
-    private final Set<SnapshotWatcher<? super T>> watchers = new HashSet<>();
+    private final Set<SnapshotWatcher<? super T>> watchers = new LinkedHashSet<>();
 
     @Nullable
     private T latestValue;
@@ -72,8 +72,9 @@ abstract class RefCountedStream<T> implements SnapshotStream<T> {
         if (value != null) {
             latestValue = value;
         }
-        final Object[] snapshot = watchers.toArray();
-        for (Object o : snapshot) {
+        // Use a snapshot to allow re-entrant subscribe/unsubscribe during callbacks.
+        final Object[] cpy = watchers.toArray();
+        for (Object o : cpy) {
             @SuppressWarnings("unchecked")
             final SnapshotWatcher<? super T> w = (SnapshotWatcher<? super T>) o;
             w.onUpdate(value, error);

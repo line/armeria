@@ -64,8 +64,7 @@ final class XdsClusterManager implements SafeCloseable {
     Subscription registerLocalWatcher(SnapshotWatcher<Optional<ClusterSnapshot>> watcher) {
         final ClusterStream clusterStream = nodes.get(localClusterName);
         if (clusterStream == null) {
-            return SnapshotStream.just(Optional.<ClusterSnapshot>empty())
-                                 .subscribe(watcher);
+            return SnapshotStream.<ClusterSnapshot>empty().subscribe(watcher);
         }
         return clusterStream.map(Optional::of).subscribe(watcher);
     }

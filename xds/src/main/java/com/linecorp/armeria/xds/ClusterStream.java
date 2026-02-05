@@ -183,7 +183,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
                 }
                 node = new EndpointStream(configSource, clusterName, context).map(Optional::of);
             } else {
-                node = SnapshotStream.just(Optional.empty());
+                node = SnapshotStream.empty();
             }
             return node.subscribe(watcher);
         }

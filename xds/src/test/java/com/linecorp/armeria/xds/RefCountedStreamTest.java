@@ -17,11 +17,13 @@
 package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
@@ -127,6 +129,39 @@ class RefCountedStreamTest {
 
         assertThat(errors1).containsExactly(error);
         assertThat(errors2).containsExactly(error);
+    }
+
+    @Test
+    void emitNotifiesWatchersInSubscriptionOrder() {
+        final TestRefCountedStream stream = new TestRefCountedStream(Subscription::noop);
+        final List<String> order = new ArrayList<>();
+
+        stream.subscribe((snapshot, error) -> order.add("first"));
+        stream.subscribe((snapshot, error) -> order.add("second"));
+
+        stream.emit("value1", null);
+
+        assertThat(order).containsExactly("first", "second");
+    }
+
+    @Test
+    void emitAllowsWatcherRemovalDuringCallback() {
+        final TestRefCountedStream stream = new TestRefCountedStream(Subscription::noop);
+        final AtomicInteger updates = new AtomicInteger();
+        final AtomicReference<Subscription> sub1 = new AtomicReference<>();
+
+        final Subscription subscription1 = stream.subscribe((snapshot, error) -> {
+            updates.incrementAndGet();
+            sub1.get().close();
+        });
+        sub1.set(subscription1);
+        stream.subscribe((snapshot, error) -> updates.incrementAndGet());
+
+        assertThatCode(() -> stream.emit("value1", null)).doesNotThrowAnyException();
+        assertThat(updates.get()).isEqualTo(2);
+
+        stream.emit("value2", null);
+        assertThat(updates.get()).isEqualTo(3);
     }
 
     @Test

@@ -16,9 +16,13 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.Optional;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class StaticSnapshotStream<T> implements SnapshotStream<T> {
+
+    static final SnapshotStream<?> EMPTY = new StaticSnapshotStream<>(Optional.empty(), null);
 
     private final @Nullable T value;
     private final @Nullable Throwable error;
