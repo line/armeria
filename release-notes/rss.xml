@@ -4,10 +4,17 @@
         <title>Armeria Release Notes</title>
         <link>https://armeria.dev/release-notes</link>
         
-        <lastBuildDate>Fri, 09 Jan 2026 06:34:29 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 05 Feb 2026 06:49:03 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <language>en</language>
         <copyright>© 2015-2026, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.36.0]]></title>
+            <link>https://armeria.dev/release-notes/1.36.0/</link>
+            <guid>https://armeria.dev/release-notes/1.36.0/</guid>
+            <pubDate>Thu, 05 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Standalone Athenz Token Validation: You can now use AthenzAuthorizer to validate Athenz tokens outside of Armeria&#x27;s request pipeline. This allows you to easily integrate Athenz authorization into...]]></description>
+        </item>
         <item>
             <title><![CDATA[v1.35.0]]></title>
             <link>https://armeria.dev/release-notes/1.35.0/</link>
