@@ -210,7 +210,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           title={
                             <>
                               <code>{service.name}</code> <br />
-                              <code>{service.descriptionInfo?.docString}</code>
+                              <code>
+                                {
+                                  specification.getServiceDescription(
+                                    service.name,
+                                  )?.docString
+                                }
+                              </code>
                             </>
                           }
                           placement="top"

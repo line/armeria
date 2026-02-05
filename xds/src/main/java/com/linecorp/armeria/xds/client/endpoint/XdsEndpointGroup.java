@@ -45,6 +45,7 @@ import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceException;
 
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
@@ -119,8 +120,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
     }
 
     @Override
-    public void snapshotUpdated(ListenerSnapshot listenerSnapshot) {
-        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable XdsResourceException t) {
+        if (snapshot == null) {
+            return;
+        }
+        final RouteSnapshot routeSnapshot = snapshot.routeSnapshot();
         if (routeSnapshot == null) {
             return;
         }

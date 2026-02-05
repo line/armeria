@@ -25,6 +25,7 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
@@ -120,7 +121,7 @@ final class ListenerManager implements SafeCloseable, SnapshotWatcher<ListenerSn
     }
 
     @Override
-    public void snapshotUpdated(ListenerSnapshot newSnapshot) {
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable XdsResourceException t) {
         // noop
     }
 }

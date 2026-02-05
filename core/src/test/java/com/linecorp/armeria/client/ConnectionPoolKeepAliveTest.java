@@ -118,6 +118,7 @@ class ConnectionPoolKeepAliveTest {
         final RecordingConnectionPoolListener listener = new RecordingConnectionPoolListener();
         try (ClientFactory factory = ClientFactory.builder()
                                                   .connectionPoolListener(listener)
+                                                  .idleTimeoutMillis(0)
                                                   .maxConnectionAgeMillis(1000)
                                                   .build()) {
             final AggregatedHttpResponse res = WebClient.builder(protocol, server.httpEndpoint())

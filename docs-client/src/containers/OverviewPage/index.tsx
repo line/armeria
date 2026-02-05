@@ -62,7 +62,12 @@ const OverviewPage: React.FunctionComponent<Props> = ({ specification }) => {
                     <TableCell>
                       <code>{service.name}</code>
                     </TableCell>
-                    <TableCell>{service.descriptionInfo?.docString}</TableCell>
+                    <TableCell>
+                      {
+                        specification.getServiceDescription(service.name)
+                          ?.docString
+                      }
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (

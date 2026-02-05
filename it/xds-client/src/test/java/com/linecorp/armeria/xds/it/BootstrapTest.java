@@ -28,12 +28,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceException;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -118,7 +120,14 @@ class BootstrapTest {
         cache.setSnapshot(GROUP, snapshot);
 
         final AtomicReference<Object> objRef = new AtomicReference<>();
-        final SnapshotWatcher<Object> watcher = objRef::set;
+        final SnapshotWatcher<Object> watcher = new SnapshotWatcher<>() {
+            @Override
+            public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+                if (snapshot != null) {
+                    objRef.set(snapshot);
+                }
+            }
+        };
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
                                                      .defaultSnapshotWatcher(watcher)
                                                      .build()) {

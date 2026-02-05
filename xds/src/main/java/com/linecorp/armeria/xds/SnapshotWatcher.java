@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-
-import io.grpc.Status;
 
 /**
  * A watcher implementation which waits for updates on an xDS snapshot.
@@ -28,18 +27,8 @@ import io.grpc.Status;
 public interface SnapshotWatcher<T> {
 
     /**
-     * Invoked when a full snapshot is updated.
+     * Invoked when a snapshot is updated or an error occurs.
+     * Either snapshot or error will be non-null.
      */
-    void snapshotUpdated(T newSnapshot);
-
-    /**
-     * Invoked when a resource is deemed not to exist. This can either be due to
-     * a timeout on a watch, or the xDS control plane explicitly signalling a resource is missing.
-     */
-    default void onMissing(XdsType type, String resourceName) {}
-
-    /**
-     * Invoked when an unexpected error occurs while processing a resource.
-     */
-    default void onError(XdsType type, String resourceName, Status status) {}
+    void onUpdate(@Nullable T snapshot, @Nullable XdsResourceException t);
 }

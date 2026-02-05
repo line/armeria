@@ -40,43 +40,16 @@ final class DocStringSupport {
     }
 
     ServiceSpecification addDocStrings(ServiceSpecification spec) {
+        // Apply doc strings to enums, structs, and exceptions (which still have descriptionInfo)
+        // Service, method, parameter, return, and throws descriptions are stored in docStrings map
         return new ServiceSpecification(
-                spec.services().stream().map(this::addServiceDocStrings).collect(toImmutableList()),
+                spec.services(),
                 spec.enums().stream().map(this::addEnumDocStrings).collect(toImmutableList()),
                 spec.structs().stream().map(this::addStructDocStrings).collect(toImmutableList()),
                 spec.exceptions().stream().map(this::addExceptionDocStrings).collect(toImmutableList()),
                 spec.exampleHeaders(),
+                descriptionInfos,
                 spec.docServiceRoute());
-    }
-
-    private ServiceInfo addServiceDocStrings(ServiceInfo service) {
-        final DescriptionInfo descriptionInfo = findDescription(service.name(), service.descriptionInfo());
-        final List<MethodInfo> methodsWithDescription =
-                service.methods().stream()
-                       .map(method -> addMethodDocStrings(service, method))
-                       .collect(toImmutableList());
-
-        return service.withMethods(methodsWithDescription)
-                      .withDescriptionInfo(descriptionInfo);
-    }
-
-    private MethodInfo addMethodDocStrings(ServiceInfo service, MethodInfo method) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name(), method.descriptionInfo());
-        final List<FieldInfo> paramsWithDescription =
-                method.parameters().stream()
-                      .map(field -> addParameterDocString(service, method, field))
-                      .collect(toImmutableList());
-
-        return method.withParameters(paramsWithDescription)
-                     .withDescriptionInfo(descriptionInfo);
-    }
-
-    private FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name() + '/' + field.name(),
-                                field.descriptionInfo());
-        return field.withDescriptionInfo(descriptionInfo);
     }
 
     private EnumInfo addEnumDocStrings(EnumInfo e) {

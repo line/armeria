@@ -201,11 +201,22 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     const childFieldInfos = props.specification.getStructByName(
       param.typeSignature,
     )?.fields;
+    // Lookup parameter description from docStrings
+    const descriptionInfo = props.specification.getParamDescription(
+      service.name,
+      method.name,
+      param.name,
+    );
     if (childFieldInfos) {
-      return { ...param, childFieldInfos };
+      return { ...param, descriptionInfo, childFieldInfos };
     }
-    return param;
+    return { ...param, descriptionInfo };
   });
+
+  const methodDescriptionInfo = props.specification.getMethodDescription(
+    service.name,
+    method.name,
+  );
 
   return (
     <>
@@ -225,9 +236,9 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           </Button>
         )}
       </Grid>
-      {method.descriptionInfo?.docString && (
+      {methodDescriptionInfo?.docString && (
         <Section>
-          <Description descriptionInfo={method.descriptionInfo} />
+          <Description descriptionInfo={methodDescriptionInfo} />
         </Section>
       )}
       <Section>
@@ -238,10 +249,16 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           specification={props.specification}
         />
       </Section>
-      <ReturnType method={method} specification={props.specification} />
-      {serviceType !== ServiceType.HTTP && (
-        <Exceptions method={method} specification={props.specification} />
-      )}
+      <ReturnType
+        method={method}
+        specification={props.specification}
+        serviceName={service.name}
+      />
+      <Exceptions
+        method={method}
+        specification={props.specification}
+        serviceName={service.name}
+      />
       <Endpoints method={method} />
       {debugTransport && (
         <DebugPage

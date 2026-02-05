@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
@@ -42,9 +43,10 @@ import com.linecorp.armeria.server.athenz.resource.AthenzResourceProvider;
 @UnstableApi
 public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<AthenzServiceBuilder> {
 
-    private static final List<TokenType> DEFAULT_TOKEN_TYPES = ImmutableList.copyOf(TokenType.values());
+    private static final List<AthenzTokenHeader> DEFAULT_TOKEN_HEADERS =
+            ImmutableList.copyOf(TokenType.values());
 
-    private List<TokenType> tokenTypes = DEFAULT_TOKEN_TYPES;
+    private List<AthenzTokenHeader> tokenHeaders = DEFAULT_TOKEN_HEADERS;
 
     private static final String DEFAULT_RESOURCE_TAG_VALUE = "*";
 
@@ -130,21 +132,60 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     /**
      * Sets the {@link TokenType}s to be used for access checks.
      * If not set, all token types are checked by default.
+     *
+     * @deprecated Use {@link #tokenHeader(AthenzTokenHeader...)} instead.
      */
+    @Deprecated
     public AthenzServiceBuilder tokenType(TokenType... tokenTypes) {
         requireNonNull(tokenTypes, "tokenTypes");
         checkArgument(tokenTypes.length > 0, "tokenTypes must not be empty");
-        return this;
+        return tokenHeader(tokenTypes);
     }
 
     /**
      * Sets the {@link TokenType}s to be used for access checks.
      * If not set, all token types are checked by default.
+     *
+     * @deprecated Use {@link #tokenHeader(Iterable)} instead.
      */
+    @Deprecated
     public AthenzServiceBuilder tokenType(Iterable<TokenType> tokenTypes) {
         requireNonNull(tokenTypes, "tokenTypes");
         checkArgument(!Iterables.isEmpty(tokenTypes), "tokenTypes must not be empty");
-        this.tokenTypes = ImmutableList.copyOf(tokenTypes);
+        return tokenHeader(tokenTypes);
+    }
+
+    /**
+     * Sets the headers to be used for access checks.
+     * If not set, all predefined token types are checked by default.
+     *
+     * <p>This method allows you to specify either predefined {@link TokenType}s or custom
+     * {@link AthenzTokenHeader} implementations for flexible header configuration.
+     *
+     * @param tokenHeaders the token header configurations
+     * @return this builder
+     */
+    public AthenzServiceBuilder tokenHeader(AthenzTokenHeader... tokenHeaders) {
+        requireNonNull(tokenHeaders, "tokenHeaders");
+        checkArgument(tokenHeaders.length > 0, "tokenHeaders must not be empty");
+        this.tokenHeaders = ImmutableList.copyOf(tokenHeaders);
+        return this;
+    }
+
+    /**
+     * Sets the headers to be used for access checks.
+     * If not set, all predefined token types are checked by default.
+     *
+     * <p>This method allows you to specify either predefined {@link TokenType}s or custom
+     * {@link AthenzTokenHeader} implementations for flexible header configuration.
+     *
+     * @param tokenHeaders the token header configurations
+     * @return this builder
+     */
+    public AthenzServiceBuilder tokenHeader(Iterable<? extends AthenzTokenHeader> tokenHeaders) {
+        requireNonNull(tokenHeaders, "tokenHeaders");
+        checkArgument(!Iterables.isEmpty(tokenHeaders), "tokenHeaders must not be empty");
+        this.tokenHeaders = ImmutableList.copyOf(tokenHeaders);
         return this;
     }
 
@@ -154,16 +195,16 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     public Function<? super HttpService, AthenzService> newDecorator() {
         final AthenzResourceProvider athenzResourceProvider = this.athenzResourceProvider;
         final String athenzAction = this.athenzAction;
-        final List<TokenType> tokenTypes = this.tokenTypes;
+        final List<AthenzTokenHeader> tokenHeaders = this.tokenHeaders;
         final String resourceTagValue = this.resourceTagValue;
 
         checkState(athenzResourceProvider != null, "resource or resourceProvider is not set");
         checkState(athenzAction != null, "action is not set");
         checkState(resourceTagValue != null, "resourceTagValue is not set");
 
-        final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
+        final AthenzAuthorizer authorizer = new AthenzAuthorizer(buildAuthZpeClient());
         return delegate -> new AthenzService(
-                delegate, authZpeClient, athenzResourceProvider,
-                athenzAction, tokenTypes, meterIdPrefix(), resourceTagValue);
+                delegate, authorizer, athenzResourceProvider,
+                athenzAction, tokenHeaders, meterIdPrefix(), resourceTagValue);
     }
 }

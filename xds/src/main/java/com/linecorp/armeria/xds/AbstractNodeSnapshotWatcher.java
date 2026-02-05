@@ -16,36 +16,24 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
-
-import io.grpc.Status;
 
 abstract class AbstractNodeSnapshotWatcher<T> implements SnapshotWatcher<T>, SafeCloseable {
 
     private boolean preClosed;
 
     @Override
-    public final void snapshotUpdated(T newSnapshot) {
+    public final void onUpdate(@Nullable T snapshot, @Nullable XdsResourceException t) {
         if (preClosed) {
             return;
         }
-        doSnapshotUpdated(newSnapshot);
-    }
-
-    @Override
-    public final void onError(XdsType type, String resourceName, Status status) {
-        if (preClosed) {
-            return;
+        if (snapshot != null) {
+            doSnapshotUpdated(snapshot);
+        } else {
+            assert t != null;
+            doOnError(t);
         }
-        doOnError(type, resourceName, status);
-    }
-
-    @Override
-    public final void onMissing(XdsType type, String resourceName) {
-        if (preClosed) {
-            return;
-        }
-        doOnMissing(type, resourceName);
     }
 
     final void preClose() {
@@ -64,9 +52,7 @@ abstract class AbstractNodeSnapshotWatcher<T> implements SnapshotWatcher<T>, Saf
 
     abstract void doSnapshotUpdated(T newSnapshot);
 
-    abstract void doOnError(XdsType type, String resourceName, Status status);
-
-    abstract void doOnMissing(XdsType type, String resourceName);
+    abstract void doOnError(Throwable t);
 
     /**
      * Invoked before a new child node is created. This may be useful if a shared resource (metrics)

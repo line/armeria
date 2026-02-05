@@ -19,6 +19,8 @@ package com.linecorp.armeria.server.athenz.resource;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -38,5 +40,12 @@ final class PathAthenzResourceProvider implements AthenzResourceProvider {
     public CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req) {
         final String resource = includeQuery ? req.path() : ctx.path();
         return UnmodifiableFuture.completedFuture(resource);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("includeQuery", includeQuery)
+                          .toString();
     }
 }

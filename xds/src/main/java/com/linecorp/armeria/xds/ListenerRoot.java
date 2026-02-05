@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.grpc.Status;
 
 /**
  * A root node representing a {@link Listener}.
@@ -37,9 +36,9 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
         super(context.eventLoop(), defaultWatcher);
         this.resourceName = resourceName;
         this.listenerManager = listenerManager;
-        context.eventLoop().execute(
-                safeRunnable(() -> listenerManager.register(resourceName, context, this),
-                             t -> onError(XdsType.LISTENER, resourceName, Status.fromThrowable(t))));
+        context.eventLoop().execute(safeRunnable(
+                () -> listenerManager.register(resourceName, context, this),
+                t -> onUpdate(null, XdsResourceException.maybeWrap(XdsType.LISTENER, resourceName, t))));
     }
 
     @Override
