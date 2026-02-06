@@ -229,7 +229,6 @@ public final class DecodedStreamMessage<I, O>
                     }
                 } else {
                     final ByteBuf byteBuf = decoder.toByteBuf(obj);
-                    byteBuf.touch();
                     requireNonNull(byteBuf, "decoder.toByteBuf() returned null");
                     if (input.add(byteBuf)) {
                         decoder.process(input, DecodedStreamMessage.this);
