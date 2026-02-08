@@ -461,4 +461,74 @@ class PortBasedVirtualHostTest {
             server.stop().join();
         }
     }
+
+    @Test
+    void actualPortReflectedAfterServerStart() throws Exception {
+        final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
+
+        final Server server = Server.builder()
+                .port(port)
+                .virtualHost(port)
+                .service("/test", (ctx, req) -> HttpResponse.of("OK"))
+                .and()
+                .build();
+
+        assertThat(port.actualPort()).isEqualTo(0);
+
+        server.start().join();
+        try {
+            assertThat(port.actualPort()).isGreaterThan(0);
+
+            final int boundPort = port.actualPort();
+            final VirtualHost vh = server.config().findVirtualHost("localhost", boundPort);
+            assertThat(vh.serverPort()).isSameAs(port);
+
+            // Verify the service is accessible
+            final WebClient client = WebClient.of("http://127.0.0.1:" + boundPort);
+            assertThat(client.get("/test").aggregate().join().contentUtf8()).isEqualTo("OK");
+        } finally {
+            server.stop().join();
+        }
+    }
+
+    @Test
+    void multipleRandomPortVirtualHosts() {
+        final ServerPort port1 = new ServerPort(0, SessionProtocol.HTTP);
+        final ServerPort port2 = new ServerPort(0, SessionProtocol.HTTP);
+
+        final Server server = Server.builder()
+                .port(port1)
+                .virtualHost(port1)
+                .service("/foo", (ctx, req) -> HttpResponse.of("Hello, foo!"))
+                .and()
+                .port(port2)
+                .virtualHost(port2)
+                .service("/bar", (ctx, req) -> HttpResponse.of("Hello, bar!"))
+                .and()
+                .build();
+
+        server.start().join();
+        try {
+            assertThat(port1.actualPort()).isGreaterThan(0);
+            assertThat(port2.actualPort()).isGreaterThan(0);
+            assertThat(port1.actualPort()).isNotEqualTo(port2.actualPort());
+
+            final VirtualHost vh1 = server.config().findVirtualHost("localhost", port1.actualPort());
+            final VirtualHost vh2 = server.config().findVirtualHost("localhost", port2.actualPort());
+
+            assertThat(vh1.serverPort()).isSameAs(port1);
+            assertThat(vh2.serverPort()).isSameAs(port2);
+
+            final WebClient client1 = WebClient.of("http://127.0.0.1:" + port1.actualPort());
+            final WebClient client2 = WebClient.of("http://127.0.0.1:" + port2.actualPort());
+
+            assertThat(client1.get("/foo").aggregate().join().contentUtf8()).isEqualTo("Hello, foo!");
+            assertThat(client2.get("/bar").aggregate().join().contentUtf8()).isEqualTo("Hello, bar!");
+
+            assertThat(client1.get("/bar").aggregate().join().status().code()).isEqualTo(404);
+            assertThat(client2.get("/foo").aggregate().join().status().code()).isEqualTo(404);
+        } finally {
+            server.stop().join();
+        }
+    }
 }

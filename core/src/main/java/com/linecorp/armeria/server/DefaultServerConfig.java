@@ -139,6 +139,9 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super String, ? extends EventLoopGroup> bossGroupFactory;
 
     @Nullable
+    private volatile Int2ObjectMap<VirtualHost> actualPortToVirtualHost;
+
+    @Nullable
     private String strVal;
 
     DefaultServerConfig(
@@ -399,6 +402,26 @@ final class DefaultServerConfig implements ServerConfig {
         this.server = requireNonNull(server, "server");
     }
 
+    /**
+     * Builds the O(1) lookup map from actual bound ports to VirtualHosts.
+     * This should be called after all ports are bound.
+     */
+    void buildActualPortMapping() {
+        final Int2ObjectMap<VirtualHost> mapping = new Int2ObjectOpenHashMap<>();
+        for (VirtualHost vh : virtualHosts) {
+            final ServerPort sp = vh.serverPort();
+            if (sp != null && sp.localAddress().getPort() == 0) {
+                final int actualPort = sp.actualPort();
+                if (actualPort > 0) {
+                    mapping.put(actualPort, vh);
+                }
+            }
+        }
+        if (!mapping.isEmpty()) {
+            actualPortToVirtualHost = mapping;
+        }
+    }
+
     @Override
     public List<ServerPort> ports() {
         return ports;
@@ -426,21 +449,11 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Override
     public VirtualHost findVirtualHost(String hostname, int port) {
-        // Check if any ServerPort-based virtual host matches the port.
-        // We need to look up the activePorts to find which original ServerPort was bound to this port.
-        if (server != null) {
-            for (ServerPort activePort : server.activePorts().values()) {
-                if (activePort.localAddress().getPort() == port) {
-                    final ServerPort originalPort = activePort.originalServerPort();
-                    if (originalPort != null) {
-                        // Find the VirtualHost that has this original ServerPort
-                        for (VirtualHost vh : virtualHosts) {
-                            if (vh.serverPort() == originalPort) {
-                                return vh;
-                            }
-                        }
-                    }
-                }
+        final Int2ObjectMap<VirtualHost> portMapping = actualPortToVirtualHost;
+        if (portMapping != null) {
+            final VirtualHost vh = portMapping.get(port);
+            if (vh != null) {
+                return vh;
             }
         }
 
