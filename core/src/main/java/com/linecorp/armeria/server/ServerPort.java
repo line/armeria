@@ -251,6 +251,7 @@ public final class ServerPort implements Comparable<ServerPort> {
      * If the port was configured as 0 (ephemeral) and has been bound, returns the actual bound port.
      * Otherwise, returns the configured port from {@link #localAddress()}.
      */
+    @UnstableApi
     public int actualPort() {
         final int actualPort = this.actualPort;
         if (actualPort > 0) {
