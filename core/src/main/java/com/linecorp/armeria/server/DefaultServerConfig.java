@@ -139,6 +139,9 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super String, ? extends EventLoopGroup> bossGroupFactory;
 
     @Nullable
+    private volatile Int2ObjectMap<VirtualHost> actualPortToVirtualHost;
+
+    @Nullable
     private String strVal;
 
     DefaultServerConfig(
@@ -332,8 +335,9 @@ final class DefaultServerConfig implements ServerConfig {
         // Set virtual host definitions and initialize their domain name mapping.
         final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
         for (VirtualHost h : virtualHosts) {
-            if (h.port() > 0) {
+            if (h.port() > 0 || h.serverPort() != null) {
                 // A port-based virtual host will be handled by buildDomainAndPortMapping().
+                // A ServerPort-based virtual host (with port 0) will be resolved at runtime.
                 continue;
             }
             mappingBuilder.add(h.hostnamePattern(), h);
@@ -398,6 +402,26 @@ final class DefaultServerConfig implements ServerConfig {
         this.server = requireNonNull(server, "server");
     }
 
+    /**
+     * Builds the O(1) lookup map from actual bound ports to VirtualHosts.
+     * This should be called after all ports are bound.
+     */
+    void buildActualPortMapping() {
+        final Int2ObjectMap<VirtualHost> mapping = new Int2ObjectOpenHashMap<>();
+        for (VirtualHost vh : virtualHosts) {
+            final ServerPort sp = vh.serverPort();
+            if (sp != null && sp.localAddress().getPort() == 0) {
+                final int actualPort = sp.actualPort();
+                if (actualPort > 0) {
+                    mapping.put(actualPort, vh);
+                }
+            }
+        }
+        if (!mapping.isEmpty()) {
+            actualPortToVirtualHost = mapping;
+        }
+    }
+
     @Override
     public List<ServerPort> ports() {
         return ports;
@@ -425,6 +449,14 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Override
     public VirtualHost findVirtualHost(String hostname, int port) {
+        final Int2ObjectMap<VirtualHost> portMapping = actualPortToVirtualHost;
+        if (portMapping != null) {
+            final VirtualHost vh = portMapping.get(port);
+            if (vh != null) {
+                return vh;
+            }
+        }
+
         if (virtualHostAndPortMapping == null) {
             return defaultVirtualHost;
         }
@@ -437,6 +469,7 @@ final class DefaultServerConfig implements ServerConfig {
                 return virtualHost;
             }
         }
+
         // No port-based virtual host is configured. Look for named-based virtual host.
         final Mapping<String, VirtualHost> nameBasedMapping = virtualHostAndPortMapping.get(-1);
         assert nameBasedMapping != null;

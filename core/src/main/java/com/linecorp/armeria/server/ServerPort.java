@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
@@ -68,6 +69,13 @@ public final class ServerPort implements Comparable<ServerPort> {
     private int hashCode;
     @Nullable
     private ServerPortMetric serverPortMetric;
+    @Nullable
+    private final ServerPort originalServerPort;
+
+    /**
+     * The actual port after binding. -1 means not set yet.
+     */
+    private volatile int actualPort = -1;
 
     @Nullable
     private String strVal;
@@ -113,6 +121,15 @@ public final class ServerPort implements Comparable<ServerPort> {
      *                  will choose the same port number for them, rather than allocating two ephemeral ports.
      */
     ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup) {
+        this(localAddress, protocols, portGroup, null);
+    }
+
+    /**
+     * Creates a new {@link ServerPort} with a reference to the original {@link ServerPort}.
+     * This constructor is used internally when binding to an ephemeral port.
+     */
+    ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup,
+               @Nullable ServerPort originalServerPort) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -127,6 +144,7 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.localAddress = localAddress;
         this.protocols = checkProtocols(protocols);
         this.portGroup = portGroup;
+        this.originalServerPort = originalServerPort;
 
         if (localAddress instanceof DomainSocketAddress) {
             comparisonStr = ((DomainSocketAddress) localAddress).authority() + '/' + protocols;
@@ -226,6 +244,46 @@ public final class ServerPort implements Comparable<ServerPort> {
      */
     long portGroup() {
         return portGroup;
+    }
+
+    /**
+     * Returns the actual port this {@link ServerPort} is bound to.
+     * If the port was configured as 0 (ephemeral) and has been bound, returns the actual bound port.
+     * Otherwise, returns the configured port from {@link #localAddress()}.
+     */
+    @UnstableApi
+    public int actualPort() {
+        final int actualPort = this.actualPort;
+        if (actualPort > 0) {
+            return actualPort;
+        }
+        return localAddress.getPort();
+    }
+
+    /**
+     * Sets the actual port after binding.
+     * This is only allowed when the configured port is 0 (ephemeral) and hasn't been set yet.
+     *
+     * @param actualPort the actual bound port
+     * @throws IllegalArgumentException if actualPort is not positive
+     * @throws IllegalStateException if the configured port is not 0 or actualPort was already set
+     */
+    void setActualPort(int actualPort) {
+        checkArgument(actualPort > 0, "actualPort: %s (expected: > 0)", actualPort);
+        checkState(localAddress.getPort() == 0,
+                   "Cannot set actualPort for non-ephemeral port: %s", localAddress.getPort());
+        checkState(this.actualPort == -1,
+                   "actualPort is already set to %s", this.actualPort);
+        this.actualPort = actualPort;
+    }
+
+    /**
+     * Returns the original {@link ServerPort} that this port was created from,
+     * or {@code null} if this is an original port.
+     */
+    @Nullable
+    ServerPort originalServerPort() {
+        return originalServerPort;
     }
 
     @Nullable
