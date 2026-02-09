@@ -37,6 +37,29 @@ message CookieConfig {
 
   // The value used for the SameSite cookie attribute.
   SameSite same_site = 1 [(validate.rules).enum = {defined_only: true}];
+
+  // The path attribute for the cookie.
+  //
+  // This controls the scope of the cookie and is useful for path-based routing scenarios
+  // where different logical boundaries or applications may operate with different OAuth2 clients.
+  // The CSRF cookie (nonce cookie) can be configured with a different path than session cookies
+  // to support flows where the callback URL is on a different path.
+  //
+  // If not specified, defaults to ``/``.
+  string path = 2 [(validate.rules).string = {pattern: "^$|^/[^\\x00-\\x1f\\x7f \",;<>\\\\]*$"}];
+
+  // If true, the ``Partitioned`` attribute will be set on the cookie.
+  //
+  // Modern browsers (Firefox, Chrome with third-party cookie deprecation) warn or block
+  // "foreign" cookies unless they carry the ``Partitioned`` attribute alongside ``SameSite=None; Secure``.
+  // When Envoy is used in a gateway/IdP flow that sets OAuth/OIDC cookies for a parent domain
+  // (e.g., ``Domain=.example.com``) while running on a different host, those cookies are
+  // considered third-party and will be rejected without ``Partitioned``.
+  //
+  // See `CHIPS <https://developers.google.com/privacy-sandbox/3pcd/chips>`_ for more information.
+  //
+  // Default is false.
+  bool partitioned = 3;
 }
 
 // [#next-free-field: 8]
@@ -121,7 +144,8 @@ message OAuth2Credentials {
 
   // The domain to set the cookie on. If not set, the cookie will default to the host of the request, not including the subdomains.
   // This is useful when token cookies need to be shared across multiple subdomains.
-  string cookie_domain = 5;
+  string cookie_domain = 5
+      [(validate.rules).string = {pattern: "^$|^[^\\x00-\\x1f\\x7f \",;<>\\\\]+$"}];
 }
 
 // OAuth config

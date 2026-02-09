@@ -78,7 +78,8 @@ message ScopeSpans {
   // is recorded in. Notably, the last part of the URL path is the version number of the
   // schema: http[s]://server[:port]/path/<version>. To learn more about Schema URL see
   // https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
-  // This schema_url applies to all spans and span events in the "spans" field.
+  // This schema_url applies to the data in the "scope" field and all spans and span
+  // events in the "spans" field.
   string schema_url = 3;
 }
 
@@ -182,7 +183,7 @@ message Span {
   // and `SERVER` (callee) to identify queueing latency associated with the span.
   SpanKind kind = 6;
 
-  // start_time_unix_nano is the start time of the span. On the client side, this is the time
+  // The start time of the span. On the client side, this is the time
   // kept by the local machine where the span execution starts. On the server side, this
   // is the time when the server's application handler starts running.
   // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
@@ -190,7 +191,7 @@ message Span {
   // This field is semantically required and it is expected that end_time >= start_time.
   fixed64 start_time_unix_nano = 7;
 
-  // end_time_unix_nano is the end time of the span. On the client side, this is the time
+  // The end time of the span. On the client side, this is the time
   // kept by the local machine where the span execution ends. On the server side, this
   // is the time when the server application handler stops running.
   // Value is UNIX Epoch time in nanoseconds since 00:00:00 UTC on 1 January 1970.
@@ -198,7 +199,7 @@ message Span {
   // This field is semantically required and it is expected that end_time >= start_time.
   fixed64 end_time_unix_nano = 8;
 
-  // attributes is a collection of key/value pairs. Note, global attributes
+  // A collection of key/value pairs. Note, global attributes
   // like server name can be set using the resource API. Examples of attributes:
   //
   //     "/http/user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"
@@ -208,19 +209,10 @@ message Span {
   //
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  //
-  // The attribute values SHOULD NOT contain empty values.
-  // The attribute values SHOULD NOT contain bytes values.
-  // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
-  // double values.
-  // The attribute values SHOULD NOT contain kvlist values.
-  // The behavior of software that receives attributes containing such values can be unpredictable.
-  // These restrictions can change in a minor release.
-  // The restrictions take origin from the OpenTelemetry specification:
-  // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
+  // The behavior of software that receives duplicated keys can be unpredictable.
   repeated opentelemetry.proto.common.v1.KeyValue attributes = 9;
 
-  // dropped_attributes_count is the number of attributes that were discarded. Attributes
+  // The number of attributes that were discarded. Attributes
   // can be discarded because their keys are too long or because there are too many
   // attributes. If this value is 0, then no attributes were dropped.
   uint32 dropped_attributes_count = 10;
@@ -228,37 +220,28 @@ message Span {
   // Event is a time-stamped annotation of the span, consisting of user-supplied
   // text description and key-value pairs.
   message Event {
-    // time_unix_nano is the time the event occurred.
+    // The time the event occurred.
     fixed64 time_unix_nano = 1;
 
-    // name of the event.
+    // The name of the event.
     // This field is semantically required to be set to non-empty string.
     string name = 2;
 
-    // attributes is a collection of attribute key/value pairs on the event.
+    // A collection of attribute key/value pairs on the event.
     // Attribute keys MUST be unique (it is not allowed to have more than one
     // attribute with the same key).
-    //
-    // The attribute values SHOULD NOT contain empty values.
-    // The attribute values SHOULD NOT contain bytes values.
-    // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
-    // double values.
-    // The attribute values SHOULD NOT contain kvlist values.
-    // The behavior of software that receives attributes containing such values can be unpredictable.
-    // These restrictions can change in a minor release.
-    // The restrictions take origin from the OpenTelemetry specification:
-    // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
+    // The behavior of software that receives duplicated keys can be unpredictable.
     repeated opentelemetry.proto.common.v1.KeyValue attributes = 3;
 
-    // dropped_attributes_count is the number of dropped attributes. If the value is 0,
+    // The number of dropped attributes. If the value is 0,
     // then no attributes were dropped.
     uint32 dropped_attributes_count = 4;
   }
 
-  // events is a collection of Event items.
+  // A collection of Event items.
   repeated Event events = 11;
 
-  // dropped_events_count is the number of dropped events. If the value is 0, then no
+  // The number of dropped events. If the value is 0, then no
   // events were dropped.
   uint32 dropped_events_count = 12;
 
@@ -277,22 +260,13 @@ message Span {
     // The trace_state associated with the link.
     string trace_state = 3;
 
-    // attributes is a collection of attribute key/value pairs on the link.
+    // A collection of attribute key/value pairs on the link.
     // Attribute keys MUST be unique (it is not allowed to have more than one
     // attribute with the same key).
-    //
-    // The attribute values SHOULD NOT contain empty values.
-    // The attribute values SHOULD NOT contain bytes values.
-    // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
-    // double values.
-    // The attribute values SHOULD NOT contain kvlist values.
-    // The behavior of software that receives attributes containing such values can be unpredictable.
-    // These restrictions can change in a minor release.
-    // The restrictions take origin from the OpenTelemetry specification:
-    // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
+    // The behavior of software that receives duplicated keys can be unpredictable.
     repeated opentelemetry.proto.common.v1.KeyValue attributes = 4;
 
-    // dropped_attributes_count is the number of dropped attributes. If the value is 0,
+    // The number of dropped attributes. If the value is 0,
     // then no attributes were dropped.
     uint32 dropped_attributes_count = 5;
 
@@ -316,11 +290,11 @@ message Span {
     fixed32 flags = 6;
   }
 
-  // links is a collection of Links, which are references from this span to a span
+  // A collection of Links, which are references from this span to a span
   // in the same or different trace.
   repeated Link links = 13;
 
-  // dropped_links_count is the number of dropped links after the maximum size was
+  // The number of dropped links after the maximum size was
   // enforced. If this value is 0, then no links were dropped.
   uint32 dropped_links_count = 14;
 
