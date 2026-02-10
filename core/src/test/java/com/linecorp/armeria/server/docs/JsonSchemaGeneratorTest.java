@@ -365,8 +365,6 @@ class JsonSchemaGeneratorTest {
         assertThatJson(generated).node("$defs.methods." + methodName + ".properties.queryParam").isAbsent();
         assertThatJson(generated).node("$defs.methods." + methodName + ".properties.headerParam").isAbsent();
 
-        System.err.println(generated.toPrettyString());
-
         // Body parameter should have its description from docStrings
         assertThatJson(generated).node("$defs.methods." + methodName + ".properties.bodyParam.type")
                                  .isEqualTo("boolean");
