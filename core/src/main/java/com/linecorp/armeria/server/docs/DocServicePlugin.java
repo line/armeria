@@ -60,9 +60,6 @@ public interface DocServicePlugin {
                                                DescriptiveTypeInfoProvider descriptiveTypeInfoProvider);
 
     // Methods related with extracting documentation strings.
-    // TODO(trustin): Define the docstring format.
-    // TODO(trustin): How do we specify the docstring of an exception thrown by a method?
-    // TODO(trustin): How do we specify the docstring of a method return value?
 
     /**
      * Loads the {@link DescriptionInfo} that describes services and their methods, enums and their values and
@@ -72,8 +69,12 @@ public interface DocServicePlugin {
      * <ul>
      *   <li>{@code "{service name}"} - a docstring that describes a service</li>
      *   <li>{@code "{service name}/{method name}"} - a docstring that describes a service method</li>
-     *   <li>{@code "{service name}/{method name}/{parameter name}"} - a docstring that describes
+     *   <li>{@code "{service name}/{method name}:param/{parameter name}"} - a docstring that describes
      *       a service method parameter</li>
+     *   <li>{@code "{service name}/{method name}:return"} - a docstring that describes
+     *       a service method return value</li>
+     *   <li>{@code "{service name}/{method name}:throws/{exception type name}"} - a docstring that describes
+     *       an exception thrown by a service method</li>
      *   <li>{@code "{type name}"} - a docstring that describes an enum, a struct or an exception</li>
      *   <li>{@code "{type name}/{field name}"} - a docstring that describes a field of an enum, a struct or
      *       an exception</li>

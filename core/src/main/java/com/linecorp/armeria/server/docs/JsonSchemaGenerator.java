@@ -45,9 +45,11 @@ final class JsonSchemaGenerator {
     private final Map<String, StructInfo> structs;
     private final Map<String, EnumInfo> enums;
     private final Map<String, DiscriminatorInfo> polymorphismToBase;
+    private final Map<String, DescriptionInfo> docStrings;
 
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
         this.serviceSpecification = requireNonNull(serviceSpecification, "serviceSpecification");
+        docStrings = serviceSpecification.docStrings();
 
         final ImmutableMap.Builder<String, StructInfo> structsBuilder = ImmutableMap
                 .builderWithExpectedSize(serviceSpecification.structs().size());
@@ -181,7 +183,7 @@ final class JsonSchemaGenerator {
             for (final MethodInfo m : svc.methods()) {
                 // To avoid potential name collision, we can use a more unique key like
                 // method id.
-                methodsNode.set(m.name(), generateMethodSchema(m));
+                methodsNode.set(m.name(), generateMethodSchema(svc.name(), m));
             }
         }
         return methodsNode;
@@ -263,13 +265,16 @@ final class JsonSchemaGenerator {
         return schemaNode;
     }
 
-    private ObjectNode generateMethodSchema(MethodInfo methodInfo) {
+    private ObjectNode generateMethodSchema(String serviceName, MethodInfo methodInfo) {
         final ObjectNode root = mapper.createObjectNode();
         root.put("$id", methodInfo.id());
         root.put("title", methodInfo.name());
-        final String docString = methodInfo.descriptionInfo().docString();
-        if (!docString.isEmpty()) {
-            root.put("description", docString);
+
+        // Add method description from docStrings if available
+        final String methodDescKey = serviceName + '/' + methodInfo.name();
+        final DescriptionInfo methodDesc = docStrings.get(methodDescKey);
+        if (methodDesc != null && !methodDesc.docString().isEmpty()) {
+            root.put("description", methodDesc.docString());
         }
 
         root.put("additionalProperties", false);
@@ -278,7 +283,17 @@ final class JsonSchemaGenerator {
         final ObjectNode propertiesNode = mapper.createObjectNode();
         final ArrayNode requiredNode = mapper.createArrayNode();
 
-        for (final FieldInfo field : methodInfo.parameters()) {
+        for (final ParamInfo paramInfo : methodInfo.parameters()) {
+            // Convert ParamInfo to FieldInfo for schema generation
+            // Look up parameter descriptions from docStrings
+            final String paramDescKey = serviceName + '/' + methodInfo.name() + ":param/" + paramInfo.name();
+            final DescriptionInfo paramDesc = docStrings.get(paramDescKey);
+            final FieldInfo field = FieldInfo.builder(paramInfo.name(), paramInfo.typeSignature())
+                                             .location(paramInfo.location())
+                                             .requirement(paramInfo.requirement())
+                                             .descriptionInfo(
+                                                     paramDesc != null ? paramDesc : DescriptionInfo.empty())
+                                             .build();
             final FieldLocation loc = field.location();
             if (loc == FieldLocation.BODY || loc == FieldLocation.UNSPECIFIED) {
                 propertiesNode.set(field.name(), generateFieldSchema(field));

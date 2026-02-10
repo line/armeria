@@ -210,7 +210,13 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           title={
                             <>
                               <code>{service.name}</code> <br />
-                              <code>{service.descriptionInfo?.docString}</code>
+                              <code>
+                                {
+                                  specification.getServiceDescription(
+                                    service.name,
+                                  )?.docString
+                                }
+                              </code>
                             </>
                           }
                           placement="top"
@@ -456,6 +462,7 @@ const dummySpecification = new Specification({
   services: [],
   structs: [],
   docServiceRoute: undefined,
+  docServiceExtraInfo: {},
 });
 
 const App: React.FunctionComponent<Props> = (props) => {
@@ -478,6 +485,7 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [enumsOpen, toggleEnumsOpen] = useReducer(toggle, true);
   const [structsOpen, toggleStructsOpen] = useReducer(toggle, true);
   const [exceptionsOpen, toggleExceptionsOpen] = useReducer(toggle, true);
+  const [webAppTitle, setWebAppTitle] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -485,6 +493,13 @@ const App: React.FunctionComponent<Props> = (props) => {
         const httpResponse = await fetch('specification.json');
         const specificationData: SpecificationData = await httpResponse.json();
         const initialSpecification = new Specification(specificationData);
+        const extraInfo = initialSpecification.getDocServiceExtraInfo();
+
+        const simpleTitle = extraInfo.webAppTitle;
+        if (simpleTitle) {
+          setWebAppTitle(simpleTitle);
+        }
+
         initialSpecification.getServices().forEach((service) => {
           toggleOpenService(service.name);
         });
@@ -518,6 +533,14 @@ const App: React.FunctionComponent<Props> = (props) => {
       setVersions(initialVersions);
     })();
   }, []);
+
+  const defaultTitle = 'Armeria documentation service';
+  const artifactVersion = versions
+    ? extractSimpleArtifactVersion(versions.getArmeriaArtifactVersion())
+    : '';
+  const composedTitle = `${
+    webAppTitle ? `${webAppTitle} - ` : ''
+  }${defaultTitle} ${artifactVersion}`;
 
   const classes = useStyles();
 
@@ -589,10 +612,11 @@ const App: React.FunctionComponent<Props> = (props) => {
   return (
     <div className={classes.root}>
       <Helmet>
+        <title>{composedTitle || defaultTitle}</title>
         <script src="injected.js" />
       </Helmet>
       <CssBaseline />
-      <AppBar className={classes.appBar}>
+      <AppBar className={classes.appBar} data-js-target="main-app-bar">
         <Toolbar disableGutters>
           <Hidden mdUp>
             <IconButton color="inherit" onClick={toggleMobileDrawer}>
@@ -606,12 +630,7 @@ const App: React.FunctionComponent<Props> = (props) => {
             noWrap
           >
             <span className={classes.mainHeader}>
-              Armeria documentation service
-              {versions
-                ? ` ${extractSimpleArtifactVersion(
-                    versions.getArmeriaArtifactVersion(),
-                  )}`
-                : ''}
+              {composedTitle || defaultTitle}
             </span>
           </Typography>
           <div style={{ flex: 1 }} />

@@ -26,7 +26,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -51,7 +53,7 @@ class JsonSchemaGeneratorTest {
         return "#/$defs/models/" + modelName;
     }
 
-    private static ServiceSpecification specWithSingleRestMethod(List<FieldInfo> params,
+    private static ServiceSpecification specWithSingleRestMethod(List<ParamInfo> params,
                                                                  List<StructInfo> structs,
                                                                  List<EnumInfo> enums) {
         final MethodInfo m = new MethodInfo(
@@ -60,7 +62,7 @@ class JsonSchemaGeneratorTest {
                 ImmutableList.copyOf(params),
                 ImmutableList.of(),                       // exampleHeaders
                 ImmutableList.of(),                       // endpoints
-                HttpMethod.POST, DescriptionInfo.empty());
+                HttpMethod.POST);
 
         return new ServiceSpecification(
                 ImmutableList.of(new ServiceInfo("test-service", ImmutableList.of(m))),
@@ -73,7 +75,7 @@ class JsonSchemaGeneratorTest {
             String requestStructName,
             ImmutableList<FieldInfo> requestStructFields) {
 
-        final FieldInfo requestParam = FieldInfo.builder("request",
+        final ParamInfo requestParam = ParamInfo.builder("request",
                                                          TypeSignature.ofStruct(
                                                                  requestStructName, new Object()))
                                                 .requirement(FieldRequirement.REQUIRED)
@@ -82,10 +84,10 @@ class JsonSchemaGeneratorTest {
                 "svc.grpc", "test-method", TypeSignature.ofBase("void"),
                 ImmutableList.of(requestParam),
                 /* useParameterAsRoot */ true,
-                ImmutableList.of(), ImmutableSet.of(),
+                ImmutableSet.of(), ImmutableList.of(),
                 ImmutableList.of(), ImmutableList.of(),
                 ImmutableList.of(), ImmutableList.of(),
-                HttpMethod.POST, DescriptionInfo.empty());
+                HttpMethod.POST);
 
         final List<StructInfo> allStructs = new ArrayList<>();
         allStructs.add(new StructInfo(requestStructName, requestStructFields));
@@ -105,7 +107,7 @@ class JsonSchemaGeneratorTest {
                                        .build();
 
         final StructInfo s = new StructInfo("S", ImmutableList.of(opt));
-        final FieldInfo request = FieldInfo.of("request", TypeSignature.ofStruct("S", new Object()));
+        final ParamInfo request = ParamInfo.of("request", TypeSignature.ofStruct("S", new Object()));
 
         final ServiceSpecification spec = specWithSingleRestMethod(
                 ImmutableList.of(request), ImmutableList.of(s), ImmutableList.of());
@@ -132,7 +134,7 @@ class JsonSchemaGeneratorTest {
         final StructInfo holder = new StructInfo("Holder", ImmutableList.of(listFoo, mapFoo));
 
         final ServiceSpecification spec = specWithSingleRestMethod(
-                ImmutableList.of(FieldInfo.of("request", TypeSignature.ofStruct("Holder", new Object()))),
+                ImmutableList.of(ParamInfo.of("request", TypeSignature.ofStruct("Holder", new Object()))),
                 ImmutableList.of(holder, foo), ImmutableList.of());
 
         final JsonNode schema = JsonSchemaGenerator.generate(spec);
@@ -157,7 +159,7 @@ class JsonSchemaGeneratorTest {
         final StructInfo dto = new StructInfo("Dto", ImmutableList.of(enumField));
 
         final ServiceSpecification spec = specWithSingleRestMethod(
-                ImmutableList.of(FieldInfo.of("request", TypeSignature.ofStruct("Dto", new Object()))),
+                ImmutableList.of(ParamInfo.of("request", TypeSignature.ofStruct("Dto", new Object()))),
                 ImmutableList.of(dto),
                 ImmutableList.of(colorInfo));
 
@@ -192,13 +194,13 @@ class JsonSchemaGeneratorTest {
 
     @Test
     void rest_filtersOutPathQueryHeader_keepsOnlyBodyAndUnspecified() {
-        final FieldInfo path = FieldInfo.builder("id", TypeSignature.ofBase("int"))
+        final ParamInfo path = ParamInfo.builder("id", TypeSignature.ofBase("int"))
                                         .location(FieldLocation.PATH).build();
-        final FieldInfo query = FieldInfo.builder("q", TypeSignature.ofBase("string"))
+        final ParamInfo query = ParamInfo.builder("q", TypeSignature.ofBase("string"))
                                          .location(FieldLocation.QUERY).build();
-        final FieldInfo header = FieldInfo.builder("h", TypeSignature.ofBase("string"))
+        final ParamInfo header = ParamInfo.builder("h", TypeSignature.ofBase("string"))
                                           .location(FieldLocation.HEADER).build();
-        final FieldInfo body = FieldInfo.builder("payload",
+        final ParamInfo body = ParamInfo.builder("payload",
                                                  TypeSignature.ofStruct("Payload", new Object()))
                                         .location(FieldLocation.BODY).build();
 
@@ -227,7 +229,7 @@ class JsonSchemaGeneratorTest {
 
         final StructInfo s = new StructInfo("S", ImmutableList.of(r, o));
         final ServiceSpecification spec = specWithSingleRestMethod(
-                ImmutableList.of(FieldInfo.of("request", TypeSignature.ofStruct("S", new Object()))),
+                ImmutableList.of(ParamInfo.of("request", TypeSignature.ofStruct("S", new Object()))),
                 ImmutableList.of(s), ImmutableList.of());
 
         final JsonNode schema = JsonSchemaGenerator.generate(spec);
@@ -246,10 +248,146 @@ class JsonSchemaGeneratorTest {
         final StructInfo s = new StructInfo("HasBox", ImmutableList.of(box));
 
         final ServiceSpecification spec = specWithSingleRestMethod(
-                ImmutableList.of(FieldInfo.of("request", TypeSignature.ofStruct("HasBox", new Object()))),
+                ImmutableList.of(ParamInfo.of("request", TypeSignature.ofStruct("HasBox", new Object()))),
                 ImmutableList.of(s), ImmutableList.of());
 
         final JsonNode schema = JsonSchemaGenerator.generate(spec);
         assertThatJson(schema).node(modelNodePath("HasBox") + ".properties.box.type").isEqualTo("integer");
+    }
+
+    @Test
+    void testDocStringsArePopulatedFromServiceSpecification() {
+        // Test that method descriptions are retrieved from docStrings,
+        // and field descriptions come from FieldInfo.descriptionInfo() when useParameterAsRoot() is true
+        final String methodName = "test-method";
+
+        final List<FieldInfo> parameters = ImmutableList.of(
+                FieldInfo.of("param1", TypeSignature.ofBase("int"),
+                             DescriptionInfo.of("Field param1 from StructInfo")),
+                FieldInfo.of("param2", TypeSignature.ofBase("string"),
+                             DescriptionInfo.of("Field param2 from StructInfo"))
+        );
+        final StructInfo structInfo = new StructInfo(methodName, parameters);
+
+        // docStrings contains method description (field descriptions are in FieldInfo when using StructInfo)
+        final ImmutableMap<String, DescriptionInfo> docStrings = ImmutableMap.of(
+                "test-service/" + methodName, DescriptionInfo.of("Method description from docStrings")
+        );
+
+        final ServiceSpecification serviceSpecification =
+                new ServiceSpecification(
+                        ImmutableList.of(
+                                new ServiceInfo(
+                                        "test-service",
+                                        ImmutableList.of(newMethodInfo(methodName, ParamInfo.of(
+                                                "request", TypeSignature.ofStruct(methodName, new Object()))))
+                                )
+                        ),
+                        ImmutableList.of(),
+                        ImmutableList.of(structInfo),
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        docStrings,
+                        null);
+
+        final ObjectNode generated = JsonSchemaGenerator.generate(serviceSpecification);
+
+        // Verify method description is populated from docStrings
+        assertThatJson(generated).node("$defs.methods." + methodName + ".description")
+                                 .isEqualTo("Method description from docStrings");
+
+        // Verify field descriptions come from FieldInfo.descriptionInfo()
+        assertThatJson(generated).node("$defs.models." + methodName + ".properties.param1.description")
+                                 .isEqualTo("Field param1 from StructInfo");
+        assertThatJson(generated).node("$defs.models." + methodName + ".properties.param2.description")
+                                 .isEqualTo("Field param2 from StructInfo");
+    }
+
+    @Test
+    void testDocStringsForParametersWhenNotUsingParameterAsRoot() {
+        final String methodName = "test-method";
+        // Test that parameter descriptions are retrieved from docStrings when useParameterAsRoot is false
+        final ParamInfo param1 = ParamInfo.builder("queryParam", TypeSignature.ofBase("string"))
+                                          .location(FieldLocation.QUERY)
+                                          .requirement(FieldRequirement.REQUIRED)
+                                          .build();
+        final ParamInfo param2 = ParamInfo.builder("headerParam", TypeSignature.ofBase("int"))
+                                          .location(FieldLocation.HEADER)
+                                          .requirement(FieldRequirement.OPTIONAL)
+                                          .build();
+        final ParamInfo param3 = ParamInfo.builder("bodyParam", TypeSignature.ofBase("boolean"))
+                                          .location(FieldLocation.BODY)
+                                          .requirement(FieldRequirement.REQUIRED)
+                                          .build();
+
+        // Create a MethodInfo with useParameterAsRoot = false
+        final MethodInfo methodInfo = new MethodInfo(
+                "test-service",
+                methodName,
+                TypeSignature.ofBase("void"),
+                ImmutableList.of(param1, param2, param3),
+                false,  // useParameterAsRoot = false
+                ImmutableSet.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                HttpMethod.POST
+        );
+
+        // docStrings contains method and parameter descriptions
+        final String methodKey = "test-service/" + methodName;
+        final ImmutableMap<String, DescriptionInfo> docStrings = ImmutableMap.of(
+                methodKey, DescriptionInfo.of("Test method description"),
+                methodKey + ":param/queryParam", DescriptionInfo.of("Query parameter desc"),
+                methodKey + ":param/headerParam", DescriptionInfo.of("Header parameter desc"),
+                methodKey + ":param/bodyParam", DescriptionInfo.of("Body parameter desc")
+        );
+
+        final ServiceSpecification serviceSpecification = new ServiceSpecification(
+                ImmutableList.of(new ServiceInfo("test-service", ImmutableList.of(methodInfo))),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                docStrings,
+                null
+        );
+
+        final ObjectNode generated = JsonSchemaGenerator.generate(serviceSpecification);
+
+        assertThatJson(generated).node("$defs.methods." + methodName + ".description")
+                                 .isEqualTo("Test method description");
+
+        // Only BODY and UNSPECIFIED location parameters are included in the schema
+        // QUERY and HEADER parameters are not included
+        assertThatJson(generated).node("$defs.methods." + methodName + ".properties.queryParam").isAbsent();
+        assertThatJson(generated).node("$defs.methods." + methodName + ".properties.headerParam").isAbsent();
+
+        System.err.println(generated.toPrettyString());
+
+        // Body parameter should have its description from docStrings
+        assertThatJson(generated).node("$defs.methods." + methodName + ".properties.bodyParam.type")
+                                 .isEqualTo("boolean");
+        assertThatJson(generated).node("$defs.methods." + methodName + ".properties.bodyParam.description")
+                                 .isEqualTo("Body parameter desc");
+    }
+
+    private static MethodInfo newMethodInfo(String methodName, ParamInfo... parameters) {
+        return new MethodInfo(
+                "test-service",
+                methodName,
+                TypeSignature.ofBase("void"),
+                Arrays.asList(parameters),
+                true,
+                ImmutableSet.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                HttpMethod.POST
+        );
     }
 }

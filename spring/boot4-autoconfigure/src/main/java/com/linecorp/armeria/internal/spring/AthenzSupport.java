@@ -17,22 +17,32 @@
 package com.linecorp.armeria.internal.spring;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
+
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.ResolvableType;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.AthenzConfig;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 final class AthenzSupport {
 
-    static DependencyInjector injectAthenzDecorator(ServerBuilder sb, AthenzConfig athenzConfig,
-                                                    @Nullable DependencyInjector dependencyInjector) {
+    static DependencyInjector injectAthenzDecorator(BeanFactory beanFactory, ServerBuilder sb,
+                                                    AthenzConfig athenzConfig,
+                                                    @Nullable DependencyInjector dependencyInjector,
+                                                    MeterRegistry meterRegistry) {
         final URI ztsUri = athenzConfig.getZtsUri();
         final File athenzPrivateKey = athenzConfig.getAthenzPrivateKey();
         final File athenzPublicKey = athenzConfig.getAthenzPublicKey();
@@ -42,6 +52,8 @@ final class AthenzSupport {
         final List<String> domains = athenzConfig.getDomains();
         final boolean jwsPolicySupport = athenzConfig.isJwsPolicySupport();
         final Duration policyRefreshInterval = athenzConfig.getPolicyRefreshInterval();
+        final boolean enableMetrics = athenzConfig.isEnableMetrics();
+        final String meterIdPrefix = athenzConfig.getMeterIdPrefix();
 
         checkState(ztsUri != null,
                    "ztsUri must be specified when athenz is enabled. " +
@@ -57,17 +69,25 @@ final class AthenzSupport {
                    "Please set 'armeria.athenz.domains' property in application properties.");
 
         try {
+            // Athenz requires Java 11 but Spring Boot 2 Java 8, so we use reflection instead of
+            // compile-time dependency.
             final Class<?> factoryProvider = Class.forName(
                     "com.linecorp.armeria.internal.server.athenz.AthenzServiceDecoratorFactoryProvider");
+
+            final Class<?> ztsBaseClientBuilder = Class.forName(
+                    "com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder");
+            final List<Object> ztsClientCustomizers = findBeans(beanFactory, Consumer.class,
+                                                                ztsBaseClientBuilder);
             final Method createMethod = factoryProvider.getMethod(
                     "create", ServerBuilder.class, URI.class, File.class, File.class,
-                    URI.class, File.class, String.class, List.class, boolean.class, Duration.class);
-            final Object athenzServiceDecoratorFactory = createMethod.invoke(null, sb, ztsUri, athenzPrivateKey,
-                                                                             athenzPublicKey, proxyUri,
-                                                                             athenzCaCert,
-                                                                             oauth2KeyPath,
-                                                                             domains, jwsPolicySupport,
-                                                                             policyRefreshInterval);
+                    URI.class, File.class, String.class, List.class, boolean.class, Duration.class,
+                    MeterRegistry.class, String.class, List.class);
+            final Object athenzServiceDecoratorFactory =
+                    createMethod.invoke(null, sb, ztsUri, athenzPrivateKey,
+                                        athenzPublicKey, proxyUri, athenzCaCert, oauth2KeyPath,
+                                        domains, jwsPolicySupport, policyRefreshInterval,
+                                        enableMetrics ? meterRegistry : null, meterIdPrefix,
+                                        ztsClientCustomizers);
             assert "com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory"
                     .equals(athenzServiceDecoratorFactory.getClass().getName());
 
@@ -84,6 +104,13 @@ final class AthenzSupport {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create AthenzServiceDecoratorFactory", e);
         }
+    }
+
+    private static List<Object> findBeans(BeanFactory beanFactory, Class<?> containerType,
+                                          Class<?> genericType) {
+        final ResolvableType resolvableType = ResolvableType.forClassWithGenerics(containerType, genericType);
+        final ObjectProvider<Object> beanProvider = beanFactory.getBeanProvider(resolvableType);
+        return beanProvider.orderedStream().collect(toImmutableList());
     }
 
     private AthenzSupport() {}

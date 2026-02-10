@@ -134,3 +134,21 @@ service TypeDefService {
                   13: TypedefedDouble td13, 14: TypedefedListDouble td14, 15: TypedefedBinary td15,
                   16: TypedefedListBinary td16)
 }
+
+// Tests that mid-line @return and @throws tags are ignored.
+service MidLineTagTestService {
+    /**
+     * Method where only the type is specified in the throws tag.
+     * @param string value - the input value
+     * @throws FooServiceException
+     */
+    void throwsTypeOnly(1:string value) throws (1:FooServiceException e)
+
+    /**
+     * Method with mid-line @return should be ignored because tags must be at line start.
+     * Similarly, mid-line @throws FooServiceException - should also be ignored.
+     * @param string value - the input value
+     * @return valid return description
+     */
+    string midLineTagsIgnored(1:string value)
+}

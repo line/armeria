@@ -20,18 +20,22 @@ import java.io.File;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.athenz.AthenzPolicyConfig;
 import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory;
 import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactoryBuilder;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A helper class to create an {@link AthenzServiceDecoratorFactory} instance.
@@ -42,9 +46,9 @@ public final class AthenzServiceDecoratorFactoryProvider {
     public static AthenzServiceDecoratorFactory create(
             ServerBuilder sb, URI ztsUri, File athenzPrivateKey, File athenzPublicKey,
             @Nullable URI proxyUri, @Nullable File athenzCaCert, @Nullable String oauth2KeysPath,
-            List<String> domains,
-            boolean jwsPolicySupport,
-            Duration policyRefreshInterval) {
+            List<String> domains, boolean jwsPolicySupport, Duration policyRefreshInterval,
+            @Nullable MeterRegistry meterRegistry, String meterIdPrefix,
+            List<Consumer<ZtsBaseClientBuilder>> ztsClientCustomizer) {
 
         final ZtsBaseClientBuilder clientBuilder =
                 ZtsBaseClient.builder(ztsUri)
@@ -55,17 +59,25 @@ public final class AthenzServiceDecoratorFactoryProvider {
         if (athenzCaCert != null) {
             clientBuilder.trustedCertificate(athenzCaCert);
         }
+        if (meterRegistry != null) {
+            clientBuilder.enableMetrics(meterRegistry, MeterIdPrefixFunction.ofDefault(meterIdPrefix));
+        }
 
-        final AthenzPolicyConfig athenzPolicyConfig = new AthenzPolicyConfig(domains, ImmutableMap.of(),
-                                                                             jwsPolicySupport,
-                                                                             policyRefreshInterval);
+        for (Consumer<ZtsBaseClientBuilder> customizer : ztsClientCustomizer) {
+            customizer.accept(clientBuilder);
+        }
         final ZtsBaseClient ztsBaseClient = clientBuilder.build();
+
         sb.serverListener(new ServerListenerAdapter() {
             @Override
             public void serverStopped(Server server) throws Exception {
                 ztsBaseClient.close();
             }
         });
+
+        final AthenzPolicyConfig athenzPolicyConfig = new AthenzPolicyConfig(domains, ImmutableMap.of(),
+                                                                             jwsPolicySupport,
+                                                                             policyRefreshInterval);
         final AthenzServiceDecoratorFactoryBuilder factoryBuilder =
                 AthenzServiceDecoratorFactory
                         .builder(ztsBaseClient);

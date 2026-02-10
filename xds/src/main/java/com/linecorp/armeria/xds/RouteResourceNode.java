@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
-import io.grpc.Status;
 
 final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, RouteSnapshot> {
 
@@ -117,13 +116,8 @@ final class RouteResourceNode extends AbstractResourceNode<RouteXdsResource, Rou
         }
 
         @Override
-        protected void doOnError(XdsType type, String resourceName, Status status) {
-            parentNode.notifyOnError(type, resourceName, status);
-        }
-
-        @Override
-        protected void doOnMissing(XdsType type, String resourceName) {
-            parentNode.notifyOnMissing(type, resourceName);
+        protected void doOnError(Throwable t) {
+            parentNode.notifyOnError(t);
         }
 
         @Override

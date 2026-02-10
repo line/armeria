@@ -12,11 +12,7 @@
               "name": "req",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
-              "typeSignature": "testing.scalapb.messages.TestMessage",
-              "descriptionInfo": {
-                "docString": "",
-                "markup": "NONE"
-              }
+              "typeSignature": "testing.scalapb.messages.TestMessage"
             }
           ],
           "exceptionTypeSignatures": [ ],
@@ -31,18 +27,10 @@
           "exampleRequests": [ ],
           "examplePaths": [ ],
           "exampleQueries": [ ],
-          "httpMethod": "POST",
-          "descriptionInfo": {
-            "docString": "",
-            "markup": "NONE"
-          }
+          "httpMethod": "POST"
         }
       ],
-      "exampleHeaders": [ ],
-      "descriptionInfo": {
-        "docString": "",
-        "markup": "NONE"
-      }
+      "exampleHeaders": [ ]
     }
   ],
   "enums": [

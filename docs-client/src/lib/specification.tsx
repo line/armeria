@@ -22,6 +22,14 @@ export interface DescriptionInfo {
   markup: string;
 }
 
+export interface Param {
+  name: string;
+  location: string;
+  requirement: string;
+  typeSignature: string;
+  // NO descriptionInfo - lookup at render time via docStrings
+}
+
 export interface Endpoint {
   hostnamePattern: string;
   pathMapping: string;
@@ -35,7 +43,7 @@ export interface Method {
   name: string;
   id: string;
   returnTypeSignature: string;
-  parameters: Field[];
+  parameters: Param[];
   exceptionTypeSignatures: string[];
   endpoints: Endpoint[];
   exampleHeaders: { [name: string]: string }[];
@@ -43,14 +51,14 @@ export interface Method {
   examplePaths: string[];
   exampleQueries: string[];
   httpMethod: string;
-  descriptionInfo: DescriptionInfo;
+  // NO descriptionInfo - lookup at render time via docStrings
 }
 
 export interface Service {
   name: string;
   methods: Method[];
   exampleHeaders: { [name: string]: string }[];
-  descriptionInfo: DescriptionInfo;
+  // NO descriptionInfo - lookup at render time via docStrings
 }
 
 export enum ServiceType {
@@ -108,6 +116,8 @@ export interface SpecificationData {
   exceptions: Struct[];
   exampleHeaders: { [name: string]: string }[];
   docServiceRoute?: Route;
+  docServiceExtraInfo: Record<string, string>;
+  docStrings?: Record<string, DescriptionInfo>;
 }
 
 export function simpleName(fullName: string): string {
@@ -168,6 +178,8 @@ export class Specification {
 
   private readonly docServiceRoute?: Route;
 
+  private readonly docStrings: Record<string, DescriptionInfo>;
+
   constructor(data: SpecificationData) {
     this.data = JSON.parse(JSON.stringify(data));
 
@@ -183,7 +195,7 @@ export class Specification {
     this.uniqueServiceNames = hasUniqueNames(this.servicesByName);
     this.uniqueStructNames = hasUniqueNames(this.structsByName);
 
-    this.updateDocStrings();
+    this.docStrings = data.docStrings || {};
     this.docServiceRoute = this.data.docServiceRoute;
   }
 
@@ -221,6 +233,10 @@ export class Specification {
 
   public getDocServiceRoute(): Route | undefined {
     return this.docServiceRoute;
+  }
+
+  public getDocServiceExtraInfo(): Record<string, string> {
+    return this.data.docServiceExtraInfo;
   }
 
   public hasUniqueEnumNames(): boolean {
@@ -261,56 +277,47 @@ export class Specification {
     );
   }
 
-  private updateDocStrings() {
-    for (const service of this.data.services) {
-      for (const method of service.methods) {
-        const childDocStrings = this.parseParamDocStrings(
-          method.descriptionInfo.docString as string,
-        );
-        for (const param of method.parameters) {
-          const childDocString = childDocStrings.get(param.name);
-          if (childDocString) {
-            param.descriptionInfo = {
-              docString: childDocString,
-              markup: 'NONE',
-            };
-          }
-        }
-      }
-    }
-    this.updateStructDocStrings(this.data.structs);
-    this.updateStructDocStrings(this.data.exceptions);
+  // Lookup method for descriptions
+  public getDocString(key: string): DescriptionInfo | undefined {
+    return this.docStrings[key];
   }
 
-  private updateStructDocStrings(structs: Struct[]) {
-    // TODO(trustin): Handle the docstrings of return values and exceptions.
-    for (const struct of structs) {
-      const childDocStrings = this.parseParamDocStrings(
-        struct.descriptionInfo.docString as string,
-      );
-      for (const field of struct.fields) {
-        const childDocString = childDocStrings.get(field.name);
-        if (childDocString) {
-          field.descriptionInfo = {
-            docString: childDocString,
-            markup: 'NONE',
-          };
-        }
-      }
-    }
+  // Helper methods for common lookups
+  public getServiceDescription(
+    serviceName: string,
+  ): DescriptionInfo | undefined {
+    return this.docStrings[serviceName];
   }
 
-  private parseParamDocStrings(docString: string | undefined) {
-    const parameters = new Map<string, string>();
-    if (!docString) {
-      return parameters;
-    }
-    const pattern = /@param\s+(\w+)[\s.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
-    let match = pattern.exec(docString);
-    while (match != null) {
-      parameters.set(match[1], match[2]);
-      match = pattern.exec(docString);
-    }
-    return parameters;
+  public getMethodDescription(
+    serviceName: string,
+    methodName: string,
+  ): DescriptionInfo | undefined {
+    return this.docStrings[`${serviceName}/${methodName}`];
+  }
+
+  public getParamDescription(
+    serviceName: string,
+    methodName: string,
+    paramName: string,
+  ): DescriptionInfo | undefined {
+    return this.docStrings[`${serviceName}/${methodName}:param/${paramName}`];
+  }
+
+  public getReturnDescription(
+    serviceName: string,
+    methodName: string,
+  ): DescriptionInfo | undefined {
+    return this.docStrings[`${serviceName}/${methodName}:return`];
+  }
+
+  public getThrowsDescription(
+    serviceName: string,
+    methodName: string,
+    exceptionType: string,
+  ): DescriptionInfo | undefined {
+    return this.docStrings[
+      `${serviceName}/${methodName}:throws/${exceptionType}`
+    ];
   }
 }

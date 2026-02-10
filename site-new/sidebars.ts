@@ -78,7 +78,8 @@ const sidebars: SidebarsConfig = {
       items: [
         'advanced/logging',
         'advanced/structured-logging',
-        'advanced/custom-attributes',
+        'advanced/request-context',
+        'advanced/understanding-timeouts',
         'advanced/streaming-backpressure',
         'advanced/structured-logging-kafka',
         'advanced/metrics',

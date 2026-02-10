@@ -84,7 +84,7 @@ export default async function createConfigAsync() {
           docs: {
             sidebarPath: './sidebars.ts',
             path: 'src/content/docs',
-            editUrl: 'https://github.com/line/armeria/edit/main/site/',
+            editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
             remarkPlugins: [remarkApiLink, remarkGithub],
           },
           blog: {
@@ -102,7 +102,7 @@ export default async function createConfigAsync() {
               type: ['rss'],
               xslt: false,
             },
-            editUrl: 'https://github.com/line/armeria/edit/main/site/',
+            editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
             onInlineTags: 'warn',
             onInlineAuthors: 'warn',
             onUntruncatedBlogPosts: 'warn',
@@ -251,7 +251,7 @@ export default async function createConfigAsync() {
           path: 'src/content/community',
           routeBasePath: 'community',
           sidebarPath: './sidebarsCommunity.ts',
-          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
           remarkPlugins: [remarkApiLink, remarkGithub],
         },
       ],
@@ -268,7 +268,7 @@ export default async function createConfigAsync() {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
-          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
           remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
         },
       ],
@@ -289,7 +289,7 @@ export default async function createConfigAsync() {
             type: ['rss'],
             xslt: false,
           },
-          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'throw',
@@ -312,7 +312,7 @@ export default async function createConfigAsync() {
             type: ['rss'],
             xslt: false,
           },
-          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'throw',
@@ -335,7 +335,7 @@ export default async function createConfigAsync() {
             type: ['rss'],
             xslt: false,
           },
-          editUrl: 'https://github.com/line/armeria/edit/main/site/',
+          editUrl: 'https://github.com/line/armeria/edit/main/site-new/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'throw',
@@ -470,10 +470,6 @@ export default async function createConfigAsync() {
             {
               from: '/docs/advanced-structured-logging',
               to: '/docs/advanced/structured-logging',
-            },
-            {
-              from: '/docs/advanced-custom-attributes',
-              to: '/docs/advanced/custom-attributes',
             },
             {
               from: '/docs/advanced-streaming-backpressure',

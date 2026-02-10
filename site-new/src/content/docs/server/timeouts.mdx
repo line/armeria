@@ -124,6 +124,92 @@ public class HelloService {
 }
 ```
 
+## Handling timeouts for streaming requests
+
+For long-running streaming requests (e.g., gRPC server streaming, bidirectional streaming, or
+GraphQL subscriptions), the default request timeout applies to the entire duration of the stream—from
+receiving the first message until `responseObserver.onCompleted()` is called. This means that if your
+stream is expected to last longer than the configured request timeout, you must manually extend the
+timeout as messages are sent.
+
+You can extend the timeout dynamically using [ServiceRequestContext](type://ServiceRequestContext) with
+[TimeoutMode.EXTEND](type://TimeoutMode#EXTEND):
+
+```java
+import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+import java.time.Duration;
+
+import io.grpc.stub.StreamObserver;
+
+public class MyStreamingService extends MyServiceGrpc.MyServiceImplBase {
+
+    @Override
+    public void streamingOutputCall(Request request,
+                                    StreamObserver<Response> responseObserver) {
+        ServiceRequestContext ctx = ServiceRequestContext.current();
+
+        for (int i = 0; i < 100; i++) {
+            // Simulate processing time
+            Thread.sleep(500);
+
+            // Send a response
+            responseObserver.onNext(Response.newBuilder().build());
+
+            // Extend the timeout with each message sent
+            ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(5));
+        }
+
+        responseObserver.onCompleted();
+    }
+}
+```
+
+You can also extend the timeout reactively when streaming with reactive publishers:
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+import java.time.Duration;
+
+import reactor.core.publisher.Flux;
+
+// Extend timeout with each emitted item
+ServerBuilder sb = Server.builder();
+sb.service("/streaming", (ctx, req) -> {
+    Flux<String> publisher =
+        Flux.interval(Duration.ofMillis(200))
+            .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofMillis(500)));
+    return HttpResponse.of(publisher.take(100).map(i -> "data: " + i + "\n"));
+});
+```
+
+Alternatively, for streams with unpredictable duration (e.g., infinite streams or proxy services),
+you can disable the timeout entirely:
+
+```java
+// Disable request timeout for infinite streaming
+ServerBuilder sb = Server.builder();
+sb.requestTimeoutMillis(0)
+  .service("/infinite-stream", myStreamingService);
+```
+
+:::tip
+
+See [Timeout control](/docs/advanced/request-context#timeout-control) for more details on using
+[TimeoutMode](type://TimeoutMode) to dynamically adjust timeouts.
+
+:::
+
+## Understanding timeout and cancellation origins
+
+Timeouts and cancellations can originate from either the client or server side, and understanding this is
+crucial for debugging issues. For detailed information about how timeouts and cancellations propagate
+between clients and servers, see [Understanding timeout and cancellation origins](/docs/advanced/understanding-timeouts).
+
 ## Global Configuration
 
 You may globally configure the default timeout with system properties or a custom [FlagsProvider](type).

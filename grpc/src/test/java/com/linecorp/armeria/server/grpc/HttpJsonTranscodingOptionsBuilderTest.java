@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.api.HttpRule;
 import com.google.common.collect.ImmutableList;
 
 class HttpJsonTranscodingOptionsBuilderTest {
@@ -67,5 +68,29 @@ class HttpJsonTranscodingOptionsBuilderTest {
                                           .queryParamMatchRules(JSON_NAME)
                                           .build();
         assertThat(onlyJsonName.queryParamMatchRules()).containsExactly(JSON_NAME, ORIGINAL_FIELD);
+    }
+
+    @Test
+    void shouldCopyAllFieldsFromExistingOptions() {
+        final HttpRule rule = HttpRule.newBuilder()
+                                      .setSelector("test.Service/Method")
+                                      .setGet("/v1/method")
+                                      .build();
+
+        final HttpJsonTranscodingOptions original =
+                HttpJsonTranscodingOptions.builder()
+                                          .ignoreProtoHttpRule(false)
+                                          .additionalHttpRules(rule)
+                                          .queryParamMatchRules(LOWER_CAMEL_CASE, ORIGINAL_FIELD)
+                                          .errorHandler(UnframedGrpcErrorHandler.ofJson())
+                                          .build();
+
+        final HttpJsonTranscodingOptions copy = new HttpJsonTranscodingOptionsBuilder(original).build();
+
+        assertThat(copy.ignoreProtoHttpRule()).isEqualTo(original.ignoreProtoHttpRule());
+        assertThat(copy.additionalHttpRules()).isEqualTo(original.additionalHttpRules());
+        assertThat(copy.queryParamMatchRules()).isEqualTo(original.queryParamMatchRules());
+        assertThat(copy.errorHandler()).isEqualTo(original.errorHandler());
+        assertThat(copy).isEqualTo(original);
     }
 }

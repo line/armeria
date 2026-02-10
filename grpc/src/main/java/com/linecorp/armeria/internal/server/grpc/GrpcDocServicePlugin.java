@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
 import static java.util.Objects.requireNonNull;
@@ -25,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,6 +38,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -68,11 +69,10 @@ import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -267,7 +267,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             final HttpEndpoint firstEndpoint = sortedEndpoints.get(0);
             final HttpEndpointSpecification firstSpec = firstEndpoint.spec();
 
-            final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
+            final ImmutableList.Builder<ParamInfo> paramInfosBuilder = ImmutableList.builder();
             firstSpec.pathVariables().forEach(paramName -> {
                 @Nullable
                 final Parameter parameter = firstSpec.parameters().get(paramName);
@@ -276,7 +276,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 final TypeSignature typeSignature =
                         parameter != null ? toTypeSignature(parameter)
                                           : TypeSignature.ofBase(JavaType.STRING.name());
-                fieldInfosBuilder.add(FieldInfo.builder(paramName, typeSignature)
+                paramInfosBuilder.add(ParamInfo.builder(paramName, typeSignature)
                                                .requirement(FieldRequirement.REQUIRED)
                                                .location(FieldLocation.PATH)
                                                .build());
@@ -286,20 +286,20 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                                                                      : FieldLocation.BODY;
             firstSpec.parameters().forEach((paramName, parameter) -> {
                 if (!firstSpec.pathVariables().contains(paramName)) {
-                    final FieldInfoBuilder builder;
+                    final String actualParamName;
                     if (fieldLocation == FieldLocation.BODY && !"*".equals(bodyParamName) &&
                         paramName.startsWith(bodyParamName + '.')) {
-                        builder = FieldInfo.builder(paramName.substring(bodyParamName.length() + 1),
-                                                    toTypeSignature(parameter));
+                        actualParamName = paramName.substring(bodyParamName.length() + 1);
                     } else {
-                        builder = FieldInfo.builder(paramName, toTypeSignature(parameter));
+                        actualParamName = paramName;
                     }
 
-                    builder.requirement(parameter.isRequired() ? FieldRequirement.REQUIRED
-                                                               : FieldRequirement.OPTIONAL);
-
-                    fieldInfosBuilder.add(builder.location(fieldLocation)
-                                                 .build());
+                    final FieldRequirement requirement =
+                            parameter.isRequired() ? FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL;
+                    paramInfosBuilder.add(ParamInfo.builder(actualParamName, toTypeSignature(parameter))
+                                                   .requirement(requirement)
+                                                   .location(fieldLocation)
+                                                   .build());
                 }
             });
 
@@ -341,11 +341,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                     firstSpec.methodName(),
                     firstSpec.order(),
                     descriptiveMessageSignature(firstSpec.methodDescriptor().getOutputType()),
-                    fieldInfosBuilder.build(),
+                    paramInfosBuilder.build(),
                     endpointInfos,
                     examplePaths,
                     exampleQueries,
-                    firstEndpoint.httpMethod(), DescriptionInfo.empty()));
+                    firstEndpoint.httpMethod()));
         });
         return new ServiceInfo(serviceName, methodInfos.build());
     }
@@ -374,18 +374,94 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Override
     public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
-        return serviceConfigs.stream()
-                             .flatMap(c -> {
-                                 final GrpcService grpcService = c.service().as(GrpcService.class);
-                                 assert grpcService != null;
-                                 return grpcService.services().stream();
-                             })
-                             .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
-                                                             .entrySet().stream())
-                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
-                                                     (Map.Entry<String, String> entry) ->
-                                                             DescriptionInfo.of(entry.getValue()),
-                                                     (a, b) -> a));
+        // Collect all services and their class loaders
+        final Set<ServerServiceDefinition> allServices = new HashSet<>();
+        final Set<ClassLoader> classLoaders = new HashSet<>();
+
+        for (ServiceConfig c : serviceConfigs) {
+            final GrpcService grpcService = c.service().as(GrpcService.class);
+            assert grpcService != null;
+            for (ServerServiceDefinition service : grpcService.services()) {
+                allServices.add(service);
+                classLoaders.add(service.getClass().getClassLoader());
+            }
+        }
+
+        // Load base docstrings from all class loaders
+        final Map<String, DescriptionInfo> docStrings = new HashMap<>();
+        for (ClassLoader classLoader : classLoaders) {
+            docstringExtractor.getAllDocStrings(classLoader).forEach((key, value) ->
+                    docStrings.putIfAbsent(key, DescriptionInfo.of(value)));
+        }
+
+        // Add :param/request entries using input message type descriptions
+        for (ServerServiceDefinition service : allServices) {
+            final io.grpc.ServiceDescriptor serviceDescriptor = service.getServiceDescriptor();
+            if (!(serviceDescriptor.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)) {
+                continue;
+            }
+
+            final ProtoFileDescriptorSupplier supplier =
+                    (ProtoFileDescriptorSupplier) serviceDescriptor.getSchemaDescriptor();
+            final FileDescriptor fileDescriptor = supplier.getFileDescriptor();
+            final ServiceDescriptor protoServiceDescriptor =
+                    fileDescriptor.getServices().stream()
+                                  .filter(sd -> sd.getFullName().equals(serviceDescriptor.getName()))
+                                  .findFirst()
+                                  .orElse(null);
+
+            if (protoServiceDescriptor == null) {
+                continue;
+            }
+
+            for (MethodDescriptor method : protoServiceDescriptor.getMethods()) {
+                final String methodKey = protoServiceDescriptor.getFullName() + '/' + method.getName();
+                final String paramKey = methodKey + ":param/request";
+                final String returnKey = methodKey + ":return";
+
+                // Add :param/request using first sentence of input message type description
+                final String inputTypeName = method.getInputType().getFullName();
+                final DescriptionInfo inputTypeDescription = docStrings.get(inputTypeName);
+                if (inputTypeDescription != null) {
+                    docStrings.putIfAbsent(paramKey, firstSentence(inputTypeDescription));
+                }
+
+                // Add :return using first sentence of output message type description (if not already set)
+                final String outputTypeName = method.getOutputType().getFullName();
+                final DescriptionInfo outputTypeDescription = docStrings.get(outputTypeName);
+                if (outputTypeDescription != null && !docStrings.containsKey(returnKey)) {
+                    docStrings.put(returnKey, firstSentence(outputTypeDescription));
+                }
+            }
+        }
+
+        return ImmutableMap.copyOf(docStrings);
+    }
+
+    /**
+     * Extracts the first sentence from a {@link DescriptionInfo}.
+     * A sentence is considered to end with a period followed by whitespace or end of string.
+     */
+    private static DescriptionInfo firstSentence(DescriptionInfo descriptionInfo) {
+        final String docString = descriptionInfo.docString();
+        if (docString == null || docString.isEmpty()) {
+            return descriptionInfo;
+        }
+
+        // Find the first period followed by whitespace or end of string
+        final int length = docString.length();
+        for (int i = 0; i < length; i++) {
+            if (docString.charAt(i) == '.') {
+                // Check if this is end of string or followed by whitespace
+                if (i + 1 >= length || Character.isWhitespace(docString.charAt(i + 1))) {
+                    final String firstSentence = docString.substring(0, i + 1).trim();
+                    return DescriptionInfo.of(firstSentence, descriptionInfo.markup());
+                }
+            }
+        }
+
+        // No period found, return original (trimmed)
+        return DescriptionInfo.of(docString.trim(), descriptionInfo.markup());
     }
 
     @Override
@@ -429,16 +505,16 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 method.getName(),
                 // gRPC methods always take a single request parameter of message type.
                 descriptiveMessageSignature(method.getOutputType()),
-                ImmutableList.of(FieldInfo.builder("request",
+                ImmutableList.of(ParamInfo.builder("request",
                                                    descriptiveMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
-                true, ImmutableList.of(),
+                true, ImmutableSet.<TypeSignature>of(),
                 endpointInfos,
                 ImmutableList.of(),
                 defaultExamples(method),
                 ImmutableList.of(),
                 ImmutableList.of(),
-                HttpMethod.POST, DescriptionInfo.empty());
+                HttpMethod.POST);
     }
 
     private static List<String> defaultExamples(MethodDescriptor method) {
@@ -454,8 +530,6 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             return ImmutableList.of();
         }
     }
-
-    @VisibleForTesting
 
     @Override
     public String toString() {

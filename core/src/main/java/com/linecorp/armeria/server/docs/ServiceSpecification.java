@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
@@ -49,18 +50,21 @@ public final class ServiceSpecification {
 
     private static final ServiceSpecification emptyServiceSpecification =
             new ServiceSpecification(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
-                                     ImmutableList.of(), ImmutableList.of(), null);
+                                     ImmutableList.of(), ImmutableList.of(), ImmutableMap.of(), null);
 
     /**
      * Merges the specified {@link ServiceSpecification}s into one.
      */
     public static ServiceSpecification merge(Iterable<ServiceSpecification> specs, Route docServiceRoute) {
+        final ImmutableMap.Builder<String, DescriptionInfo> docStringsBuilder = ImmutableMap.builder();
+        Streams.stream(specs).forEach(s -> docStringsBuilder.putAll(s.docStrings()));
         return new ServiceSpecification(
                 Streams.stream(specs).flatMap(s -> s.services().stream())::iterator,
                 Streams.stream(specs).flatMap(s -> s.enums().stream())::iterator,
                 Streams.stream(specs).flatMap(s -> s.structs().stream())::iterator,
                 Streams.stream(specs).flatMap(s -> s.exceptions().stream())::iterator,
                 ImmutableList.of(),
+                docStringsBuilder.buildKeepingLast(),
                 docServiceRoute
         );
     }
@@ -128,6 +132,9 @@ public final class ServiceSpecification {
     private final Set<StructInfo> structs;
     private final Set<ExceptionInfo> exceptions;
     private final List<HttpHeaders> exampleHeaders;
+    private final Map<String, DescriptionInfo> docStrings;
+    private Map<String, String> docServiceExtraInfo = new HashMap<>();
+
     @Nullable
     private final Route docServiceRoute;
 
@@ -139,7 +146,7 @@ public final class ServiceSpecification {
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,
                                 Iterable<ExceptionInfo> exceptions) {
-        this(services, enums, structs, exceptions, ImmutableList.of(), null);
+        this(services, enums, structs, exceptions, ImmutableList.of(), ImmutableMap.of(), null);
     }
 
     /**
@@ -152,7 +159,7 @@ public final class ServiceSpecification {
                                 Iterable<ExceptionInfo> exceptions,
                                 Iterable<HttpHeaders> exampleHeaders
     ) {
-        this(services, enums, structs, exceptions, exampleHeaders, null);
+        this(services, enums, structs, exceptions, exampleHeaders, ImmutableMap.of(), null);
     }
 
     /**
@@ -164,12 +171,26 @@ public final class ServiceSpecification {
                                 Iterable<ExceptionInfo> exceptions,
                                 Iterable<HttpHeaders> exampleHeaders,
                                 @Nullable Route docServiceRoute) {
+        this(services, enums, structs, exceptions, exampleHeaders, ImmutableMap.of(), docServiceRoute);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceSpecification(Iterable<ServiceInfo> services,
+                                Iterable<EnumInfo> enums,
+                                Iterable<StructInfo> structs,
+                                Iterable<ExceptionInfo> exceptions,
+                                Iterable<HttpHeaders> exampleHeaders,
+                                Map<String, DescriptionInfo> docStrings,
+                                @Nullable Route docServiceRoute) {
         this.services = Streams.stream(requireNonNull(services, "services"))
                                .collect(toImmutableSortedSet(comparing(ServiceInfo::name)));
         this.enums = collectDescriptiveTypeInfo(enums, "enums");
         this.structs = collectStructInfo(structs);
         this.exceptions = collectDescriptiveTypeInfo(exceptions, "exceptions");
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
+        this.docStrings = ImmutableMap.copyOf(requireNonNull(docStrings, "docStrings"));
         if (docServiceRoute != null && docServiceRoute.pathType() == RoutePathType.PREFIX) {
             this.docServiceRoute = docServiceRoute;
         } else {
@@ -242,11 +263,43 @@ public final class ServiceSpecification {
     }
 
     /**
+     * Returns all documentation strings for services, methods, parameters, return types, and exceptions.
+     * The keys follow these formats:
+     * <ul>
+     *   <li>{@code "className"} - service description</li>
+     *   <li>{@code "className/methodName"} - method description</li>
+     *   <li>{@code "className/methodName:return"} - return description</li>
+     *   <li>{@code "className/methodName:throws/ExceptionType"} - exception description</li>
+     *   <li>{@code "className/methodName:param/paramName"} - parameter description</li>
+     * </ul>
+     */
+    @JsonProperty
+    public Map<String, DescriptionInfo> docStrings() {
+        return docStrings;
+    }
+
+    /**
      * Returns the path pattern string of the {@link DocService} mount location on server.
      */
     @JsonProperty
     @Nullable
     public Route docServiceRoute() {
         return docServiceRoute;
+    }
+
+    /**
+     * Returns the extra info in this specification.
+     */
+    @JsonProperty
+    public Map<String, String> docServiceExtraInfo() {
+        return docServiceExtraInfo;
+    }
+
+    /**
+     * Sets the additional information for the document service.
+     * @param docServiceExtraInfo a map containing the extra information for the document service.
+     */
+    public void setDocServiceExtraInfo(Map<String, String> docServiceExtraInfo) {
+        this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo,"docServiceExtraInfo");
     }
 }

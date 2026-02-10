@@ -24,7 +24,6 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
-import io.grpc.Status;
 
 final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResource, ListenerSnapshot> {
 
@@ -115,13 +114,8 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
         }
 
         @Override
-        protected void doOnMissing(XdsType type, String resourceName) {
-            parentNode.notifyOnMissing(type, resourceName);
-        }
-
-        @Override
-        protected void doOnError(XdsType type, String resourceName, Status status) {
-            parentNode.notifyOnError(type, resourceName, status);
+        protected void doOnError(Throwable t) {
+            parentNode.notifyOnError(t);
         }
 
         @Override

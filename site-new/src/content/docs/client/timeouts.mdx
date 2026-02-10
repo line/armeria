@@ -88,6 +88,99 @@ Note that [ClientFactory](type) implements `java.lang.AutoCloseable` and thus ne
 terminate your application. On `close()`, [ClientFactory](type) will close all the connections it manages
 and abort any requests in progress.
 
+## Handling timeouts for streaming responses
+
+For long-running streaming responses (e.g., gRPC server streaming, GraphQL subscriptions over WebSocket),
+the default response timeout applies to the entire duration of the stream—from the first message until
+the stream completes. This means that if your stream is expected to last longer than the configured
+response timeout, you must manually extend the timeout as messages are received.
+
+You can extend the timeout dynamically using [ClientRequestContext](type) with
+[TimeoutMode#EXTEND](type):
+
+```java
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.util.TimeoutMode;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+// gRPC streaming example
+TestServiceStub client = GrpcClients.newClient(uri, TestServiceStub.class);
+
+client.withDeadlineAfter(5, TimeUnit.SECONDS)
+      .streamingOutputCall(request, new StreamObserver<Response>() {
+          @Override
+          public void onNext(Response value) {
+              // Extend the timeout with each message received
+              ClientRequestContext ctx = ClientRequestContext.current();
+              ctx.setResponseTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(5));
+          }
+
+          @Override
+          public void onError(Throwable t) {
+              // Handle error
+          }
+
+          @Override
+          public void onCompleted() {
+              // Stream completed
+          }
+      });
+```
+
+For blocking gRPC clients, you can capture the [ClientRequestContext](type) using
+[Clients#newContextCaptor()](type) and extend the timeout while iterating:
+
+```java
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.util.TimeoutMode;
+
+import java.time.Duration;
+import java.util.Iterator;
+
+TestServiceBlockingStub client = GrpcClients.newClient(uri, TestServiceBlockingStub.class);
+
+Iterator<Response> iterator;
+ClientRequestContext ctx;
+try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+    iterator = client.withDeadlineAfter(5, TimeUnit.SECONDS)
+                     .streamingOutputCall(request);
+    ctx = captor.get();
+}
+
+while (iterator.hasNext()) {
+    Response response = iterator.next();
+    // Extend the timeout with each message received
+    ctx.setResponseTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(5));
+}
+```
+
+Alternatively, for streams with unpredictable duration, you can disable the timeout entirely:
+
+```java
+// Disable response timeout for infinite streaming
+WebClient client = WebClient.builder("http://example.com")
+                            .responseTimeoutMillis(0)
+                            .build();
+```
+
+:::tip
+
+See [Timeout control](/docs/advanced/request-context#timeout-control) for more details on using
+[TimeoutMode](type) to dynamically adjust timeouts.
+
+:::
+
+## Understanding timeout origins
+
+Timeouts can originate from either the client or server side, and understanding this is crucial for
+debugging timeout-related issues. For detailed information about how timeouts and cancellations propagate
+between clients and servers, see [Understanding timeout and cancellation origins](/docs/advanced/understanding-timeouts).
+
 ## Using JVM system properties
 
 You can override the default client timeouts by specifying the following JVM system properties if you do not

@@ -35,7 +35,7 @@ public final class AthenzServiceDecoratorFactoryBuilder
      * Returns a new {@link AthenzServiceDecoratorFactory} instance.
      */
     public AthenzServiceDecoratorFactory build() {
-        final MinifiedAuthZpeClient authZpeClient = buildAuthZpeClient();
-        return new AthenzServiceDecoratorFactory(authZpeClient, meterIdPrefix());
+        final AthenzAuthorizer authorizer = new AthenzAuthorizer(buildAuthZpeClient());
+        return new AthenzServiceDecoratorFactory(authorizer, meterIdPrefix());
     }
 }

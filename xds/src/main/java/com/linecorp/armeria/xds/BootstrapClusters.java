@@ -72,9 +72,11 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     }
 
     @Override
-    public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-        final String name = newSnapshot.xdsResource().name();
-        clusterSnapshots.put(name, newSnapshot);
+    public void onUpdate(@Nullable ClusterSnapshot snapshot, @Nullable XdsResourceException t) {
+        if (snapshot != null) {
+            final String name = snapshot.xdsResource().name();
+            clusterSnapshots.put(name, snapshot);
+        }
     }
 
     @Nullable

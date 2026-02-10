@@ -18,16 +18,10 @@ package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -35,6 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceErrorHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesText;
@@ -43,48 +38,157 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 class ContentPreviewingErrorResponseTest {
 
     @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
+    static final ServerExtension serverWithErrorHandler = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            configureServer(sb, true);
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension serverWithoutServerErrorHandler = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            configureServer(sb, false);
+        }
+    };
+
+    private static void configureServer(ServerBuilder sb, boolean errorHandler) {
+        if (errorHandler) {
             sb.errorHandler((ctx, cause) -> {
                 return HttpResponse.of("errorHandler: " + cause.getMessage());
             });
+        }
 
-            sb.service("/aborted/http-status-exception", (ctx, req) ->
-                    HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR)));
-            sb.service("/aborted/unexpected-exception", (ctx, req) ->
-                    HttpResponse.ofFailure(new IllegalStateException("Oops!")));
+        sb.service("/aborted/http-status-exception", (ctx, req) ->
+                HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR)));
+        sb.service("/aborted/unexpected-exception", (ctx, req) ->
+                HttpResponse.ofFailure(new IllegalStateException("Oops!")));
 
-            sb.service("/throw/http-status-exception", (ctx, req) -> {
-                throw HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR);
-            });
-            sb.service("/throw/unexpected-exception", (ctx, req) -> {
-                throw new IllegalStateException("Oops!");
-            });
+        sb.service("/throw/http-status-exception", (ctx, req) -> {
+            throw HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR);
+        });
+        sb.service("/throw/unexpected-exception", (ctx, req) -> {
+            throw new IllegalStateException("Oops!");
+        });
 
-            sb.annotatedService("/annotated", new ContentPreviewingAnnotatedService());
+        sb.annotatedService("/annotated", new ContentPreviewingAnnotatedService());
+        if (errorHandler) {
             sb.annotatedService("/annotatedExceptionHandler",
                                 new ContentPreviewingAnnotatedService(),
                                 (ExceptionHandlerFunction) (ctx, req, cause) -> {
                                     return HttpResponse.of("exceptionHandler: " + cause.getMessage());
                                 });
-
-            sb.decorator(LoggingService.newDecorator());
-            sb.decorator(ContentPreviewingService.newDecorator(Integer.MAX_VALUE));
         }
-    };
+
+        final ServiceErrorHandler serviceErrorHandler = (ctx, cause) -> {
+            return HttpResponse.of("serviceErrorHandler: " + cause.getMessage());
+        };
+        sb.withRoute(bindingBuilder -> {
+            if (errorHandler) {
+                bindingBuilder.errorHandler(serviceErrorHandler);
+            }
+            bindingBuilder.path("/binding/aborted/http-status-exception")
+                          .build((ctx, req) -> {
+                              return HttpResponse.ofFailure(
+                                      HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                          });
+        });
+        sb.withRoute(bindingBuilder -> {
+            if (errorHandler) {
+                bindingBuilder.errorHandler(serviceErrorHandler);
+            }
+            bindingBuilder.path("/binding/aborted/unexpected-exception")
+                          .build((ctx, req) -> {
+                              return HttpResponse.ofFailure(new IllegalStateException("Oops!"));
+                          });
+        });
+        sb.withRoute(bindingBuilder -> {
+            if (errorHandler) {
+                bindingBuilder.errorHandler(serviceErrorHandler);
+            }
+            bindingBuilder.path("/binding/throw/http-status-exception")
+                          .build((ctx, req) -> {
+                              throw HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                          });
+        });
+        sb.withRoute(bindingBuilder -> {
+            if (errorHandler) {
+                bindingBuilder.errorHandler(serviceErrorHandler);
+            }
+            bindingBuilder.path("/binding/throw/unexpected-exception")
+                          .build((ctx, req) -> {
+                              throw new IllegalStateException("Oops!");
+                          });
+        });
+
+        sb.decorator(LoggingService.newDecorator());
+        sb.decorator(ContentPreviewingService.newDecorator(Integer.MAX_VALUE));
+    }
 
     @ParameterizedTest
-    @ArgumentsSource(ShouldRecordErrorResponseContentPreviewingArgumentsProvider.class)
-    void shouldRecordErrorResponseContentPreviewing(String path, String responseContent) throws Exception {
-        final BlockingWebClient client = server.blockingWebClient();
-        final AggregatedHttpResponse res = client.get(path);
-        assertThat(res.contentUtf8()).isEqualTo(responseContent);
+    @ValueSource(strings = {
+            "/aborted/http-status-exception",
+            "/aborted/unexpected-exception",
+            "/throw/http-status-exception",
+            "/throw/unexpected-exception",
+            "/annotated/aborted/http-status-exception",
+            "/annotated/aborted/unexpected-exception",
+            "/annotated/throw/http-status-exception",
+            "/annotated/throw/unexpected-exception",
+            "/binding/aborted/http-status-exception",
+            "/binding/aborted/unexpected-exception",
+            "/binding/throw/http-status-exception",
+            "/binding/throw/unexpected-exception",
+    })
+    void shouldSetNullContentPreviewWhenAnExceptionIsRaisedAndErrorHandlerSet(String path) throws Exception {
+        serverWithErrorHandler.blockingWebClient().get(path);
 
-        final RequestContext ctx = server.requestContextCaptor().poll();
+        final RequestContext ctx = serverWithErrorHandler.requestContextCaptor().poll();
         final RequestLog log = ctx.log().whenComplete().join();
 
-        assertThat(log.responseContentPreview()).isEqualTo(responseContent);
+        assertThat(log.responseContentPreview()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/aborted/http-status-exception",
+            "/aborted/unexpected-exception",
+            "/throw/http-status-exception",
+            "/throw/unexpected-exception",
+            "/annotated/aborted/http-status-exception",
+            "/annotated/aborted/unexpected-exception",
+            "/annotated/throw/http-status-exception",
+            "/annotated/throw/unexpected-exception",
+            "/binding/aborted/http-status-exception",
+            "/binding/aborted/unexpected-exception",
+            "/binding/throw/http-status-exception",
+            "/binding/throw/unexpected-exception",
+    })
+    void shouldSetNullContentPreviewWhenAnExceptionIsRaisedAndNoErrorHandlerSet(String path) throws Exception {
+        serverWithoutServerErrorHandler.blockingWebClient().get(path);
+
+        final RequestContext ctx = serverWithoutServerErrorHandler.requestContextCaptor().poll();
+        final RequestLog log = ctx.log().whenComplete().join();
+
+        assertThat(log.responseContentPreview()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/annotatedExceptionHandler/aborted/http-status-exception",
+            "/annotatedExceptionHandler/aborted/unexpected-exception",
+            "/annotatedExceptionHandler/throw/http-status-exception",
+            "/annotatedExceptionHandler/throw/unexpected-exception",
+    })
+    void annotatedServiceExceptionHandlerAlwaysRecordContentPreview(String path) throws Exception {
+        final AggregatedHttpResponse res = serverWithErrorHandler.blockingWebClient().get(path);
+        final String content = res.contentUtf8();
+
+        final RequestContext ctx = serverWithErrorHandler.requestContextCaptor().poll();
+        final RequestLog log = ctx.log().whenComplete().join();
+
+        assertThat(log.responseContentPreview()).isEqualTo(content);
     }
 
     @ProducesText
@@ -96,7 +200,7 @@ class ContentPreviewingErrorResponseTest {
 
         @Get("/aborted/unexpected-exception")
         public HttpResponse abortedUnexpectedException() {
-            return HttpResponse.ofFailure(new IllegalStateException("Oops!"));
+            return HttpResponse.ofFailure(new IllegalArgumentException("Oops!"));
         }
 
         @Get("/throw/http-status-exception")
@@ -106,38 +210,7 @@ class ContentPreviewingErrorResponseTest {
 
         @Get("/throw/unexpected-exception")
         public HttpResponse throwUnexpectedException() {
-            throw new IllegalStateException("Oops!");
-        }
-    }
-
-    private static final class ShouldRecordErrorResponseContentPreviewingArgumentsProvider
-            implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(Arguments.of("/aborted/http-status-exception",
-                                          "errorHandler: 500 Internal Server Error"),
-                             Arguments.of("/aborted/unexpected-exception",
-                                          "errorHandler: Oops!"),
-                             Arguments.of("/throw/http-status-exception",
-                                          "errorHandler: 500 Internal Server Error"),
-                             Arguments.of("/throw/unexpected-exception",
-                                          "errorHandler: Oops!"),
-                             Arguments.of("/annotated/aborted/http-status-exception",
-                                          "errorHandler: 500 Internal Server Error"),
-                             Arguments.of("/annotated/aborted/unexpected-exception",
-                                          "errorHandler: Oops!"),
-                             Arguments.of("/annotated/throw/http-status-exception",
-                                          "errorHandler: 500 Internal Server Error"),
-                             Arguments.of("/annotated/throw/unexpected-exception",
-                                          "errorHandler: Oops!"),
-                             Arguments.of("/annotatedExceptionHandler/aborted/http-status-exception",
-                                          "exceptionHandler: 500 Internal Server Error"),
-                             Arguments.of("/annotatedExceptionHandler/aborted/unexpected-exception",
-                                          "exceptionHandler: Oops!"),
-                             Arguments.of("/annotatedExceptionHandler/throw/http-status-exception",
-                                          "exceptionHandler: 500 Internal Server Error"),
-                             Arguments.of("/annotatedExceptionHandler/throw/unexpected-exception",
-                                          "exceptionHandler: Oops!"));
+            throw new IllegalArgumentException("Oops!");
         }
     }
 }
