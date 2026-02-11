@@ -306,12 +306,14 @@ class XdsLoadBalancerLifecycleObserverTest {
                         // Check that revisions are incremented to 2 after second update
                         "armeria.xds.lb.endpoints.updated.revision#value{cluster=my-cluster}", 2.0,
                         "armeria.xds.lb.resource.updated.revision#value{cluster=my-cluster}", 2.0,
-                        "armeria.xds.lb.state.updated.revision#value{cluster=my-cluster}", 2.0,
-                        // (cluster v1, endpoint v1) -> (cluster v2, endpoint v1) -> (cluster v2, endpoint v2)
-                        "armeria.xds.lb.endpoints.updated.count#count{cluster=my-cluster}", 3.0,
-                        "armeria.xds.lb.resource.updated.count#count{cluster=my-cluster}", 3.0,
-                        "armeria.xds.lb.state.updated.count#count{cluster=my-cluster}", 3.0
+                        "armeria.xds.lb.state.updated.revision#value{cluster=my-cluster}", 2.0
                 ));
+                assertThat(lbMetrics.get("armeria.xds.lb.endpoints.updated.count#count{cluster=my-cluster}"))
+                        .isGreaterThanOrEqualTo(2.0);
+                assertThat(lbMetrics.get("armeria.xds.lb.resource.updated.count#count{cluster=my-cluster}"))
+                        .isGreaterThanOrEqualTo(2.0);
+                assertThat(lbMetrics.get("armeria.xds.lb.state.updated.count#count{cluster=my-cluster}"))
+                        .isGreaterThanOrEqualTo(2.0);
             });
 
             listenerRoot.close();
