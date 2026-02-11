@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoder;
@@ -95,11 +95,11 @@ public final class DecodedStreamMessage<I, O>
         }
 
         whenComplete().handle((unused1, cause) -> {
-            if (cause instanceof CancelledSubscriptionException) {
-                cancelAndCleanup();
+            if (cause != null) {
+                cancelAndCleanup(cause);
             } else {
-                // In addition to 'onComplete()', 'onError()' and 'cancel()',
-                // make sure to call 'cleanup()' even when 'abort()' or 'close()' is invoked directly
+                // In addition to 'onComplete()', 'onError()', 'cancel()', and 'abort()',
+                // make sure to call 'cleanup()' even when  or 'close()' is invoked directly
                 cleanup();
             }
             return null;
@@ -111,7 +111,7 @@ public final class DecodedStreamMessage<I, O>
         if (tryWrite(out)) {
             handlerProduced = true;
         } else {
-            cancelAndCleanup();
+            cancelAndCleanup(ClosedStreamException.get());
         }
     }
 
@@ -174,7 +174,7 @@ public final class DecodedStreamMessage<I, O>
         }
     }
 
-    private void cancelAndCleanup() {
+    private void cancelAndCleanup(Throwable cause) {
         if (cancelled) {
             return;
         }
@@ -182,6 +182,8 @@ public final class DecodedStreamMessage<I, O>
         cancelled = true;
         if (upstream != null) {
             upstream.cancel();
+        } else {
+            publisher.abort(cause);
         }
         cleanup();
     }
@@ -258,7 +260,7 @@ public final class DecodedStreamMessage<I, O>
                 }
             } catch (Throwable ex) {
                 decoder.processOnError(ex);
-                cancelAndCleanup();
+                cancelAndCleanup(ex);
                 abort(ex);
                 Exceptions.throwIfFatal(ex);
             }
