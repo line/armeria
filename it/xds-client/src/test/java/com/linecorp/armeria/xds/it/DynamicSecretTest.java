@@ -419,8 +419,7 @@ class DynamicSecretTest {
             assertThat(certSnapshot).isNotNull();
             assertThat(certSnapshot.tlsKeyPair()).isEqualTo(certificate1.tlsKeyPair());
             final CertificateValidationContextSnapshot validationContext = tlsSnapshot.validationContext();
-            assertThat(validationContext).isNotNull();
-            assertThat(validationContext.trustedCa()).isNull();
+            assertThat(validationContext).isNull();
         }
     }
 
@@ -521,8 +520,7 @@ class DynamicSecretTest {
                     tlsSnapshot = listenerSnapshot.routeSnapshot().virtualHostSnapshots().get(0)
                                                   .routeEntries().get(0).clusterSnapshot().transportSocket();
             final TlsCertificateSnapshot certSnapshot = tlsSnapshot.tlsCertificate();
-            assertThat(certSnapshot).isNotNull();
-            assertThat(certSnapshot.tlsKeyPair()).isNull();
+            assertThat(certSnapshot).isNull();
             final CertificateValidationContextSnapshot validationContext = tlsSnapshot.validationContext();
             assertThat(validationContext).isNotNull();
             assertThat(validationContext.trustedCa()).containsExactly(certificate2.certificate());

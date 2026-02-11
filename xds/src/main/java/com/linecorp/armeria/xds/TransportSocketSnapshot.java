@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.Optional;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -36,15 +38,17 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     private final CertificateValidationContextSnapshot validationContext;
 
     TransportSocketSnapshot(TransportSocket transportSocket) {
-        this(transportSocket, null, null);
+        this.transportSocket = transportSocket;
+        tlsCertificate = null;
+        validationContext = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
-                            @Nullable TlsCertificateSnapshot tlsCertificate,
-                            @Nullable CertificateValidationContextSnapshot validationContext) {
+                            Optional<TlsCertificateSnapshot> tlsCertificate,
+                            Optional<CertificateValidationContextSnapshot> validationContext) {
         this.transportSocket = transportSocket;
-        this.tlsCertificate = tlsCertificate;
-        this.validationContext = validationContext;
+        this.tlsCertificate = tlsCertificate.orElse(null);
+        this.validationContext = validationContext.orElse(null);
     }
 
     @Override

@@ -57,11 +57,13 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
         }
         if (dataSource.hasInlineBytes()) {
             final byte[] bytes = dataSource.getInlineBytes().toByteArray();
-            watcher.onUpdate(Optional.of(ByteString.copyFrom(bytes)), null);
-        } else if (dataSource.hasInlineString()) {
+            return SnapshotStream.just(Optional.of(ByteString.copyFrom(bytes))).subscribe(watcher);
+        }
+        if (dataSource.hasInlineString()) {
             final byte[] bytes = dataSource.getInlineString().getBytes(StandardCharsets.UTF_8);
-            watcher.onUpdate(Optional.of(ByteString.copyFrom(bytes)), null);
-        } else if (dataSource.hasEnvironmentVariable()) {
+            return SnapshotStream.just(Optional.of(ByteString.copyFrom(bytes))).subscribe(watcher);
+        }
+        if (dataSource.hasEnvironmentVariable()) {
             final String envVar = dataSource.getEnvironmentVariable();
             final String envVarValue = System.getenv(envVar);
             if (envVarValue == null) {
@@ -70,8 +72,9 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
                 return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
             }
             final byte[] bytes = envVarValue.getBytes(StandardCharsets.UTF_8);
-            watcher.onUpdate(Optional.of(ByteString.copyFrom(bytes)), null);
-        } else if (dataSource.hasFilename()) {
+            return SnapshotStream.just(Optional.of(ByteString.copyFrom(bytes))).subscribe(watcher);
+        }
+        if (dataSource.hasFilename()) {
             final String filename = dataSource.getFilename();
             final Path filePath = Paths.get(filename).toAbsolutePath();
             Path dirPath = filePath.getParent();
@@ -99,11 +102,9 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
                     }
                 });
             };
-        } else {
-            final IllegalArgumentException e = new IllegalArgumentException(
-                    String.format("Unexpected data source type '%s'", dataSource.getSpecifierCase()));
-            return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
         }
-        return SnapshotStream.<ByteString>empty().subscribe(watcher);
+        final IllegalArgumentException e = new IllegalArgumentException(
+                String.format("Unexpected data source type '%s'", dataSource.getSpecifierCase()));
+        return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
     }
 }

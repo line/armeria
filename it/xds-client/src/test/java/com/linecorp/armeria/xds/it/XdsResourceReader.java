@@ -69,6 +69,7 @@ public final class XdsResourceReader {
                                                             .addEscape('\\', "\\\\")
                                                             .addEscape('"', "\\\"")
                                                             .addEscape('\n', "\\n")
+                                                            .addEscape('\r', "\\r")
                                                             .build();
 
     static String escapeMultiLine(String str) {
