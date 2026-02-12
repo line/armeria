@@ -37,7 +37,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -78,20 +78,17 @@ final class XdsEndpointUtil {
         return true;
     }
 
-    static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot) {
-        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-        if (endpointSnapshot == null) {
-            return EndpointGroup.of();
-        }
-        final Cluster cluster = clusterSnapshot.xdsResource().resource();
+    static EndpointGroup convertEndpointGroup(ClusterXdsResource clusterXdsResource,
+                                              EndpointSnapshot endpointSnapshot) {
+        final Cluster cluster = clusterXdsResource.resource();
         final EndpointGroup endpointGroup;
         switch (cluster.getType()) {
             case STATIC:
             case EDS:
-                endpointGroup = staticEndpointGroup(clusterSnapshot);
+                endpointGroup = staticEndpointGroup(endpointSnapshot);
                 break;
             case STRICT_DNS:
-                endpointGroup = strictDnsEndpointGroup(clusterSnapshot);
+                endpointGroup = strictDnsEndpointGroup(clusterXdsResource, endpointSnapshot);
                 break;
             default:
                 throw new UnsupportedOperationException(
@@ -117,17 +114,15 @@ final class XdsEndpointUtil {
                 .build();
     }
 
-    private static EndpointGroup staticEndpointGroup(ClusterSnapshot clusterSnapshot) {
-        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
+    private static EndpointGroup staticEndpointGroup(EndpointSnapshot endpointSnapshot) {
         assert endpointSnapshot != null;
         final List<Endpoint> endpoints = convertLoadAssignment(endpointSnapshot.xdsResource().resource());
         return EndpointGroup.of(endpoints);
     }
 
-    private static EndpointGroup strictDnsEndpointGroup(ClusterSnapshot clusterSnapshot) {
-        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-        assert endpointSnapshot != null;
-        final Cluster cluster = clusterSnapshot.xdsResource().resource();
+    private static EndpointGroup strictDnsEndpointGroup(ClusterXdsResource clusterXdsResource,
+                                                        EndpointSnapshot endpointSnapshot) {
+        final Cluster cluster = clusterXdsResource.resource();
 
         final ImmutableList.Builder<EndpointGroup> endpointGroupBuilder = ImmutableList.builder();
         final ClusterLoadAssignment loadAssignment = endpointSnapshot.xdsResource().resource();

@@ -90,7 +90,7 @@ final class DefaultLbStateFactory {
         long degradedWeight = 0;
         long totalWeight = 0;
         final boolean weightedPriorityHealth =
-                EndpointUtil.weightedPriorityHealth(prioritySet.clusterSnapshot());
+                EndpointUtil.weightedPriorityHealth(prioritySet.endpointSnapshot());
         if (weightedPriorityHealth) {
             for (Endpoint host : hostSet.healthyHostsEndpointGroup().endpoints()) {
                 healthyWeight += host.weight();
@@ -106,7 +106,7 @@ final class DefaultLbStateFactory {
             degradedWeight = hostSet.degradedHostsEndpointGroup().endpoints().size();
             totalWeight = hostCount;
         }
-        final int overProvisioningFactor = EndpointUtil.overProvisionFactor(prioritySet.clusterSnapshot());
+        final int overProvisioningFactor = EndpointUtil.overProvisionFactor(prioritySet.endpointSnapshot());
         final int health = (int) Math.min(100L, LongMath.saturatedMultiply(
                 overProvisioningFactor, healthyWeight) / totalWeight);
         final int degraded = (int) Math.min(100L, LongMath.saturatedMultiply(

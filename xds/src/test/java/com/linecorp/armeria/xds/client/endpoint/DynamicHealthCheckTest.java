@@ -41,7 +41,6 @@ import com.google.protobuf.util.Durations;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -179,7 +178,7 @@ class DynamicHealthCheckTest {
             final XdsLoadBalancer loadBalancer1 = pollLoadBalancer(root, "cluster", cluster);
             assertThat(loadBalancer1).isNotNull();
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            final Endpoint endpoint = loadBalancer1.select(ctx, ctx.eventLoop()).join();
+            final Endpoint endpoint = loadBalancer1.selectNow(ctx);
             assertThat(endpoint.port()).isEqualTo(server1.httpPort());
 
             // now update the health check path
@@ -200,7 +199,7 @@ class DynamicHealthCheckTest {
                                                      ImmutableList.of(), "v2"));
 
             final XdsLoadBalancer loadBalancer2 = pollLoadBalancer(root, "cluster", cluster);
-            await().untilAsserted(() -> assertThat(loadBalancer2.select(ctx, ctx.eventLoop()).join().port())
+            await().untilAsserted(() -> assertThat(loadBalancer2.selectNow(ctx).port())
                     .isEqualTo(server2.httpPort()));
 
             await().untilAsserted(() -> {
@@ -208,7 +207,7 @@ class DynamicHealthCheckTest {
                 // trying 4 times should be more than enough
                 for (int i = 0; i < 4; i++) {
                     // after the hc to the first server is updated, requests should only be routed to server2
-                    assertThat(loadBalancer2.select(ctx, ctx.eventLoop()).join().port())
+                    assertThat(loadBalancer2.selectNow(ctx).port())
                             .isEqualTo(server2.httpPort());
                 }
             });
@@ -255,7 +254,7 @@ class DynamicHealthCheckTest {
             // WeightRampingUpStrategy guarantees that all endpoints will be considered, so
             // trying 4 times should be more than enough
             for (int i = 0; i < 4; i++) {
-                final Endpoint endpoint = loadBalancer.select(ctx, CommonPools.workerGroup()).get();
+                final Endpoint endpoint = loadBalancer.selectNow(ctx);
                 assertThat(endpoint.port()).isEqualTo(server1.httpPort());
             }
             assertThat(server1Hc2CtxRef).hasNullValue();
@@ -283,7 +282,7 @@ class DynamicHealthCheckTest {
             final XdsLoadBalancer loadBalancer2 = pollLoadBalancer(root, "cluster", cluster);
             // wait until server 2 is also selected
             await().untilAsserted(() -> {
-                final Endpoint endpoint = loadBalancer2.select(ctx, CommonPools.workerGroup()).get();
+                final Endpoint endpoint = loadBalancer2.selectNow(ctx);
                 assertThat(endpoint.port()).isEqualTo(server2.httpPort());
             });
 
@@ -347,7 +346,7 @@ class DynamicHealthCheckTest {
             // trying 4 times should be more than enough
             final Set<Integer> healthyPorts = new HashSet<>();
             for (int i = 0; i < 4; i++) {
-                final Endpoint endpoint = loadBalancer.select(ctx, CommonPools.workerGroup()).get();
+                final Endpoint endpoint = loadBalancer.selectNow(ctx);
                 healthyPorts.add(endpoint.port());
             }
             assertThat(healthyPorts).containsExactlyInAnyOrder(server1.httpPort(), server2.httpPort());

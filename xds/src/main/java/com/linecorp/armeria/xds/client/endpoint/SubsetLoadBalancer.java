@@ -36,7 +36,7 @@ import com.google.protobuf.Struct;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
@@ -45,29 +45,27 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSele
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 
-final class SubsetLoadBalancer implements LoadBalancer {
+final class SubsetLoadBalancer implements XdsLoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
-    private final LoadBalancer allEndpointsLoadBalancer;
+    private final XdsLoadBalancer allEndpointsLoadBalancer;
+    private final Locality locality;
     @Nullable
-    private final LocalCluster localCluster;
-    @Nullable
-    private final PrioritySet localPrioritySet;
+    private final XdsLoadBalancer localLoadBalancer;
 
-    private final Map<Struct, LoadBalancer> subsetLoadBalancers;
+    private final Map<Struct, XdsLoadBalancer> subsetLoadBalancers;
     private final Map<Struct, LoadBalancerState> subsetStates;
     private final LbSubsetConfig lbSubsetConfig;
     private final LbSubsetFallbackPolicy fallbackPolicy;
 
-    SubsetLoadBalancer(PrioritySet prioritySet, LoadBalancer allEndpointsLoadBalancer,
-                       @Nullable LocalCluster localCluster, @Nullable PrioritySet localPrioritySet) {
+    SubsetLoadBalancer(PrioritySet prioritySet, XdsLoadBalancer allEndpointsLoadBalancer,
+                       Locality locality, @Nullable XdsLoadBalancer localLoadBalancer) {
         this.allEndpointsLoadBalancer = allEndpointsLoadBalancer;
-        this.localCluster = localCluster;
-        this.localPrioritySet = localPrioritySet;
+        this.locality = locality;
+        this.localLoadBalancer = localLoadBalancer;
 
-        final ClusterSnapshot clusterSnapshot = prioritySet.clusterSnapshot();
-        final Cluster cluster = clusterSnapshot.xdsResource().resource();
+        final Cluster cluster = prioritySet.cluster();
         lbSubsetConfig = cluster.getLbSubsetConfig();
         fallbackPolicy = lbSubsetFallbackPolicy(lbSubsetConfig);
 
@@ -90,7 +88,7 @@ final class SubsetLoadBalancer implements LoadBalancer {
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
         final Struct filterMetadata = filterMetadata(ctx);
-        final LoadBalancer subsetLoadBalancer = subsetLoadBalancers.get(filterMetadata);
+        final XdsLoadBalancer subsetLoadBalancer = subsetLoadBalancers.get(filterMetadata);
         if (subsetLoadBalancer != null) {
             return subsetLoadBalancer.selectNow(ctx);
         }
@@ -101,9 +99,18 @@ final class SubsetLoadBalancer implements LoadBalancer {
         return allEndpointsLoadBalancer.selectNow(ctx);
     }
 
-    private Map<Struct, LoadBalancer> createSubsetLoadBalancers(PrioritySet prioritySet) {
-        final ClusterSnapshot clusterSnapshot = prioritySet.clusterSnapshot();
+    @Override
+    public EndpointSnapshot endpointSnapshot() {
+        return allEndpointsLoadBalancer.endpointSnapshot();
+    }
 
+    @Nullable
+    @Override
+    public LoadBalancerState localLoadBalancer() {
+        return allEndpointsLoadBalancer.localLoadBalancer();
+    }
+
+    private Map<Struct, XdsLoadBalancer> createSubsetLoadBalancers(PrioritySet prioritySet) {
         final Map<Struct, List<Endpoint>> endpointsPerFilterStruct = new HashMap<>();
         for (LbSubsetSelector subsetSelector: lbSubsetConfig.getSubsetSelectorsList()) {
             final ProtocolStringList keys = subsetSelector.getKeysList();
@@ -129,12 +136,14 @@ final class SubsetLoadBalancer implements LoadBalancer {
                                         .add(endpoint);
             }
         }
-        final ImmutableMap.Builder<Struct, LoadBalancer> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<Struct, XdsLoadBalancer> builder = ImmutableMap.builder();
         for (Entry<Struct, List<Endpoint>> entry : endpointsPerFilterStruct.entrySet()) {
             final PrioritySet subsetPrioritySet =
-                    new PriorityStateManager(clusterSnapshot, entry.getValue()).build();
+                    new PriorityStateManager(prioritySet.clusterXdsResource(),
+                                             prioritySet.endpointSnapshot(),
+                                             entry.getValue()).build();
             final DefaultLoadBalancer subsetLoadBalancer =
-                    new DefaultLoadBalancer(subsetPrioritySet, localCluster, localPrioritySet);
+                    new DefaultLoadBalancer(subsetPrioritySet, locality, localLoadBalancer);
             builder.put(entry.getKey(), subsetLoadBalancer);
         }
         return builder.build();
@@ -182,5 +191,10 @@ final class SubsetLoadBalancer implements LoadBalancer {
     @Override
     public Map<Struct, LoadBalancerState> subsetStates() {
         return subsetStates;
+    }
+
+    @Override
+    public List<Endpoint> allEndpoints() {
+        return allEndpointsLoadBalancer.allEndpoints();
     }
 }

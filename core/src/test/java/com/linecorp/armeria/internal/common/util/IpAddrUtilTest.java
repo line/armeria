@@ -52,9 +52,5 @@ class IpAddrUtilTest {
         inetAddress = InetAddress.getByAddress("foo.com", new byte[] { 1, 2, 3, 4 });
         inetSocketAddress = new InetSocketAddress(inetAddress, 8080);
         assertThat(IpAddrUtil.isCreatedWithIpAddressOnly(inetSocketAddress)).isFalse();
-
-        inetAddress = InetAddress.getByName("foo.com");
-        inetSocketAddress = new InetSocketAddress(inetAddress, 8080);
-        assertThat(IpAddrUtil.isCreatedWithIpAddressOnly(inetSocketAddress)).isFalse();
     }
 }

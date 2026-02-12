@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.List;
@@ -35,7 +36,6 @@ import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
 import io.envoyproxy.envoy.config.core.v3.HeaderValue;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
-import io.netty.channel.EventLoop;
 
 final class GrpcServicesPreprocessor implements HttpPreprocessor {
 
@@ -46,10 +46,10 @@ final class GrpcServicesPreprocessor implements HttpPreprocessor {
         this.services = services;
         this.bootstrapClusters = bootstrapClusters;
         for (GrpcService service : services) {
-            final XdsLoadBalancer loadBalancer = bootstrapClusters.loadBalancer(
-                    service.getEnvoyGrpc().getClusterName());
-            checkState(loadBalancer != null,
-                       "Cannot find endpoints for '%s' in bootstrap clusters '%s'", service, bootstrapClusters);
+            final CompletableFuture<?> f =
+                    bootstrapClusters.snapshotFuture(service.getEnvoyGrpc().getClusterName());
+            checkState(f != null,
+                       "Cannot find cluster for '%s' in bootstrap clusters '%s'", service, bootstrapClusters);
         }
     }
 
@@ -64,33 +64,27 @@ final class GrpcServicesPreprocessor implements HttpPreprocessor {
         final EnvoyGrpc envoyGrpc = grpcService.getEnvoyGrpc();
         final String clusterName = envoyGrpc.getClusterName();
 
-        final ClusterSnapshot clusterSnapshot = bootstrapClusters.clusterSnapshot(clusterName);
-        assert clusterSnapshot != null;
-        final UpstreamTlsContext tlsContext = clusterSnapshot.xdsResource().upstreamTlsContext();
-        if (tlsContext != null) {
-            ctx.setSessionProtocol(SessionProtocol.HTTPS);
-        } else {
-            ctx.setSessionProtocol(SessionProtocol.HTTP);
-        }
+        final CompletableFuture<ClusterSnapshot> snapshotFuture =
+                bootstrapClusters.snapshotFuture(clusterName);
+        checkArgument(snapshotFuture != null, "No cluster found for name: %s", clusterName);
+        return HttpResponse.of(snapshotFuture.thenApply(snapshot -> {
+            final UpstreamTlsContext tlsContext = snapshot.xdsResource().upstreamTlsContext();
+            if (tlsContext != null) {
+                ctx.setSessionProtocol(SessionProtocol.HTTPS);
+            } else {
+                ctx.setSessionProtocol(SessionProtocol.HTTP);
+            }
 
-        final XdsLoadBalancer loadBalancer = bootstrapClusters.loadBalancer(clusterName);
-        assert loadBalancer != null;
-        final Endpoint endpoint = loadBalancer.selectNow(ctx);
-        if (endpoint != null) {
+            final XdsLoadBalancer loadBalancer = snapshot.loadBalancer();
+            checkArgument(loadBalancer != null, "No endpoints found for name: %s", clusterName);
+            final Endpoint endpoint = loadBalancer.selectNow(ctx);
+            checkArgument(endpoint != null, "Endpoint not selected found for name: %s", clusterName);
             ctx.setEndpointGroup(endpoint);
-            return delegate.execute(ctx, req);
-        }
-        final EventLoop temporaryEventLoop = ctx.options().factory().eventLoopSupplier().get();
-        final CompletableFuture<HttpResponse> cf =
-                loadBalancer.select(ctx, temporaryEventLoop, ctx.responseTimeoutMillis())
-                            .thenApply(endpoint0 -> {
-                                ctx.setEndpointGroup(endpoint0);
-                                try {
-                                    return delegate.execute(ctx, req);
-                                } catch (Exception e) {
-                                    return Exceptions.throwUnsafely(e);
-                                }
-                            });
-        return HttpResponse.of(cf);
+            try {
+                return delegate.execute(ctx, req);
+            } catch (Exception e) {
+                return Exceptions.throwUnsafely(e);
+            }
+        }));
     }
 }
