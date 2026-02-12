@@ -108,9 +108,6 @@ message ComparisonFilter {
 
     // <=
     LE = 2;
-
-    // !=
-    NE = 3;
   }
 
   // Comparison operator.

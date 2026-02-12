@@ -96,8 +96,7 @@ message ScopeMetrics {
   // is recorded in. Notably, the last part of the URL path is the version number of the
   // schema: http[s]://server[:port]/path/<version>. To learn more about Schema URL see
   // https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
-  // This schema_url applies to the data in the "scope" field and all metrics in the
-  // "metrics" field.
+  // This schema_url applies to all metrics in the "metrics" field.
   string schema_url = 3;
 }
 
@@ -188,13 +187,13 @@ message ScopeMetrics {
 message Metric {
   reserved 4, 6, 8;
 
-  // The name of the metric.
+  // name of the metric.
   string name = 1;
 
-  // A description of the metric, which can be used in documentation.
+  // description of the metric, which can be used in documentation.
   string description = 2;
 
-  // The unit in which the metric value is reported. Follows the format
+  // unit in which the metric value is reported. Follows the format
   // described by https://unitsofmeasure.org/ucum.html.
   string unit = 3;
 
@@ -216,7 +215,6 @@ message Metric {
   // for lossless roundtrip translation to / from another data model.
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  // The behavior of software that receives duplicated keys can be unpredictable.
   repeated opentelemetry.proto.common.v1.KeyValue metadata = 12;
 }
 
@@ -230,31 +228,25 @@ message Metric {
 // AggregationTemporality is not included. Consequently, this also means
 // "StartTimeUnixNano" is ignored for all data points.
 message Gauge {
-  // The time series data points.
-  // Note: Multiple time series may be included (same timestamp, different attributes).
   repeated NumberDataPoint data_points = 1;
 }
 
 // Sum represents the type of a scalar metric that is calculated as a sum of all
 // reported measurements over a time interval.
 message Sum {
-  // The time series data points.
-  // Note: Multiple time series may be included (same timestamp, different attributes).
   repeated NumberDataPoint data_points = 1;
 
   // aggregation_temporality describes if the aggregator reports delta changes
   // since last report time, or cumulative changes since a fixed start time.
   AggregationTemporality aggregation_temporality = 2;
 
-  // Represents whether the sum is monotonic.
+  // If "true" means that the sum is monotonic.
   bool is_monotonic = 3;
 }
 
 // Histogram represents the type of a metric that is calculated by aggregating
 // as a Histogram of all reported measurements over a time interval.
 message Histogram {
-  // The time series data points.
-  // Note: Multiple time series may be included (same timestamp, different attributes).
   repeated HistogramDataPoint data_points = 1;
 
   // aggregation_temporality describes if the aggregator reports delta changes
@@ -265,8 +257,6 @@ message Histogram {
 // ExponentialHistogram represents the type of a metric that is calculated by aggregating
 // as a ExponentialHistogram of all reported double measurements over a time interval.
 message ExponentialHistogram {
-  // The time series data points.
-  // Note: Multiple time series may be included (same timestamp, different attributes).
   repeated ExponentialHistogramDataPoint data_points = 1;
 
   // aggregation_temporality describes if the aggregator reports delta changes
@@ -284,8 +274,6 @@ message ExponentialHistogram {
 // because the count and sum fields of a SummaryDataPoint are assumed to be
 // cumulative values.
 message Summary {
-  // The time series data points.
-  // Note: Multiple time series may be included (same timestamp, different attributes).
   repeated SummaryDataPoint data_points = 1;
 }
 
@@ -389,7 +377,16 @@ message NumberDataPoint {
   // where this point belongs. The list may be empty (may contain 0 elements).
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  // The behavior of software that receives duplicated keys can be unpredictable.
+  //
+  // The attribute values SHOULD NOT contain empty values.
+  // The attribute values SHOULD NOT contain bytes values.
+  // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
+  // double values.
+  // The attribute values SHOULD NOT contain kvlist values.
+  // The behavior of software that receives attributes containing such values can be unpredictable.
+  // These restrictions can change in a minor release.
+  // The restrictions take origin from the OpenTelemetry specification:
+  // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
   repeated opentelemetry.proto.common.v1.KeyValue attributes = 7;
 
   // StartTimeUnixNano is optional but strongly encouraged, see the
@@ -438,7 +435,16 @@ message HistogramDataPoint {
   // where this point belongs. The list may be empty (may contain 0 elements).
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  // The behavior of software that receives duplicated keys can be unpredictable.
+  //
+  // The attribute values SHOULD NOT contain empty values.
+  // The attribute values SHOULD NOT contain bytes values.
+  // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
+  // double values.
+  // The attribute values SHOULD NOT contain kvlist values.
+  // The behavior of software that receives attributes containing such values can be unpredictable.
+  // These restrictions can change in a minor release.
+  // The restrictions take origin from the OpenTelemetry specification:
+  // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
   repeated opentelemetry.proto.common.v1.KeyValue attributes = 9;
 
   // StartTimeUnixNano is optional but strongly encouraged, see the
@@ -523,7 +529,16 @@ message ExponentialHistogramDataPoint {
   // where this point belongs. The list may be empty (may contain 0 elements).
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  // The behavior of software that receives duplicated keys can be unpredictable.
+  //
+  // The attribute values SHOULD NOT contain empty values.
+  // The attribute values SHOULD NOT contain bytes values.
+  // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
+  // double values.
+  // The attribute values SHOULD NOT contain kvlist values.
+  // The behavior of software that receives attributes containing such values can be unpredictable.
+  // These restrictions can change in a minor release.
+  // The restrictions take origin from the OpenTelemetry specification:
+  // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
   repeated opentelemetry.proto.common.v1.KeyValue attributes = 1;
 
   // StartTimeUnixNano is optional but strongly encouraged, see the
@@ -539,12 +554,12 @@ message ExponentialHistogramDataPoint {
   // 1970.
   fixed64 time_unix_nano = 3;
 
-  // The number of values in the population. Must be
+  // count is the number of values in the population. Must be
   // non-negative. This value must be equal to the sum of the "bucket_counts"
   // values in the positive and negative Buckets plus the "zero_count" field.
   fixed64 count = 4;
 
-  // The sum of the values in the population. If count is zero then this field
+  // sum of the values in the population. If count is zero then this field
   // must be zero.
   //
   // Note: Sum should only be filled out when measuring non-negative discrete
@@ -571,7 +586,7 @@ message ExponentialHistogramDataPoint {
   // values depend on the range of the data.
   sint32 scale = 6;
 
-  // The count of values that are either exactly zero or
+  // zero_count is the count of values that are either exactly zero or
   // within the region considered zero by the instrumentation at the
   // tolerated degree of precision.  This bucket stores values that
   // cannot be expressed using the standard exponential formula as
@@ -590,12 +605,12 @@ message ExponentialHistogramDataPoint {
   // Buckets are a set of bucket counts, encoded in a contiguous array
   // of counts.
   message Buckets {
-    // The bucket index of the first entry in the bucket_counts array.
+    // Offset is the bucket index of the first entry in the bucket_counts array.
     //
     // Note: This uses a varint encoding as a simple form of compression.
     sint32 offset = 1;
 
-    // An array of count values, where bucket_counts[i] carries
+    // bucket_counts is an array of count values, where bucket_counts[i] carries
     // the count of the bucket at index (offset+i). bucket_counts[i] is the count
     // of values greater than base^(offset+i) and less than or equal to
     // base^(offset+i+1).
@@ -615,10 +630,10 @@ message ExponentialHistogramDataPoint {
   // measurements that were used to form the data point
   repeated Exemplar exemplars = 11;
 
-  // The minimum value over (start_time, end_time].
+  // min is the minimum value over (start_time, end_time].
   optional double min = 12;
 
-  // The maximum value over (start_time, end_time].
+  // max is the maximum value over (start_time, end_time].
   optional double max = 13;
 
   // ZeroThreshold may be optionally set to convey the width of the zero
@@ -640,7 +655,16 @@ message SummaryDataPoint {
   // where this point belongs. The list may be empty (may contain 0 elements).
   // Attribute keys MUST be unique (it is not allowed to have more than one
   // attribute with the same key).
-  // The behavior of software that receives duplicated keys can be unpredictable.
+  //
+  // The attribute values SHOULD NOT contain empty values.
+  // The attribute values SHOULD NOT contain bytes values.
+  // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
+  // double values.
+  // The attribute values SHOULD NOT contain kvlist values.
+  // The behavior of software that receives attributes containing such values can be unpredictable.
+  // These restrictions can change in a minor release.
+  // The restrictions take origin from the OpenTelemetry specification:
+  // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
   repeated opentelemetry.proto.common.v1.KeyValue attributes = 7;
 
   // StartTimeUnixNano is optional but strongly encouraged, see the
