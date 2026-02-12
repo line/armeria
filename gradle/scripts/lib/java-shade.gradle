@@ -371,7 +371,13 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 
 
         relocations.each { props ->
-            task.relocate props['from'], props['to']
+            logger.debug("[${project.name}] Relocating ${props['name']} from ${props['from']} to ${props['to']} " +
+                    "in ${isMain ? 'main' : 'test'}")
+            task.relocate(props['from'], props['to']) {
+                exclude {
+                    return isGenerated(project, it.path, isMain)
+                }
+            }
         }
 
         dependencies {
@@ -400,6 +406,34 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
             }
         }
     }
+}
+
+boolean isGenerated(Project project, String path, boolean isMain) {
+    if (path.endsWith("package-info.class")) {
+        return false
+    }
+    if (!path.endsWith('.class')) {
+        return false
+    }
+    // Remove the .class extension.
+    def className = path.substring(0, path.length() - 6)
+    // Remove the inner class part.
+    def topLevelClassName = className.split('\\$')[0]
+
+    def javaSourcePath = "${topLevelClassName}.java"
+    def scope = isMain ? 'main' : 'test'
+    def thriftGenSrcDir = "${project.ext.genSrcDir}/${scope}/javaThrift"
+    def grpcGenSrcDir = "${project.buildDir}/generated/sources/proto/${scope}/grpc"
+    def protoGenSrcDir = "${project.buildDir}/generated/sources/proto/${scope}/java"
+
+    // Check if the source file exists in any of the generated source directories.
+    if (new File("${thriftGenSrcDir}/${javaSourcePath}").exists() ||
+        new File("${grpcGenSrcDir}/${javaSourcePath}").exists() ||
+        new File("${protoGenSrcDir}/${javaSourcePath}").exists()) {
+        logger.debug("[${project.name}] Excluding generated class from shading: ${path}")
+        return true
+    }
+    return false
 }
 
 /**
