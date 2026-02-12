@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -23,12 +22,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
@@ -42,27 +39,12 @@ final class JsonSchemaGenerator {
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final ServiceSpecification serviceSpecification;
-    private final Map<String, StructInfo> structs;
-    private final Map<String, EnumInfo> enums;
     private final Map<String, DiscriminatorInfo> polymorphismToBase;
     private final Map<String, DescriptionInfo> docStrings;
 
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
         this.serviceSpecification = requireNonNull(serviceSpecification, "serviceSpecification");
         docStrings = serviceSpecification.docStrings();
-
-        final ImmutableMap.Builder<String, StructInfo> structsBuilder = ImmutableMap
-                .builderWithExpectedSize(serviceSpecification.structs().size());
-        for (final StructInfo structInfo : serviceSpecification.structs()) {
-            structsBuilder.put(structInfo.name(), structInfo);
-            if (structInfo.alias() != null) {
-                structsBuilder.put(structInfo.alias(), structInfo);
-            }
-        }
-        structs = structsBuilder.build();
-
-        enums = serviceSpecification.enums().stream()
-                .collect(toImmutableMap(EnumInfo::name, Function.identity()));
 
         // Pre-compute mappings from subtype to its base type's DiscriminatorInfo
         final Map<String, String> nameToAlias = new HashMap<>();
@@ -144,6 +126,19 @@ final class JsonSchemaGenerator {
             default:
                 return "object";
         }
+    }
+
+    private static ObjectNode generateEnumDefinition(EnumInfo enumInfo) {
+        final ObjectNode schemaNode = mapper.createObjectNode();
+        schemaNode.put("type", "string");
+        final String docString = enumInfo.descriptionInfo().docString();
+        if (!docString.isEmpty()) {
+            schemaNode.put("description", docString);
+        }
+        final ArrayNode enumValues = mapper.createArrayNode();
+        enumInfo.values().forEach(value -> enumValues.add(value.name()));
+        schemaNode.set("enum", enumValues);
+        return schemaNode;
     }
 
     private ObjectNode doGenerate() {
@@ -252,19 +247,6 @@ final class JsonSchemaGenerator {
         return schemaNode;
     }
 
-    private static ObjectNode generateEnumDefinition(EnumInfo enumInfo) {
-        final ObjectNode schemaNode = mapper.createObjectNode();
-        schemaNode.put("type", "string");
-        final String docString = enumInfo.descriptionInfo().docString();
-        if (!docString.isEmpty()) {
-            schemaNode.put("description", docString);
-        }
-        final ArrayNode enumValues = mapper.createArrayNode();
-        enumInfo.values().forEach(value -> enumValues.add(value.name()));
-        schemaNode.set("enum", enumValues);
-        return schemaNode;
-    }
-
     private ObjectNode generateMethodSchema(String serviceName, MethodInfo methodInfo) {
         final ObjectNode root = mapper.createObjectNode();
         root.put("$id", methodInfo.id());
@@ -322,13 +304,13 @@ final class JsonSchemaGenerator {
         }
 
         if (typeSignature.type() == TypeSignatureType.STRUCT ||
-                typeSignature.type() == TypeSignatureType.ENUM) {
+            typeSignature.type() == TypeSignatureType.ENUM) {
             fieldNode.put("$ref", "#/$defs/models/" + typeSignature.name());
             return fieldNode;
         }
 
         if (typeSignature.type() == TypeSignatureType.OPTIONAL ||
-                typeSignature.type() == TypeSignatureType.CONTAINER) {
+            typeSignature.type() == TypeSignatureType.CONTAINER) {
             final TypeSignature inner = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
             final ObjectNode innerNode = generateFieldSchema(FieldInfo.of("", inner));
             if (!docString.isEmpty()) {
@@ -349,7 +331,7 @@ final class JsonSchemaGenerator {
             case MAP: {
                 final TypeSignature valueType = ((MapTypeSignature) typeSignature).valueTypeSignature();
                 fieldNode.set("additionalProperties",
-                        generateFieldSchema(FieldInfo.of("", valueType)));
+                              generateFieldSchema(FieldInfo.of("", valueType)));
                 break;
             }
             default:

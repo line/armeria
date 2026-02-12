@@ -101,25 +101,25 @@ public final class JacksonPolymorphismTypeInfoProvider implements DescriptiveTyp
         final DiscriminatorInfo discriminator = DiscriminatorInfo.of(propertyName, mapping);
 
         final List<TypeSignature> oneOf = Arrays.stream(jsonSubTypes.value())
-                .map(subType -> TypeSignature.ofStruct(subType.value()))
-                .collect(toImmutableList());
+                                                .map(subType -> TypeSignature.ofStruct(subType.value()))
+                                                .collect(toImmutableList());
 
         final JavaType javaType = mapper.constructType(clazz);
         final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
         final List<BeanPropertyDefinition> properties = description.findProperties();
 
         final List<FieldInfo> fields = properties.stream()
-                .map(prop -> FieldInfo.of(prop.getName(),
-                        toTypeSignature(
-                                prop.getPrimaryType())))
-                .collect(toImmutableList());
+                                                 .map(prop -> FieldInfo.of(prop.getName(),
+                                                                           toTypeSignature(
+                                                                                   prop.getPrimaryType())))
+                                                 .collect(toImmutableList());
 
         final Description classDescription = clazz.getAnnotation(Description.class);
 
         final DescriptionInfo descriptionInfo = classDescription == null ? DescriptionInfo.empty()
-                : DescriptionInfo.from(classDescription);
+                                                                         : DescriptionInfo.from(
+                classDescription);
 
-        return new StructInfo(clazz.getName(), null, fields,
-                descriptionInfo, oneOf, discriminator);
+        return new StructInfo(clazz.getName(), null, fields, descriptionInfo, oneOf, discriminator);
     }
 }

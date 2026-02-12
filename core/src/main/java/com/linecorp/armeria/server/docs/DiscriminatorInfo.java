@@ -39,9 +39,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class DiscriminatorInfo {
 
-    private final String propertyName;
-    private final Map<String, String> mapping;
-
     /**
      * Creates a new {@link DiscriminatorInfo} with {@code propertyName}, the name
      * of the property
@@ -51,6 +48,9 @@ public final class DiscriminatorInfo {
     public static DiscriminatorInfo of(String propertyName, Map<String, String> mapping) {
         return new DiscriminatorInfo(propertyName, mapping);
     }
+
+    private final String propertyName;
+    private final Map<String, String> mapping;
 
     /**
      * Creates a new instance.
@@ -74,7 +74,7 @@ public final class DiscriminatorInfo {
      * The keys are the values that appear in the {@link #propertyName()} field, and
      * the values are
      * the schema definitions to use for that value (e.g.,
-     * {@code "#/$defs/models/Cat"}).
+     * {@code "#/$defs/models/com.linecorp.armeria.Cat"}).
      */
     @JsonProperty
     public Map<String, String> mapping() {
@@ -101,6 +101,6 @@ public final class DiscriminatorInfo {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).add("propertyName", propertyName).add("mapping", mapping)
-                .toString();
+                          .toString();
     }
 }
