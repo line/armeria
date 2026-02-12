@@ -1,12 +1,12 @@
 # Update the versions here and run update-api.sh
 
 # envoy (source: SHA from https://github.com/envoyproxy/envoy)
-ENVOY_SHA="bad8280de85c25b147a90c1d9b8a8c67a13e7134"
+ENVOY_SHA="6d9bb7d9a85d616b220d1f8fe67b61f82bbdb8d3"
 
-# dependencies (source: https://github.com/envoyproxy/envoy/blob/bad8280de85c25b147a90c1d9b8a8c67a13e7134/api/bazel/repository_locations.bzl)
+# dependencies (source: https://github.com/envoyproxy/envoy/blob/6d9bb7d9a85d616b220d1f8fe67b61f82bbdb8d3/api/bazel/repository_locations.bzl)
 GOOGLEAPIS_SHA="fd52b5754b2b268bc3a22a10f29844f206abb327"  # 2024-09-16
-PGV_VERSION="1.0.4"  # 2024-01-17
+PGV_VERSION="1.3.0"  # 2025-12-04
 PROMETHEUS_SHA="0.6.2"  # 2025-04-11
-OPENTELEMETRY_VERSION="1.8.0"  # 2025-09-02
-CEL_VERSION="0.24.0"  # 2025-05-09
-XDS_SHA="2ac532fd44436293585084f8d94c6bdb17835af0"  # 2025-05-01
+OPENTELEMETRY_VERSION="1.9.0"  # 2025-10-31
+CEL_VERSION="0.25.1"  # 2025-11-10
+XDS_SHA="8bfbf64dc13ee1a570be4fbdcfccbdd8532463f0"  # 2025-11-10
