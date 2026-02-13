@@ -109,10 +109,10 @@ class TransportSocketSnapshotTest {
                              (SecretProvider) file -> encoder.encodeToString(Files.readAllBytes(file.toPath())),
                              (SecretProvider) file -> encoder.encodeToString(Files.readAllBytes(file.toPath()))
                 ),
-                Arguments.of("filename: \"%s\"",
+                Arguments.of("filename: '%s'",
                              (SecretProvider) File::getAbsolutePath,
                              (SecretProvider) File::getAbsolutePath),
-                Arguments.of("filename: \"%s\"",
+                Arguments.of("filename: '%s'",
                              (SecretProvider) file -> relativizeToCwd(file).toString(),
                              (SecretProvider) file -> relativizeToCwd(file).toString())
         );
@@ -124,9 +124,8 @@ class TransportSocketSnapshotTest {
                               SecretProvider certProvider) throws Exception {
         final String serviceKey = keyProvider.getSecret(certificate.privateKeyFile());
         final String serviceCert = certProvider.getSecret(certificate.certificateFile());
-        final String bootstrapStr = tlsCertBootstrap.formatted(
-                secretYamlTemplate.formatted(yamlDoubleQuote(serviceKey)),
-                secretYamlTemplate.formatted(yamlDoubleQuote(serviceCert)));
+        final String bootstrapStr = tlsCertBootstrap.formatted(secretYamlTemplate.formatted(serviceKey),
+                                                               secretYamlTemplate.formatted(serviceCert));
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
@@ -314,13 +313,6 @@ class TransportSocketSnapshotTest {
     @FunctionalInterface
     interface SecretProvider {
         String getSecret(File file) throws Exception;
-    }
-
-    static String yamlDoubleQuote(String s) {
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n");
     }
 
     static Path relativizeToCwd(File file) {
