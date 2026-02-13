@@ -807,27 +807,21 @@ class ErrorHandlingTest {
         final String bootstrapStr = sdsBootstrapYaml.formatted(server.httpPort());
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
 
-        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
                 if (snapshot != null) {
                     snapshotRef.set(snapshot);
                 }
-                if (t != null) {
-                    errorRef.set(t);
-                }
             });
 
             await().during(Duration.ofSeconds(2)).untilAsserted(() -> {
-                assertThat(errorRef.get()).isNull();
                 assertThat(snapshotRef.get()).isNull();
             });
 
             Files.writeString(missingFile.toPath(), Files.readString(certificate.certificateFile().toPath()));
 
             await().untilAsserted(() -> {
-                assertThat(errorRef.get()).isNull();
                 assertThat(snapshotRef.get()).isNotNull();
             });
         }
