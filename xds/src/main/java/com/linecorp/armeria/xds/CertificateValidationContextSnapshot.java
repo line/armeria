@@ -35,11 +35,6 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
     @Nullable
     private final List<X509Certificate> trustedCa;
 
-    CertificateValidationContextSnapshot(CertificateValidationContext resource) {
-        this.resource = resource;
-        trustedCa = null;
-    }
-
     CertificateValidationContextSnapshot(CertificateValidationContext resource,
                                          @Nullable List<X509Certificate> trustedCa) {
         this.resource = resource;
