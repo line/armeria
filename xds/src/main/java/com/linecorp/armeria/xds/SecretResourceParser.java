@@ -22,6 +22,8 @@ final class SecretResourceParser extends ResourceParser<Secret, SecretXdsResourc
 
     static final SecretResourceParser INSTANCE = new SecretResourceParser();
 
+    private SecretResourceParser() {}
+
     @Override
     String name(Secret message) {
         return message.getName();

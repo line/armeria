@@ -124,8 +124,9 @@ class TransportSocketSnapshotTest {
                               SecretProvider certProvider) throws Exception {
         final String serviceKey = keyProvider.getSecret(certificate.privateKeyFile());
         final String serviceCert = certProvider.getSecret(certificate.certificateFile());
-        final String bootstrapStr = tlsCertBootstrap.formatted(secretYamlTemplate.formatted(serviceKey),
-                                                               secretYamlTemplate.formatted(serviceCert));
+        final String bootstrapStr = tlsCertBootstrap.formatted(
+                secretYamlTemplate.formatted(yamlDoubleQuote(serviceKey)),
+                secretYamlTemplate.formatted(yamlDoubleQuote(serviceCert)));
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
@@ -198,7 +199,7 @@ class TransportSocketSnapshotTest {
     @ParameterizedTest
     @MethodSource("testDataSources")
     void staticValidationContext(String secretYamlTemplate, SecretProvider keyProvider,
-                                  SecretProvider certProvider) throws Exception {
+                                 SecretProvider certProvider) throws Exception {
         final String caCert = certProvider.getSecret(certificate.certificateFile());
         final String bootstrapStr = validationContextBootstrap.formatted(secretYamlTemplate.formatted(caCert));
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
@@ -315,9 +316,25 @@ class TransportSocketSnapshotTest {
         String getSecret(File file) throws Exception;
     }
 
+    static String yamlDoubleQuote(String s) {
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+    }
+
     static Path relativizeToCwd(File file) {
         final Path cwd = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
         final Path abs = file.toPath().toAbsolutePath().normalize();
+
+        final Path cwdRoot = cwd.getRoot();
+        final Path absRoot = abs.getRoot();
+        if (cwdRoot != null && absRoot != null && !cwdRoot.equals(absRoot)) {
+            return abs;
+        }
+        if (cwd.isAbsolute() != abs.isAbsolute()) {
+            return abs;
+        }
         return cwd.relativize(abs);
     }
 }
