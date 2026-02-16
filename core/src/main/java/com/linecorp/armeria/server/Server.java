@@ -489,7 +489,7 @@ public final class Server implements ListenableAsyncCloseable {
                                 .addListener(new NextServerPortStartListener(this, it, future));
                 // Chain the future to set up server metrics and port mapping before server start future is completed.
                 return future.thenAccept(unused -> {
-                    config.delegate().buildActualPortMapping();
+                    config.delegate().rebuildDomainAndPortMapping();
                     setupPendingResponsesMetrics();
                 });
             } catch (Throwable cause) {
@@ -801,16 +801,14 @@ public final class Server implements ListenableAsyncCloseable {
                 if (localAddress instanceof InetSocketAddress) {
                     actualPort = new ServerPort((InetSocketAddress) localAddress,
                                                 port.protocols(),
-                                                port.portGroup(),
-                                                port);
+                                                port.portGroup());
                 } else if (localAddress instanceof io.netty.channel.unix.DomainSocketAddress) {
                     // Convert Netty's DomainSocketAddress to ours.
                     final DomainSocketAddress converted = DomainSocketAddress.of(
                             (io.netty.channel.unix.DomainSocketAddress) localAddress);
                     actualPort = new ServerPort(converted,
                                                 port.protocols(),
-                                                port.portGroup(),
-                                                port);
+                                                port.portGroup());
                 } else {
                     logger.warn("Unexpected local address type: {}", localAddress.getClass().getName());
                     return;

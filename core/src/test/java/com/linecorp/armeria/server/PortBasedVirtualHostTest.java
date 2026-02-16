@@ -385,32 +385,6 @@ class PortBasedVirtualHostTest {
     }
 
     @Test
-    void serverPortOriginalServerPortAccessor() {
-        final ServerPort originalPort = new ServerPort(0, SessionProtocol.HTTP);
-        final Server server = Server.builder()
-                                    .port(originalPort)
-                                    .virtualHost(originalPort)
-                                    .service("/test", (ctx, req) -> HttpResponse.of("test"))
-                                    .and()
-                                    .build();
-
-        server.start().join();
-        try {
-            final boolean found = server.activePorts().values().stream()
-                                        .anyMatch(p -> p.originalServerPort() == originalPort);
-            assertThat(found).isTrue();
-        } finally {
-            server.stop().join();
-        }
-    }
-
-    @Test
-    void serverPortOriginalServerPortReturnsNullForNormalCreation() {
-        final ServerPort port = new ServerPort(8080, SessionProtocol.HTTP);
-        assertThat(port.originalServerPort()).isNull();
-    }
-
-    @Test
     void defaultVirtualHostServerPortReturnsNull() {
         final Server server = Server.builder()
                                     .http(0)
@@ -438,15 +412,8 @@ class PortBasedVirtualHostTest {
 
         server.start().join();
         try {
-            int actualPort1 = -1;
-            int actualPort2 = -1;
-            for (ServerPort activePort : server.activePorts().values()) {
-                if (activePort.originalServerPort() == port1) {
-                    actualPort1 = activePort.localAddress().getPort();
-                } else if (activePort.originalServerPort() == port2) {
-                    actualPort2 = activePort.localAddress().getPort();
-                }
-            }
+            final int actualPort1 = port1.actualPort();
+            final int actualPort2 = port2.actualPort();
 
             assertThat(actualPort1).isGreaterThan(0);
             assertThat(actualPort2).isGreaterThan(0);

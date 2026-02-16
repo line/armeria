@@ -69,8 +69,6 @@ public final class ServerPort implements Comparable<ServerPort> {
     private int hashCode;
     @Nullable
     private ServerPortMetric serverPortMetric;
-    @Nullable
-    private final ServerPort originalServerPort;
 
     /**
      * The actual port after binding. -1 means not set yet.
@@ -121,15 +119,6 @@ public final class ServerPort implements Comparable<ServerPort> {
      *                  will choose the same port number for them, rather than allocating two ephemeral ports.
      */
     ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup) {
-        this(localAddress, protocols, portGroup, null);
-    }
-
-    /**
-     * Creates a new {@link ServerPort} with a reference to the original {@link ServerPort}.
-     * This constructor is used internally when binding to an ephemeral port.
-     */
-    ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup,
-               @Nullable ServerPort originalServerPort) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -144,7 +133,6 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.localAddress = localAddress;
         this.protocols = checkProtocols(protocols);
         this.portGroup = portGroup;
-        this.originalServerPort = originalServerPort;
 
         if (localAddress instanceof DomainSocketAddress) {
             comparisonStr = ((DomainSocketAddress) localAddress).authority() + '/' + protocols;
@@ -277,14 +265,6 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.actualPort = actualPort;
     }
 
-    /**
-     * Returns the original {@link ServerPort} that this port was created from,
-     * or {@code null} if this is an original port.
-     */
-    @Nullable
-    ServerPort originalServerPort() {
-        return originalServerPort;
-    }
 
     @Nullable
     ServerPortMetric serverPortMetric() {

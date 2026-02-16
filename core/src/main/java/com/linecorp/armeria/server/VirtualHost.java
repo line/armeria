@@ -86,6 +86,10 @@ public final class VirtualHost {
     @Nullable
     private final ServerPort serverPort;
     @Nullable
+    private volatile String cachedDefaultHostname;
+    @Nullable
+    private volatile String cachedHostnamePattern;
+    @Nullable
     private final SslContext sslContext;
     @Nullable
     private final TlsProvider tlsProvider;
@@ -317,10 +321,16 @@ public final class VirtualHost {
      * Returns the name of the default host.
      */
     public String defaultHostname() {
-        if (serverPort != null && serverPort.localAddress() != null) {
-            final int actualPort = serverPort.localAddress().getPort();
+        if (serverPort != null) {
+            String cached = cachedDefaultHostname;
+            if (cached != null) {
+                return cached;
+            }
+            final int actualPort = serverPort.actualPort();
             if (actualPort > 0) {
-                return originalDefaultHostname + ':' + actualPort;
+                cached = originalDefaultHostname + ':' + actualPort;
+                cachedDefaultHostname = cached;
+                return cached;
             }
         }
         return defaultHostname;
@@ -331,10 +341,16 @@ public final class VirtualHost {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
-        if (serverPort != null && serverPort.localAddress() != null) {
-            final int actualPort = serverPort.localAddress().getPort();
+        if (serverPort != null) {
+            String cached = cachedHostnamePattern;
+            if (cached != null) {
+                return cached;
+            }
+            final int actualPort = serverPort.actualPort();
             if (actualPort > 0) {
-                return originalHostnamePattern + ':' + actualPort;
+                cached = originalHostnamePattern + ':' + actualPort;
+                cachedHostnamePattern = cached;
+                return cached;
             }
         }
         return hostnamePattern;
