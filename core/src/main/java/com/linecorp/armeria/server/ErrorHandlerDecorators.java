@@ -26,18 +26,26 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class ServerErrorHandlerDecorators {
+final class ErrorHandlerDecorators {
 
-    private static final List<DecoratingServerErrorHandlerFunction> decoratorFunctions =
-            ImmutableList.of(new CorsServerErrorHandler(),
-                             new ContentPreviewServerErrorHandler());
+    private static final List<DecoratingErrorHandlerFunction> decoratorFunctions =
+            ImmutableList.of(new CorsErrorHandler(),
+                             new ContentPreviewErrorHandler());
 
-    private ServerErrorHandlerDecorators() {}
+    private ErrorHandlerDecorators() {}
 
     static ServerErrorHandler decorate(ServerErrorHandler delegate) {
         ServerErrorHandler decorated = delegate;
-        for (DecoratingServerErrorHandlerFunction decoratorFunction : decoratorFunctions) {
+        for (DecoratingErrorHandlerFunction decoratorFunction : decoratorFunctions) {
             decorated = new DecoratingServerErrorHandler(decorated, decoratorFunction);
+        }
+        return decorated;
+    }
+
+    static ServiceErrorHandler decorate(ServiceErrorHandler delegate) {
+        ServiceErrorHandler decorated = delegate;
+        for (DecoratingErrorHandlerFunction decoratorFunction : decoratorFunctions) {
+            decorated = new DecoratingServiceErrorHandler(decorated, decoratorFunction);
         }
         return decorated;
     }
@@ -45,10 +53,10 @@ final class ServerErrorHandlerDecorators {
     private static final class DecoratingServerErrorHandler implements ServerErrorHandler {
 
         final ServerErrorHandler delegate;
-        final DecoratingServerErrorHandlerFunction decoratorFunction;
+        final DecoratingErrorHandlerFunction decoratorFunction;
 
         DecoratingServerErrorHandler(ServerErrorHandler delegate,
-                                     DecoratingServerErrorHandlerFunction decoratorFunction) {
+                                     DecoratingErrorHandlerFunction decoratorFunction) {
             this.delegate = delegate;
             this.decoratorFunction = decoratorFunction;
         }
@@ -77,6 +85,34 @@ final class ServerErrorHandlerDecorators {
                                                    HttpStatus status, @Nullable String description,
                                                    @Nullable Throwable cause) {
             return delegate.renderStatus(ctx, config, headers, status, description, cause);
+        }
+    }
+
+    private static final class DecoratingServiceErrorHandler implements ServiceErrorHandler {
+
+        final ServiceErrorHandler delegate;
+        final DecoratingErrorHandlerFunction decoratorFunction;
+
+        DecoratingServiceErrorHandler(ServiceErrorHandler delegate,
+                                      DecoratingErrorHandlerFunction decoratorFunction) {
+            this.delegate = delegate;
+            this.decoratorFunction = decoratorFunction;
+        }
+
+        @Nullable
+        @Override
+        public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+            return decoratorFunction.onServiceException(delegate, ctx, cause);
+        }
+
+        @Nullable
+        @Override
+        public AggregatedHttpResponse renderStatus(ServiceRequestContext ctx,
+                                                   RequestHeaders headers,
+                                                   HttpStatus status,
+                                                   @Nullable String description,
+                                                   @Nullable Throwable cause) {
+            return delegate.renderStatus(ctx, headers, status, description, cause);
         }
     }
 }

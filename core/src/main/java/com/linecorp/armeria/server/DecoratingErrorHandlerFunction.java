@@ -20,10 +20,15 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * A function to decorate a {@link ServerErrorHandler} with additional behavior. It is typically used to inject
- * additional logic before or after the specified {@link ServerErrorHandler} execution.
+ * A function to decorate a {@link ServerErrorHandler} or a {@link ServiceErrorHandler} with additional
+ * behavior. Implementations can wrap error handlers to add pre-processing, post-processing, or
+ * conditional logic around error handling. The decorator receives the delegate error handler and
+ * can decide whether and when to invoke it.
  */
-interface DecoratingServerErrorHandlerFunction {
+interface DecoratingErrorHandlerFunction {
     @Nullable
     HttpResponse onServiceException(ServerErrorHandler delegate, ServiceRequestContext ctx, Throwable cause);
+
+    @Nullable
+    HttpResponse onServiceException(ServiceErrorHandler delegate, ServiceRequestContext ctx, Throwable cause);
 }
