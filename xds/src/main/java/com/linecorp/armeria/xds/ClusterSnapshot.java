@@ -125,7 +125,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .add("clusterXdsResource", clusterXdsResource)
                           .add("endpointSnapshot", endpointSnapshot)
                           .add("loadBalancer", loadBalancer)
-                          .add("tlsSnapshot", transportSocket)
+                          .add("transportSocket", transportSocket)
                           .add("transportSocketMatches", transportSocketMatches)
                           .toString();
     }

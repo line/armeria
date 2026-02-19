@@ -79,6 +79,9 @@ class ConfigSourceGrpcServiceTest {
                                   .addService(v3DiscoveryServer.getRouteDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getEndpointDiscoveryServiceImpl())
                                   .build());
+            sb.tlsSelfSigned();
+            sb.http(0);
+            sb.https(0);
             sb.decorator(AuthService.builder()
                                     .addBasicAuth((ctx, data) -> CompletableFuture
                                             .completedFuture(PASSWORD.equals(data.password())))
@@ -119,6 +122,29 @@ class ConfigSourceGrpcServiceTest {
                                                                                 server.httpUri()));
         final ConfigSource basicConfigSource = XdsTestResources.adsConfigSource();
         final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, basicConfigSource, bootstrap1);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            listenerRoot.addSnapshotWatcher(watcher);
+            final ListenerSnapshot listenerSnapshot = watcher.blockingChanged(ListenerSnapshot.class);
+
+            final Listener expectedListener =
+                    cache.getSnapshot(GROUP).listeners().resources().get(listenerName);
+            assertThat(listenerSnapshot.xdsResource().resource()).isEqualTo(expectedListener);
+        }
+    }
+
+    @Test
+    void testBootstrapClusterUsesTls() {
+        final String listenerName = "listener1";
+        final ApiConfigSource adsConfigSource =
+                apiConfigSource(BOOTSTRAP_CLUSTER_NAME, ApiType.AGGREGATED_GRPC, HEADER_VALUE);
+        final Cluster bootstrapCluster =
+                XdsTestResources.createTlsStaticCluster(
+                        BOOTSTRAP_CLUSTER_NAME, loadAssignment(BOOTSTRAP_CLUSTER_NAME, server.httpsUri()));
+        final ConfigSource basicConfigSource = XdsTestResources.adsConfigSource();
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, basicConfigSource,
+                                                               bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
             final TestResourceWatcher watcher = new TestResourceWatcher();

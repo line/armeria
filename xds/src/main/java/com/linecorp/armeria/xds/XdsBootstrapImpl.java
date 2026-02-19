@@ -19,12 +19,9 @@ package com.linecorp.armeria.xds;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
-import java.util.function.Consumer;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -44,16 +41,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final SnapshotWatcher<Object> defaultWatcher;
     private final DirectoryWatchService watchService;
 
-    @VisibleForTesting
-    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
-                     Consumer<GrpcClientBuilder> configClientCustomizer) {
-        this(bootstrap, eventLoop, XdsBootstrapBuilder.DEFAULT_METER_ID_PREFIX,
-             Flags.meterRegistry(), configClientCustomizer, XdsBootstrapBuilder.DEFAULT_SNAPSHOT_WATCHER);
-    }
-
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
-                     Consumer<GrpcClientBuilder> configClientCustomizer,
                      SnapshotWatcher<Object> defaultWatcher) {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
@@ -66,7 +55,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
-                bootstrap, eventLoop, configClientCustomizer, bootstrapClusters,
+                bootstrap, eventLoop, bootstrapClusters,
                 configSourceMapper, meterRegistry, meterIdPrefix);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,

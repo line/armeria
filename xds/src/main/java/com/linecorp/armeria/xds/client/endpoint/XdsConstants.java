@@ -20,6 +20,7 @@ final class XdsConstants {
 
     // https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets
     static final String SUBSET_LOAD_BALANCING_FILTER_NAME = "envoy.lb";
+    static final String TRANSPORT_SOCKET_MATCH_FILTER_NAME = "envoy.transport_socket_match";
 
     private XdsConstants() {}
 }

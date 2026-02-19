@@ -409,6 +409,7 @@ class ErrorHandlingTest {
             """;
 
     //language=yaml
+    //language=YAML
     private static final String routeYaml =
             """
               name: my-route
@@ -697,6 +698,7 @@ class ErrorHandlingTest {
         final File invalidCertFile = new File(tempDir, "invalid.pem");
         Files.writeString(invalidCertFile.toPath(), "this is not a valid certificate");
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: my-cert
@@ -743,6 +745,7 @@ class ErrorHandlingTest {
         final File invalidKeyFile = new File(tempDir, "invalid.key");
         Files.writeString(invalidKeyFile.toPath(), "this is not a valid private key");
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: my-cert
@@ -788,6 +791,7 @@ class ErrorHandlingTest {
     void sdsMissingCertificateFile(@TempDir File tempDir) throws Exception {
         final File missingFile = new File(tempDir, "nonexistent.pem");
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: my-cert
@@ -829,6 +833,7 @@ class ErrorHandlingTest {
 
     @Test
     void sdsMissingSecretName() throws Exception {
+        //language=YAML
         final String secretYaml =
                 """
                 name: wrong-cert-name
@@ -864,6 +869,7 @@ class ErrorHandlingTest {
                 assertThat(snapshotRef.get()).isNull();
             });
 
+            //language=YAML
             final String correctSecretYaml =
                     """
                     name: my-cert

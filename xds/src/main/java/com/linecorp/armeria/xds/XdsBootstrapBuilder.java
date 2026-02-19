@@ -125,6 +125,6 @@ public final class XdsBootstrapBuilder {
     public XdsBootstrap build() {
         final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
         return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
-                                    ignored -> {}, snapshotWatcher);
+                                    snapshotWatcher);
     }
 }

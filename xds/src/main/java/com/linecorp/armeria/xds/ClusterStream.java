@@ -86,29 +86,38 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
                                                               @Nullable ConfigSource configSource) {
         final TransportSocketStream transportSocket = new TransportSocketStream(
                 context, configSource, resource.resource().getTransportSocket());
-        final SnapshotStream<Optional<XdsLoadBalancer>> lbStream =
-                new EndpointSnapshotNode(resource, context, configSource)
-                        .switchMap(optEndpointSnapshot -> {
-                            if (!optEndpointSnapshot.isPresent()) {
-                                return SnapshotStream.empty();
-                            }
-                            final EndpointSnapshot endpointSnapshot = optEndpointSnapshot.get();
-                            if (context.clusterManager().hasLocalCluster() &&
-                                !resourceName.equals(context.clusterManager().localClusterName())) {
-                                return new LocalClusterStream(context.clusterManager())
-                                        .switchMap(localCluster -> {
-                                            return new LoadBalancerStream(resource, endpointSnapshot,
-                                                                          loadBalancerFactory, localCluster);
-                                        }).map(Optional::of);
-                            } else {
-                                return new LoadBalancerStream(resource, endpointSnapshot,
-                                                              loadBalancerFactory, Optional.empty())
-                                        .map(Optional::of);
-                            }
-                        });
         final List<TransportSocketMatch> matches = resource.resource().getTransportSocketMatchesList();
         final TransportSocketMatchesStream socketMatchesStream =
                 new TransportSocketMatchesStream(context, configSource, matches);
+        final SnapshotStream<Optional<EndpointSnapshot>> endpointSnapshotStream =
+                new EndpointSnapshotNode(resource, context, configSource);
+        final SnapshotStream<Optional<XdsLoadBalancer>> lbStream =
+                SnapshotStream.combineLatest(endpointSnapshotStream, transportSocket, socketMatchesStream,
+                                             LoadBalancerInput::new)
+                              .switchMap(input -> {
+                                  if (!input.endpointSnapshot.isPresent()) {
+                                      return SnapshotStream.just(Optional.empty());
+                                  }
+                                  final EndpointSnapshot endpointSnapshot = input.endpointSnapshot.get();
+                                  if (context.clusterManager().hasLocalCluster() &&
+                                      !resourceName.equals(context.clusterManager().localClusterName())) {
+                                      return new LocalClusterStream(context.clusterManager())
+                                              .switchMap(localCluster -> {
+                                                  return new LoadBalancerStream(
+                                                          resource, endpointSnapshot,
+                                                          input.transportSocket,
+                                                          input.transportSocketMatches,
+                                                          loadBalancerFactory, localCluster);
+                                              }).map(Optional::of);
+                                  } else {
+                                      return new LoadBalancerStream(
+                                              resource, endpointSnapshot,
+                                              input.transportSocket,
+                                              input.transportSocketMatches,
+                                              loadBalancerFactory, Optional.empty())
+                                              .map(Optional::of);
+                                  }
+                              });
         return SnapshotStream.combineLatest(
                 lbStream, transportSocket, socketMatchesStream,
                 (lb, socket, socketMatches) -> new ClusterSnapshot(resource, lb, socket, socketMatches));
@@ -160,27 +169,49 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         }
     }
 
+    private static final class LoadBalancerInput {
+
+        private final Optional<EndpointSnapshot> endpointSnapshot;
+        private final TransportSocketSnapshot transportSocket;
+        private final List<TransportSocketMatchSnapshot> transportSocketMatches;
+
+        LoadBalancerInput(Optional<EndpointSnapshot> endpointSnapshot,
+                          TransportSocketSnapshot transportSocket,
+                          List<TransportSocketMatchSnapshot> transportSocketMatches) {
+            this.endpointSnapshot = endpointSnapshot;
+            this.transportSocket = transportSocket;
+            this.transportSocketMatches = transportSocketMatches;
+        }
+    }
+
     private static class LoadBalancerStream extends RefCountedStream<XdsLoadBalancer> {
 
         private final ClusterXdsResource clusterXdsResource;
         private final EndpointSnapshot endpointSnapshot;
+        private final TransportSocketSnapshot transportSocket;
+        private final List<TransportSocketMatchSnapshot> transportSocketMatches;
         private final XdsLoadBalancerFactory loadBalancerFactory;
         @Nullable
         private final XdsLoadBalancer localLoadBalancer;
 
         LoadBalancerStream(ClusterXdsResource clusterXdsResource,
                            EndpointSnapshot endpointSnapshot,
+                           TransportSocketSnapshot transportSocket,
+                           List<TransportSocketMatchSnapshot> transportSocketMatches,
                            XdsLoadBalancerFactory loadBalancerFactory,
                            Optional<ClusterSnapshot> localSnapshot) {
             this.clusterXdsResource = clusterXdsResource;
             this.endpointSnapshot = endpointSnapshot;
+            this.transportSocket = transportSocket;
+            this.transportSocketMatches = transportSocketMatches;
             this.loadBalancerFactory = loadBalancerFactory;
             localLoadBalancer = localSnapshot.isPresent() ? localSnapshot.get().loadBalancer() : null;
         }
 
         @Override
         protected Subscription onStart(SnapshotWatcher<XdsLoadBalancer> watcher) {
-            loadBalancerFactory.register(clusterXdsResource, endpointSnapshot, watcher,
+            loadBalancerFactory.register(clusterXdsResource, endpointSnapshot,
+                                         transportSocket, transportSocketMatches, watcher,
                                          localLoadBalancer);
             return Subscription.noop();
         }

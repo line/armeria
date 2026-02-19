@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -50,5 +53,30 @@ public final class TlsCertificateSnapshot implements Snapshot<TlsCertificate> {
     @Override
     public TlsCertificate xdsResource() {
         return resource;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final TlsCertificateSnapshot that = (TlsCertificateSnapshot) object;
+        return Objects.equal(resource, that.resource);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(resource);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("resource", resource)
+                          .toString();
     }
 }

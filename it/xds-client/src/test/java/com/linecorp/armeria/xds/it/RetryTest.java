@@ -151,6 +151,7 @@ class RetryTest {
                              }
                              """, ResponseHeaders.of(422), 2),
                 // RETRY_ON_RETRIABLE_HEADERS
+                //language=YAML
                 Arguments.of("""
                              {
                                retry_on: "retriable-headers",
@@ -474,6 +475,7 @@ class RetryTest {
     public static Stream<Arguments> rateLimitedBackoff_args() {
         return Stream.of(
                 // Test rate limited backoff with retry-after header in seconds
+                //language=YAML
                 Arguments.of("""
                               {
                                 retry_on: "5xx",
@@ -489,6 +491,7 @@ class RetryTest {
                               """,
                              ResponseHeaders.builder(500).add("retry-after", "1").build(), 1000L, 1000L),
                 // Test rate limited backoff exceeding max_interval (should skip)
+                //language=YAML
                 Arguments.of("""
                              {
                                retry_on: "5xx",
@@ -677,6 +680,7 @@ class RetryTest {
     public static Stream<Arguments> retriableRequestHeaders_args() {
         return Stream.of(
                 // Test retriable_request_headers matching (should retry)
+                //language=YAML
                 Arguments.of("""
                              {
                                num_retries: 2,
@@ -693,6 +697,7 @@ class RetryTest {
                                            .add("x-envoy-retry-on", "5xx")
                                            .add("x-envoy-max-retries", "2").build(), 2),
                 // Test retriable_request_headers not matching (should not retry even with retry header)
+                //language=YAML
                 Arguments.of("""
                              {
                                num_retries: 2,
@@ -709,6 +714,7 @@ class RetryTest {
                                            .add("x-envoy-retry-on", "5xx")
                                            .add("x-envoy-max-retries", "2").build(), 0),
                 // Test retriable_request_headers missing header (should not retry)
+                //language=YAML
                 Arguments.of("""
                              {
                                num_retries: 2,
@@ -724,6 +730,7 @@ class RetryTest {
                                            .add("x-envoy-retry-on", "5xx")
                                            .add("x-envoy-max-retries", "2").build(), 0),
                 // Test multiple retriable_request_headers (OR condition)
+                //language=YAML
                 Arguments.of("""
                              {
                                num_retries: 2,

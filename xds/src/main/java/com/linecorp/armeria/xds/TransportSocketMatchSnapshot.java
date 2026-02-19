@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.TransportSocketMatch;
 
 /**
@@ -23,6 +28,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster.TransportSocketMatch;
  * {@link TransportSocketSnapshot}. This allows conditional transport socket selection
  * based on endpoint metadata matching.
  */
+@UnstableApi
 public final class TransportSocketMatchSnapshot implements Snapshot<TransportSocketMatch> {
 
     private final TransportSocketMatch transportSocketMatch;
@@ -44,5 +50,31 @@ public final class TransportSocketMatchSnapshot implements Snapshot<TransportSoc
      */
     public TransportSocketSnapshot transportSocket() {
         return transportSocketSnapshot;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final TransportSocketMatchSnapshot that = (TransportSocketMatchSnapshot) object;
+        return Objects.equal(transportSocketMatch, that.transportSocketMatch) &&
+               Objects.equal(transportSocketSnapshot, that.transportSocketSnapshot);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(transportSocketMatch, transportSocketSnapshot);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("transportSocketMatch", transportSocketMatch)
+                          .add("transportSocketSnapshot", transportSocketSnapshot)
+                          .toString();
     }
 }
