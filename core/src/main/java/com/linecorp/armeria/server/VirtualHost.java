@@ -84,6 +84,12 @@ public final class VirtualHost {
     private final String hostnamePattern;
     private final int port;
     @Nullable
+    private final ServerPort serverPort;
+    @Nullable
+    private volatile String cachedDefaultHostname;
+    @Nullable
+    private volatile String cachedHostnamePattern;
+    @Nullable
     private final SslContext sslContext;
     @Nullable
     private final TlsProvider tlsProvider;
@@ -112,6 +118,7 @@ public final class VirtualHost {
     private final Function<RoutingContext, RequestId> requestIdGenerator;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
+                @Nullable ServerPort serverPort,
                 @Nullable SslContext sslContext,
                 @Nullable TlsProvider tlsProvider,
                 @Nullable TlsEngineType tlsEngineType,
@@ -142,6 +149,7 @@ public final class VirtualHost {
             this.hostnamePattern = hostnamePattern;
         }
         this.port = port;
+        this.serverPort = serverPort;
         this.sslContext = sslContext;
         this.tlsProvider = tlsProvider;
         this.tlsEngineType = tlsEngineType;
@@ -182,7 +190,8 @@ public final class VirtualHost {
             ReferenceCountUtil.release(sslContext);
             throw new IllegalStateException("Cannot set a new SslContext when TlsProvider is set.");
         }
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, null,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, serverPort,
+                               sslContext, null,
                                tlsEngineType, serviceConfigs, fallbackServiceConfig,
                                RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
                                defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
@@ -309,9 +318,21 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns the default hostname of this virtual host.
+     * Returns the name of the default host.
      */
     public String defaultHostname() {
+        if (serverPort != null) {
+            String cached = cachedDefaultHostname;
+            if (cached != null) {
+                return cached;
+            }
+            final int actualPort = serverPort.actualPort();
+            if (actualPort > 0) {
+                cached = originalDefaultHostname + ':' + actualPort;
+                cachedDefaultHostname = cached;
+                return cached;
+            }
+        }
         return defaultHostname;
     }
 
@@ -320,6 +341,18 @@ public final class VirtualHost {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
+        if (serverPort != null) {
+            String cached = cachedHostnamePattern;
+            if (cached != null) {
+                return cached;
+            }
+            final int actualPort = serverPort.actualPort();
+            if (actualPort > 0) {
+                cached = originalHostnamePattern + ':' + actualPort;
+                cachedHostnamePattern = cached;
+                return cached;
+            }
+        }
         return hostnamePattern;
     }
 
@@ -329,6 +362,15 @@ public final class VirtualHost {
      */
     public int port() {
         return port;
+    }
+
+    /**
+     * Returns the {@link ServerPort} that this virtual host is bound to,
+     * or {@code null} if this virtual host is not based on a {@link ServerPort}.
+     */
+    @Nullable
+    ServerPort serverPort() {
+        return serverPort;
     }
 
     /**
@@ -602,7 +644,8 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, serverPort,
+                               sslContext, tlsProvider,
                                tlsEngineType, serviceConfigs, fallbackServiceConfig,
                                RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
                                defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
