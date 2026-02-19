@@ -20,6 +20,9 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
@@ -40,6 +43,9 @@ import io.envoyproxy.envoy.config.core.v3.TransportSocket;
  */
 @UnstableApi
 public final class TransportSocketSnapshot implements Snapshot<TransportSocket> {
+
+    private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
+    private static boolean warnedNoVerify;
 
     private final TransportSocket transportSocket;
     @Nullable
@@ -102,18 +108,24 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         if (validationContext != null) {
             final boolean systemRootCerts = validationContext.xdsResource().hasSystemRootCerts();
             final List<X509Certificate> trustedCa = validationContext.trustedCa();
+            // set the trusted CA certificates
             if (trustedCa != null) {
                 specBuilder.trustedCertificates(trustedCa);
             } else if (systemRootCerts) {
-                // use java default
+                // use java default root CAs
             } else {
+                warnNoVerifyOnce();
                 verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
             }
+
+            // set peer verification rules - these are applied before trusted CA verification
+            // so that checks are run regardless of CA configuration
             final List<TlsPeerVerifierFactory> verifierFactories = validationContext.peerVerifierFactories();
             if (!verifierFactories.isEmpty()) {
                 verifiersBuilder.addAll(verifierFactories);
             }
         } else {
+            // don't verify ca certs if no validation context is configured
             verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
         }
         if (tlsCertificate != null) {
@@ -127,6 +139,15 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
             specBuilder.verifierFactories(verifierFactories);
         }
         return specBuilder.build();
+    }
+
+    private static void warnNoVerifyOnce() {
+        if (!warnedNoVerify) {
+            warnedNoVerify = true;
+            logger.warn("TLS peer verification is disabled because validation context has no trusted CA " +
+                        "and system_root_certs is unset. Set system_root_certs: \\{} to use the " +
+                        "default Java TLS roots.");
+        }
     }
 
     @Override

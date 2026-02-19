@@ -101,6 +101,16 @@ final class SanMatcher {
         return null;
     }
 
+    /**
+     * Implements Envoy's DNS+exact matching rule.
+     *
+     * <p>When {@code san_type} is DNS and the matcher is {@code exact}, Envoy evaluates DNS
+     * wildcards according to RFC 6125 section 6.4.3 instead of requiring literal equality.
+     * This enables a SAN like {@code *.example.com} to match a concrete host like
+     * {@code api.example.com}.
+     * @see <a href="https://github.com/envoyproxy/envoy/blob/d568d57938c13d36f46405290d6a2a5e2ceed710/api/envoy/extensions/transport_sockets/tls/v3/common.proto#L346-L353">Envoy Documentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6125#section-6.4.3">RFC 6125</a>
+     */
     private static boolean dnsExactMatchWithWildcard(String sanValue, String expected,
                                                      boolean ignoreCase) {
         String san = sanValue;

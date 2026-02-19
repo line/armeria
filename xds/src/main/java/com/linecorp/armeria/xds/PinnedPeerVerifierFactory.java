@@ -52,7 +52,7 @@ final class PinnedPeerVerifierFactory implements TlsPeerVerifierFactory {
     }
 
     private void verifyPins(X509Certificate[] chain, SSLEngine engine) throws CertificateException {
-        if (chain == null || chain.length == 0) {
+        if (chain.length == 0) {
             throw new CertificateException("No peer certificates presented.");
         }
         if (spkiPins.isEmpty() && certHashPins.isEmpty()) {
@@ -64,7 +64,7 @@ final class PinnedPeerVerifierFactory implements TlsPeerVerifierFactory {
         if (spkiMatched || certMatched) {
             return;
         }
-        throw new CertificateException("Certificate pinning failed.");
+        throw new CertificateException("Certificate pin check failed.");
     }
 
     private boolean matchesSpki(X509Certificate cert) throws CertificateException {

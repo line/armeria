@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.primitives.Ints;
 import com.google.protobuf.Duration;
 import com.google.protobuf.UInt32Value;
@@ -91,7 +93,8 @@ public final class XdsCommonUtil {
     public static void setTlsParams(PreClientRequestContext ctx, Endpoint endpoint) {
         final TransportSocketSnapshot transportSocket =
                 endpoint.attr(TRANSPORT_SOCKET_SNAPSHOT_KEY);
-        assert transportSocket != null;
+        checkArgument(transportSocket != null,
+                      "TransportSocket not set for selected endpoint: %s", endpoint);
         final ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
         if (clientTlsSpec == null) {
             ctx.setSessionProtocol(SessionProtocol.HTTP);
