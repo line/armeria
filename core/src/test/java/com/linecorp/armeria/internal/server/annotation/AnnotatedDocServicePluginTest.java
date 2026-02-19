@@ -18,13 +18,13 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.LONG;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.VOID;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfo;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.newDescriptiveTypeInfo;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.toTypeSignature;
 import static com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest.REQUEST_STRUCT_INFO_PROVIDER;
+import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.LONG;
+import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.STRING;
+import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.VOID;
+import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.toTypeSignature;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;

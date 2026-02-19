@@ -15,26 +15,18 @@
  */
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
@@ -44,76 +36,221 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
  */
 final class JsonSchemaGenerator {
 
-    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaGenerator.class);
-
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    private static final List<FieldLocation> VALID_FIELD_LOCATIONS = ImmutableList.of(
-            FieldLocation.BODY,
-            FieldLocation.UNSPECIFIED);
-
-    private static final List<String> MEMORIZED_JSON_TYPES = ImmutableList.of("array", "object");
-
-    /**
-     * Generate an array of json schema specifications for each method inside the service.
-     *
-     * @param serviceSpecification the service specification to generate the json schema from.
-     *
-     * @return ArrayNode that contains service specifications
-     */
-    static ArrayNode generate(ServiceSpecification serviceSpecification) {
-        // TODO: Test for Thrift and annotated services
-        final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification);
-        return generator.generate();
-    }
-
-    private final Set<ServiceInfo> serviceInfos;
-    private final Map<String, StructInfo> typeSignatureToStructMapping;
-    private final Map<String, EnumInfo> typeNameToEnumMapping;
+    private final ServiceSpecification serviceSpecification;
+    private final Map<String, DiscriminatorInfo> polymorphismToBase;
     private final Map<String, DescriptionInfo> docStrings;
 
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
-        serviceInfos = serviceSpecification.services();
+        this.serviceSpecification = requireNonNull(serviceSpecification, "serviceSpecification");
         docStrings = serviceSpecification.docStrings();
-        final ImmutableMap.Builder<String, StructInfo> typeSignatureToStructMappingBuilder =
-                ImmutableMap.builderWithExpectedSize(serviceSpecification.structs().size());
-        for (StructInfo struct : serviceSpecification.structs()) {
-            typeSignatureToStructMappingBuilder.put(struct.name(), struct);
-            if (struct.alias() != null && !struct.alias().equals(struct.name())) {
-                // TypeSignature.signature() could be StructInfo.alias() if the type is a protobuf Message.
-                typeSignatureToStructMappingBuilder.put(struct.alias(), struct);
+
+        // Pre-compute mappings from subtype to its base type's DiscriminatorInfo
+        final Map<String, String> nameToAlias = new HashMap<>();
+        for (final StructInfo struct : serviceSpecification.structs()) {
+            if (struct.alias() != null) {
+                nameToAlias.put(struct.name(), struct.alias());
             }
         }
-        typeSignatureToStructMapping = typeSignatureToStructMappingBuilder.build();
-        typeNameToEnumMapping = serviceSpecification.enums().stream().collect(
-                toImmutableMap(EnumInfo::name, Function.identity()));
+
+        polymorphismToBase = new HashMap<>();
+        for (final StructInfo struct : serviceSpecification.structs()) {
+            final DiscriminatorInfo discriminator = struct.discriminator();
+            if (discriminator != null) {
+                struct.oneOf().forEach(sub -> {
+                    polymorphismToBase.putIfAbsent(sub.name(), discriminator);
+                    final String alias = nameToAlias.get(sub.name());
+                    if (alias != null) {
+                        polymorphismToBase.putIfAbsent(alias, discriminator);
+                    }
+                });
+            }
+        }
     }
 
-    private ArrayNode generate() {
-        final ArrayNode definitions = mapper.createArrayNode();
-
-        final Set<ObjectNode> methodDefinitions =
-                serviceInfos.stream()
-                            .flatMap(serviceInfo -> serviceInfo.methods().stream()
-                                    .map(methodInfo -> generate(serviceInfo.name(), methodInfo)))
-                            .collect(toImmutableSet());
-
-        return definitions.addAll(methodDefinitions);
+    // Public static entry point
+    static ObjectNode generate(ServiceSpecification serviceSpecification) {
+        return new JsonSchemaGenerator(serviceSpecification).doGenerate();
     }
 
-    /**
-     * Generate the JSON Schema for the given {@link MethodInfo}.
-     *
-     * @param serviceName the name of the service containing the method.
-     * @param methodInfo the method to generate the JSON Schema for.
-     *
-     * @return ObjectNode containing the JSON schema for the parameter type.
-     */
-    private ObjectNode generate(String serviceName, MethodInfo methodInfo) {
+    private static String getSchemaType(TypeSignature typeSignature) {
+        switch (typeSignature.type()) {
+            case ENUM:
+                return "string";
+            case ITERABLE:
+                return "array";
+            case MAP:
+            case STRUCT:
+                return "object";
+            case OPTIONAL:
+            case CONTAINER: {
+                final TypeSignature inner = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+                return getSchemaType(inner);
+            }
+            default:
+                break;
+        }
+
+        switch (typeSignature.name().toLowerCase(Locale.ROOT)) {
+            case "boolean":
+            case "bool":
+                return "boolean";
+            case "short":
+            case "float":
+            case "double":
+                return "number";
+            case "i8":
+            case "i16":
+            case "i32":
+            case "i64":
+            case "integer":
+            case "int":
+            case "long":
+            case "int32":
+            case "int64":
+            case "uint32":
+            case "uint64":
+            case "sint32":
+            case "sint64":
+            case "fixed32":
+            case "fixed64":
+            case "sfixed32":
+            case "sfixed64":
+                return "integer";
+            case "binary":
+            case "byte":
+            case "bytes":
+            case "string":
+                return "string";
+            default:
+                return "object";
+        }
+    }
+
+    private static ObjectNode generateEnumDefinition(EnumInfo enumInfo) {
+        final ObjectNode schemaNode = mapper.createObjectNode();
+        schemaNode.put("type", "string");
+        final String docString = enumInfo.descriptionInfo().docString();
+        if (!docString.isEmpty()) {
+            schemaNode.put("description", docString);
+        }
+        final ArrayNode enumValues = mapper.createArrayNode();
+        enumInfo.values().forEach(value -> enumValues.add(value.name()));
+        schemaNode.set("enum", enumValues);
+        return schemaNode;
+    }
+
+    private ObjectNode doGenerate() {
         final ObjectNode root = mapper.createObjectNode();
+        if (serviceSpecification.services().isEmpty()) {
+            throw new IllegalArgumentException("serviceSpecification must contain at least one service.");
+        }
+        final ServiceInfo representativeService = serviceSpecification.services().iterator().next();
+        // Use a representative service name for the title and ID for now.
+        final String serviceName = representativeService.name();
 
-        root.put("$id", methodInfo.id())
-            .put("title", methodInfo.name());
+        root.put("$schema", "https://json-schema.org/draft/2020-12/schema");
+        root.put("$id", serviceName);
+        root.put("title", serviceName);
+
+        final ObjectNode defs = root.putObject("$defs");
+        defs.set("models", generateModels());
+        defs.set("methods", generateMethods());
+
+        return root;
+    }
+
+    private ObjectNode generateModels() {
+        final ObjectNode modelsNode = mapper.createObjectNode();
+        for (final StructInfo structInfo : serviceSpecification.structs()) {
+            modelsNode.set(structInfo.name(), generateStructDefinition(structInfo));
+        }
+        for (final EnumInfo enumInfo : serviceSpecification.enums()) {
+            modelsNode.set(enumInfo.name(), generateEnumDefinition(enumInfo));
+        }
+        return modelsNode;
+    }
+
+    private ObjectNode generateMethods() {
+        final ObjectNode methodsNode = mapper.createObjectNode();
+        for (final ServiceInfo svc : serviceSpecification.services()) {
+            for (final MethodInfo m : svc.methods()) {
+                // To avoid potential name collision, we can use a more unique key like
+                // method id.
+                methodsNode.set(m.name(), generateMethodSchema(svc.name(), m));
+            }
+        }
+        return methodsNode;
+    }
+
+    private ObjectNode generateStructDefinition(StructInfo structInfo) {
+        final ObjectNode schemaNode = mapper.createObjectNode();
+        schemaNode.put("type", "object");
+        schemaNode.put("title", structInfo.name());
+        final String docString = structInfo.descriptionInfo().docString();
+        if (!docString.isEmpty()) {
+            schemaNode.put("description", docString);
+        }
+
+        final List<TypeSignature> oneOf = structInfo.oneOf();
+        if (!oneOf.isEmpty()) {
+            final ArrayNode oneOfNode = schemaNode.putArray("oneOf");
+            oneOf.forEach(sub -> {
+                final ObjectNode ref = mapper.createObjectNode();
+                ref.put("$ref", "#/$defs/models/" + sub.name());
+                oneOfNode.add(ref);
+            });
+
+            final DiscriminatorInfo discriminator = structInfo.discriminator();
+            if (discriminator != null) {
+                final ObjectNode disc = schemaNode.putObject("discriminator");
+                disc.put("propertyName", discriminator.propertyName());
+                if (!discriminator.mapping().isEmpty()) {
+                    final ObjectNode mapping = disc.putObject("mapping");
+                    // Update mapping paths
+                    discriminator.mapping().forEach(mapping::put);
+                }
+            }
+            return schemaNode;
+        }
+
+        final ObjectNode props = mapper.createObjectNode();
+
+        // Check if this struct is a subtype and add the discriminator property
+        final DiscriminatorInfo discriminatorInfo = polymorphismToBase.get(structInfo.name());
+        if (discriminatorInfo != null) {
+            final ObjectNode propertySchema = props.putObject(discriminatorInfo.propertyName());
+            propertySchema.put("type", "string");
+        }
+
+        final List<String> requiredFields = new ArrayList<>();
+        for (final FieldInfo field : structInfo.fields()) {
+            props.set(field.name(), generateFieldSchema(field));
+            if (field.requirement() == FieldRequirement.REQUIRED) {
+                requiredFields.add(field.name());
+            }
+        }
+        if (!props.isEmpty()) {
+            schemaNode.set("properties", props);
+        }
+
+        if (discriminatorInfo != null) {
+            requiredFields.add(discriminatorInfo.propertyName());
+        }
+
+        if (!requiredFields.isEmpty()) {
+            final ArrayNode requiredNode = mapper.createArrayNode();
+            requiredFields.forEach(requiredNode::add);
+            schemaNode.set("required", requiredNode);
+        }
+        return schemaNode;
+    }
+
+    private ObjectNode generateMethodSchema(String serviceName, MethodInfo methodInfo) {
+        final ObjectNode root = mapper.createObjectNode();
+        root.put("$id", methodInfo.id());
+        root.put("title", methodInfo.name());
 
         // Add method description from docStrings if available
         final String methodDescKey = serviceName + '/' + methodInfo.name();
@@ -122,300 +259,84 @@ final class JsonSchemaGenerator {
             root.put("description", methodDesc.docString());
         }
 
-        root.put("additionalProperties", false)
-            // TODO: Assumes every method takes an object, which is only valid for RPC based services
-            //  and most of the REST services.
-            .put("type", "object");
+        root.put("additionalProperties", false);
+        root.put("type", "object");
 
-        final List<FieldInfo> methodFields;
-        final Map<TypeSignature, String> visited = new HashMap<>();
-        final String currentPath = "#";
+        final ObjectNode propertiesNode = mapper.createObjectNode();
+        final ArrayNode requiredNode = mapper.createArrayNode();
 
-        if (methodInfo.useParameterAsRoot()) {
-            final TypeSignature signature = methodInfo.parameters().get(0)
-                                                      .typeSignature();
-            final StructInfo structInfo = typeSignatureToStructMapping.get(signature.signature());
-            if (structInfo == null) {
-                logger.debug("Could not find root parameter with signature: {}", signature);
-                root.put("additionalProperties", true);
-                methodFields = ImmutableList.of();
-            } else {
-                methodFields = structInfo.fields();
-            }
-            visited.put(signature, currentPath);
-        } else {
+        for (final ParamInfo paramInfo : methodInfo.parameters()) {
             // Convert ParamInfo to FieldInfo for schema generation
             // Look up parameter descriptions from docStrings
-            methodFields = methodInfo.parameters().stream()
-                    .map(p -> {
-                        final String paramDescKey = serviceName + '/' +
-                                                    methodInfo.name() + ":param/" + p.name();
-                        final DescriptionInfo paramDesc = docStrings.get(paramDescKey);
-                        return FieldInfo.builder(p.name(), p.typeSignature())
-                                .location(p.location())
-                                .requirement(p.requirement())
-                                .descriptionInfo(paramDesc != null ? paramDesc : DescriptionInfo.empty())
-                                .build();
-                    })
-                    .collect(ImmutableList.toImmutableList());
+            final String paramDescKey = serviceName + '/' + methodInfo.name() + ":param/" + paramInfo.name();
+            final DescriptionInfo paramDesc = docStrings.get(paramDescKey);
+            final FieldInfo field = FieldInfo.builder(paramInfo.name(), paramInfo.typeSignature())
+                                             .location(paramInfo.location())
+                                             .requirement(paramInfo.requirement())
+                                             .descriptionInfo(
+                                                     paramDesc != null ? paramDesc : DescriptionInfo.empty())
+                                             .build();
+            final FieldLocation loc = field.location();
+            if (loc == FieldLocation.BODY || loc == FieldLocation.UNSPECIFIED) {
+                propertiesNode.set(field.name(), generateFieldSchema(field));
+                if (field.requirement() == FieldRequirement.REQUIRED) {
+                    requiredNode.add(field.name());
+                }
+            }
         }
 
-        generateProperties(methodFields, visited, currentPath, root);
+        if (!propertiesNode.isEmpty()) {
+            root.set("properties", propertiesNode);
+        }
+        if (!requiredNode.isEmpty()) {
+            root.set("required", requiredNode);
+        }
+
         return root;
     }
 
-    /**
-     * Generate the JSON Schema for the given {@link FieldInfo} and add it to the given {@link ObjectNode}
-     * and add required fields to the {@link ArrayNode}.
-     *
-     * @param field field to generate schema for
-     * @param visited map of visited types and their paths
-     * @param path current path in tree traversal of fields
-     * @param parent the parent to add schema properties
-     * @param required the array node to add required field names, if parent doesn't support, it is null.
-     */
-    private void generateField(FieldInfo field, Map<TypeSignature, String> visited, String path,
-                               ObjectNode parent,
-                               @Nullable ArrayNode required) {
+    private ObjectNode generateFieldSchema(FieldInfo field) {
         final ObjectNode fieldNode = mapper.createObjectNode();
-        final TypeSignature fieldTypeSignature = field.typeSignature();
-
-        fieldNode.put("description", field.descriptionInfo().docString());
-
-        // Fill required fields for the current object.
-        if (required != null && field.requirement() == FieldRequirement.REQUIRED) {
-            required.add(field.name());
+        final TypeSignature typeSignature = field.typeSignature();
+        final String docString = field.descriptionInfo().docString();
+        if (!docString.isEmpty()) {
+            fieldNode.put("description", docString);
         }
 
-        if (visited.containsKey(fieldTypeSignature)) {
-            // If field is already visited, add a reference to the field instead of iterating its children.
-            final String pathName = visited.get(fieldTypeSignature);
-            fieldNode.put("$ref", pathName);
-        } else {
-            final String schemaType = getSchemaType(field.typeSignature());
+        if (typeSignature.type() == TypeSignatureType.STRUCT ||
+            typeSignature.type() == TypeSignatureType.ENUM) {
+            fieldNode.put("$ref", "#/$defs/models/" + typeSignature.name());
+            return fieldNode;
+        }
 
-            // Field is not visited, create a new type definition for it.
-            fieldNode.put("type", schemaType);
-
-            if (field.typeSignature().type() == TypeSignatureType.ENUM) {
-                fieldNode.set("enum", getEnumType(field.typeSignature()));
+        if (typeSignature.type() == TypeSignatureType.OPTIONAL ||
+            typeSignature.type() == TypeSignatureType.CONTAINER) {
+            final TypeSignature inner = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+            final ObjectNode innerNode = generateFieldSchema(FieldInfo.of("", inner));
+            if (!docString.isEmpty()) {
+                innerNode.put("description", docString);
             }
+            return innerNode;
+        }
 
-            final String currentPath;
-            if (field.name().isEmpty()) {
-                currentPath = path;
-            } else {
-                currentPath = path + '/' + field.name();
+        final String schemaType = getSchemaType(typeSignature);
+        fieldNode.put("type", schemaType);
+
+        switch (typeSignature.type()) {
+            case ITERABLE: {
+                final TypeSignature itemType = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+                fieldNode.set("items", generateFieldSchema(FieldInfo.of("", itemType)));
+                break;
             }
-
-            // Only Struct types map to custom objects to we need reference to those structs.
-            // Having references to primitives do not make sense.
-            if (MEMORIZED_JSON_TYPES.contains(schemaType)) {
-                visited.put(fieldTypeSignature, currentPath);
+            case MAP: {
+                final TypeSignature valueType = ((MapTypeSignature) typeSignature).valueTypeSignature();
+                fieldNode.set("additionalProperties",
+                              generateFieldSchema(FieldInfo.of("", valueType)));
+                break;
             }
-
-            // Based on field type, we need to call the appropriate method to generate the schema.
-            // For example maps have `additionalProperties` field, arrays have `items` field and structs
-            // have `properties` field.
-            if (field.typeSignature().type() == TypeSignatureType.MAP) {
-                generateMapFields(fieldNode, field, visited, currentPath);
-            } else if (field.typeSignature().type() == TypeSignatureType.ITERABLE) {
-                generateArrayFields(fieldNode, field, visited, currentPath);
-            } else if ("object".equals(schemaType)) {
-                generateStructFields(fieldNode, field, visited, currentPath);
-            }
+            default:
+                break;
         }
-
-        // Set current field inside the returned object.
-        // If field is nameless, unpack it.
-        // Example:
-        // For `list<int> x` we should have `{"x": {"items": {"type": "integer"}}}`
-        // Not `{"x": {"items": {"": {"type": "integer"}}}}`
-        if (field.name().isEmpty()) {
-            parent.setAll(fieldNode);
-        } else {
-            parent.set(field.name(), fieldNode);
-        }
-    }
-
-    /**
-     * Generate properties for the given fields and writes to the object node.
-     *
-     * @param fields list of fields that the child has.
-     * @param visited a map of visited fields, required for cycle detection.
-     * @param path current path as defined in JSON Schema spec, required for cyclic references.
-     * @param parent object node that the results will be written to.
-     */
-    private void generateProperties(List<FieldInfo> fields, Map<TypeSignature, String> visited, String path,
-                                    ObjectNode parent) {
-        final ObjectNode objectNode = mapper.createObjectNode();
-        final ArrayNode required = mapper.createArrayNode();
-
-        for (FieldInfo field : fields) {
-            if (VALID_FIELD_LOCATIONS.contains(field.location())) {
-                generateField(field, visited, path + "/properties", objectNode, required);
-            }
-        }
-
-        parent.set("properties", objectNode);
-        parent.set("required", required);
-    }
-
-    /**
-     * Create the JSON node for a map field.
-     * Example for `map(string, int)`: {"type": "object", "additionalProperties": {"type": "integer"}}
-     *
-     * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#additional-properties">JSON Schema</a>
-     */
-    private void generateMapFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
-                                   String path) {
-        final ObjectNode additionalProperties = mapper.createObjectNode();
-
-        // Keys are always converted to strings.
-        final TypeSignature valueType = ((MapTypeSignature) field.typeSignature()).valueTypeSignature();
-        // Create a field info with no name. Field infos with no name are considered to be unpacked.
-        final FieldInfo valueFieldInfo = FieldInfo.builder("", valueType)
-                                                  .location(FieldLocation.BODY)
-                                                  .requirement(FieldRequirement.OPTIONAL)
-                                                  .build();
-
-        // Recursively generate the field.
-        generateField(valueFieldInfo, visited, path + "/additionalProperties", additionalProperties, null);
-
-        fieldNode.set("additionalProperties", additionalProperties);
-    }
-
-    /**
-     * Create the JSON node for an array field.
-     * Example for `list(int)`: {"type": "array", "items": {"type": "integer"}}
-     *
-     * @see <a href="https://json-schema.org/understanding-json-schema/reference/array.html">JSON Schema</a>
-     */
-    private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
-                                     String path) {
-        final ObjectNode items = mapper.createObjectNode();
-
-        final TypeSignature itemsType =
-                ((ContainerTypeSignature) field.typeSignature()).typeParameters().get(0);
-        // Create a field info with no name. Field infos with no name are considered to be unpacked.
-        final FieldInfo itemFieldInfo = FieldInfo.builder("", itemsType)
-                                                 .location(FieldLocation.BODY)
-                                                 .requirement(FieldRequirement.OPTIONAL)
-                                                 .build();
-
-        generateField(itemFieldInfo, visited, path + "/items", items, null);
-
-        fieldNode.set("items", items);
-    }
-
-    /**
-     * Create the JSON node for a struct (object) field. Most custom classes are serialized as structs.
-     * Example for `Foo(Integer x)`: {"type": "object", "properties": {"x": {"type": "integer"}}}
-     *
-     * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#properties">JSON Schema</a>
-     */
-    private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
-                                      String path) {
-
-        final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());
-        fieldNode.put("additionalProperties", fieldStructInfo == null);
-
-        if (fieldStructInfo == null) {
-            logger.debug("Could not find struct with signature: {}",
-                         field.typeSignature().signature());
-        }
-
-        // Iterate over each child field, generate their definitions.
-        if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
-            generateProperties(fieldStructInfo.fields(), visited, path, fieldNode);
-        }
-    }
-
-    /**
-     * Get the JSON type for the given enum type.
-     * Example: `enum Foo { BAR, BAZ }`: {"type": "string", "enum": ["BAR", "BAZ"]}
-     */
-    private ArrayNode getEnumType(TypeSignature type) {
-        final ArrayNode enumArray = mapper.createArrayNode();
-        final EnumInfo enumInfo = typeNameToEnumMapping.get(type.signature());
-
-        if (enumInfo != null) {
-            enumInfo.values().forEach(x -> enumArray.add(x.name()));
-        }
-
-        return enumArray;
-    }
-
-    /**
-     * Get the JSON type for the given type. Unknown types are returned as `object`.
-     * This list can be extended to support more types.
-     *
-     * @see <a href="https://json-schema.org/understanding-json-schema/reference/type.html">JSON Schema</a>
-     */
-    private static String getSchemaType(TypeSignature typeSignature) {
-        if (typeSignature.type() == TypeSignatureType.ENUM) {
-            return "string";
-        }
-
-        if (typeSignature.type() == TypeSignatureType.ITERABLE) {
-            switch (typeSignature.name().toLowerCase()) {
-                case "repeated":
-                case "list":
-                case "array":
-                case "set":
-                    return "array";
-                default:
-                    return "object";
-            }
-        }
-
-        if (typeSignature.type() == TypeSignatureType.MAP) {
-            return "object";
-        }
-
-        if (typeSignature.type() == TypeSignatureType.BASE) {
-            switch (typeSignature.name().toLowerCase()) {
-                case "boolean":
-                case "bool":
-                    return "boolean";
-                case "short":
-                case "number":
-                case "float":
-                case "double":
-                    return "number";
-                case "i":
-                case "i8":
-                case "i16":
-                case "i32":
-                case "i64":
-                case "integer":
-                case "int":
-                case "l32":
-                case "l64":
-                case "long":
-                case "long32":
-                case "long64":
-                case "int32":
-                case "int64":
-                case "uint32":
-                case "uint64":
-                case "sint32":
-                case "sint64":
-                case "fixed32":
-                case "fixed64":
-                case "sfixed32":
-                case "sfixed64":
-                    return "integer";
-                case "binary":
-                case "byte":
-                case "bytes":
-                case "string":
-                    return "string";
-                default:
-                    return "object";
-            }
-        }
-
-        return "object";
+        return fieldNode;
     }
 }
