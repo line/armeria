@@ -231,7 +231,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
         if (listenableHealthChecker == null) {
             return ServingStatus.SERVICE_UNKNOWN;
         }
-        if (listenableHealthChecker.isHealthy()) {
+        if (listenableHealthChecker.healthStatus().isHealthy()) {
             return ServingStatus.SERVING;
         }
         return ServingStatus.NOT_SERVING;
@@ -247,7 +247,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
             serverHealthChecker.addListener(healthChecker -> {
                 updateListeners.forEach(updateListener -> {
                     try {
-                        updateListener.healthUpdated(healthChecker.isHealthy());
+                        updateListener.healthStatusUpdated(healthChecker.healthStatus());
                     } catch (Throwable t) {
                         logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
                     }
@@ -268,7 +268,7 @@ public final class GrpcHealthCheckService extends HealthImplBase {
 
     private boolean isServerHealthy() {
         for (HealthChecker healthChecker : serverHealthCheckers) {
-            if (!healthChecker.isHealthy()) {
+            if (!healthChecker.healthStatus().isHealthy()) {
                 return false;
             }
         }
