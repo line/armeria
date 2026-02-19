@@ -49,7 +49,7 @@
     "gray-matter": "^4.0.3",
     "jsdom": "^26.1.0",
     "jsonp": "^0.2.1",
-    "minimatch": "^10.1.1",
+    "minimatch": "^10.2.1",
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-awesome-reveal": "^4.3.1",
