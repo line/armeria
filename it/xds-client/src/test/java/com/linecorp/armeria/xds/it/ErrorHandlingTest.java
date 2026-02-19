@@ -20,13 +20,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -37,7 +42,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsResourceException;
@@ -51,6 +58,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
 import io.envoyproxy.pgv.ValidationException;
 
 class ErrorHandlingTest {
@@ -70,10 +78,14 @@ class ErrorHandlingTest {
                                   .addService(v3DiscoveryServer.getClusterDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getRouteDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getEndpointDiscoveryServiceImpl())
+                                  .addService(v3DiscoveryServer.getSecretDiscoveryServiceImpl())
                                   .build());
             sb.service("/hello", (ctx, req) -> HttpResponse.of("world"));
         }
     };
+
+    @RegisterExtension
+    static final SelfSignedCertificateExtension certificate = new SelfSignedCertificateExtension();
 
     //language=YAML
     private static final String listenerYaml =
@@ -611,6 +623,267 @@ class ErrorHandlingTest {
                                             .cause()
                                             .isInstanceOf(ValidationException.class)
                                             .hasMessageContaining(errorMsg);
+        }
+    }
+
+    //language=YAML
+    private static final String sdsBootstrapYaml =
+            """
+                dynamic_resources:
+                  ads_config:
+                    api_type: GRPC
+                    grpc_services:
+                      - envoy_grpc:
+                          cluster_name: bootstrap-cluster
+                static_resources:
+                  clusters:
+                    - name: bootstrap-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: bootstrap-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
+                              address:
+                                socket_address:
+                                  address: 127.0.0.1
+                                  port_value: %s
+                    - name: my-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: my-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
+                              address:
+                                socket_address:
+                                  address: 127.0.0.1
+                                  port_value: 8080
+                      transport_socket:
+                        name: envoy.transport_sockets.tls
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+            .tls.v3.UpstreamTlsContext
+                          common_tls_context:
+                            tls_certificate_sds_secret_configs:
+                              - name: my-cert
+                                sds_config:
+                                  ads: {}
+                  listeners:
+                    - name: my-listener
+                      api_listener:
+                        api_listener:
+                          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+            .v3.HttpConnectionManager
+                          stat_prefix: http
+                          route_config:
+                            name: local_route
+                            virtual_hosts:
+                            - name: local_service1
+                              domains: [ "*" ]
+                              routes:
+                                - match:
+                                    prefix: /
+                                  route:
+                                    cluster: my-cluster
+                          http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                """;
+
+    @Test
+    void sdsInvalidCertificateFile(@TempDir File tempDir) throws Exception {
+        final File invalidCertFile = new File(tempDir, "invalid.pem");
+        Files.writeString(invalidCertFile.toPath(), "this is not a valid certificate");
+
+        final String secretYaml =
+                """
+                name: my-cert
+                tls_certificate:
+                  private_key:
+                    filename: %s
+                  certificate_chain:
+                    filename: %s
+                """.formatted(certificate.privateKeyFile().toPath().toString(),
+                              invalidCertFile.getAbsolutePath());
+        final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        final String bootstrapStr = sdsBootstrapYaml.formatted(server.httpPort());
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        final var watcher = new SnapshotWatcher<>() {
+            @Override
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
+                if (t != null) {
+                    errorRef.set(t);
+                }
+            }
+        };
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .defaultSnapshotWatcher(watcher)
+                                                     .build()) {
+            xdsBootstrap.listenerRoot("my-listener");
+            await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
+            assertThat(errorRef.get()).isInstanceOf(XdsResourceException.class);
+            final XdsResourceException xdsResourceException = (XdsResourceException) errorRef.get();
+            assertThat(xdsResourceException.type()).isEqualTo(XdsType.SECRET);
+            assertThat(xdsResourceException.name()).isEqualTo("my-cert");
+            assertThat(xdsResourceException).cause().isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void sdsInvalidPrivateKeyFile(@TempDir File tempDir) throws Exception {
+        final File invalidKeyFile = new File(tempDir, "invalid.key");
+        Files.writeString(invalidKeyFile.toPath(), "this is not a valid private key");
+
+        final String secretYaml =
+                """
+                name: my-cert
+                tls_certificate:
+                  private_key:
+                    filename: %s
+                  certificate_chain:
+                    filename: %s
+                """.formatted(invalidKeyFile.getAbsolutePath(),
+                              certificate.certificateFile().toPath().toString());
+        final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        final String bootstrapStr = sdsBootstrapYaml.formatted(server.httpPort());
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        final var watcher = new SnapshotWatcher<>() {
+            @Override
+            public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
+                if (t != null) {
+                    errorRef.set(t);
+                }
+            }
+        };
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .defaultSnapshotWatcher(watcher)
+                                                     .build()) {
+            xdsBootstrap.listenerRoot("my-listener");
+            await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
+            assertThat(errorRef.get()).isInstanceOf(XdsResourceException.class);
+            final XdsResourceException xdsResourceException = (XdsResourceException) errorRef.get();
+            assertThat(xdsResourceException.type()).isEqualTo(XdsType.SECRET);
+            assertThat(xdsResourceException.name()).isEqualTo("my-cert");
+            assertThat(xdsResourceException).cause().isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    void sdsMissingCertificateFile(@TempDir File tempDir) throws Exception {
+        final File missingFile = new File(tempDir, "nonexistent.pem");
+
+        final String secretYaml =
+                """
+                name: my-cert
+                tls_certificate:
+                  private_key:
+                    filename: %s
+                  certificate_chain:
+                    filename: %s
+                """.formatted(certificate.privateKeyFile().toPath().toString(),
+                              missingFile.getAbsolutePath());
+        final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        final String bootstrapStr = sdsBootstrapYaml.formatted(server.httpPort());
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+
+        final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
+                if (snapshot != null) {
+                    snapshotRef.set(snapshot);
+                }
+            });
+
+            await().during(Duration.ofSeconds(2)).untilAsserted(() -> {
+                assertThat(snapshotRef.get()).isNull();
+            });
+
+            Files.writeString(missingFile.toPath(), Files.readString(certificate.certificateFile().toPath()));
+
+            await().untilAsserted(() -> {
+                assertThat(snapshotRef.get()).isNotNull();
+            });
+        }
+    }
+
+    @Test
+    void sdsMissingSecretName() throws Exception {
+        final String secretYaml =
+                """
+                name: wrong-cert-name
+                tls_certificate:
+                  private_key:
+                    filename: %s
+                  certificate_chain:
+                    filename: %s
+                """.formatted(certificate.privateKeyFile().toPath().toString(),
+                              certificate.certificateFile().toPath().toString());
+        final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        final String bootstrapStr = sdsBootstrapYaml.formatted(server.httpPort());
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
+                if (snapshot != null) {
+                    snapshotRef.set(snapshot);
+                }
+                if (t != null) {
+                    errorRef.set(t);
+                }
+            });
+            await().during(Duration.ofSeconds(2)).untilAsserted(() -> {
+                assertThat(errorRef.get()).isNull();
+                assertThat(snapshotRef.get()).isNull();
+            });
+
+            final String correctSecretYaml =
+                    """
+                    name: my-cert
+                    tls_certificate:
+                      private_key:
+                        filename: %s
+                      certificate_chain:
+                        filename: %s
+                    """.formatted(certificate.privateKeyFile().toPath().toString(),
+                                  certificate.certificateFile().toPath().toString());
+            final Secret correctSecret = XdsResourceReader.fromYaml(correctSecretYaml, Secret.class);
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                     ImmutableList.of(), ImmutableList.of(correctSecret),
+                                                     version.toString()));
+
+            await().untilAsserted(() -> {
+                assertThat(errorRef.get()).isNull();
+                assertThat(snapshotRef.get()).isNotNull();
+            });
         }
     }
 }

@@ -19,7 +19,9 @@ package com.linecorp.armeria.xds.it;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.protobuf.GeneratedMessageV3;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.JsonFormat.Parser;
 import com.google.protobuf.util.JsonFormat.TypeRegistry;
@@ -27,6 +29,7 @@ import com.google.protobuf.util.JsonFormat.TypeRegistry;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 public final class XdsResourceReader {
 
@@ -35,6 +38,7 @@ public final class XdsResourceReader {
             JsonFormat.parser().usingTypeRegistry(TypeRegistry.newBuilder()
                                                               .add(HttpConnectionManager.getDescriptor())
                                                               .add(Router.getDescriptor())
+                                                              .add(UpstreamTlsContext.getDescriptor())
                                                               .build());
 
     public static Bootstrap fromYaml(String yaml) {
@@ -49,16 +53,27 @@ public final class XdsResourceReader {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends GeneratedMessageV3> T fromYaml(String yaml, Class<T> clazz) {
-        final GeneratedMessageV3.Builder<?> builder;
+    public static <T extends GeneratedMessage> T fromYaml(String yaml, Class<T> clazz) {
+        final GeneratedMessage.Builder<?> builder;
         try {
-            builder = (GeneratedMessageV3.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
+            builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
             final JsonNode jsonNode = mapper.reader().readTree(yaml);
             parser.merge(jsonNode.toString(), builder);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         return (T) builder.build();
+    }
+
+    private static final Escaper multiLineEscaper = Escapers.builder()
+                                                            .addEscape('\\', "\\\\")
+                                                            .addEscape('"', "\\\"")
+                                                            .addEscape('\n', "\\n")
+                                                            .addEscape('\r', "\\r")
+                                                            .build();
+
+    static String escapeMultiLine(String str) {
+        return multiLineEscaper.escape(str);
     }
 
     private XdsResourceReader() {}

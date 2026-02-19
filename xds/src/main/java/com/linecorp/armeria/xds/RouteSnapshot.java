@@ -24,7 +24,6 @@ import java.util.Map;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -59,12 +58,6 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
         this.virtualHostSnapshots =
                 virtualHostSnapshots.stream().map(vhs -> vhs.withFilterConfigs(filterConfigs, upstreamFilters))
                                     .collect(ImmutableList.toImmutableList());
-    }
-
-    RouteSnapshot(RouteXdsResource routeXdsResource) {
-        this.routeXdsResource = routeXdsResource;
-        virtualHostSnapshots = ImmutableList.of();
-        filterConfigs = ImmutableMap.of();
     }
 
     RouteSnapshot withRouter(Router router) {
