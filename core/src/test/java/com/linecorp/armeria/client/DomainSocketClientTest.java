@@ -16,14 +16,20 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -55,6 +61,17 @@ class DomainSocketClientTest {
                 sb.https(domainSocketAddress(true));
             }
             sb.tlsSelfSigned();
+            sb.service("/greet", (ctx, req) -> HttpResponse.builder()
+                                                           .ok()
+                                                           .content("Hello!")
+                                                           .build());
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension tcpServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
             sb.service("/greet", (ctx, req) -> HttpResponse.builder()
                                                            .ok()
                                                            .content("Hello!")
@@ -111,6 +128,58 @@ class DomainSocketClientTest {
                                        "/greet";
             assertThat(ctx.uri()).hasToString(expectedUri);
         }
+    }
+
+    @Test
+    void shouldSupportLocalDomainSocketAddress() {
+        final DomainSocketAddress remoteAddr = domainSocketAddress(false);
+        final DomainSocketAddress localAddr =
+                DomainSocketAddress.of(tempDir.getRoot().resolve("local.sock").toString());
+        final String baseUri = SessionProtocol.H2C.uriText() + "://" + remoteAddr.authority();
+
+        final RequestOptions options = RequestOptions.builder().localBindAddress(localAddr).build();
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse res =
+                    WebClient.of().execute(HttpRequest.builder().get(baseUri + "/greet").build(), options)
+                             .aggregate().join();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.contentUtf8()).isEqualTo("Hello!");
+            assertThat(ctxCaptor.get().localBindAddress()).isEqualTo(localAddr);
+        }
+    }
+
+    @Test
+    void shouldRejectInetLocalAddressForDomainSocketRemote() throws Exception {
+        final DomainSocketAddress remoteAddr = domainSocketAddress(false);
+        final InetSocketAddress localAddr =
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
+        final String baseUri = SessionProtocol.H2C.uriText() + "://" + remoteAddr.authority();
+
+        final RequestOptions options = RequestOptions.builder().localBindAddress(localAddr).build();
+        assertThatThrownBy(() -> WebClient.of()
+                .execute(HttpRequest.builder().get(baseUri + "/greet").build(), options)
+                .aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .cause()
+                .hasCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("localBindAddress and the remote address must be of the same type");
+    }
+
+    @Test
+    void shouldRejectDomainSocketLocalAddressForTcpRemote() {
+        final DomainSocketAddress localAddr =
+                DomainSocketAddress.of(tempDir.getRoot().resolve("mismatch.sock").toString());
+        final RequestOptions options = RequestOptions.builder().localBindAddress(localAddr).build();
+        final WebClient client = WebClient.of(tcpServer.httpUri());
+        assertThatThrownBy(() -> client
+                .execute(HttpRequest.builder().get("/greet").build(), options)
+                .aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .cause()
+                .hasCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("localBindAddress and the remote address must be of the same type");
     }
 
     private static DomainSocketAddress domainSocketAddress(boolean useAbstractNamespace) {
