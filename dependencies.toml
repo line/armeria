@@ -442,6 +442,14 @@ module = "it.unimi.dsi:fastutil"
 version.ref = "fastutil"
 relocations = { from = "it.unimi.dsi.fastutil", to = "com.linecorp.armeria.internal.shaded.fastutil" }
 
+[libraries.zeroAllocationHashing]
+module = "net.openhft:zero-allocation-hashing"
+version = "0.16"
+relocations = [
+    { from = "net.openhft.hashing", to = "com.linecorp.armeria.internal.shaded.openhft" }
+]
+
+
 # Finagle is used only for testing in zookeeper module.
 [libraries.finagle-serversets_v213]
 module = "com.twitter:finagle-serversets_2.13"

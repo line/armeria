@@ -105,6 +105,9 @@ dependencies {
     // Logback is only used for RequestScopedMdc integration.
     compileOnly libs.logback14
 
+    // https://mvnrepository.com/artifact/net.openhft/zero-allocation-hashing
+    implementation 'net.openhft:zero-allocation-hashing:0.16'
+
     // Micrometer and other metric-related stuff
     api libs.micrometer.core
     api libs.context.propagation
@@ -232,6 +235,14 @@ if (tasks.findByName('trimShadedJar')) {
         // Keep the Guava classes accessed during testing.
         keep "class com.linecorp.armeria.internal.shaded.guava.net.HttpHeaders { *; }"
         keep "class com.linecorp.armeria.internal.shaded.guava.net.MediaType { *; }"
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.Access { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.ByteBufferAccess { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.CharSequenceAccess { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.LongHashFunction { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.Primitives { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.UnsafeAccess { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.Util { *; }'
+        keep 'class com.linecorp.armeria.internal.shaded.openhft.net.openhft.hashing.XxHash { *; }'
         dontnote
     }
 }
