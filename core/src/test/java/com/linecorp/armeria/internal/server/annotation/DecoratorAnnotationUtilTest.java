@@ -122,6 +122,24 @@ class DecoratorAnnotationUtilTest {
         assertThat(udd2.value()).isEqualTo(2);
     }
 
+    @Test
+    void ofSlowSamplingRequest() throws Exception {
+        final List<DecoratorAndOrder> list =
+                DecoratorAnnotationUtil.collectDecorators(TestClass.class,
+                                                          TestClass.class.getMethod("slowRequestSampling"));
+
+        assertThat(values(list)).containsExactly(Decorator1.class,
+                                                 LoggingDecoratorFactoryFunction.class,
+                                                 LoggingDecoratorFactoryFunction.class);
+
+        final LoggingDecorator loggingDecorator = (LoggingDecorator) list.get(2).annotation();
+
+        assertThat(loggingDecorator.slowRequestSamplingPercentile()).isEqualTo(0.5f);
+        assertThat(loggingDecorator.slowRequestSamplingLowerBoundMillis()).isEqualTo(1L);
+        assertThat(loggingDecorator.slowRequestSamplingUpperBoundMillis()).isEqualTo(10L);
+        assertThat(loggingDecorator.slowRequestSamplingWindowMillis()).isEqualTo(100L);
+    }
+
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
         return list.stream()
                    .map(DecoratorAndOrder::annotation)
@@ -187,6 +205,13 @@ class DecoratorAnnotationUtilTest {
         @Decorator(value = Decorator2.class, order = 2)
         @UserDefinedRepeatableDecorator(value = 2, order = 3)
         public String userDefinedRepeatableDecorator() {
+            return "";
+        }
+
+        @LoggingDecorator(
+                slowRequestSamplingPercentile = 0.5f, slowRequestSamplingLowerBoundMillis = 1L,
+                slowRequestSamplingUpperBoundMillis = 10L, slowRequestSamplingWindowMillis = 100L)
+        public String slowRequestSampling() {
             return "";
         }
     }
