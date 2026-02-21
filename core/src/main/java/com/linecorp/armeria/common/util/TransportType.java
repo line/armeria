@@ -97,6 +97,9 @@ public enum TransportType {
      */
     public static boolean supportsDomainSockets(EventLoopGroup eventLoopGroup) {
         requireNonNull(eventLoopGroup, "eventLoopGroup");
+        if (eventLoopGroup instanceof DelegatingEventLoopGroup) {
+            eventLoopGroup = ((DelegatingEventLoopGroup) eventLoopGroup).delegate();
+        }
         if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
             return false;
         }
@@ -183,6 +186,9 @@ public enum TransportType {
      */
     public static boolean isSupported(EventLoopGroup eventLoopGroup) {
         requireNonNull(eventLoopGroup, "eventLoopGroup");
+        if (eventLoopGroup instanceof DelegatingEventLoopGroup) {
+            eventLoopGroup = ((DelegatingEventLoopGroup) eventLoopGroup).delegate();
+        }
         if (eventLoopGroup instanceof EventLoop) {
             eventLoopGroup = ((EventLoop) eventLoopGroup).parent();
             if (eventLoopGroup == null) {
@@ -198,6 +204,10 @@ public enum TransportType {
     }
 
     private static TransportType find(EventLoopGroup eventLoopGroup) {
+        if (eventLoopGroup instanceof DelegatingEventLoopGroup) {
+            eventLoopGroup = ((DelegatingEventLoopGroup) eventLoopGroup).delegate();
+        }
+
         if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
             throw unsupportedEventLoopType(eventLoopGroup);
         }
