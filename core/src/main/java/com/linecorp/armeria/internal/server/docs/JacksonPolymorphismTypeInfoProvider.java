@@ -48,6 +48,11 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  * {@link DescriptiveTypeInfo} for a polymorphic
  * type by inspecting Jackson annotations such as {@link JsonTypeInfo} and
  * {@link JsonSubTypes}.
+ *
+ * <p>Note that this provider currently only supports
+ * {@link JsonTypeInfo.As#PROPERTY} and
+ * {@link JsonTypeInfo.As#EXISTING_PROPERTY}. Other inclusion types are not
+ * supported.
  */
 public final class JacksonPolymorphismTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
@@ -81,9 +86,18 @@ public final class JacksonPolymorphismTypeInfoProvider implements DescriptiveTyp
             return null;
         }
 
-        final String propertyName = jsonTypeInfo.property();
+        String propertyName = jsonTypeInfo.property();
         if (propertyName.isEmpty()) {
-            return null;
+            final JsonTypeInfo.Id use = jsonTypeInfo.use();
+            if (use == JsonTypeInfo.Id.CLASS) {
+                propertyName = "@class";
+            } else if (use == JsonTypeInfo.Id.MINIMAL_CLASS) {
+                propertyName = "@c";
+            } else if (use == JsonTypeInfo.Id.NAME || use == JsonTypeInfo.Id.SIMPLE_NAME) {
+                propertyName = "@type";
+            } else {
+                return null;
+            }
         }
 
         if (jsonSubTypes.value().length == 0) {
