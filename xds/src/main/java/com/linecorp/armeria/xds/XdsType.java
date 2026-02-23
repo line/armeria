@@ -31,9 +31,11 @@ public enum XdsType {
     ROUTE("type.googleapis.com/envoy.config.route.v3.RouteConfiguration"),
     CLUSTER("type.googleapis.com/envoy.config.cluster.v3.Cluster"),
     ENDPOINT("type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"),
-    VIRTUAL_HOST("type.googleapis.com/envoy.config.route.v3.VirtualHost");
+    VIRTUAL_HOST("type.googleapis.com/envoy.config.route.v3.VirtualHost"),
+    SECRET("type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret");
 
-    private static final Set<XdsType> discoverableTypes = EnumSet.of(LISTENER, ROUTE, CLUSTER, ENDPOINT);
+    private static final Set<XdsType> discoverableTypes =
+            EnumSet.of(LISTENER, ROUTE, CLUSTER, ENDPOINT, SECRET);
 
     private final String typeUrl;
 

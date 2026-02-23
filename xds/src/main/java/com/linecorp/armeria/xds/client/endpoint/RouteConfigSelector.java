@@ -22,7 +22,6 @@ import com.linecorp.armeria.internal.client.AbstractAsyncSelector;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
-import com.linecorp.armeria.xds.XdsResourceException;
 
 final class RouteConfigSelector extends AbstractAsyncSelector<RouteConfig>
         implements SnapshotWatcher<ListenerSnapshot> {
@@ -41,7 +40,7 @@ final class RouteConfigSelector extends AbstractAsyncSelector<RouteConfig>
     }
 
     @Override
-    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable XdsResourceException t) {
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable Throwable t) {
         if (snapshot == null) {
             return;
         }

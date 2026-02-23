@@ -21,8 +21,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.grpc.Status;
-
 /**
  * An exception that indicates an error occurred while processing an xDS resource.
  */
@@ -48,8 +46,8 @@ public class XdsResourceException extends RuntimeException {
         this.name = name;
     }
 
-    XdsResourceException(XdsType type, String name, @Nullable Status status) {
-        super(status != null ? status.asRuntimeException() : null);
+    XdsResourceException(XdsType type, String name, @Nullable Throwable t, String message) {
+        super(message, t);
         this.type = type;
         this.name = name;
     }

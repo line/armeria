@@ -17,11 +17,13 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
@@ -320,6 +323,19 @@ class DecodedStreamMessageTest {
         boolean isReleased() {
             return byteBufs.stream().allMatch(buf -> buf.refCnt() == 0);
         }
+    }
+
+    @Test
+    void shouldAbortStreamOnAbortion() {
+        final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+        final StreamMessage<HttpData> stream =
+                StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("67"));
+        final StreamMessage<String> decoded = stream.decode(decoder);
+        final AnticipatedException exception = new AnticipatedException("Stream aborted");
+        decoded.abort(exception);
+        assertThatThrownBy(() -> stream.whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(exception);
     }
 
     private static final class HeaderAwareDecoder implements HttpDecoder<String> {

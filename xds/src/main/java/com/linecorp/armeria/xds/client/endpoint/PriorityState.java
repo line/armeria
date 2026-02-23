@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.ClusterXdsResource;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
@@ -36,10 +36,10 @@ final class PriorityState {
     private final UpdateHostsParam param;
 
     PriorityState(List<Endpoint> hosts, Map<Locality, Integer> localityWeightsMap,
-                  ClusterSnapshot clusterSnapshot) {
+                  ClusterXdsResource clusterXdsResource) {
         final Map<Locality, List<Endpoint>> endpointsPerLocality = endpointsByLocality(hosts);
         param = new UpdateHostsParam(hosts, endpointsPerLocality, localityWeightsMap,
-                                     selectionStrategy(clusterSnapshot.xdsResource().resource()));
+                                     selectionStrategy(clusterXdsResource.resource()));
     }
 
     UpdateHostsParam param() {
@@ -51,10 +51,10 @@ final class PriorityState {
         private final ImmutableList.Builder<Endpoint> hostsBuilder = ImmutableList.builder();
         private final ImmutableMap.Builder<Locality, Integer> localityWeightsBuilder =
                 ImmutableMap.builder();
-        private final ClusterSnapshot clusterSnapshot;
+        private final ClusterXdsResource clusterXdsResource;
 
-        PriorityStateBuilder(ClusterSnapshot clusterSnapshot) {
-            this.clusterSnapshot = clusterSnapshot;
+        PriorityStateBuilder(ClusterXdsResource clusterXdsResource) {
+            this.clusterXdsResource = clusterXdsResource;
         }
 
         void addEndpoint(Endpoint endpoint) {
@@ -67,7 +67,7 @@ final class PriorityState {
 
         PriorityState build() {
             return new PriorityState(hostsBuilder.build(), localityWeightsBuilder.buildKeepingLast(),
-                                     clusterSnapshot);
+                                     clusterXdsResource);
         }
     }
 }

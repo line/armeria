@@ -30,6 +30,7 @@ import com.google.rpc.Code;
 
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -110,6 +111,21 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
             if (status != null) {
                 tagListBuilder.add(statusTag(status));
                 return;
+            }
+        }
+
+        // Check responseContent for gRPC status when headers/trailers
+        // don't contain grpc-status (e.g., when client cancels via RST_STREAM)
+        final Object responseContent = log.responseContent();
+        if (responseContent instanceof RpcResponse) {
+            final RpcResponse rpcResponse = (RpcResponse) responseContent;
+            if (rpcResponse.isCompletedExceptionally()) {
+                final Throwable cause = rpcResponse.cause();
+                if (cause != null) {
+                    final Status grpcStatus = Status.fromThrowable(cause);
+                    tagListBuilder.add(statusTag(StringUtil.toString(grpcStatus.getCode().value())));
+                    return;
+                }
             }
         }
 

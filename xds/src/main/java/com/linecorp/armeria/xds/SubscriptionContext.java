@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -36,4 +37,8 @@ interface SubscriptionContext {
     ConfigSourceMapper configSourceMapper();
 
     XdsClusterManager clusterManager();
+
+    DirectoryWatchService watchService();
+
+    BootstrapSecrets bootstrapSecrets();
 }

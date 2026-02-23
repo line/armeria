@@ -17,92 +17,73 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
+import static com.linecorp.armeria.xds.AbstractRoot.safeRunnable;
+import static com.linecorp.armeria.xds.XdsResourceException.maybeWrap;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.xds.SnapshotStream.Subscription;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.netty.util.concurrent.EventExecutor;
 
-final class ListenerManager implements SafeCloseable, SnapshotWatcher<ListenerSnapshot> {
+final class ListenerManager implements SafeCloseable {
 
-    private final Map<String, ListenerResourceNode> nodes = new HashMap<>();
+    private final Map<String, ListenerStream> nodes = new HashMap<>();
     private final EventExecutor eventLoop;
     private boolean closed;
-    private final List<SnapshotWatcher<? super ListenerSnapshot>> watchers;
+    private final List<Subscription> subscriptions = new ArrayList<>();
 
     ListenerManager(EventExecutor eventLoop, Bootstrap bootstrap, SubscriptionContext subscriptionContext,
                     SnapshotWatcher<Object> defaultSnapshotWatcher) {
         this.eventLoop = eventLoop;
         // the manager is added as default for static resources so they are never unregistered
         // unless the bootstrap is closed
-        watchers = ImmutableList.of(this, defaultSnapshotWatcher);
-        initializeBootstrap(bootstrap, subscriptionContext);
+        initializeBootstrap(bootstrap, subscriptionContext, defaultSnapshotWatcher);
     }
 
-    private void initializeBootstrap(Bootstrap bootstrap, SubscriptionContext bootstrapContext) {
+    private void initializeBootstrap(Bootstrap bootstrap, SubscriptionContext bootstrapContext,
+                                     SnapshotWatcher<Object> watcher) {
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Listener listener: staticResources.getListenersList()) {
-                register(listener, bootstrapContext, watchers);
+                register(listener, bootstrapContext, watcher);
             }
         }
     }
 
-    void register(Listener listener, SubscriptionContext context,
-                  Iterable<SnapshotWatcher<? super ListenerSnapshot>> watchers) {
+    void register(Listener listener, SubscriptionContext context, SnapshotWatcher<Object> watcher) {
         checkArgument(!nodes.containsKey(listener.getName()),
                       "Static listener with name '%s' already registered", listener.getName());
-        final ListenerResourceNode node = new ListenerResourceNode(null, listener.getName(), context, STATIC);
-        for (SnapshotWatcher<? super ListenerSnapshot> watcher: watchers) {
-            node.addWatcher(watcher);
-        }
+        final ListenerStream node = new ListenerStream(new ListenerXdsResource(listener), context);
         nodes.put(listener.getName(), node);
-
-        final ListenerXdsResource listenerResource =
-                ListenerResourceParser.INSTANCE.parse(listener, "", 0);
-        eventLoop.execute(() -> node.onChanged(listenerResource));
+        eventLoop.execute(safeRunnable(() -> {
+            final Subscription subscription = node.subscribe(watcher);
+            subscriptions.add(subscription);
+        }, t -> watcher.onUpdate(null, maybeWrap(XdsType.LISTENER, listener.getName(), t))));
     }
 
-    void register(String name, SubscriptionContext context, SnapshotWatcher<ListenerSnapshot> watcher) {
+    Subscription register(String name, SubscriptionContext context, SnapshotWatcher<ListenerSnapshot> watcher) {
         if (closed) {
-            return;
+            return Subscription.noop();
         }
-        final ListenerResourceNode node = nodes.computeIfAbsent(name, ignored -> {
+        final ListenerStream node = nodes.computeIfAbsent(name, ignored -> {
             // on-demand lds if not already registered
-            final ConfigSource configSource = context.configSourceMapper().ldsConfigSource(name);
-            final ListenerResourceNode dynamicNode =
-                    new ListenerResourceNode(configSource, name, context,
-                                             watcher, ResourceNodeType.DYNAMIC);
-            context.subscribe(dynamicNode);
-            return dynamicNode;
+            return new ListenerStream(name, context);
         });
-        node.addWatcher(watcher);
-    }
-
-    void unregister(String name, SnapshotWatcher<ListenerSnapshot> watcher) {
-        if (closed) {
-            return;
-        }
-        final ListenerResourceNode node = nodes.get(name);
-        if (node == null) {
-            return;
-        }
-        node.removeWatcher(watcher);
-        if (!node.hasWatchers()) {
-            node.close();
-            nodes.remove(name);
-        }
+        final Subscription subscription = node.subscribe(watcher);
+        return () -> {
+            subscription.close();
+            if (!node.hasWatchers()) {
+                nodes.remove(name);
+            }
+        };
     }
 
     @Override
@@ -115,13 +96,8 @@ final class ListenerManager implements SafeCloseable, SnapshotWatcher<ListenerSn
             return;
         }
         closed = true;
-        for (ListenerResourceNode node : nodes.values()) {
-            node.close();
+        for (Subscription subscription: subscriptions) {
+            subscription.close();
         }
-    }
-
-    @Override
-    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable XdsResourceException t) {
-        // noop
     }
 }
