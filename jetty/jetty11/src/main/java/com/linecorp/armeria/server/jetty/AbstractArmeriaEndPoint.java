@@ -15,8 +15,10 @@
  */
 package com.linecorp.armeria.server.jetty;
 
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -65,7 +67,6 @@ abstract class AbstractArmeriaEndPoint implements EndPoint {
         return ctx.log().partial().requestStartTimeMillis();
     }
 
-    @Override
     public InetSocketAddress getLocalAddress() {
         final InetSocketAddress localAddress = this.localAddress;
         if (localAddress != null) {
@@ -85,9 +86,16 @@ abstract class AbstractArmeriaEndPoint implements EndPoint {
         }
     }
 
-    @Override
     public InetSocketAddress getRemoteAddress() {
         return ctx.remoteAddress();
+    }
+
+    public SocketAddress getLocalSocketAddress() {
+        return getLocalAddress();
+    }
+
+    public SocketAddress getRemoteSocketAddress() {
+        return getRemoteAddress();
     }
 
     @Override
@@ -194,6 +202,25 @@ abstract class AbstractArmeriaEndPoint implements EndPoint {
     @Override
     public void write(Callback callback, ByteBuffer... buffers) {
         writeFlusher.write(callback, buffers);
+    }
+
+    public Callback cancelWrite(Throwable cause) {
+        try {
+            final Method method = WriteFlusher.class.getMethod("cancelWrite", Throwable.class);
+            final Object result = method.invoke(writeFlusher, cause);
+            if (result instanceof Callback) {
+                return (Callback) result;
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // Jetty <= 11 does not have WriteFlusher#cancelWrite.
+        }
+
+        if (cause == null) {
+            writeFlusher.onClose();
+        } else {
+            writeFlusher.onFail(cause);
+        }
+        return Callback.NOOP;
     }
 
     @Override

@@ -227,7 +227,7 @@ public final class JettyService implements HttpService {
                 final ArmeriaEndPoint endPoint = new ArmeriaEndPoint(ctx, hostname);
                 final ArmeriaHttpConnection httpConnection =
                         new ArmeriaHttpConnection(httpConfiguration, connector, endPoint,
-                                                  false, ctx, res, aReq.content());
+                                                  ctx, res, aReq.content());
                 final HttpChannel httpChannel = httpConnection.getHttpChannel();
                 final MetaData.Request requestMetadata =
                         toRequestMetadata(ctx, aReq, httpConnection, mappedPath);
@@ -331,9 +331,9 @@ public final class JettyService implements HttpService {
         MetaData.@Nullable Response response;
 
         ArmeriaHttpConnection(HttpConfiguration config, Connector connector,
-                              EndPoint endPoint, boolean recordComplianceViolations,
-                              ServiceRequestContext ctx, HttpResponseWriter res, HttpData content) {
-            super(config, connector, endPoint, recordComplianceViolations);
+                              EndPoint endPoint, ServiceRequestContext ctx,
+                              HttpResponseWriter res, HttpData content) {
+            super(config, connector, endPoint);
             this.ctx = ctx;
             this.res = res;
             this.content = content;
