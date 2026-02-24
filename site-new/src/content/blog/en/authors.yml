@@ -6,7 +6,7 @@ ikhunum:
 meri:
   name: Meri
   title: Meri writes on behalf of the Armeria project — powered by its maintainers and contributors.
-  image_url: https://github.com/line/armeria/blob/main/site-new/static/img/icon-144x144.png
+  image_url: /img/icon-144x144.png
 
 inseong:
   name: Inseong
