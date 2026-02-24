@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.modelcontextprotocol.common.McpTransportContext;
-import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.server.McpTransportContextExtractor;
 
@@ -34,7 +33,7 @@ import io.modelcontextprotocol.server.McpTransportContextExtractor;
 @UnstableApi
 public final class ArmeriaStatelessServerTransportBuilder {
 
-    private McpJsonMapper jsonMapper = McpJsonDefaults.getMapper();
+    private McpJsonMapper jsonMapper = McpJsonMapper.getDefault();
     private McpTransportContextExtractor<ServiceRequestContext> contextExtractor =
             serverRequest -> McpTransportContext.EMPTY;
 
