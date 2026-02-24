@@ -3,6 +3,11 @@ ikhunum:
   title: Ikhun is developing for open-source Armeria and Central Dogma at LINE Plus.
   image_url: https://github.com/ikhoon.png
 
+meri:
+  name: Meri
+  title: Meri writes on behalf of the Armeria project — powered by its maintainers and contributors.
+  image_url: https://github.com/line/armeria/blob/main/site-new/static/img/icon-144x144.png
+
 inseong:
   name: Inseong
   title: LINE Engineer
