@@ -144,7 +144,9 @@ class DomainSocketClientTest {
                              .aggregate().join();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(res.contentUtf8()).isEqualTo("Hello!");
-            assertThat(ctxCaptor.get().localBindAddress()).isEqualTo(localAddr);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(ctx.localBindAddress()).isEqualTo(localAddr);
+            assertThat(ctx.localAddress()).isEqualTo(localAddr);
         }
     }
 
