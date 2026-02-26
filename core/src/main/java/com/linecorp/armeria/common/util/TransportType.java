@@ -15,16 +15,9 @@
  */
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.concurrent.ThreadFactory;
-import java.util.function.Function;
-
 import com.google.common.base.Ascii;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TransportTypeProvider;
-
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoEventLoopGroup;
@@ -33,6 +26,11 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
+
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Native transport types.
@@ -255,7 +253,7 @@ public enum TransportType {
     /**
      * Creates the available {@link EventLoopGroup}.
      */
-    public EventLoopGroup newEventLoopGroup(int nThreads,
+    public IoEventLoopGroup newEventLoopGroup(int nThreads,
                                             Function<TransportType, ThreadFactory> threadFactoryFactory) {
         final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
         return provider.eventLoopGroupFactory().apply(nThreads, threadFactory);
