@@ -23,6 +23,7 @@ import java.util.function.Function;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.TransportTypeProvider;
 
 import io.netty.channel.EventLoop;
@@ -263,6 +264,7 @@ public enum TransportType {
     /**
      * Creates the available {@link IoEventLoopGroup}.
      */
+    @UnstableApi
     public IoEventLoopGroup newIoEventLoopGroup(int nThreads,
                                                 Function<TransportType, ThreadFactory> threadFactoryFactory) {
         final ThreadFactory threadFactory = threadFactoryFactory.apply(this);
