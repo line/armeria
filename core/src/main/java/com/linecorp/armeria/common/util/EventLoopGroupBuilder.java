@@ -16,17 +16,18 @@
 
 package com.linecorp.armeria.common.util;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.IoEventLoopGroup;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.ThreadFactory;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
 
 /**
  * A builder for creating an {@link EventLoopGroup} with custom configuration.
@@ -139,7 +140,7 @@ public final class EventLoopGroupBuilder {
         }
 
         final IoEventLoopGroup eventLoopGroup =
-            type.newEventLoopGroup(numThreads, unused -> factory);
+            type.newIoEventLoopGroup(numThreads, unused -> factory);
 
         // Wrap with shutdown configuration if non-default values are used
         if (shutdownQuietPeriodMillis != DEFAULT_SHUTDOWN_QUIET_PERIOD_MILLIS ||

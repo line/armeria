@@ -77,13 +77,13 @@ class DelegatingIoEventLoopGroup implements IoEventLoopGroup {
     }
 
     @Override
-    public Future<IoRegistration> register(IoHandle handle) {
-        return delegate.register(handle);
+    public Iterator<EventExecutor> iterator() {
+        return delegate.iterator();
     }
 
     @Override
-    public Iterator<EventExecutor> iterator() {
-        return delegate.iterator();
+    public Future<IoRegistration> register(IoHandle handle) {
+        return delegate.register(handle);
     }
 
     @Override
