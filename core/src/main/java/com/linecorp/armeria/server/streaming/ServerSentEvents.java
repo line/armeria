@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.sse.ServerSentEvent;
  * <pre>{@code
  * Server server =
  *     Server.builder()
- *           // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
+ *           // Emit Server-Sent Events with the ServerSentEvent instances published by a publisher.
  *           .service("/sse1",
  *                    (ctx, req) -> ServerSentEvents.fromPublisher(
  *                            Flux.just(ServerSentEvent.ofData("foo"), ServerSentEvent.ofData("bar"))))
