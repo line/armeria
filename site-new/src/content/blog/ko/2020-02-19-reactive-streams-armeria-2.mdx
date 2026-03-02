@@ -176,7 +176,7 @@ HttpResponse httpResponse = JsonTextSequences.fromPublisher(dataStream);
 // Convert Publisher to Server-sent Events with Armeria HttpResponse
 // with “text/event-stream” MIME type
 HttpResponse httpResponse = ServerSentEvents
-        .fromPublisher(dataStream, SeverSentEvent::ofData);
+        .fromPublisher(dataStream, ServerSentEvent::ofData);
 ```
 
 또한 빌트인 publisher를 더욱 쉽게 사용할 수 있도록 RxJava 통합을 지원하고 있습니다. 어노테이션한 서비스에 `@ProduceJsonSequence` 어노테이션을 추가하고, `Observable`을 그대로 반환하면 Armeria에서 해당 프로토콜로 자동으로 변환합니다.
