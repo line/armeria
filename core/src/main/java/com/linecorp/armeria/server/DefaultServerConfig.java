@@ -453,11 +453,12 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Override
     public VirtualHost findVirtualHost(String hostname, int port) {
-        if (virtualHostAndPortMapping == null) {
+        final Int2ObjectMap<Mapping<String, VirtualHost>> mapping = virtualHostAndPortMapping;
+        if (mapping == null) {
             return defaultVirtualHost;
         }
 
-        final Mapping<String, VirtualHost> virtualHostMapping = virtualHostAndPortMapping.get(port);
+        final Mapping<String, VirtualHost> virtualHostMapping = mapping.get(port);
         if (virtualHostMapping != null) {
             final VirtualHost virtualHost = virtualHostMapping.map(hostname + ':' + port);
             // Exclude the default virtual host from port-based virtual hosts.
@@ -467,7 +468,7 @@ final class DefaultServerConfig implements ServerConfig {
         }
 
         // No port-based virtual host is configured. Look for named-based virtual host.
-        final Mapping<String, VirtualHost> nameBasedMapping = requireNonNull(virtualHostAndPortMapping.get(-1));
+        final Mapping<String, VirtualHost> nameBasedMapping = requireNonNull(mapping.get(-1));
         return nameBasedMapping.map(hostname);
     }
 
