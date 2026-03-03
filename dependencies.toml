@@ -805,7 +805,7 @@ version = "1.1.0"
 [libraries.jwt]
 module = "com.auth0:java-jwt"
 version.ref = "jwt"
-javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.4.0/"
+javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.5.1/"
 
 [libraries.kafka]
 module = "org.apache.kafka:kafka-clients"
@@ -878,7 +878,7 @@ javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.4.7/"
 [libraries.logback15]
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback15"
-javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.5.12/"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.5.32/"
 
 [libraries.mcp-core]
 module = "io.modelcontextprotocol.sdk:mcp"
