@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
@@ -297,6 +298,19 @@ final class DefaultServerConfig implements ServerConfig {
                                                                               v.serverPort().actualPort() > 0))
                                                                 .collect(toImmutableList());
 
+        final Map<Integer, VirtualHost> portMappingDefaultVhosts = new HashMap<>();
+        for (VirtualHost v : portMappingVhosts) {
+            if (v.hostnamePattern().startsWith("*:")) {
+                final int port;
+                if (v.port() > 0) {
+                    port = v.port();
+                } else {
+                    port = requireNonNull(v.serverPort()).actualPort();
+                }
+                portMappingDefaultVhosts.put(port, v);
+            }
+        }
+
         final Map<Integer, DomainMappingBuilder<VirtualHost>> mappingsBuilder = new HashMap<>();
         for (VirtualHost virtualHost : portMappingVhosts) {
             final int port;
@@ -307,17 +321,15 @@ final class DefaultServerConfig implements ServerConfig {
                 port = serverPort.actualPort();
             }
             // The default virtual host should be either '*' or '*:<port>'.
-            final VirtualHost defaultVhost;
-            if ("*".equals(virtualHost.originalHostnamePattern())) {
-                defaultVhost = virtualHost;
-            } else {
-                defaultVhost = defaultVirtualHost;
-            }
+            final VirtualHost defaultVhost =
+                    firstNonNull(portMappingDefaultVhosts.get(port), defaultVirtualHost);
             // Builds a 'DomainMappingBuilder' with 'defaultVhost' for the port if absent.
             final DomainMappingBuilder<VirtualHost> mappingBuilder =
                     mappingsBuilder.computeIfAbsent(port, key -> new DomainMappingBuilder<>(defaultVhost));
 
-            if (defaultVhost != virtualHost) {
+            if (defaultVhost == virtualHost) {
+                // The 'virtualHost' was added already as a default value when creating 'DomainMappingBuilder'.
+            } else {
                 mappingBuilder.add(virtualHost.hostnamePattern(), virtualHost);
             }
         }
@@ -337,11 +349,9 @@ final class DefaultServerConfig implements ServerConfig {
         final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
         for (VirtualHost h : virtualHosts) {
             if (h == defaultVirtualHost) {
-                // The default virtual host is already set as the default of the DomainMappingBuilder.
                 continue;
             }
             if (h.port() > 0 || h.serverPort() != null) {
-                // A port-based virtual host will be handled by buildDomainAndPortMapping().
                 continue;
             }
             mappingBuilder.add(h.hostnamePattern(), h);
@@ -409,9 +419,6 @@ final class DefaultServerConfig implements ServerConfig {
     /**
      * Rebuilds the domain and port mapping after all ports are bound.
      * This includes ServerPort-based VirtualHosts whose actual ports are now resolved.
-     *
-     * <p>Note: {@code this.virtualHosts} includes the {@code defaultVirtualHost},
-     * which is filtered out inside {@link #buildDomainMapping}.
      */
     void rebuildDomainAndPortMapping() {
         if (virtualHosts.stream().anyMatch(v -> v.serverPort() != null)) {

@@ -60,12 +60,15 @@ class PortBasedVirtualHostTest {
             sb.http(normalServerPort)
               .http(virtualHostPort)
               .http(fooHostPort)
+              .virtualHost("foo.com:" + fooHostPort)
+              .service("/foo", (ctx, req) -> HttpResponse.of("foo with port"))
+              .and()
+              .virtualHost(fooHostPort)
+              .service("/foo-default", (ctx, req) -> HttpResponse.of("foo with default host"))
+              .and()
               .service("/normal", (ctx, req) -> HttpResponse.of("normal"))
               .virtualHost(virtualHostPort)
               .service("/managed", (ctx, req) -> HttpResponse.of("managed"))
-              .and()
-              .virtualHost("foo.com:" + fooHostPort)
-              .service("/foo", (ctx, req) -> HttpResponse.of("foo with port"))
               .and()
               .virtualHost("foo.com")
               .service("/foo-no-port", (ctx, req) -> HttpResponse.of("foo without port"))
@@ -151,6 +154,37 @@ class PortBasedVirtualHostTest {
 
             response = client.get("/foo-no-port").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("foo without port");
+        }
+    }
+
+    @Test
+    void shouldFallbackToDefaultPortVirtualHost() {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .addressResolverGroupFactory(
+                                                          unused -> MockAddressResolverGroup.localhost())
+                                                  .build()) {
+
+            final WebClient client = WebClient.builder("http://foo.com:" + fooHostPort)
+                                              .factory(factory)
+                                              .build();
+            AggregatedHttpResponse response = client.get("/normal").aggregate().join();
+            // Fallback to default virtual host
+            assertThat(response.contentUtf8()).isEqualTo("normal");
+
+            response = client.get("/managed").aggregate().join();
+            assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+            response = client.get("/foo").aggregate().join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+            response = client.get("/foo-no-port").aggregate().join();
+            assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+            final WebClient barClient = WebClient.builder("http://bar.com:" + fooHostPort)
+                                                 .factory(factory)
+                                                 .build();
+            response = barClient.get("/foo-default").aggregate().join();
+            assertThat(response.contentUtf8()).isEqualTo("foo with default host");
         }
     }
 
