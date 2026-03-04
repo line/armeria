@@ -1,0 +1,34 @@
+---
+date: 2026-03-04
+---
+
+# v1.37.0
+
+## 🌟 New features
+
+- You can now bind outgoing connections to a specific local address via `RequestOptions.builder().localBindAddress(addr).build()` or the `.localBindAddress()` method on any request preparation builder #6640
+
+## 📈 Improvements
+
+- Improved warning logs by adding diagnostic context to frequent `Exceptions.logIfUnexpected()` entries and HTTP/2 connection errors. #6638
+- Users can configure TLS via static or SDS-provided secrets and observe updated transport socket snapshots; file-backed cert/CA updates are propagated to snapshots. #6597
+
+## 🛠️ Bug fixes
+
+- Setting `pingIntervalMillis` to a value greater than 33 seconds no longer throws an Exception. #6648
+  - `SO_KEEPALIVE` `TCP_KEEPIDLE`, `TCP_KEEPINTVL` are no longer set by default.
+- `BraveService` and `ThrottlingService` now correctly propagate the delegate's exchange type and service options. #6643
+- Fixed a bug where aborted streaming requests may affect the http2 window of other requests in the same connection. #6642
+- `EventLoop`s created using `EventLoopGroupBuilder` can be set as a worker group without an exception being thrown. #6632 #6641
+- `WebSocketClient` now correctly releases buffered memory when an inbound stream is aborted. #6624
+- `GrpcMeterIdPrefixFunction` records `grpc-status` correctly for responses which fail with an exception. #6606 #6621
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'novoj',
+  'sallylyen'
+]} />
