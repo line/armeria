@@ -1,0 +1,21 @@
+{
+  "name": "armeria",
+  "owner": {
+    "name": "armerian",
+    "email": "dl_armeria@linecorp.com"
+  },
+  "metadata": {
+    "description": "Claude plugin for the Armeria microservice framework, providing AI-assisted guidance for common development tasks",
+    "version": "0.0.1"
+  },
+  "plugins": [
+    {
+      "name": "armeria",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/line/armeria.git",
+        "path": "tools/claude-plugins/armeria"
+      }
+    }
+  ]
+}
