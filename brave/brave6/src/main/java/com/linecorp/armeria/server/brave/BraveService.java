@@ -22,11 +22,14 @@ import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
@@ -117,5 +120,15 @@ public final class BraveService extends AbstractBraveService<HttpServerRequest, 
     @Override
     void handleSend(HttpServerResponse response, Span span) {
         handler.handleSend(response, span);
+    }
+
+    @Override
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        return ((HttpService) unwrap()).exchangeType(routingContext);
+    }
+
+    @Override
+    public ServiceOptions options() {
+        return ((HttpService) unwrap()).options();
     }
 }
