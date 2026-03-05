@@ -103,22 +103,22 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
         if (pins.isEmpty()) {
             return Collections.emptyList();
         }
-        final List<ByteString> decoded = new ArrayList<>(pins.size());
+        final ImmutableList.Builder<ByteString> decoded = ImmutableList.builderWithExpectedSize(pins.size());
         for (String pin : pins) {
             decoded.add(ByteString.copyFrom(Base64.getDecoder().decode(pin)));
         }
-        return ImmutableList.copyOf(decoded);
+        return decoded.build();
     }
 
     private static List<ByteString> decodeCertificateHashPins(List<String> pins) {
         if (pins.isEmpty()) {
             return Collections.emptyList();
         }
-        final List<ByteString> decoded = new ArrayList<>(pins.size());
+        final ImmutableList.Builder<ByteString> decoded = ImmutableList.builderWithExpectedSize(pins.size());
         for (String pin : pins) {
             decoded.add(decodeHex(pin));
         }
-        return ImmutableList.copyOf(decoded);
+        return decoded.build();
     }
 
     private static ByteString decodeHex(String pin) {

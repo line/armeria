@@ -408,7 +408,6 @@ class ErrorHandlingTest {
                 domains: []
             """;
 
-    //language=yaml
     //language=YAML
     private static final String routeYaml =
             """

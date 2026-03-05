@@ -96,7 +96,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
                                              LoadBalancerInput::new)
                               .switchMap(input -> {
                                   if (!input.endpointSnapshot.isPresent()) {
-                                      return SnapshotStream.just(Optional.empty());
+                                      return SnapshotStream.empty();
                                   }
                                   final EndpointSnapshot endpointSnapshot = input.endpointSnapshot.get();
                                   if (context.clusterManager().hasLocalCluster() &&

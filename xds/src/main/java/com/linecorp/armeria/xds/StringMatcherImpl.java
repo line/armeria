@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.function.Predicate;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.MoreObjects;
 import com.google.re2j.Pattern;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -123,11 +124,13 @@ class StringMatcherImpl {
 
     @Override
     public String toString() {
-        return "StringMatcherImpl{" +
-               "patternCase=" + patternCase +
-               ", ignoreCase=" + ignoreCase +
-               ", patternValue=" + patternValue +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                          .add("ignoreCase", ignoreCase)
+                          .add("patternCase", patternCase)
+                          .add("predicate", predicate)
+                          .add("exact", exact)
+                          .add("patternValue", patternValue)
+                          .toString();
     }
 
     @Override

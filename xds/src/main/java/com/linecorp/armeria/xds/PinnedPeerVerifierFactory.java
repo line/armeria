@@ -22,8 +22,6 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Objects;
 
-import javax.net.ssl.SSLEngine;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
@@ -47,11 +45,11 @@ final class PinnedPeerVerifierFactory implements TlsPeerVerifierFactory {
     public TlsPeerVerifier create(TlsPeerVerifier delegate) {
         return (chain, authType, engine) -> {
             delegate.verify(chain, authType, engine);
-            verifyPins(chain, engine);
+            verifyPins(chain);
         };
     }
 
-    private void verifyPins(X509Certificate[] chain, SSLEngine engine) throws CertificateException {
+    private void verifyPins(X509Certificate[] chain) throws CertificateException {
         if (chain.length == 0) {
             throw new CertificateException("No peer certificates presented.");
         }
@@ -60,8 +58,11 @@ final class PinnedPeerVerifierFactory implements TlsPeerVerifierFactory {
         }
         final X509Certificate leaf = chain[0];
         final boolean spkiMatched = !spkiPins.isEmpty() && matchesSpki(leaf);
+        if (spkiMatched) {
+            return;
+        }
         final boolean certMatched = !certHashPins.isEmpty() && matchesCertHash(leaf);
-        if (spkiMatched || certMatched) {
+        if (certMatched) {
             return;
         }
         throw new CertificateException("Certificate pin check failed.");

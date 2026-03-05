@@ -218,16 +218,6 @@ final class XdsEndpointUtil {
         return endpoint;
     }
 
-    static Endpoint attachTransportSocket(Endpoint endpoint,
-                                          TransportSocketSnapshot transportSocket,
-                                          List<TransportSocketMatchSnapshot> transportSocketMatches,
-                                          LbEndpoint lbEndpoint,
-                                          LocalityLbEndpoints localityLbEndpoints) {
-        final TransportSocketSnapshot matched = TransportSocketMatchUtil.selectTransportSocket(
-                transportSocket, transportSocketMatches, lbEndpoint, localityLbEndpoints);
-        return endpoint.withAttr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY, matched);
-    }
-
     static int endpointWeight(LbEndpoint lbEndpoint) {
         return lbEndpoint.hasLoadBalancingWeight() ?
                Math.max(1, lbEndpoint.getLoadBalancingWeight().getValue()) : 1;

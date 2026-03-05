@@ -120,7 +120,6 @@ class TlsPeerVerificationIntegrationTest {
         }
     };
 
-    // language=YAML
     //language=YAML
     private static final String bootstrapTemplate =
             """
@@ -167,7 +166,6 @@ class TlsPeerVerificationIntegrationTest {
             %s
             """;
 
-    // language=YAML
     //language=YAML
     private static final String bootstrapTemplateWithoutValidationContext =
             """

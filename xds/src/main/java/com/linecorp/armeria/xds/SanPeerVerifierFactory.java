@@ -20,8 +20,6 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Objects;
 
-import javax.net.ssl.SSLEngine;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
@@ -41,11 +39,11 @@ final class SanPeerVerifierFactory implements TlsPeerVerifierFactory {
     public TlsPeerVerifier create(TlsPeerVerifier delegate) {
         return (chain, authType, engine) -> {
             delegate.verify(chain, authType, engine);
-            verifySan(chain, engine);
+            verifySan(chain);
         };
     }
 
-    private void verifySan(X509Certificate[] chain, SSLEngine engine) throws CertificateException {
+    private void verifySan(X509Certificate[] chain) throws CertificateException {
         if (sanMatchers.isEmpty()) {
             return;
         }
