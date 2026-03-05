@@ -69,14 +69,15 @@ class RegressionGuard1Test {
         }
     };
 
+    @SuppressWarnings("checkstyle:LineLength")
+    //language=JSON
     private static final String listenerJson =
             """
             {
               "name": "my-listener",
               "apiListener": {
                 "apiListener": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.network\
-                  .http_connection_manager.v3.HttpConnectionManager",
+                  "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
                   "statPrefix": "ingress_http",
                   "rds": {
                     "configSource": {
@@ -90,6 +91,7 @@ class RegressionGuard1Test {
             }
             """;
 
+    //language=JSON
     private static final String routeJson =
             """
             {
@@ -142,6 +144,7 @@ class RegressionGuard1Test {
             }
             """;
 
+    //language=JSON
     private static final String endpointsJson =
             """
             {
