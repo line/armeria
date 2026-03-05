@@ -110,7 +110,8 @@ Rules:
 - Each production dependency (api/implementation scope) gets one bullet: `- {name} {old} -> {new}`
 - The `- Build` bullet groups build-only dependencies (testImplementation, annotationProcessor,
   relocated libs, non-transitive deps); nest them as sub-bullets with 3-space indent
-- Use the exact library name as it appears in `dependencies.toml` (the version key name)
+- Use the library's official name if one exists (e.g. `gRPC-Java`, `Jackson`, `Netty`, `Kotlin`,
+  `Reactor`, `Logback`, `Micrometer`); otherwise use the key name as-is from `dependencies.toml`
 - Sort entries **alphabetically (A → Z)** within each section
 - Omit skipped dependencies from the commit message entirely
 - If no build-only deps were upgraded, omit the `- Build` section entirely
@@ -119,9 +120,9 @@ Example:
 ```
 Update dependencies
 
-- grpc-java 1.63.0 -> 1.64.0
-- jackson 2.17.0 -> 2.18.0
+- gRPC-Java 1.63.0 -> 1.64.0
+- Jackson 2.17.0 -> 2.18.0
 - Build
    - checkstyle 10.14.0 -> 10.17.0
-   - errorprone 2.27.0 -> 2.28.0
+   - ErrorProne 2.27.0 -> 2.28.0
 ```
