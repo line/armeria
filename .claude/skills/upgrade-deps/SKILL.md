@@ -39,13 +39,31 @@ If a version looks ambiguous (unexpected format, major version bump, unusual nam
 verify on Maven Central before proceeding:
   https://central.sonatype.com/artifact/{groupId}/{artifactId}
 
-## Step 3: Check Java Version Compatibility
+## Step 3: Check Skip Hints and Java Version Compatibility
 
-For each candidate upgrade:
+Before upgrading any dependency, check `dependencies.toml` for a comment directly above
+its version entry. Many pinned versions have an explicit reason, for example:
+
+```toml
+# Don't upgrade Caffeine to 3.x that requires Java 11.
+caffeine = "2.9.3"
+
+# Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
+reflections = "0.9.11"
+
+# Ensure that we use the same ZooKeeper version as what Curator depends on.
+zookeeper = "3.9.3"
+```
+
+If such a comment exists and the reason still applies, **skip the upgrade** and do not
+remove the comment.
+
+If no comment exists, proceed with the Java version compatibility check:
 1. Find which modules use this dependency in `dependencies.toml`
 2. Determine the minimum Java version required by those modules (see table above)
 3. Check the new library version's minimum Java requirement (Maven Central / release notes)
-4. If the library's required Java > module's minimum Java → **skip the upgrade**
+4. If the library's required Java > module's minimum Java → **skip the upgrade** and add a
+   comment above the version entry explaining why (e.g. `# X.Y requires Java 11`)
 5. If compatible → proceed with the upgrade
 
 ## Step 4: Update dependencies.toml
