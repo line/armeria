@@ -1,8 +1,8 @@
 dependencies {
-    testImplementation project(':xds')
-    testImplementation libs.jackson.dataformat.yaml
-    testImplementation libs.protobuf.java.util
-    testImplementation libs.controlplane.server
-    testImplementation libs.controlplane.cache
-    testImplementation libs.protoc.pgv.java.stub
+    api project(':xds')
+    api libs.jackson.dataformat.yaml
+    api libs.protobuf.java.util
+    api libs.controlplane.server
+    api libs.controlplane.cache
+    api libs.protoc.pgv.java.stub
 }
