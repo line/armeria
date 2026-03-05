@@ -163,7 +163,10 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     @Override
     @UnstableApi
     public RequestOptionsBuilder localBindAddress(InetSocketAddress localAddress) {
-        localBindAddress = requireNonNull(localAddress, "localAddress");
+        requireNonNull(localAddress, "localAddress");
+        checkArgument(!localAddress.isUnresolved(),
+                      "localAddress: %s (expected: a resolved address)", localAddress);
+        localBindAddress = localAddress;
         return this;
     }
 
