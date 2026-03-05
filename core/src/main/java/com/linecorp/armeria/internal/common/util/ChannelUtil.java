@@ -101,24 +101,10 @@ public final class ChannelUtil {
     @Nullable
     private static ChannelOption<Integer> epollTcpUserTimeout;
     @Nullable
-    private static ChannelOption<Integer> epollTcpKeepidle;
-    @Nullable
-    private static ChannelOption<Integer> epollTcpKeepintvl;
-    @Nullable
     private static ChannelOption<Integer> ioUringTcpUserTimeout;
-    @Nullable
-    private static ChannelOption<Integer> ioUringTcpKeepidle;
-    @Nullable
-    private static ChannelOption<Integer> ioUringTcpKeepintvl;
-
-    private static final Set<ChannelOption<?>> tcpOptions;
 
     static {
-        final ImmutableSet.Builder<ChannelOption<?>> tcpOptionsBuilder = ImmutableSet.builder();
-
         ChannelOption<Integer> epollTcpUserTimeout = null;
-        ChannelOption<Integer> epollTcpKeepidle = null;
-        ChannelOption<Integer> epollTcpKeepintvl = null;
 
         try {
             final Class<?> clazz = Class.forName(
@@ -126,32 +112,14 @@ public final class ChannelUtil {
                     ChannelUtil.class.getClassLoader());
             //noinspection unchecked
             epollTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
-            //noinspection unchecked
-            epollTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
-            //noinspection unchecked
-            epollTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
-
-            if (epollTcpUserTimeout != null) {
-                tcpOptionsBuilder.add(epollTcpUserTimeout);
-            }
-            if (epollTcpKeepidle != null) {
-                tcpOptionsBuilder.add(epollTcpKeepidle);
-            }
-            if (epollTcpKeepintvl != null) {
-                tcpOptionsBuilder.add(epollTcpKeepintvl);
-            }
         } catch (Throwable ignored) {
             // Ignore
         }
 
         ChannelUtil.epollTcpUserTimeout = epollTcpUserTimeout;
-        ChannelUtil.epollTcpKeepidle = epollTcpKeepidle;
-        ChannelUtil.epollTcpKeepintvl = epollTcpKeepintvl;
 
         if (INCUBATOR_CHANNEL_PACKAGE_NAME != null) {
             ChannelOption<Integer> ioUringTcpUserTimeout = null;
-            ChannelOption<Integer> ioUringTcpKeepidle = null;
-            ChannelOption<Integer> ioUringTcpKeepintvl = null;
 
             try {
                 final Class<?> clazz = Class.forName(
@@ -159,30 +127,12 @@ public final class ChannelUtil {
                         ChannelUtil.class.getClassLoader());
                 //noinspection unchecked
                 ioUringTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
-                //noinspection unchecked
-                ioUringTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
-                //noinspection unchecked
-                ioUringTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
-
-                if (ioUringTcpUserTimeout != null) {
-                    tcpOptionsBuilder.add(ioUringTcpUserTimeout);
-                }
-                if (ioUringTcpKeepidle != null) {
-                    tcpOptionsBuilder.add(ioUringTcpKeepidle);
-                }
-                if (ioUringTcpKeepintvl != null) {
-                    tcpOptionsBuilder.add(ioUringTcpKeepintvl);
-                }
             } catch (Throwable ignored) {
                 // Ignore
             }
 
             ChannelUtil.ioUringTcpUserTimeout = ioUringTcpUserTimeout;
-            ChannelUtil.ioUringTcpKeepidle = ioUringTcpKeepidle;
-            ChannelUtil.ioUringTcpKeepintvl = ioUringTcpKeepintvl;
         }
-
-        tcpOptions = tcpOptionsBuilder.build();
     }
 
     @Nullable
@@ -266,16 +216,16 @@ public final class ChannelUtil {
 
     public static Map<ChannelOption<?>, Object> applyDefaultChannelOptions(
             Map<ChannelOption<?>, Object> channelOptions,
-            long idleTimeoutMillis, long pingIntervalMillis) {
+            long idleTimeoutMillis) {
         return applyDefaultChannelOptions(
                 Flags.useDefaultSocketOptions(), Flags.transportType(), channelOptions,
-                idleTimeoutMillis, pingIntervalMillis);
+                idleTimeoutMillis);
     }
 
     @VisibleForTesting
     static Map<ChannelOption<?>, Object> applyDefaultChannelOptions(
             boolean enabled, TransportType transportType, Map<ChannelOption<?>, Object> channelOptions,
-            long idleTimeoutMillis, long pingIntervalMillis) {
+            long idleTimeoutMillis) {
         if (!enabled) {
             return channelOptions;
         }
@@ -283,40 +233,19 @@ public final class ChannelUtil {
         final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (idleTimeoutMillis > 0) {
-            final int tcpUserTimeout = Ints.saturatedCast(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+            final int tcpUserTimeoutMillis =
+                    Ints.saturatedCast(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
                 assert epollTcpUserTimeout != null;
-                putChannelOption(newChannelOptionsBuilder, epollTcpUserTimeout, tcpUserTimeout);
+                putChannelOption(newChannelOptionsBuilder, epollTcpUserTimeout, tcpUserTimeoutMillis);
             } else if (transportType == TransportType.IO_URING &&
                        canAddChannelOption(ioUringTcpUserTimeout, channelOptions)) {
                 assert ioUringTcpUserTimeout != null;
-                putChannelOption(newChannelOptionsBuilder, ioUringTcpUserTimeout, tcpUserTimeout);
+                putChannelOption(newChannelOptionsBuilder, ioUringTcpUserTimeout, tcpUserTimeoutMillis);
             }
         }
 
-        if (pingIntervalMillis > 0) {
-            final int intPingIntervalMillis = Ints.saturatedCast(pingIntervalMillis);
-            if (transportType == TransportType.EPOLL &&
-                canAddChannelOption(epollTcpKeepidle, channelOptions) &&
-                canAddChannelOption(epollTcpKeepintvl, channelOptions) &&
-                canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
-                assert epollTcpKeepidle != null;
-                assert epollTcpKeepintvl != null;
-                putChannelOption(newChannelOptionsBuilder, ChannelOption.SO_KEEPALIVE, true);
-                putChannelOption(newChannelOptionsBuilder, epollTcpKeepidle, intPingIntervalMillis);
-                putChannelOption(newChannelOptionsBuilder, epollTcpKeepintvl, intPingIntervalMillis);
-            } else if (transportType == TransportType.IO_URING &&
-                       canAddChannelOption(ioUringTcpKeepidle, channelOptions) &&
-                       canAddChannelOption(ioUringTcpKeepintvl, channelOptions) &&
-                       canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
-                assert ioUringTcpKeepidle != null;
-                assert ioUringTcpKeepintvl != null;
-                putChannelOption(newChannelOptionsBuilder, ChannelOption.SO_KEEPALIVE, true);
-                putChannelOption(newChannelOptionsBuilder, ioUringTcpKeepidle, intPingIntervalMillis);
-                putChannelOption(newChannelOptionsBuilder, ioUringTcpKeepintvl, intPingIntervalMillis);
-            }
-        }
         newChannelOptionsBuilder.putAll(channelOptions);
         return newChannelOptionsBuilder.build();
     }
@@ -337,7 +266,7 @@ public final class ChannelUtil {
     }
 
     public static boolean isTcpOption(ChannelOption<?> option) {
-        return tcpOptions.contains(option);
+        return option.name().startsWith("TCP_");
     }
 
     @Nullable

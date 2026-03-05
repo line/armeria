@@ -2312,8 +2312,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         }
 
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
-                ChannelUtil.applyDefaultChannelOptions(
-                        childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
+                ChannelUtil.applyDefaultChannelOptions(childChannelOptions, idleTimeoutMillis);
         final BlockingTaskExecutor blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
 
         return new DefaultServerConfig(

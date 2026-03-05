@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
@@ -62,11 +61,11 @@ public class ChannelUtilTest {
                 ChannelOption.SO_LINGER, 1000);
 
         Map<ChannelOption<?>, Object> newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, TransportType.EPOLL, options, 3000, 4000);
+                true, TransportType.EPOLL, options, 3000);
         assertThat(options).isNotEqualTo(newOptions);
 
         newOptions = ChannelUtil.applyDefaultChannelOptions(
-                false, TransportType.EPOLL, options, 3000, 4000);
+                false, TransportType.EPOLL, options, 3000);
         assertThat(options).containsExactlyEntriesOf(newOptions);
     }
 
@@ -80,18 +79,18 @@ public class ChannelUtilTest {
         // ignore if idle timeout not set
         Map<ChannelOption<?>, Object> newOptions =
                 ChannelUtil.applyDefaultChannelOptions(
-                        true, transportType, options, 0, 0);
+                        true, transportType, options, 0);
         assertThat(options).containsExactlyEntriesOf(newOptions);
 
         // ignore if idle timeout is out of bounds
         newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, transportType, options, -1, 0);
+                true, transportType, options, -1);
         assertThat(options).containsExactlyEntriesOf(newOptions);
 
         // apply idle timeout if possible
         final int idleTimeoutMillis = 2000;
         newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, transportType, options, idleTimeoutMillis, 0);
+                true, transportType, options, idleTimeoutMillis);
         assertThat(newOptions).containsOnly(
                 entry(ChannelOption.SO_LINGER, lingerMillis),
                 entry(option, idleTimeoutMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS));
@@ -101,7 +100,7 @@ public class ChannelUtilTest {
         final Map<ChannelOption<?>, Object> userDefinedOptions = ImmutableMap.of(
                 ChannelOption.SO_LINGER, lingerMillis, option, userDefinedTcpUserTimeoutMillis);
         newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, transportType, userDefinedOptions, idleTimeoutMillis, 0);
+                true, transportType, userDefinedOptions, idleTimeoutMillis);
         assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
     }
 
@@ -112,49 +111,7 @@ public class ChannelUtilTest {
 
         final Map<ChannelOption<?>, Object> newOptions =
                 ChannelUtil.applyDefaultChannelOptions(
-                        true, TransportType.NIO, options, 3000, 4000);
+                        true, TransportType.NIO, options, 3000);
         assertThat(options).containsExactlyEntriesOf(newOptions);
-    }
-
-    @ParameterizedTest
-    @EnumSource(TransportType.class)
-    void keepAliveChannelOption(TransportType type) {
-        final int lingerMillis = 1000;
-        final Map<ChannelOption<?>, Object> options = ImmutableMap.of(
-                ChannelOption.SO_LINGER, lingerMillis);
-
-        // ignore if parameters are infinite
-        Map<ChannelOption<?>, Object> newOptions =
-                ChannelUtil.applyDefaultChannelOptions(true, type, options, 0, 0);
-        assertThat(newOptions).containsExactlyEntriesOf(options);
-
-        // ignore if parameters are out of bounds
-        newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, type, options, 0, -1);
-        assertThat(newOptions).containsExactlyEntriesOf(options);
-
-        final int pingIntervalMillis = 3000;
-        newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, type, options, 0, pingIntervalMillis);
-        if (type == TransportType.EPOLL) {
-            assertThat(newOptions).containsOnly(entry(ChannelOption.SO_LINGER, lingerMillis),
-                                                entry(ChannelOption.SO_KEEPALIVE, true),
-                                                entry(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis),
-                                                entry(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis));
-        } else if (type == TransportType.IO_URING) {
-            assertThat(newOptions).containsOnly(entry(ChannelOption.SO_LINGER, lingerMillis),
-                                                entry(ChannelOption.SO_KEEPALIVE, true),
-                                                entry(IOUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis),
-                                                entry(IOUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis));
-        } else {
-            assertThat(newOptions).containsExactlyEntriesOf(options);
-        }
-
-        // user defined options are respected
-        final Map<ChannelOption<?>, Object> userDefinedOptions = ImmutableMap.of(
-                ChannelOption.SO_LINGER, lingerMillis, ChannelOption.SO_KEEPALIVE, false);
-        newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, type, userDefinedOptions, 0, pingIntervalMillis);
-        assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
     }
 }
