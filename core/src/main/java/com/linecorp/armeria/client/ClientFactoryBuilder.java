@@ -1084,7 +1084,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
         long idleTimeoutMillis = newOptions.idleTimeoutMillis();
-        long pingIntervalMillis = newOptions.pingIntervalMillis();
+        final long pingIntervalMillis = newOptions.pingIntervalMillis();
         final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =
                 ImmutableList.builderWithExpectedSize(2);
 
@@ -1098,18 +1098,16 @@ public final class ClientFactoryBuilder implements TlsSetters {
             final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (clampedPingIntervalMillis >= idleTimeoutMillis) {
                 adjustedOptionsBuilder.add(ZERO_PING_INTERVAL);
-                pingIntervalMillis = 0;
             } else if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 // no-op, clampedPingIntervalMillis is equal to pingIntervalMillis
             } else if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 adjustedOptionsBuilder.add(MIN_PING_INTERVAL);
-                pingIntervalMillis = MIN_PING_INTERVAL_MILLIS;
             }
         }
 
         final Map<ChannelOption<?>, Object> newChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
-                        newOptions.channelOptions(), idleTimeoutMillis, pingIntervalMillis);
+                        newOptions.channelOptions(), idleTimeoutMillis);
         adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
 
         final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
