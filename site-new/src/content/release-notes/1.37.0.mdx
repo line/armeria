@@ -22,13 +22,13 @@ date: 2026-03-06
 
 ## 🛠️ Bug fixes
 
+- [BraveService](type) and [ThrottlingService](type) now correctly propagate the delegate's exchange type and service options. #6643
+- [EventLoop](type)s created using [EventLoopGroupBuilder](type) can be set as a worker group without an exception being thrown. #6632 #6641
+- [GrpcMeterIdPrefixFunction](type) records `grpc-status` correctly for responses which fail with an exception. #6606 #6621
+- Fixed a bug where aborted streaming requests may affect the HTTP/2 window of other requests in the same connection. #6642
+- [WebSocketClient](type) now correctly releases buffered memory when an inbound stream is aborted. #6624
 - Setting `pingIntervalMillis` to a value greater than 33 seconds no longer throws an exception. #6648
   - Linux keepalive socket options (`SO_KEEPALIVE` `TCP_KEEPIDLE`, `TCP_KEEPINTVL`) are no longer set by default.
-- [BraveService](type) and [ThrottlingService](type) now correctly propagate the delegate's exchange type and service options. #6643
-- Fixed a bug where aborted streaming requests may affect the HTTP/2 window of other requests in the same connection. #6642
-- [EventLoop](type)s created using [EventLoopGroupBuilder](type) can be set as a worker group without an exception being thrown. #6632 #6641
-- [WebSocketClient](type) now correctly releases buffered memory when an inbound stream is aborted. #6624
-- [GrpcMeterIdPrefixFunction](type) records `grpc-status` correctly for responses which fail with an exception. #6606 #6621
 
 ## 🙇 Thank you
 
