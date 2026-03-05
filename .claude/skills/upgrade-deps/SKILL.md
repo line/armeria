@@ -14,11 +14,11 @@ Armeria is a multi-module project with different minimum Java version requiremen
 Before upgrading a dependency, always verify that the new version supports the minimum
 Java version required by the modules that use it.
 
-| Java Version | Example Modules |
-|-------------|----------------|
-| **8**  | `core`, `jetty9`, `grpc`, `http1`, `http2`, `brave*`, and most foundational modules |
-| **11** | `graphql`, `athenz`, `jetty10`, `jetty11`, `kubernetes`, `thrift0.18+`, `micrometer*`, `logback*`, and most others |
-| **17** | `ai:mcp`, `jetty12`, `spring:boot3-*`, `spring:boot4-*`, `spring:spring6`, `spring:spring7`, `resilience4j2` |
+| Java Version | Modules |
+|-------------|---------|
+| **8**  | `core`, `brave5`, `brave6`, `eureka`, `grpc`, `grpc-kotlin`, `graphql-protocol`, `jetty9`, `junit4`, `junit5`, `kafka`, `kotlin`, `logback`, `logback12`, `logback13`, `micrometer-context`, `oauth2`, `prometheus1`, `protobuf`, `reactor3`, `resteasy`, `retrofit2`, `rxjava2`, `rxjava3`, `sangria`, `scala*`, `spring:boot2-*`, `dropwizard2`, `thrift0.9`–`thrift0.17`, `tomcat8`, `tomcat9`, `xds`, `zookeeper3`, `saml`, `bucket4j`, `consul`, `nacos` |
+| **11** | `athenz`, `graphql`, `jetty10`, `jetty11`, `kubernetes`, `logback14`, `thrift0.18`–`thrift0.22`, `tomcat10` |
+| **17** | `ai:mcp`, `jetty12`, `resilience4j2`, `spring:boot3-*`, `spring:spring6`, `spring:boot4-*`, `spring:spring7` |
 
 When in doubt, check `settings.gradle` for the `java`, `java11`, or `java17` flag on each subproject.
 
