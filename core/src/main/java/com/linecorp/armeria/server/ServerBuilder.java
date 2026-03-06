@@ -2417,9 +2417,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             shutdownSupports.add(ShutdownSupport.of(tlsProvider));
         }
 
-        final ServerErrorHandler errorHandler = ServerErrorHandlerDecorators.decorate(
+        final ServerErrorHandler errorHandler =
                 this.errorHandler == null ? ServerErrorHandler.ofDefault()
-                                          : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
+                                          : this.errorHandler.orElse(ServerErrorHandler.ofDefault());
         final MeterIdPrefix meterIdPrefix = tlsConfig != null ? tlsConfig.meterIdPrefix() : null;
         final SslContextFactory sslContextFactory = new SslContextFactory(meterIdPrefix, meterRegistry);
         final VirtualHost defaultVirtualHost =
