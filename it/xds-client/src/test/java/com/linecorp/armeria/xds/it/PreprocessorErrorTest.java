@@ -42,6 +42,7 @@ class PreprocessorErrorTest {
     static Stream<Arguments> testCases() {
         return Stream.of(
                 Arguments.of(
+                        //language=YAML
                         """
                         dynamic_resources:
                           lds_config:
@@ -63,6 +64,7 @@ class PreprocessorErrorTest {
                         "Couldn't select a snapshot for listener 'my-listener'."
                 ),
                 Arguments.of(
+                        //language=YAML
                         """
                         static_resources:
                           listeners:
@@ -101,6 +103,7 @@ class PreprocessorErrorTest {
                         "No route has been selected for listener "
                 ),
                 Arguments.of(
+                        //language=YAML
                         """
                         static_resources:
                           listeners:

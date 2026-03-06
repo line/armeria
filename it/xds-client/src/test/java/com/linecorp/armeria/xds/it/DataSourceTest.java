@@ -75,6 +75,7 @@ class DataSourceTest {
 
     @Test
     void tlsCertificateWithPrivateKeyAndCertificateChain() throws Exception {
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -91,6 +92,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -191,6 +193,7 @@ class DataSourceTest {
         Files.copy(certificate1.certificateFile().toPath(), certificateFile.toPath(),
                    StandardCopyOption.REPLACE_EXISTING);
 
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -207,6 +210,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -326,6 +330,7 @@ class DataSourceTest {
         Files.copy(certificate1.certificateFile().toPath(), certificateFile.toPath(),
                    StandardCopyOption.REPLACE_EXISTING);
 
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -345,6 +350,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -478,6 +484,7 @@ class DataSourceTest {
         final File privateKeyFile = new File(tempDir, "private_key.pem");
         final File certificateFile = new File(tempDir, "certificate.pem");
 
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -494,6 +501,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -593,6 +601,7 @@ class DataSourceTest {
         final File privateKeyFile = new File(filesDir, "private_key.pem");
         final File certificateFile = new File(filesDir, "certificate.pem");
 
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -612,6 +621,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -714,6 +724,7 @@ class DataSourceTest {
         final byte[] privateKeyBytes = Files.readAllBytes(certificate1.privateKeyFile().toPath());
         final byte[] certBytes = Files.readAllBytes(certificate1.certificateFile().toPath());
 
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -730,6 +741,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -821,6 +833,7 @@ class DataSourceTest {
         final String privateKeyContent = Files.readString(certificate1.privateKeyFile().toPath());
         final String certContent = Files.readString(certificate1.certificateFile().toPath());
 
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -837,6 +850,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
@@ -925,6 +939,7 @@ class DataSourceTest {
 
     @Test
     void emptyDataSource() throws Exception {
+        //language=YAML
         final String tlsCertYaml =
                 """
                 name: my-cert
@@ -938,6 +953,7 @@ class DataSourceTest {
                                                  ImmutableList.of(), ImmutableList.of(secret),
                                                  version.toString()));
 
+        //language=YAML
         final String bootstrapStr =
                 """
                 dynamic_resources:
