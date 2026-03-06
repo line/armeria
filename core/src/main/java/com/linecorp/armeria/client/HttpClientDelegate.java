@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
@@ -238,7 +239,22 @@ final class HttpClientDelegate implements HttpClient {
         final TlsProvider tlsProvider = factory.options().tlsProvider();
         final ClientTlsSpec tlsSpec = determineTlsSpec(endpoint, protocol, tlsProvider, ctx);
 
-        final PoolKey key = new PoolKey(endpoint, proxyConfig, tlsSpec);
+        final InetSocketAddress localBindAddress = ctx.localBindAddress();
+        if (localBindAddress != null) {
+            final boolean remoteDomain = endpoint.isDomainSocket();
+            final boolean localDomain = localBindAddress instanceof DomainSocketAddress;
+            if (remoteDomain != localDomain) {
+                earlyCancelRequest(
+                        new IllegalArgumentException(
+                                "localBindAddress and the remote address must be of the same type " +
+                                "(domain socket vs. TCP). remote: " + endpoint +
+                                ", localBindAddress: " + localBindAddress),
+                        ctx, timingsBuilder);
+                return;
+            }
+        }
+
+        final PoolKey key = new PoolKey(endpoint, proxyConfig, tlsSpec, localBindAddress);
         final HttpChannelPool pool;
         try {
             pool = factory.pool(ctx.eventLoop().withoutContext());

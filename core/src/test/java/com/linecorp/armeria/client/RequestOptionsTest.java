@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
@@ -258,5 +260,52 @@ class RequestOptionsTest {
         assertThat(attrs.get(foo)).isEqualTo("world");
         assertThat(attrs.get(bar)).isEqualTo("options");
         assertThat(attrs.get(quz)).isEqualTo("Armeria");
+    }
+
+    @Test
+    void localAddressInRequestOptions() throws Exception {
+        final InetSocketAddress addr = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
+        final RequestOptions options = RequestOptions.builder()
+                                                     .localBindAddress(addr)
+                                                     .build();
+        assertThat(options.localBindAddress()).isEqualTo(addr);
+    }
+
+    @Test
+    void localAddressNullInEmptyOptions() {
+        assertThat(RequestOptions.of().localBindAddress()).isNull();
+    }
+
+    @Test
+    void localAddressCopiedFromOtherOptions() throws Exception {
+        final InetSocketAddress addr = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
+        final RequestOptions original = RequestOptions.builder()
+                                                      .localBindAddress(addr)
+                                                      .build();
+        final RequestOptions copied = RequestOptions.builder(original).build();
+        assertThat(copied.localBindAddress()).isEqualTo(addr);
+    }
+
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void setLocalAddress(boolean usePreparation) throws Exception {
+        final InetSocketAddress addr = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final CompletableFuture<AggregatedHttpResponse> res;
+            if (usePreparation) {
+                res = client.prepare()
+                            .get("/ping")
+                            .localBindAddress(addr)
+                            .execute()
+                            .aggregate();
+            } else {
+                final HttpRequest req = HttpRequest.builder().get("/ping").build();
+                final RequestOptions options = RequestOptions.builder().localBindAddress(addr).build();
+                res = client.execute(req, options).aggregate();
+            }
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.localBindAddress()).isEqualTo(addr);
+            assertThat(res.join().contentUtf8()).isEqualTo("pong");
+        }
     }
 }

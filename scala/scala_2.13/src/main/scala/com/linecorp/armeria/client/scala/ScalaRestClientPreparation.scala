@@ -25,6 +25,7 @@ import io.netty.util.AttributeKey
 import org.reactivestreams.Publisher
 
 import java.lang.{Iterable => JIterable}
+import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.{Map => JMap}
 import _root_.scala.collection.immutable
@@ -266,6 +267,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
 
   override def clientTlsSpec(clientTlsSpec: ClientTlsSpec): ScalaRestClientPreparation = {
     delegate.clientTlsSpec(clientTlsSpec)
+    this
+  }
+
+  override def localBindAddress(localAddress: InetSocketAddress): ScalaRestClientPreparation = {
+    delegate.localBindAddress(localAddress)
     this
   }
 }

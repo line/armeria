@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.ResponseAsUtil.OBJECT_MAPPER;
 import static com.linecorp.armeria.client.ResponseAsUtil.SUCCESS_PREDICATE;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -342,6 +343,12 @@ public final class BlockingWebClientRequestPreparation
     @UnstableApi
     public BlockingWebClientRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
         delegate.clientTlsSpec(clientTlsSpec);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation localBindAddress(InetSocketAddress localAddress) {
+        delegate.localBindAddress(localAddress);
         return this;
     }
 

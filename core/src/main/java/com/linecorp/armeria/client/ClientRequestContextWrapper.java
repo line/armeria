@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -182,6 +183,18 @@ public class ClientRequestContextWrapper
     @UnstableApi
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
         unwrap().setClientTlsSpec(clientTlsSpec);
+    }
+
+    @Override
+    @UnstableApi
+    public @Nullable InetSocketAddress localBindAddress() {
+        return unwrap().localBindAddress();
+    }
+
+    @Override
+    @UnstableApi
+    public void setLocalBindAddress(InetSocketAddress localAddress) {
+        unwrap().setLocalBindAddress(localAddress);
     }
 
     @Override
