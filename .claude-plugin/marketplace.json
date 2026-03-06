@@ -5,7 +5,7 @@
     "email": "dl_armeria@linecorp.com"
   },
   "metadata": {
-    "description": "Claude plugin for the Armeria microservice framework, providing AI-assisted guidance for common development tasks",
+    "description": "Claude plugin for the Armeria microservice framework",
     "version": "0.0.1"
   },
   "plugins": [
