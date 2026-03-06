@@ -51,6 +51,9 @@ public final class ClusterXdsResource extends AbstractXdsResource {
             final String transportSocketName = cluster.getTransportSocket().getName();
             checkArgument("envoy.transport_sockets.tls".equals(transportSocketName),
                           "Unexpected tls transport socket name '%s'", transportSocketName);
+            if (!cluster.getTransportSocket().hasTypedConfig()) {
+                return UpstreamTlsContext.getDefaultInstance();
+            }
             return XdsValidatorIndexRegistry.unpack(cluster.getTransportSocket().getTypedConfig(),
                                                     UpstreamTlsContext.class);
         }
