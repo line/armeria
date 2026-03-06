@@ -255,6 +255,8 @@ public enum TransportType {
 
     /**
      * Creates the available {@link EventLoopGroup}.
+     *
+     * @deprecated Use {@link #newIoEventLoopGroup(int, Function)}.
      */
     @Deprecated
     public EventLoopGroup newEventLoopGroup(int nThreads,
