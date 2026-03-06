@@ -256,6 +256,7 @@ public enum TransportType {
     /**
      * Creates the available {@link EventLoopGroup}.
      */
+    @Deprecated
     public EventLoopGroup newEventLoopGroup(int nThreads,
                                             Function<TransportType, ThreadFactory> threadFactoryFactory) {
         return newIoEventLoopGroup(nThreads, threadFactoryFactory);
