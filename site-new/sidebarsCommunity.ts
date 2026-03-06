@@ -7,6 +7,7 @@ const sidebars: SidebarsConfig = {
     'developer-guide',
     'code-of-conduct',
     'design-resources',
+    'claude-plugin',
   ],
 };
 
