@@ -72,6 +72,8 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
@@ -136,7 +138,7 @@ public class SignedCertificate {
      * <p> Algorithm: RSA </p>
      */
     public SignedCertificate(SignedCertificate parent) throws CertificateException {
-        this("localhost", parent);
+        this("localhost", parent, true);
     }
 
     /**
@@ -146,9 +148,7 @@ public class SignedCertificate {
      * @param fqdn a fully qualified domain name
      */
     public SignedCertificate(String fqdn, SignedCertificate parent) throws CertificateException {
-        this(new CertificateParams(requireNonNull(fqdn, "fqdn"), ThreadLocalRandom.current(),
-                                   DEFAULT_KEY_LENGTH_BITS, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER,
-                                   requireNonNull(parent, "parent")));
+        this(fqdn, parent, true);
     }
 
     /**
@@ -161,10 +161,38 @@ public class SignedCertificate {
      */
     public SignedCertificate(String fqdn, SignedCertificate parent,
                              Iterable<String> subjectAlternativeNames) throws CertificateException {
+        this(fqdn, parent, subjectAlternativeNames, true);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn a fully qualified domain name
+     * @param parent the parent certificate to sign with
+     * @param isCA whether the certificate should be a CA certificate
+     */
+    public SignedCertificate(String fqdn, SignedCertificate parent, boolean isCA)
+            throws CertificateException {
+        this(fqdn, parent, ImmutableList.of(), isCA);
+    }
+
+    /**
+     * Creates a new instance.
+     * <p> Algorithm: RSA </p>
+     *
+     * @param fqdn a fully qualified domain name
+     * @param parent the parent certificate to sign with
+     * @param subjectAlternativeNames additional Subject Alternative Names
+     * @param isCA whether the certificate should be a CA certificate
+     */
+    public SignedCertificate(String fqdn, SignedCertificate parent,
+                             Iterable<String> subjectAlternativeNames, boolean isCA)
+            throws CertificateException {
         this(new CertificateParams(requireNonNull(fqdn, "fqdn"), ThreadLocalRandom.current(),
                                    DEFAULT_KEY_LENGTH_BITS, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER,
                                    requireNonNull(parent, "parent"),
-                                   requireNonNull(subjectAlternativeNames, "subjectAlternativeNames")));
+                                   requireNonNull(subjectAlternativeNames, "subjectAlternativeNames"), isCA));
     }
 
     /**
@@ -298,8 +326,7 @@ public class SignedCertificate {
         builder.addExtension(subjectAlternativeName,
                              false,
                              new GeneralNames(names.toArray(new GeneralName[0])));
-        // certs can sign other certs
-        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
+        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(params.isCA()));
         if (params.issuerCert() != null) {
             final JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
             builder.addExtension(Extension.authorityKeyIdentifier, false,
