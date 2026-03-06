@@ -32,7 +32,7 @@ interface OwnProps {
   method: Method;
   useRequestBody: boolean;
   requestBody: string;
-  jsonSchemas: any[];
+  jsonSchemas: any;
   setRequestBody: Dispatch<React.SetStateAction<string>>;
   additionalPath: string;
   setAdditionalPath: Dispatch<React.SetStateAction<string>>;
