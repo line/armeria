@@ -1,0 +1,73 @@
+---
+date: 2026-03-10
+---
+
+# v1.37.0
+
+## 🌟 New features
+
+- You can now bind outgoing connections to a specific local address. #6640
+  ```java
+  HttpRequest req = ...;
+  RequestOptions options = RequestOptions.builder()
+                                         .localBindAddress(addr) // 👈👈👈
+                                         .build();
+  HttpResponse res = client.execute(req, options);
+  ```
+- You can now create non-CA leaf certificates using [SelfSignedCertificateExtension](type). #6657
+  ```java
+  static var rootCert = ...;
+  @RegisterExtension
+  static var intermediateCert =
+    new SignedCertificateExtension("abc.com", rootCert, true); // 👈👈👈
+  ```
+
+## 📈 Improvements
+
+- Improved warning logs by adding diagnostic context to frequent HTTP/2 connection errors. #6638
+- [XdsBootstrap](type) now supports SDS. #6597 #6610 #6654
+
+## 🛠️ Bug fixes
+
+- [EventLoop](type)s created using [EventLoopGroupBuilder](type) can be set as a worker group without an exception being thrown. #6632 #6641
+- [GrpcMeterIdPrefixFunction](type) records `grpc-status` correctly for responses which fail with an exception. #6606 #6621
+- [BraveService](type) and [ThrottlingService](type) now correctly propagate the delegate's exchange type and service options. #6643
+- Fixed a bug where aborted streaming requests may affect the HTTP/2 window of other requests in the same connection. #6642
+- [WebSocketClient](type) now correctly releases buffered memory when an inbound stream is aborted. #6624
+- Setting `pingIntervalMillis` to a value greater than 33 seconds no longer throws an exception. #6648
+  - Linux keepalive socket options (`SO_KEEPALIVE` `TCP_KEEPIDLE`, `TCP_KEEPINTVL`) are no longer set by default.
+
+## 📃 Documentation
+
+- A new Armeria Hyperfocal blog series introductory post has been added. #6637
+
+## ⛓ Dependencies
+
+* Athenz 1.12.33 → 1.12.35
+* Micrometer Context Propagation 1.2.0 → 1.2.1
+* Jackson 2.21.0 → 2.21.1
+* Java JWT 4.5.0 → 4.5.1
+* Kotlin 2.3.0 → 2.3.10
+* Logback 1.5.27 → 1.5.32
+* MCP SDK 0.17.2 → 0.18.0
+* Micrometer 1.16.2 → 1.16.3
+* Micrometer Tracing 1.6.2 → 1.6.3
+* Netty 4.2.7.Final → 4.2.10.Final
+* Prometheus 1.4.3 → 1.5.0
+* Protobuf 4 4.33.2 → 4.34.0
+* Reactor Core 3.8.2 → 3.8.3
+* Spring Framework 7.0.3 → 7.0.5
+* Spring Boot 4.0.2 → 4.0.3
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'novoj',
+  'sallylyen',
+  'schiemon',
+  'syleeeee',
+  'trustin'
+]} />
