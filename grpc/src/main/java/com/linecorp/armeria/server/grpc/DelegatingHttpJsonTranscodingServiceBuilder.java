@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -26,7 +27,9 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.HttpService;
 
 import io.grpc.ServiceDescriptor;
@@ -51,6 +54,7 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
 
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
     private HttpService fallback = DEFAULT_FALLBACK;
+    private SerializationFormat transcodedGrpcSerializationFormat = GrpcSerializationFormats.JSON;
 
     /**
      * Creates a new builder for the specified delegate.
@@ -74,6 +78,22 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
      */
     public DelegatingHttpJsonTranscodingServiceBuilder options(HttpJsonTranscodingOptions options) {
         this.options = requireNonNull(options, "options");
+        return this;
+    }
+
+    /**
+     * Sets the serialization format for transcoded gRPC requests sent to the delegate.
+     * Only {@link GrpcSerializationFormats#JSON} and {@link GrpcSerializationFormats#PROTO}
+     * are supported.
+     */
+    public DelegatingHttpJsonTranscodingServiceBuilder transcodedGrpcSerializationFormat(
+            SerializationFormat transcodedGrpcSerializationFormat) {
+        requireNonNull(transcodedGrpcSerializationFormat, "transcodedGrpcSerializationFormat");
+        checkArgument(GrpcSerializationFormats.isJson(transcodedGrpcSerializationFormat) ||
+                      GrpcSerializationFormats.isProto(transcodedGrpcSerializationFormat),
+                      "transcodedGrpcSerializationFormat must be JSON or PROTO: %s",
+                      transcodedGrpcSerializationFormat);
+        this.transcodedGrpcSerializationFormat = transcodedGrpcSerializationFormat;
         return this;
     }
 
@@ -110,6 +130,7 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
         final HttpJsonTranscoder transcoder =
                 new HttpJsonTranscoderBuilder()
                         .options(options)
+                        .transcodedGrpcSerializationFormat(transcodedGrpcSerializationFormat)
                         .serviceDescriptors(serviceDescriptors)
                         .build();
         if (transcoder == null) {

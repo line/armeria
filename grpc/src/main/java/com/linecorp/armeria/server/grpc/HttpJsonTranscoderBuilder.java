@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
@@ -61,7 +62,10 @@ import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
 import com.google.protobuf.Value;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.Field;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.TranscodingSpec;
@@ -78,6 +82,7 @@ final class HttpJsonTranscoderBuilder {
 
     private final Map<String, HttpJsonGrpcMethod> methods = new HashMap<>();
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
+    private SerializationFormat transcodedGrpcSerializationFormat = GrpcSerializationFormats.JSON;
 
     HttpJsonTranscoderBuilder serviceDefinitions(
             Iterable<ServerServiceDefinition> serviceDefinitions) {
@@ -90,18 +95,22 @@ final class HttpJsonTranscoderBuilder {
 
     private HttpJsonTranscoderBuilder serviceDefinition(
             ServerServiceDefinition serviceDefinition) {
+        requireNonNull(serviceDefinition, "serviceDefinition");
         final Descriptors.ServiceDescriptor serviceDesc = serviceDescriptor(serviceDefinition);
         if (serviceDesc == null) {
             return this;
         }
 
+        final io.grpc.ServiceDescriptor grpcServiceDescriptor = serviceDefinition.getServiceDescriptor();
+        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.of(grpcServiceDescriptor);
         for (ServerMethodDefinition<?, ?> methodDefinition : serviceDefinition.getMethods()) {
             final Descriptors.MethodDescriptor methodDesc = methodDescriptor(methodDefinition);
             if (methodDesc == null) {
                 continue;
             }
             methods.put(methodDesc.getFullName(),
-                        new HttpJsonGrpcMethod(methodDefinition, methodDesc));
+                        new HttpJsonGrpcMethod(methodDefinition, methodDesc,
+                                               methodDefinition.getMethodDescriptor(), jsonMarshaller));
         }
         return this;
     }
@@ -120,6 +129,17 @@ final class HttpJsonTranscoderBuilder {
         return this;
     }
 
+    HttpJsonTranscoderBuilder transcodedGrpcSerializationFormat(
+            SerializationFormat transcodedGrpcSerializationFormat) {
+        requireNonNull(transcodedGrpcSerializationFormat, "transcodedGrpcSerializationFormat");
+        checkArgument(GrpcSerializationFormats.isJson(transcodedGrpcSerializationFormat) ||
+                      GrpcSerializationFormats.isProto(transcodedGrpcSerializationFormat),
+                      "transcodedGrpcSerializationFormat must be JSON or PROTO: %s",
+                      transcodedGrpcSerializationFormat);
+        this.transcodedGrpcSerializationFormat = transcodedGrpcSerializationFormat;
+        return this;
+    }
+
     @Nullable
     private static Descriptors.ServiceDescriptor serviceDescriptor(ServerServiceDefinition serviceDefinition) {
         @Nullable
@@ -131,12 +151,14 @@ final class HttpJsonTranscoderBuilder {
     }
 
     private void serviceDescriptor(io.grpc.ServiceDescriptor serviceDescriptor) {
+        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.of(serviceDescriptor);
         for (io.grpc.MethodDescriptor<?, ?> grpcMethodDescriptor : serviceDescriptor.getMethods()) {
             final Descriptors.MethodDescriptor methodDesc = methodDescriptor(grpcMethodDescriptor);
             if (methodDesc == null) {
                 continue;
             }
-            methods.put(methodDesc.getFullName(), new HttpJsonGrpcMethod(null, methodDesc));
+            methods.put(methodDesc.getFullName(),
+                        new HttpJsonGrpcMethod(null, methodDesc, grpcMethodDescriptor, jsonMarshaller));
         }
     }
 
@@ -360,7 +382,7 @@ final class HttpJsonTranscoderBuilder {
             return null;
         }
         final Map<Route, TranscodingSpec> routeAndSpecs = buildRouteAndSpecs(httpRules);
-        return new HttpJsonTranscoder(routeAndSpecs, options);
+        return new HttpJsonTranscoder(routeAndSpecs, options, transcodedGrpcSerializationFormat);
     }
 
     private Map<Descriptors.MethodDescriptor, HttpRule> buildHttpRules() {
@@ -477,11 +499,17 @@ final class HttpJsonTranscoderBuilder {
         @Nullable
         final ServerMethodDefinition<?, ?> definition;
         final Descriptors.MethodDescriptor descriptor;
+        final io.grpc.MethodDescriptor<?, ?> grpcMethodDescriptor;
+        final GrpcJsonMarshaller jsonMarshaller;
 
         HttpJsonGrpcMethod(@Nullable ServerMethodDefinition<?, ?> definition,
-                           Descriptors.MethodDescriptor descriptor) {
+                           Descriptors.MethodDescriptor descriptor,
+                           io.grpc.MethodDescriptor<?, ?> grpcMethodDescriptor,
+                           GrpcJsonMarshaller jsonMarshaller) {
             this.definition = definition;
             this.descriptor = descriptor;
+            this.grpcMethodDescriptor = grpcMethodDescriptor;
+            this.jsonMarshaller = jsonMarshaller;
         }
     }
 

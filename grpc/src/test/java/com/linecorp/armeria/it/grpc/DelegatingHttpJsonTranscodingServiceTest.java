@@ -166,6 +166,24 @@ class DelegatingHttpJsonTranscodingServiceTest {
     }
 
     @Test
+    void shouldProxyHttpJsonRequestWithProtoUpstream() throws Exception {
+        reconfigureProxyServer(sb -> {
+            final HttpService protoDelegate = prefixedProxy(upstreamClient(), "/proto");
+            sb.serviceUnder("/proto",
+                            transcoderBuilder(protoDelegate)
+                                    .transcodedGrpcSerializationFormat(GrpcSerializationFormats.PROTO)
+                                    .build());
+        });
+        final WebClient client = WebClient.of(proxyServer.httpUri());
+        final AggregatedHttpResponse response = client.get("/proto/v1/messages/1").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("text").asText()).isEqualTo("messages/1");
+    }
+
+    @Test
     void shouldProxyHttpJsonRequestInProcess() throws Exception {
         reconfigureProxyServer(sb -> {
             final GrpcService grpcService = GrpcService.builder()
