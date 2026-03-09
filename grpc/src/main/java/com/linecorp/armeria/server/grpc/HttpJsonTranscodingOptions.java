@@ -25,7 +25,8 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * User provided options for customizing {@link HttpJsonTranscodingService}.
+ * User provided options for customizing {@link HttpJsonTranscodingGrpcService} and
+ * {@link DelegatingHttpJsonTranscodingService}.
  */
 @UnstableApi
 public interface HttpJsonTranscodingOptions {
@@ -66,8 +67,8 @@ public interface HttpJsonTranscodingOptions {
     /**
      * Returns the list of {@link HttpRule}s that are programmatically registered.
      *
-     * <p>These rules are used to configure the {@link HttpJsonTranscodingService} without modifying Protobuf
-     * files. They are processed in addition to any rules found in Proto annotations,
+     * <p>These rules are used to configure the {@link HttpJsonTranscodingGrpcService} without modifying
+     * Protobuf files. They are processed in addition to any rules found in Proto annotations,
      * unless {@link #ignoreProtoHttpRule()} is enabled.
      */
     List<HttpRule> additionalHttpRules();

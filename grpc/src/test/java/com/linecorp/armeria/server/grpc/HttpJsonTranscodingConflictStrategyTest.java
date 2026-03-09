@@ -22,7 +22,7 @@ import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingConflictStrate
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +31,6 @@ import com.google.api.HttpRule;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.it.grpc.HttpJsonTranscodingTestService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.TranscodingSpec;
 
 class HttpJsonTranscodingConflictStrategyTest {
 
@@ -50,14 +49,15 @@ class HttpJsonTranscodingConflictStrategyTest {
                                                    .addService(new HttpJsonTranscodingTestService())
                                                    .enableHttpJsonTranscoding(options)
                                                    .build();
-        assertThat(grpcService).isInstanceOf(HttpJsonTranscodingService.class);
-        final HttpJsonTranscodingService transcodingService = (HttpJsonTranscodingService) grpcService;
-        final Map<Route, TranscodingSpec> routes = transcodingService.routeAndSpecs();
-        assertThat(routes).containsKey(Route.builder()
+        assertThat(grpcService).isInstanceOf(HttpJsonTranscodingGrpcService.class);
+        final HttpJsonTranscodingGrpcService transcodingService =
+                (HttpJsonTranscodingGrpcService) grpcService;
+        final Set<Route> routes = transcodingService.routes();
+        assertThat(routes).contains(Route.builder()
                                             .path("/v2/messages/{message_id}")
                                             .methods(HttpMethod.GET)
                                             .build());
-        assertThat(routes).doesNotContainKey(Route.builder()
+        assertThat(routes).doesNotContain(Route.builder()
                                                   .path("/v2/additional/messages/{message_id}")
                                                   .methods(HttpMethod.GET)
                                                   .build());
@@ -78,14 +78,15 @@ class HttpJsonTranscodingConflictStrategyTest {
                                                    .addService(new HttpJsonTranscodingTestService())
                                                    .enableHttpJsonTranscoding(options)
                                                    .build();
-        assertThat(grpcService).isInstanceOf(HttpJsonTranscodingService.class);
-        final HttpJsonTranscodingService transcodingService = (HttpJsonTranscodingService) grpcService;
-        final Map<Route, TranscodingSpec> routes = transcodingService.routeAndSpecs();
-        assertThat(routes).doesNotContainKey(Route.builder()
+        assertThat(grpcService).isInstanceOf(HttpJsonTranscodingGrpcService.class);
+        final HttpJsonTranscodingGrpcService transcodingService =
+                (HttpJsonTranscodingGrpcService) grpcService;
+        final Set<Route> routes = transcodingService.routes();
+        assertThat(routes).doesNotContain(Route.builder()
                                                   .path("/v2/messages/{message_id}")
                                                   .methods(HttpMethod.GET)
                                                   .build());
-        assertThat(routes).containsKey(Route.builder()
+        assertThat(routes).contains(Route.builder()
                                             .path("/v2/additional/messages/{message_id}")
                                             .methods(HttpMethod.GET)
                                             .build());
@@ -106,18 +107,19 @@ class HttpJsonTranscodingConflictStrategyTest {
                                                    .addService(new HttpJsonTranscodingTestService())
                                                    .enableHttpJsonTranscoding(options)
                                                    .build();
-        assertThat(grpcService).isInstanceOf(HttpJsonTranscodingService.class);
-        final HttpJsonTranscodingService transcodingService = (HttpJsonTranscodingService) grpcService;
-        final Map<Route, TranscodingSpec> routes = transcodingService.routeAndSpecs();
-        assertThat(routes).doesNotContainKey(Route.builder()
+        assertThat(grpcService).isInstanceOf(HttpJsonTranscodingGrpcService.class);
+        final HttpJsonTranscodingGrpcService transcodingService =
+                (HttpJsonTranscodingGrpcService) grpcService;
+        final Set<Route> routes = transcodingService.routes();
+        assertThat(routes).doesNotContain(Route.builder()
                                                   .path("/v1/additional_binding")
                                                   .methods(HttpMethod.POST)
                                                   .build());
-        assertThat(routes).doesNotContainKey(Route.builder()
+        assertThat(routes).doesNotContain(Route.builder()
                                                   .path("/v1/alternate_additional_binding")
                                                   .methods(HttpMethod.PUT)
                                                   .build());
-        assertThat(routes).containsKey(Route.builder()
+        assertThat(routes).contains(Route.builder()
                                             .path("/v2/additional_binding")
                                             .methods(HttpMethod.GET)
                                             .build());

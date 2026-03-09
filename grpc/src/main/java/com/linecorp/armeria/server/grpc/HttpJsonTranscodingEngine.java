@@ -1,7 +1,7 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Base64;
@@ -33,7 +34,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -51,7 +51,6 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
 import com.google.protobuf.Descriptors.MethodDescriptor;
@@ -70,79 +69,284 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification.Parameter;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSupport;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.PathVariable.ValueDefinition.Type;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngineBuilder.HttpJsonGrpcMethod;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
+import com.linecorp.armeria.server.grpc.UnframedGrpcSupport.ResponseHandler;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.grpc.ServerMethodDefinition;
+import io.grpc.Status;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.AttributeKey;
 
-/**
- * Converts HTTP/JSON request to gRPC request and delegates it to the {@link FramedGrpcService}.
- */
-final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
-        implements HttpEndpointSupport {
-    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingService.class);
+final class HttpJsonTranscodingEngine implements HttpEndpointSupport {
+    static final AttributeKey<HttpJsonGrpcMethod> HTTP_JSON_GRPC_METHOD_INFO =
+            AttributeKey.valueOf(FramedGrpcService.class, "HTTP_JSON_GRPC_METHOD_INFO");
+    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingEngine.class);
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
+    private final HttpJsonTranscodingOptions options;
+    private final SerializationFormat transcodedGrpcSerializationFormat;
+    private final Map<Route, TranscodingSpec> routeAndSpecs;
+    private final Set<Route> routes;
+
+    HttpJsonTranscodingEngine(Map<Route, TranscodingSpec> routeAndSpecs,
+                              HttpJsonTranscodingOptions httpJsonTranscodingOptions,
+                              SerializationFormat transcodedGrpcSerializationFormat) {
+        options = requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
+        this.transcodedGrpcSerializationFormat =
+                requireNonNull(transcodedGrpcSerializationFormat, "transcodedGrpcSerializationFormat");
+        this.routeAndSpecs = routeAndSpecs;
+
+        final LinkedHashSet<Route> linkedHashSet = new LinkedHashSet<>(routeAndSpecs.size());
+        routeAndSpecs.entrySet().stream().sorted((o1, o2) -> {
+            if (o1.getValue().hasVerb) {
+                return -1;
+            }
+            if (o2.getValue().hasVerb) {
+                return 1;
+            }
+            return 0;
+        }).forEach(entry -> {
+            linkedHashSet.add(entry.getKey());
+        });
+
+        routes = Collections.unmodifiableSet(linkedHashSet);
+    }
 
     @Nullable
-    private static Function<AggregatedHttpResponse, AggregatedHttpResponse> generateResponseConverter(
-            TranscodingSpec spec) {
+    @Override
+    public HttpEndpointSpecification httpEndpointSpecification(Route route) {
+        requireNonNull(route, "route");
+        final TranscodingSpec spec = routeAndSpecs.get(route);
+        if (spec == null) {
+            return null;
+        }
+        final Set<String> paramNames = spec.pathVariables.stream().map(PathVariable::name)
+                                                         .collect(toImmutableSet());
+        final Map<String, Parameter> parameterTypes =
+                spec.originalFields.entrySet().stream().collect(
+                        toImmutableMap(Entry::getKey,
+                                       fieldEntry -> new Parameter(fieldEntry.getValue().type(),
+                                                                   fieldEntry.getValue().isRepeated(),
+                                                                   fieldEntry.getValue().isRequired())));
+        return new HttpEndpointSpecification(spec.order,
+                                             route,
+                                             paramNames,
+                                             spec.serviceDescriptor,
+                                             spec.methodDescriptor,
+                                             parameterTypes,
+                                             spec.httpRule);
+    }
+
+    Set<Route> routes() {
+        return routes;
+    }
+
+    HttpResponse serve(ServiceRequestContext ctx, HttpRequest req,
+                       TranscodingSpec spec, HttpService delegate) throws Exception {
+        return serve0(ctx, req, spec, delegate);
+    }
+
+    @Nullable
+    TranscodingSpec findSpec(Route route) {
+        return routeAndSpecs.get(route);
+    }
+
+    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
+                                TranscodingSpec spec, HttpService delegate) throws Exception {
+        final RequestHeaders clientHeaders = req.headers();
+        final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
+        if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "gRPC encoding is not supported for non-framed requests.");
+        }
+
+        final boolean useProto = GrpcSerializationFormats.isProto(transcodedGrpcSerializationFormat);
+        grpcHeaders.method(HttpMethod.POST)
+                   .contentType(useProto ? GrpcSerializationFormats.PROTO.mediaType()
+                                         : GrpcSerializationFormats.JSON.mediaType());
+        grpcHeaders.path(grpcPath(spec.methodDescriptor));
+        // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
+        // clear the header if it's present.
+        grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+
+        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
+                               RequestLogProperty.RESPONSE_CONTENT);
+
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        req.aggregate(ctx.eventLoop()).handle((clientRequest, t) -> {
+            try (SafeCloseable ignore = ctx.push()) {
+                if (t != null) {
+                    responseFuture.completeExceptionally(t);
+                } else {
+                    try {
+                        final HttpJsonGrpcMethod method = spec.method;
+                        ctx.setAttr(HTTP_JSON_GRPC_METHOD_INFO, method);
+                        final HttpData requestContent;
+
+                        // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
+                        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getInputType())) {
+                            // Convert the HTTP request to a JSON representation of HttpBody.
+                            requestContent = convertToHttpBody(clientRequest);
+                        } else {
+                            // Convert the HTTP request to gRPC JSON.
+                            requestContent = convertToJson(ctx, clientRequest, spec);
+                        }
+
+                        final JsonProtoMarshaller jsonProtoMarshaller =
+                                useProto ? new JsonProtoMarshaller(ctx, method) : null;
+                        final HttpData transcodedRequestContent;
+                        if (useProto) {
+                            transcodedRequestContent = convertToProto(requestContent, jsonProtoMarshaller);
+                        } else {
+                            transcodedRequestContent = requestContent;
+                        }
+                        final ResponseHandler responseHandler =
+                                new HttpJsonResponseHandler(ctx, responseFuture, spec,
+                                                            useProto, jsonProtoMarshaller);
+                        UnframedGrpcSupport.frameAndServe(
+                                delegate, ctx, grpcHeaders.build(), transcodedRequestContent,
+                                responseHandler);
+                    } catch (IllegalArgumentException iae) {
+                        responseFuture.completeExceptionally(
+                                HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
+                    } catch (Exception e) {
+                        responseFuture.completeExceptionally(e);
+                    }
+                }
+            }
+            return null;
+        });
+        return HttpResponse.of(responseFuture);
+    }
+
+    private AggregatedHttpResponse convertResponse(
+            TranscodingSpec spec, boolean useProto, AggregatedHttpResponse httpResponse,
+            @Nullable JsonProtoMarshaller jsonProtoMarshaller) throws Exception {
+        final AggregatedHttpResponse jsonResponse =
+                useProto ? convertProtoResponseToJson(httpResponse, jsonProtoMarshaller)
+                         : httpResponse;
+        return convertJsonResponse(spec, jsonResponse);
+    }
+
+    private static AggregatedHttpResponse convertJsonResponse(
+            TranscodingSpec spec, AggregatedHttpResponse httpResponse) {
         // Ignore the spec if the method is HttpBody. The response body is already in the correct format.
         if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
-            return httpResponse -> {
-                final HttpData data = httpResponse.content();
-                final JsonNode jsonNode = extractHttpBody(data);
+            final HttpData data = httpResponse.content();
+            final JsonNode jsonNode = extractHttpBody(data);
 
-                // Failed to parse the JSON body, return the original response.
-                if (jsonNode == null) {
-                    return httpResponse;
+            // Failed to parse the JSON body, return the original response.
+            if (jsonNode == null) {
+                return httpResponse;
+            }
+
+            PooledObjects.close(data);
+
+            // The data field is base64 encoded.
+            // https://protobuf.dev/programming-guides/proto3/#json
+            final String httpBody = jsonNode.get("data").asText();
+            final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
+
+            final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
+                final JsonNode contentType = jsonNode.get("contentType");
+
+                if (contentType != null && contentType.isTextual()) {
+                    builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
+                } else {
+                    builder.remove(HttpHeaderNames.CONTENT_TYPE);
                 }
+            });
 
-                PooledObjects.close(data);
-
-                // The data field is base64 encoded.
-                // https://protobuf.dev/programming-guides/proto3/#json
-                final String httpBody = jsonNode.get("data").asText();
-                final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
-
-                final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
-                    final JsonNode contentType = jsonNode.get("contentType");
-
-                    if (contentType != null && contentType.isTextual()) {
-                        builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
-                    } else {
-                        builder.remove(HttpHeaderNames.CONTENT_TYPE);
-                    }
-                });
-
-                return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
-            };
+            return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
         }
 
         @Nullable
         final String responseBody = spec.responseBody;
         if (responseBody == null) {
-            return null;
+            return httpResponse;
         }
 
-        return httpResponse -> {
-            try (HttpData data = httpResponse.content()) {
-                final HttpData convertedData = convertHttpDataForResponseBody(responseBody, data);
-                return AggregatedHttpResponse.of(httpResponse.headers(), convertedData);
+        try (HttpData data = httpResponse.content()) {
+            final HttpData convertedData = convertHttpDataForResponseBody(responseBody, data);
+            return AggregatedHttpResponse.of(httpResponse.headers(), convertedData);
+        }
+    }
+
+    private static String grpcPath(MethodDescriptor methodDescriptor) {
+        return '/' + methodDescriptor.getService().getFullName() + '/' + methodDescriptor.getName();
+    }
+
+    private HttpData convertToProto(HttpData requestContent,
+                                    @Nullable JsonProtoMarshaller jsonProtoMarshaller)
+            throws IOException {
+        final byte[] jsonBuf = requestContent.array();
+        assert jsonProtoMarshaller != null;
+        final ByteBuf protoBuf = jsonProtoMarshaller.jsonToProto(jsonBuf);
+        return HttpData.wrap(protoBuf);
+    }
+
+    private AggregatedHttpResponse convertProtoResponseToJson(
+            AggregatedHttpResponse httpResponse,
+            @Nullable JsonProtoMarshaller jsonProtoMarshaller) throws Exception {
+        final HttpData data = httpResponse.content();
+        final ByteBuf protoBuf = data.byteBuf();
+        assert jsonProtoMarshaller != null;
+        final ByteBuf jsonBuf = jsonProtoMarshaller.protoToJson(protoBuf, true);
+        return AggregatedHttpResponse.of(httpResponse.headers(), HttpData.wrap(jsonBuf));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static GrpcMessageMarshaller<Object, Object> newMessageMarshaller(
+            ServiceRequestContext ctx, SerializationFormat serializationFormat,
+            HttpJsonGrpcMethod method) {
+        return new GrpcMessageMarshaller<>(
+                ctx.alloc(),
+                serializationFormat,
+                (io.grpc.MethodDescriptor<Object, Object>) method.grpcMethodDescriptor,
+                method.jsonMarshaller,
+                false,
+                true);
+    }
+
+    private static final class JsonProtoMarshaller {
+        private final GrpcMessageMarshaller<Object, Object> json;
+        private final GrpcMessageMarshaller<Object, Object> proto;
+
+        JsonProtoMarshaller(ServiceRequestContext ctx, HttpJsonGrpcMethod method) {
+            json = newMessageMarshaller(ctx, GrpcSerializationFormats.JSON, method);
+            proto = newMessageMarshaller(ctx, GrpcSerializationFormats.PROTO, method);
+        }
+
+        ByteBuf jsonToProto(byte[] jsonBytes) throws IOException {
+            try (ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonBytes)) {
+                final Object message = json.deserializeRequest(inputStream);
+                return proto.serializeRequest(message);
             }
-        };
+        }
+
+        ByteBuf protoToJson(ByteBuf protoBuf, boolean grpcWebText) throws IOException {
+            final Object message = proto.deserializeResponse(protoBuf, grpcWebText);
+            return json.serializeResponse(message);
+        }
     }
 
     @Nullable
@@ -185,147 +389,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         responseBody, data, e);
             return HttpData.wrap(array);
         }
-    }
-
-    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
-
-    private final Map<Route, TranscodingSpec> routeAndSpecs;
-    private final Set<Route> routes;
-
-    HttpJsonTranscodingService(GrpcService delegate,
-                               Map<Route, TranscodingSpec> routeAndSpecs,
-                               HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
-        super(delegate, httpJsonTranscodingOptions.errorHandler());
-        this.routeAndSpecs = routeAndSpecs;
-
-        final LinkedHashSet<Route> linkedHashSet = new LinkedHashSet<>(delegate.routes().size() +
-                                                                       routeAndSpecs.size());
-        linkedHashSet.addAll(delegate.routes());
-
-        routeAndSpecs.entrySet().stream().sorted((o1, o2) -> {
-            if (o1.getValue().hasVerb) {
-                return -1;
-            }
-            if (o2.getValue().hasVerb) {
-                return 1;
-            }
-            return 0;
-        }).forEach(entry -> {
-            linkedHashSet.add(entry.getKey());
-        });
-
-        routes = Collections.unmodifiableSet(linkedHashSet);
-    }
-
-    @Nullable
-    @Override
-    public HttpEndpointSpecification httpEndpointSpecification(Route route) {
-        requireNonNull(route, "route");
-        final TranscodingSpec spec = routeAndSpecs.get(route);
-        if (spec == null) {
-            return null;
-        }
-        final Set<String> paramNames = spec.pathVariables.stream().map(PathVariable::name)
-                                                         .collect(toImmutableSet());
-        final Map<String, Parameter> parameterTypes =
-                spec.originalFields.entrySet().stream().collect(
-                        toImmutableMap(Entry::getKey,
-                                       fieldEntry -> new Parameter(fieldEntry.getValue().type(),
-                                                                   fieldEntry.getValue().isRepeated(),
-                                                                   fieldEntry.getValue().isRequired())));
-        return new HttpEndpointSpecification(spec.order,
-                                             route,
-                                             paramNames,
-                                             spec.serviceDescriptor,
-                                             spec.methodDescriptor,
-                                             parameterTypes,
-                                             spec.httpRule);
-    }
-
-    /**
-     * Returns the {@link Route}s which are supported by this service and the {@code delegate}.
-     */
-    @Override
-    public Set<Route> routes() {
-        return routes;
-    }
-
-    @Nullable
-    @Override
-    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
-        final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());
-        if (spec != null) {
-            return spec.method;
-        }
-        return super.methodDefinition(ctx);
-    }
-
-    @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());
-        if (spec != null) {
-            return serve0(ctx, req, spec);
-        }
-        return unwrap().serve(ctx, req);
-    }
-
-    @VisibleForTesting
-    Map<Route, TranscodingSpec> routeAndSpecs() {
-        return routeAndSpecs;
-    }
-
-    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
-                                TranscodingSpec spec) throws Exception {
-        final RequestHeaders clientHeaders = req.headers();
-        final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
-        if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
-            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                                   MediaType.PLAIN_TEXT_UTF_8,
-                                   "gRPC encoding is not supported for non-framed requests.");
-        }
-
-        grpcHeaders.method(HttpMethod.POST)
-                   .contentType(GrpcSerializationFormats.JSON.mediaType());
-        // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
-        // clear the header if it's present.
-        grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
-
-        ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
-                               RequestLogProperty.RESPONSE_CONTENT);
-
-        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregate(ctx.eventLoop()).handle((clientRequest, t) -> {
-            try (SafeCloseable ignore = ctx.push()) {
-                if (t != null) {
-                    responseFuture.completeExceptionally(t);
-                } else {
-                    try {
-                        ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
-                        final HttpData requestContent;
-
-                        // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
-                        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getInputType())) {
-                            // Convert the HTTP request to a JSON representation of HttpBody.
-                            requestContent = convertToHttpBody(clientRequest);
-                        } else {
-                            // Convert the HTTP request to gRPC JSON.
-                            requestContent = convertToJson(ctx, clientRequest, spec);
-                        }
-
-                        frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                      requestContent, responseFuture,
-                                      generateResponseConverter(spec));
-                    } catch (IllegalArgumentException iae) {
-                        responseFuture.completeExceptionally(
-                                HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
-                    } catch (Exception e) {
-                        responseFuture.completeExceptionally(e);
-                    }
-                }
-            }
-            return null;
-        });
-        return HttpResponse.of(responseFuture);
     }
 
     private static HttpData convertToHttpBody(AggregatedHttpRequest request) throws IOException {
@@ -488,7 +551,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 continue;
             }
 
-            if (field.javaType == JavaType.MESSAGE) {
+            if (field.type() == JavaType.MESSAGE) {
                 throw new IllegalArgumentException(
                         "Unsupported message type: " + field.descriptor.getFullName());
             }
@@ -584,9 +647,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     static final class TranscodingSpec {
         private final int order;
         private final HttpRule httpRule;
-        private final ServerMethodDefinition<?, ?> method;
-        private final Descriptors.ServiceDescriptor serviceDescriptor;
-        private final Descriptors.MethodDescriptor methodDescriptor;
+        private final HttpJsonGrpcMethod method;
+        private final ServiceDescriptor serviceDescriptor;
+        private final MethodDescriptor methodDescriptor;
         private final Map<String, Field> originalFields;
         private final List<Map<String, Field>> queryMappingFields;
         private final List<PathVariable> pathVariables;
@@ -596,7 +659,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         TranscodingSpec(int order,
                         HttpRule httpRule,
-                        ServerMethodDefinition<?, ?> method,
+                        HttpJsonGrpcMethod method,
                         ServiceDescriptor serviceDescriptor,
                         MethodDescriptor methodDescriptor,
                         Map<String, Field> originalFields,
@@ -618,6 +681,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         MethodDescriptor methodDescriptor() {
             return methodDescriptor;
+        }
+
+        HttpJsonGrpcMethod method() {
+            return method;
         }
     }
 
@@ -771,6 +838,52 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                  * the {@code value}.
                  */
                 REFERENCE
+            }
+        }
+    }
+
+    private class HttpJsonResponseHandler implements ResponseHandler {
+        private final ServiceRequestContext ctx;
+        private final CompletableFuture<HttpResponse> responseFuture;
+        private final TranscodingSpec spec;
+        private final boolean useProto;
+        @Nullable
+        private final JsonProtoMarshaller jsonProtoMarshaller;
+
+        HttpJsonResponseHandler(ServiceRequestContext ctx,
+                                CompletableFuture<HttpResponse> responseFuture,
+                                TranscodingSpec spec, boolean useProto,
+                                @Nullable JsonProtoMarshaller jsonProtoMarshaller) {
+            this.ctx = ctx;
+            this.responseFuture = responseFuture;
+            this.spec = spec;
+            this.useProto = useProto;
+            this.jsonProtoMarshaller = jsonProtoMarshaller;
+        }
+
+        @Override
+        public void handle(@Nullable AggregatedHttpResponse aggregatedResponse,
+                           @Nullable Status status, @Nullable Throwable cause) {
+            try {
+                // set the deferred logs if not set from the delegate
+                ctx.logBuilder().requestContent(null, null);
+                ctx.logBuilder().responseContent(null, null);
+                if (cause != null) {
+                    responseFuture.completeExceptionally(cause);
+                    return;
+                }
+                if (status != null) {
+                    assert aggregatedResponse != null;
+                    final HttpResponse errRes = options.errorHandler().handle(ctx, status, aggregatedResponse);
+                    responseFuture.complete(errRes);
+                    return;
+                }
+                assert aggregatedResponse != null;
+                final AggregatedHttpResponse convertedResponse =
+                        convertResponse(spec, useProto, aggregatedResponse, jsonProtoMarshaller);
+                responseFuture.complete(convertedResponse.toHttpResponse());
+            } catch (Exception e) {
+                responseFuture.completeExceptionally(e);
             }
         }
     }

@@ -18,12 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
@@ -41,6 +35,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -52,48 +47,26 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.grpc.ServerMethodDefinition;
-import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
 
 /**
- * Common part of the {@link UnframedGrpcService} and {@link HttpJsonTranscodingService}.
+ * Shared helpers for unframed gRPC services.
  */
-abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
+final class UnframedGrpcSupport {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnframedGrpcSupport.class);
     static final AttributeKey<Boolean> IS_UNFRAMED_GRPC =
-            AttributeKey.valueOf(AbstractUnframedGrpcService.class, "IS_UNFRAMED_GRPC");
+            AttributeKey.valueOf(UnframedGrpcSupport.class, "IS_UNFRAMED_GRPC");
 
-    private final GrpcService delegate;
-    private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
-
-    /**
-     * Creates a new instance that decorates the specified {@link HttpService}.
-     */
-    AbstractUnframedGrpcService(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
-        super(delegate);
-        this.delegate = delegate;
-        this.unframedGrpcErrorHandler = requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
-    }
-
-    @Override
-    public Set<Route> routes() {
-        return delegate.routes();
-    }
-
-    @Override
-    public ExchangeType exchangeType(RoutingContext routingContext) {
+    static ExchangeType exchangeType(RoutingContext routingContext, HttpService delegate) {
         final MediaType contentType = routingContext.headers().contentType();
         if (contentType == null) {
             return ExchangeType.BIDI_STREAMING;
@@ -101,7 +74,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
-                return ((HttpService) unwrap()).exchangeType(routingContext);
+                return delegate.exchangeType(routingContext);
             }
         }
 
@@ -112,38 +85,12 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         return ExchangeType.BIDI_STREAMING;
     }
 
-    @Override
-    public boolean isFramed() {
-        return false;
-    }
-
-    @Override
-    public Map<String, ServerMethodDefinition<?, ?>> methods() {
-        return delegate.methods();
-    }
-
-    @Override
-    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
-        return delegate.methodsByRoute();
-    }
-
-    @Override
-    public List<ServerServiceDefinition> services() {
-        return delegate.services();
-    }
-
-    @Override
-    public Set<SerializationFormat> supportedSerializationFormats() {
-        return delegate.supportedSerializationFormats();
-    }
-
-    protected void frameAndServe(
+    static void frameAndServe(
             Service<HttpRequest, HttpResponse> delegate,
             ServiceRequestContext ctx,
             RequestHeaders grpcHeaders,
             HttpData content,
-            CompletableFuture<HttpResponse> res,
-            @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
+            ResponseHandler responseHandler) {
         final HttpRequest grpcRequest;
         ctx.setAttr(IS_UNFRAMED_GRPC, true);
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -165,7 +112,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         try {
             grpcResponse = delegate.serve(ctx, grpcRequest);
         } catch (Exception e) {
-            res.completeExceptionally(e);
+            abortIfNotComplete(grpcRequest, e);
+            responseHandler.onError(e);
             return;
         }
 
@@ -174,29 +122,33 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                             (framedResponse, t) -> {
                                 try (SafeCloseable ignore = ctx.push()) {
                                     if (t != null) {
-                                        res.completeExceptionally(t);
+                                        responseHandler.onError(t);
                                     } else {
-                                        deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                                          responseConverter);
+                                        deframeAndRespond(ctx, framedResponse, responseHandler);
                                     }
+                                } finally {
+                                    abortIfNotComplete(grpcRequest, ResponseCompleteException.get());
                                 }
                                 return null;
                             });
     }
 
+    static void abortIfNotComplete(HttpRequest request, Throwable cause) {
+        if (!request.isComplete()) {
+            request.abort(cause);
+        }
+    }
+
     @VisibleForTesting
     static void deframeAndRespond(ServiceRequestContext ctx,
                                   AggregatedHttpResponse grpcResponse,
-                                  CompletableFuture<HttpResponse> res,
-                                  UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  @Nullable
-                                  Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
+                                  ResponseHandler responseHandler) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatusCode == null) {
             PooledObjects.close(grpcResponse.content());
-            res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
+            responseHandler.onError(new NullPointerException("grpcStatusCode must not be null"));
             logger.warn("{} A gRPC response must have the {} header. response: {}",
                         ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
             return;
@@ -209,18 +161,14 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         if (grpcStatus.getCode() != Code.OK) {
             PooledObjects.close(grpcResponse.content());
-            try {
-                res.complete(unframedGrpcErrorHandler.handle(ctx, grpcStatus, grpcResponse));
-            } catch (Exception e) {
-                res.completeExceptionally(e);
-            }
+            responseHandler.onStatus(grpcStatus, grpcResponse);
             return;
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
         if (grpcMediaType == null) {
             PooledObjects.close(grpcResponse.content());
-            res.completeExceptionally(new NullPointerException("MediaType is undefined"));
+            responseHandler.onError(new NullPointerException("MediaType is undefined"));
             return;
         }
 
@@ -230,16 +178,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE);
-        final Subscriber<DeframedMessage> subscriber = singleSubscriber(
-                unframedHeaders, res, responseConverter);
+        final Subscriber<DeframedMessage> subscriber = singleSubscriber(unframedHeaders, responseHandler);
         grpcResponse.toHttpResponse().decode(deframer, ctx.alloc())
                     .subscribe(subscriber, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     static Subscriber<DeframedMessage> singleSubscriber(
-            ResponseHeadersBuilder unframedHeaders, CompletableFuture<HttpResponse> res,
-            @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
+            ResponseHeadersBuilder unframedHeaders, ResponseHandler responseHandler) {
         return new Subscriber<DeframedMessage>() {
+            private boolean completed;
 
             @Override
             public void onSubscribe(Subscription subscription) {
@@ -248,6 +195,9 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
             @Override
             public void onNext(DeframedMessage message) {
+                if (completed) {
+                    return;
+                }
                 // We know that we don't support compression, so this is always a ByteBuf.
                 final ByteBuf buf = message.buf();
                 assert buf != null;
@@ -258,29 +208,48 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                         unframedHeaders.build(),
                         unframedContent);
 
-                if (responseConverter != null) {
-                    final AggregatedHttpResponse convertedResponse = responseConverter.apply(existingResponse);
-                    res.complete(convertedResponse.toHttpResponse());
-                } else {
-                    res.complete(existingResponse.toHttpResponse());
-                }
+                completed = true;
+                responseHandler.onSuccess(existingResponse);
             }
 
             @Override
             public void onError(Throwable t) {
-                if (!res.isDone()) {
-                    res.completeExceptionally(t);
+                if (!completed) {
+                    completed = true;
+                    responseHandler.onError(t);
                 }
             }
 
             @Override
             public void onComplete() {
-                if (!res.isDone()) {
+                if (!completed) {
                     // If 'ResponseObserver.onCompleted()' is called without calling 'onNext()',
                     // this callback would be invoked but 'messageRead' callback wouldn't.
-                    res.complete(HttpResponse.of(unframedHeaders.build()));
+                    completed = true;
+                    responseHandler.onSuccess(AggregatedHttpResponse.of(unframedHeaders.build()));
                 }
             }
         };
     }
+
+    @FunctionalInterface
+    interface ResponseHandler {
+        void handle(@Nullable AggregatedHttpResponse aggregatedResponse,
+                    @Nullable Status status,
+                    @Nullable Throwable cause);
+
+        default void onSuccess(AggregatedHttpResponse response) {
+            handle(requireNonNull(response, "response"), null, null);
+        }
+
+        default void onStatus(Status status, AggregatedHttpResponse response) {
+            handle(requireNonNull(response, "response"), requireNonNull(status, "status"), null);
+        }
+
+        default void onError(Throwable cause) {
+            handle(null, null, requireNonNull(cause, "cause"));
+        }
+    }
+
+    private UnframedGrpcSupport() {}
 }
