@@ -41,6 +41,7 @@ final class CertificateParams {
     private final Date notAfter;
     private final String algorithm;
     private final ImmutableList<String> subjectAlternativeNames;
+    private final boolean isCA;
 
     @Nullable
     private final X509Certificate issuerCert;
@@ -48,8 +49,9 @@ final class CertificateParams {
     private final PrivateKey issuerPrivateKey;
     private final X500Name issuerName;
 
+    // For self-signed certificate
     CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
-                      String algorithm, Iterable<String> subjectAlternativeNames) {
+                      String algorithm, Iterable<String> subjectAlternativeNames, boolean isCA) {
         this.fqdn = requireNonNull(fqdn, "fqdn");
         this.random = requireNonNull(random, "random");
         this.bits = bits;
@@ -58,6 +60,7 @@ final class CertificateParams {
         this.algorithm = requireNonNull(algorithm, "algorithm");
         this.subjectAlternativeNames =
                 ImmutableList.copyOf(requireNonNull(subjectAlternativeNames, "subjectAlternativeNames"));
+        this.isCA = isCA;
         issuerCert = null;
         issuerPrivateKey = null;
 
@@ -65,14 +68,9 @@ final class CertificateParams {
         issuerName = ownerName;
     }
 
+    // For signed certificate
     CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
-                      SignedCertificate issuer)
-            throws CertificateException {
-        this(fqdn, random, bits, notBefore, notAfter, issuer, ImmutableList.of());
-    }
-
-    CertificateParams(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
-                      SignedCertificate issuer, Iterable<String> subjectAlternativeNames)
+                      SignedCertificate issuer, Iterable<String> subjectAlternativeNames, boolean isCA)
             throws CertificateException {
         this.fqdn = requireNonNull(fqdn, "fqdn");
         ownerName = new X500Name("CN=" + fqdn);
@@ -83,6 +81,7 @@ final class CertificateParams {
         this.notAfter = requireNonNull(notAfter, "notAfter");
         this.subjectAlternativeNames =
                 ImmutableList.copyOf(requireNonNull(subjectAlternativeNames, "subjectAlternativeNames"));
+        this.isCA = isCA;
         requireNonNull(issuer, "issuer");
         algorithm = issuer.key().getAlgorithm();
         issuerCert = issuer.cert();
@@ -132,5 +131,9 @@ final class CertificateParams {
 
     ImmutableList<String> subjectAlternativeNames() {
         return subjectAlternativeNames;
+    }
+
+    boolean isCA() {
+        return isCA;
     }
 }

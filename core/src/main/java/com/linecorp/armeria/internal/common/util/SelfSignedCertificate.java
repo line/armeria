@@ -217,7 +217,25 @@ public final class SelfSignedCertificate extends SignedCertificate {
     public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
                                  String algorithm, Iterable<String> subjectAlternativeNames)
             throws CertificateException {
+        this(fqdn, random, bits, notBefore, notAfter, algorithm, subjectAlternativeNames, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn                     a fully qualified domain name
+     * @param random                   the {@link Random} to use
+     * @param bits                     the number of bits of the generated private key
+     * @param notBefore                Certificate is not valid before this time
+     * @param notAfter                 Certificate is not valid after this time
+     * @param algorithm                Key pair algorithm
+     * @param subjectAlternativeNames  additional Subject Alternative Names
+     * @param isCA                     whether the certificate should be a CA certificate
+     */
+    public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
+                                 String algorithm, Iterable<String> subjectAlternativeNames, boolean isCA)
+            throws CertificateException {
         super(new CertificateParams(fqdn, random, bits, notBefore, notAfter, algorithm,
-                                    subjectAlternativeNames));
+                                    subjectAlternativeNames, isCA));
     }
 }
