@@ -316,16 +316,24 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     @Override
     public String toString() {
+        final int ap = this.actualPort;
+        if (ap > 0 && localAddress.getPort() == 0) {
+            return toString(getClass(), localAddress(), protocols(), portGroup(), ap);
+        }
         String strVal = this.strVal;
         if (strVal == null) {
-            this.strVal = strVal = toString(getClass(), localAddress(), protocols(), portGroup());
+            this.strVal = strVal = toString(getClass(), localAddress(), protocols(), portGroup(), -1);
         }
-
         return strVal;
     }
 
     static String toString(@Nullable Class<?> type, InetSocketAddress localAddress,
                            Set<SessionProtocol> protocols, long portGroup) {
+        return toString(type, localAddress, protocols, portGroup, -1);
+    }
+
+    static String toString(@Nullable Class<?> type, InetSocketAddress localAddress,
+                           Set<SessionProtocol> protocols, long portGroup, int actualPort) {
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());
@@ -336,6 +344,9 @@ public final class ServerPort implements Comparable<ServerPort> {
         buf.append(protocols);
         if (portGroup != 0) {
             buf.append(", group: ").append(portGroup);
+        }
+        if (actualPort > 0) {
+            buf.append(", actualPort: ").append(actualPort);
         }
         buf.append(')');
 
