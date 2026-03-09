@@ -487,7 +487,8 @@ public final class Server implements ListenableAsyncCloseable {
             try {
                 doStart(primary).addListener(new ServerPortStartListener(primary))
                                 .addListener(new NextServerPortStartListener(this, it, future));
-                // Chain the future to set up server metrics and port mapping before server start future is completed.
+                // Chain the future to set up server metrics and port mapping
+                // before server start future is completed.
                 return future.thenAccept(unused -> {
                     config.delegate().rebuildDomainAndPortMapping();
                     setupPendingResponsesMetrics();

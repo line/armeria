@@ -2510,7 +2510,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 final boolean presentByIdentity = this.ports.stream().anyMatch(p -> p == serverPort);
                 checkState(presentByIdentity,
                            "The ServerPort for a virtual host is not in the server's port list. " +
-                           "Please add the ServerPort using port(ServerPort) before creating a virtual host. (serverPort: %s)", serverPort);
+                           "Please add the ServerPort using port(ServerPort) before creating a virtual host." +
+                           "(serverPort: %s)", serverPort);
             }
         }
 

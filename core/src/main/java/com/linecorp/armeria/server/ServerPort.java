@@ -265,7 +265,6 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.actualPort = actualPort;
     }
 
-
     @Nullable
     ServerPortMetric serverPortMetric() {
         return serverPortMetric;
