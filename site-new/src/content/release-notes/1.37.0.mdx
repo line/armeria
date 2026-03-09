@@ -14,11 +14,18 @@ date: 2026-03-06
                                          .build();
   HttpResponse res = client.execute(req, options);
   ```
+- You can now create non-CA leaf certificates using [SelfSignedCertificateExtension](type). #6657
+  ```java
+  static var rootCert = ...;
+  @RegisterExtension
+  static var intermediateCert =
+    new SignedCertificateExtension("abc.com", rootCert, true); // 👈👈👈
+  ```
 
 ## 📈 Improvements
 
 - Improved warning logs by adding diagnostic context to frequent HTTP/2 connection errors. #6638
-- [XdsBootstrap](type) now supports SDS. #6597
+- [XdsBootstrap](type) now supports SDS. #6597 #6610 #6654
 
 ## 🛠️ Bug fixes
 
@@ -30,6 +37,28 @@ date: 2026-03-06
 - Setting `pingIntervalMillis` to a value greater than 33 seconds no longer throws an exception. #6648
   - Linux keepalive socket options (`SO_KEEPALIVE` `TCP_KEEPIDLE`, `TCP_KEEPINTVL`) are no longer set by default.
 
+## 📃 Documentation
+
+- A new Armeria Hyperfocal blog series introductory post has been added. #6637
+
+## ⛓ Dependencies
+
+* Athenz 1.12.33 → 1.12.35
+* Micrometer Context Propagation 1.2.0 → 1.2.1
+* Jackson 2.21.0 → 2.21.1
+* Java JWT 4.5.0 → 4.5.1
+* Kotlin 2.3.0 → 2.3.10
+* Logback 1.5.27 → 1.5.32
+* MCP SDK 0.17.2 → 0.18.0
+* Micrometer 1.16.2 → 1.16.3
+* Micrometer Tracing 1.6.2 → 1.6.3
+* Netty 4.2.7.Final → 4.2.10.Final
+* Prometheus 1.4.3 → 1.5.0
+* Protobuf 4 4.33.2 → 4.34.0
+* Reactor Core 3.8.2 → 3.8.3
+* Spring Framework 7.0.3 → 7.0.5
+* Spring Boot 4.0.2 → 4.0.3
+
 ## 🙇 Thank you
 
 <ThankYou usernames={[
@@ -39,5 +68,6 @@ date: 2026-03-06
   'novoj',
   'sallylyen',
   'schiemon',
+  'syleeeee',
   'trustin'
 ]} />
