@@ -4,10 +4,17 @@
         <title>Armeria Release Notes</title>
         <link>https://armeria.dev/release-notes</link>
         
-        <lastBuildDate>Thu, 05 Feb 2026 06:49:03 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 10 Mar 2026 01:10:33 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <language>en</language>
         <copyright>© 2015-2026, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.37.0]]></title>
+            <link>https://armeria.dev/release-notes/1.37.0/</link>
+            <guid>https://armeria.dev/release-notes/1.37.0/</guid>
+            <pubDate>Tue, 10 Mar 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[You can now bind outgoing connections to a specific local address. #6640 HttpRequest req = ...;RequestOptions options = RequestOptions.builder() .localBindAddress(addr) // 👈👈👈 .build();HttpResponse...]]></description>
+        </item>
         <item>
             <title><![CDATA[v1.36.0]]></title>
             <link>https://armeria.dev/release-notes/1.36.0/</link>

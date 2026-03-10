@@ -4,11 +4,40 @@
         <title>Armeria Blog</title>
         <link>https://armeria.dev/blog</link>
         <description></description>
-        <lastBuildDate>Wed, 04 Aug 2021 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 23 Feb 2026 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
         <copyright>© 2015-2026, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[Armeria Hyperfocal #0: Coming Into Focus]]></title>
+            <link>https://armeria.dev/blog/2026/02/23/armeria-hyperfocal-0-coming-into-focus</link>
+            <guid>https://armeria.dev/blog/2026/02/23/armeria-hyperfocal-0-coming-into-focus</guid>
+            <pubDate>Mon, 23 Feb 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[A brief intro to the Armeria Hyperfocal blog series, spotlighting Armeria features with practical code examples.]]></description>
+            <content:encoded><![CDATA[<p>A brief intro to the Armeria Hyperfocal blog series, spotlighting Armeria features with practical code examples.</p>
+<!-- -->
+<blockquote>
+<p><strong>Armeria Hyperfocal</strong> — where everything comes into sharp focus.
+Starting this month, we’re launching a new series that takes a closer look at Armeria’s most interesting and useful features.</p>
+</blockquote>
+<p>Welcome to <strong>Armeria Hyperfocal</strong>, a blog series designed to highlight one topic at a time — from frequently asked questions to advanced features you might have missed.
+Each post will bring clear explanations, real-world examples, and demo code to help you understand not just <em>what</em> Armeria can do, but <em>how and why</em> it works that way.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="-what-to-expect">🔍 What to Expect<a href="https://armeria.dev/blog/2026/02/23/armeria-hyperfocal-0-coming-into-focus#-what-to-expect" class="hash-link" aria-label="Direct link to 🔍 What to Expect" title="Direct link to 🔍 What to Expect" translate="no">​</a></h2>
+<p>We’ve prepared topics that span several technical areas — from runtime optimization to security and configuration flexibility.
+You can look forward to posts exploring things like:</p>
+<ul>
+<li class="">How Armeria integrates with <strong>modern runtime environments</strong>,</li>
+<li class="">Ways to <strong>improve observability and safety</strong> in production systems, and</li>
+<li class="">Tuning <strong>client-side performance and behavior</strong> for advanced use cases.</li>
+</ul>
+<p>(Yes, some of these might sound familiar if you’ve been following our community discussions lately 👀)</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="-stay-tuned">📅 Stay Tuned<a href="https://armeria.dev/blog/2026/02/23/armeria-hyperfocal-0-coming-into-focus#-stay-tuned" class="hash-link" aria-label="Direct link to 📅 Stay Tuned" title="Direct link to 📅 Stay Tuned" translate="no">​</a></h2>
+<p>The first full edition of <strong>Hyperfocal</strong> will drop soon.
+Each post will focus on a single topic — complete with code snippets and practical takeaways you can apply right away.</p>
+<p>Until then, keep your focus sharp — and your services sharper.</p>]]></content:encoded>
+            <category>hyperfocal</category>
+        </item>
         <item>
             <title><![CDATA[Customizing Armeria metrics]]></title>
             <link>https://armeria.dev/blog/2021/08/04/customizing-armeria-metrics</link>
