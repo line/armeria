@@ -27,7 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.Predicate;
+import java.util.function.Function;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.slf4j.Logger;
@@ -46,7 +46,6 @@ import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.fabric8.kubernetes.api.model.Node;
-import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodList;
@@ -215,7 +214,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final String serviceName;
     @Nullable
     private final String portName;
-    private final Predicate<? super NodeAddress> nodeAddressFilter;
+    private final Function<Node, @Nullable String> nodeIpExtractor;
     private final long maxWatchAgeMillis;
 
     @Nullable
@@ -250,7 +249,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private volatile int numPodFailures;
 
     KubernetesEndpointGroup(KubernetesClient client, @Nullable String namespace, String serviceName,
-                            @Nullable String portName, Predicate<? super NodeAddress> nodeAddressFilter,
+                            @Nullable String portName, Function<Node, @Nullable String> nodeIpExtractor,
                             boolean autoClose, EndpointSelectionStrategy selectionStrategy,
                             boolean allowEmptyEndpoints, long selectionTimeoutMillis, long maxWatchAgeMillis) {
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
@@ -258,7 +257,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         this.namespace = namespace;
         this.serviceName = serviceName;
         this.portName = portName;
-        this.nodeAddressFilter = nodeAddressFilter;
+        this.nodeIpExtractor = nodeIpExtractor;
         this.autoClose = autoClose;
         this.maxWatchAgeMillis = maxWatchAgeMillis == Long.MAX_VALUE ? 0 : maxWatchAgeMillis;
         executeJob(() -> start(true));
@@ -596,10 +595,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         switch (action) {
             case ADDED:
             case MODIFIED:
-                final String nodeIp = node.getStatus().getAddresses().stream()
-                                          .filter(nodeAddressFilter)
-                                          .map(NodeAddress::getAddress)
-                                          .findFirst().orElse(null);
+                final String nodeIp;
+                try {
+                    nodeIp = nodeIpExtractor.apply(node);
+                } catch (Throwable ex) {
+                    logger.warn("[{}/{}] Failed to extract the IP address of the node: {}",
+                                namespace, serviceName, nodeName, ex);
+                    nodeToIp.remove(nodeName);
+                    return true;
+                }
+
                 if (nodeIp == null) {
                     logger.debug("[{}/{}] No matching IP address is found in {}. node: {}",
                                  namespace, serviceName, nodeName, node);
