@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -428,6 +429,13 @@ public final class FutureTransformingRequestPreparation<T>
     @UnstableApi
     public FutureTransformingRequestPreparation<T> clientTlsSpec(ClientTlsSpec clientTlsSpec) {
         delegate.clientTlsSpec(clientTlsSpec);
+        return this;
+    }
+
+    @Override
+    @UnstableApi
+    public FutureTransformingRequestPreparation<T> localBindAddress(InetSocketAddress localAddress) {
+        delegate.localBindAddress(localAddress);
         return this;
     }
 }

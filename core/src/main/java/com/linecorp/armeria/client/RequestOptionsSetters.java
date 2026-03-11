@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 
 import com.linecorp.armeria.common.ExchangeType;
@@ -172,4 +173,11 @@ public interface RequestOptionsSetters {
      */
     @UnstableApi
     RequestOptionsSetters clientTlsSpec(ClientTlsSpec clientTlsSpec);
+
+    /**
+     * Sets the local address to bind when making a connection for this request.
+     * If not set, the system will select an appropriate local address.
+     */
+    @UnstableApi
+    RequestOptionsSetters localBindAddress(InetSocketAddress localAddress);
 }

@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.DefaultWebClient.RESPONSE_STREAMING_RE
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
@@ -407,6 +408,13 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public WebClientRequestPreparation clientTlsSpec(ClientTlsSpec clientTlsSpec) {
         requestOptionsBuilder().clientTlsSpec(clientTlsSpec);
+        return this;
+    }
+
+    @Override
+    @UnstableApi
+    public WebClientRequestPreparation localBindAddress(InetSocketAddress localAddress) {
+        requestOptionsBuilder().localBindAddress(localAddress);
         return this;
     }
 

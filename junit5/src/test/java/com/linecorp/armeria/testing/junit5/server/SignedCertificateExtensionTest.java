@@ -44,8 +44,13 @@ class SignedCertificateExtensionTest {
                     "*.example.com",
                     "192.168.1.1",
                     "spiffe://example.com/service"
-            )
-    );
+            ),
+            false);
+
+    @RegisterExtension
+    @Order(3)
+    static final SignedCertificateExtension intermediateCa = new SignedCertificateExtension(
+            "intermediate.example.com", parent, true);
 
     @Test
     void signedCertificateWithParentAndSans() throws Exception {
@@ -75,6 +80,19 @@ class SignedCertificateExtensionTest {
         assertThat(dnsNames).contains("service.example.com", "api.example.com", "*.example.com");
         assertThat(ipAddresses).contains("192.168.1.1");
         assertThat(uris).contains("spiffe://example.com/service");
+
+        // Leaf cert must not be a CA
+        assertThat(cert.getBasicConstraints()).isEqualTo(-1);
+        // Parent (self-signed root) must be a CA
+        assertThat(parent.certificate().getBasicConstraints()).isGreaterThanOrEqualTo(0);
+    }
+
+    @Test
+    void intermediateCaIsSignedByParentAndIsCA() throws Exception {
+        final X509Certificate cert = intermediateCa.certificate();
+        cert.verify(parent.certificate().getPublicKey());
+        // isCA=true → getBasicConstraints() >= 0
+        assertThat(cert.getBasicConstraints()).isGreaterThanOrEqualTo(0);
     }
 }
 

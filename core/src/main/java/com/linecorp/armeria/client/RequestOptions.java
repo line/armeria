@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.DefaultRequestOptions.EMPTY;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
 
 import com.linecorp.armeria.common.ExchangeType;
@@ -129,4 +130,14 @@ public interface RequestOptions {
     @UnstableApi
     @Nullable
     ClientTlsSpec clientTlsSpec();
+
+    /**
+     * Returns the local address to bind when making a connection for this request.
+     * This value is propagated to {@link ClientRequestContext#localBindAddress()} and used when
+     * opening the channel, before the connection is established.
+     * {@code null} means the system will select an appropriate local address.
+     */
+    @UnstableApi
+    @Nullable
+    InetSocketAddress localBindAddress();
 }

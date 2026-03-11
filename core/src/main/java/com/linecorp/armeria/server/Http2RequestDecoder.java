@@ -338,12 +338,14 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final long maxContentLength = decodedReq.maxRequestLength();
         final long transferredLength = decodedReq.transferredBytes();
+        boolean written = false;
         if (maxContentLength > 0 && transferredLength > maxContentLength) {
             abortLargeRequest(decodedReq, false);
         } else if (decodedReq.isOpen()) {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
+                written = true;
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw Http2Exception.streamError(streamId, INTERNAL_ERROR, t,
@@ -351,11 +353,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
         }
 
-        if (decodedReq instanceof AggregatingDecodedHttpRequest) {
-            // All bytes have been processed.
+        if (decodedReq instanceof AggregatingDecodedHttpRequest || !written) {
+            // Return all bytes immediately because either:
+            // - The request is aggregating (no InboundTrafficController involvement), or
+            // - The data was not written to the stream (aborted or closed), so
+            //   onRemoval() will never be called to return the bytes via
+            //   InboundTrafficController.
             return dataLength + padding;
         } else {
-            // The data length will be reported to InboundTrafficController upon consumption for flow control.
+            // For streaming requests where data was written, only return padding now.
+            // The data bytes will be returned via InboundTrafficController when the
+            // service consumes the data (StreamingDecodedHttpRequest.onRemoval()).
             return padding;
         }
     }

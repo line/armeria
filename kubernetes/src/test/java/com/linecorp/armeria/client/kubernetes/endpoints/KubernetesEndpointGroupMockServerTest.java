@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -320,6 +321,60 @@ class KubernetesEndpointGroupMockServerTest {
             );
         });
         endpointGroup.close();
+    }
+
+    @Test
+    void shouldUseAnnotationsToGetNodeIp() {
+        // Create nodes with annotations containing custom IPs different from InternalIP
+        final String annotationKey = "custom-ip";
+        final Node node1 = newNode("1.1.1.1");
+        node1.getMetadata().setAnnotations(ImmutableMap.of(annotationKey, "10.0.0.1"));
+        final Node node2 = newNode("2.2.2.2");
+        node2.getMetadata().setAnnotations(ImmutableMap.of(annotationKey, "10.0.0.2"));
+        final Node node3 = newNode("3.3.3.3");
+        node3.getMetadata().setAnnotations(ImmutableMap.of(annotationKey, "10.0.0.3"));
+        final List<Node> nodes = ImmutableList.of(node1, node2, node3);
+
+        final Deployment deployment = newDeployment();
+        final int nodePort = 30000;
+        final Service service = newService(nodePort);
+        final List<Pod> pods = nodes.stream()
+                                    .map(node -> node.getMetadata().getName())
+                                    .map(nodeName -> newPod(deployment.getSpec().getTemplate(), nodeName))
+                                    .collect(toImmutableList());
+
+        // Create Kubernetes resources
+        for (Node node : nodes) {
+            client.nodes().resource(node).create();
+        }
+        for (Pod pod : pods) {
+            client.pods().resource(pod).create();
+        }
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        // Use nodeIpExtractor to extract the IP from annotations
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .nodeIpExtractor(node -> {
+                                                final Map<String, String> annotations =
+                                                        node.getMetadata().getAnnotations();
+                                                if (annotations == null) {
+                                                    return null;
+                                                }
+                                                return annotations.get(annotationKey);
+                                            })
+                                            .build()) {
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.whenReady()).isDone();
+                // Endpoints should use the annotation IPs, not the InternalIP addresses
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.1", nodePort),
+                        Endpoint.of("10.0.0.2", nodePort),
+                        Endpoint.of("10.0.0.3", nodePort));
+            });
+        }
     }
 
     private static Node newNode(String ip, String type) {

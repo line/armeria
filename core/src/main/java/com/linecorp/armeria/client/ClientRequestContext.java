@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegal
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -631,6 +632,35 @@ public interface ClientRequestContext extends RequestContext {
      */
     @UnstableApi
     void setClientTlsSpec(ClientTlsSpec clientTlsSpec);
+
+    /**
+     * Returns the local address that was requested to be bound when making a connection for this request.
+     * This represents the intent set before the connection is established, unlike
+     * {@link #localAddress()} which returns the actual local socket address read from the
+     * established channel after the connection completes.
+     *
+     * <p>The two methods differ most visibly when port {@code 0} (ephemeral) is used:
+     * <pre>{@code
+     * // localBindAddress() always returns the requested address, port 0 included:
+     * ctx.localBindAddress()  ->  /192.168.1.5:0
+     *
+     * // localAddress() returns null before the connection, then the OS-assigned port after:
+     * ctx.localAddress()      ->  null               // before connection
+     * ctx.localAddress()      ->  /192.168.1.5:54321 // after connection (OS picked 54321)
+     * }</pre>
+     *
+     * <p>{@code null} means no preference was given and the system will select an appropriate
+     * local address.
+     */
+    @UnstableApi
+    @Nullable
+    InetSocketAddress localBindAddress();
+
+    /**
+     * Sets the local address to bind when making a connection for this request.
+     */
+    @UnstableApi
+    void setLocalBindAddress(InetSocketAddress localAddress);
 
     @Override
     default ClientRequestContext unwrap() {

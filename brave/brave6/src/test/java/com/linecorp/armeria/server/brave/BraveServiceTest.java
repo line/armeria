@@ -31,8 +31,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -49,6 +52,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
@@ -202,6 +207,40 @@ class BraveServiceTest {
 
         // don't submit any spans
         assertThat(collector.spans().poll(1, TimeUnit.SECONDS)).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ExchangeType.class)
+    void shouldDelegateExchangeType(ExchangeType exchangeType) {
+        final ServiceOptions serviceOptions = ServiceOptions.builder()
+                                                            .requestTimeoutMillis(5000)
+                                                            .build();
+        final HttpService delegate = new HttpService() {
+            @Override
+            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                return HttpResponse.of(HttpStatus.OK);
+            }
+
+            @Override
+            public ExchangeType exchangeType(RoutingContext routingContext) {
+                return exchangeType;
+            }
+
+            @Override
+            public ServiceOptions options() {
+                return serviceOptions;
+            }
+        };
+
+        final Tracing tracing = Tracing.newBuilder()
+                                       .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                                       .build();
+        final BraveService service = BraveService.newDecorator(tracing).apply(delegate);
+
+        final RoutingContext routingContext =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).routingContext();
+        assertThat(service.exchangeType(routingContext)).isEqualTo(exchangeType);
+        assertThat(service.options()).isSameAs(serviceOptions);
     }
 
     private static RequestLog testServiceInvocation(SpanHandler spanHandler,

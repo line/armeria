@@ -18,14 +18,14 @@ package com.linecorp.armeria.common.util;
 
 import java.util.concurrent.TimeUnit;
 
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
 import io.netty.util.concurrent.Future;
 
 /**
- * An {@link EventLoopGroup} wrapper that applies pre-configured graceful shutdown parameters
+ * An {@link IoEventLoopGroup} wrapper that applies pre-configured graceful shutdown parameters
  * when {@link #shutdownGracefully()} is called.
  */
-final class ShutdownConfigurableEventLoopGroup extends DelegatingEventLoopGroup {
+final class ShutdownConfigurableEventLoopGroup extends DelegatingIoEventLoopGroup {
 
     private final long shutdownQuietPeriodMillis;
     private final long shutdownTimeoutMillis;
@@ -33,11 +33,11 @@ final class ShutdownConfigurableEventLoopGroup extends DelegatingEventLoopGroup 
     /**
      * Creates a new instance.
      *
-     * @param delegate the {@link EventLoopGroup} to delegate to
+     * @param delegate the {@link IoEventLoopGroup} to delegate to
      * @param shutdownQuietPeriodMillis the quiet period in milliseconds for graceful shutdown
      * @param shutdownTimeoutMillis the timeout in milliseconds for graceful shutdown
      */
-    ShutdownConfigurableEventLoopGroup(EventLoopGroup delegate,
+    ShutdownConfigurableEventLoopGroup(IoEventLoopGroup delegate,
                                        long shutdownQuietPeriodMillis,
                                        long shutdownTimeoutMillis) {
         super(delegate);

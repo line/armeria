@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.google.common.base.Strings;
@@ -32,6 +33,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -44,6 +46,16 @@ public final class KubernetesEndpointGroupBuilder
         extends AbstractDynamicEndpointGroupBuilder<KubernetesEndpointGroupBuilder> {
 
     private static final int DEFAULT_MAX_WATCH_AGE_MILLIS = 10 * 60 * 1000; // 10 minutes
+    private static final Predicate<? super NodeAddress> DEFAULT_NODE_ADDRESS_FILTER = nodeAddress ->
+            "InternalIP".equals(nodeAddress.getType()) && !Strings.isNullOrEmpty(nodeAddress.getAddress());
+
+    private static Function<Node, @Nullable String> toNodeIpExtractor(
+            Predicate<? super NodeAddress> addressFilter) {
+        return node -> node.getStatus().getAddresses().stream()
+                           .filter(addressFilter)
+                           .map(NodeAddress::getAddress)
+                           .findFirst().orElse(null);
+    }
 
     private final KubernetesClient kubernetesClient;
     private final boolean autoClose;
@@ -56,8 +68,8 @@ public final class KubernetesEndpointGroupBuilder
     @Nullable
     private String portName;
 
-    private Predicate<? super NodeAddress> nodeAddressFilter = nodeAddress ->
-            "InternalIP".equals(nodeAddress.getType()) && !Strings.isNullOrEmpty(nodeAddress.getAddress());
+    private Function<Node, @Nullable String> nodeIpExtractor = toNodeIpExtractor(DEFAULT_NODE_ADDRESS_FILTER);
+
     private long maxWatchAgeMillis = DEFAULT_MAX_WATCH_AGE_MILLIS;
 
     KubernetesEndpointGroupBuilder(KubernetesClient kubernetesClient, boolean autoClose) {
@@ -103,7 +115,23 @@ public final class KubernetesEndpointGroupBuilder
      */
     public KubernetesEndpointGroupBuilder nodeAddressFilter(Predicate<? super NodeAddress> nodeAddressFilter) {
         requireNonNull(nodeAddressFilter, "nodeAddressFilter");
-        this.nodeAddressFilter = nodeAddressFilter;
+        return nodeIpExtractor(toNodeIpExtractor(nodeAddressFilter));
+    }
+
+    /**
+     * Sets the {@link Function} to extract the IP address of a Kubernetes {@link Node}.
+     * If unspecified, the default is to select an {@code InternalIP} address that is not empty.
+     * This method provides more flexibility than {@link #nodeAddressFilter(Predicate)} as it allows you to
+     * use other properties of the {@link Node} to determine the IP address, such as labels or annotations.
+     *
+     * <p>Note that this method is mutually exclusive with {@link #nodeAddressFilter(Predicate)}. If both
+     * methods are called, the last one will take precedence.
+     */
+    public KubernetesEndpointGroupBuilder nodeIpExtractor(
+            Function<? super Node, @Nullable String> nodeIpExtractor) {
+        requireNonNull(nodeIpExtractor, "nodeIpExtractor");
+        //noinspection unchecked
+        this.nodeIpExtractor = (Function<Node, @Nullable String>) nodeIpExtractor;
         return this;
     }
 
@@ -148,7 +176,7 @@ public final class KubernetesEndpointGroupBuilder
     public KubernetesEndpointGroup build() {
         checkState(serviceName != null, "serviceName not set");
         return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName,
-                                           nodeAddressFilter, autoClose,
+                                           nodeIpExtractor, autoClose,
                                            selectionStrategy, shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis(), maxWatchAgeMillis);
     }
