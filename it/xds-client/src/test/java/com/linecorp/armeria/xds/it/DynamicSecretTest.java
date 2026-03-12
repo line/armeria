@@ -94,6 +94,7 @@ class DynamicSecretTest {
                 """;
 
     // YAML
+    //language=YAML
     private static final String staticBootstrap =
             """
                 dynamic_resources:
@@ -206,6 +207,7 @@ class DynamicSecretTest {
         }
     }
 
+    //language=YAML
     private static final String explicitConfigSourceBootstrap =
             """
                 dynamic_resources:
@@ -323,6 +325,7 @@ class DynamicSecretTest {
         }
     }
 
+    //language=YAML
     private static final String tlsCertOnlyBootstrap =
             """
                 dynamic_resources:
@@ -423,6 +426,7 @@ class DynamicSecretTest {
         }
     }
 
+    //language=YAML
     private static final String validationContextOnlyBootstrap =
             """
                 dynamic_resources:
@@ -490,6 +494,7 @@ class DynamicSecretTest {
 
     @Test
     void sdsValidationContextOnly() throws Exception {
+        //language=YAML
         final String validationYaml =
                 """
                 name: my-cert-validation
@@ -527,6 +532,7 @@ class DynamicSecretTest {
         }
     }
 
+    //language=YAML
     private static final String dynamicOverridesStaticBootstrap =
             """
                 dynamic_resources:
@@ -636,6 +642,7 @@ class DynamicSecretTest {
         }
     }
 
+    //language=YAML
     private static final String transportSocketMatchesBootstrap =
             """
                 dynamic_resources:

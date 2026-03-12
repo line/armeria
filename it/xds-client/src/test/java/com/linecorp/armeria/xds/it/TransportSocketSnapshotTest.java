@@ -24,6 +24,10 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,6 +38,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.google.common.io.BaseEncoding;
+
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.xds.CertificateValidationContextSnapshot;
 import com.linecorp.armeria.xds.ListenerRoot;
@@ -310,6 +317,142 @@ class TransportSocketSnapshotTest {
         }
     }
 
+    //language=YAML
+    private static final String validationContextWithPinsBootstrap =
+            """
+                static_resources:
+                  clusters:
+                    - name: my-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: my-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
+                              address:
+                                socket_address:
+                                  address: 127.0.0.1
+                                  port_value: 8080
+                      transport_socket:
+                        name: envoy.transport_sockets.tls
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.UpstreamTlsContext
+                          common_tls_context:
+                            tls_certificates:
+                              - private_key:
+                                  %s
+                                certificate_chain:
+                                  %s
+                            validation_context:
+                              trusted_ca:
+                                %s
+                              verify_certificate_spki:
+                                - "%s"
+                              verify_certificate_hash:
+                                - "%s"
+                              match_typed_subject_alt_names:
+                                - san_type: DNS
+                                  matcher:
+                                    exact: "localhost"
+                  listeners:
+                    - name: my-listener
+                      api_listener:
+                        api_listener:
+                          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                .v3.HttpConnectionManager
+                          stat_prefix: http
+                          route_config:
+                            name: local_route
+                            virtual_hosts:
+                            - name: local_service1
+                              domains: [ "*" ]
+                              routes:
+                                - match:
+                                    prefix: /
+                                  route:
+                                    cluster: my-cluster
+                          http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                """;
+
+    @ParameterizedTest
+    @MethodSource("testDataSources")
+    void clientTlsSpecIncludesPinnedAndSanVerifiers(String secretYamlTemplate, SecretProvider keyProvider,
+                                                    SecretProvider certProvider) throws Exception {
+        final String serviceKey = keyProvider.getSecret(certificate.privateKeyFile());
+        final String serviceCert = certProvider.getSecret(certificate.certificateFile());
+        final String caCert = certProvider.getSecret(certificate.certificateFile());
+        final String spkiPin = spkiPin(certificate.certificate());
+        final String certHash = certHash(certificate.certificate());
+        final String bootstrapStr =
+                validationContextWithPinsBootstrap.formatted(secretYamlTemplate.formatted(serviceKey),
+                                                             secretYamlTemplate.formatted(serviceCert),
+                                                             secretYamlTemplate.formatted(caCert),
+                                                             spkiPin,
+                                                             certHash);
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
+            final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
+            listenerRoot.addSnapshotWatcher((snapshot, t) -> {
+                if (snapshot != null) {
+                    snapshotRef.set(snapshot);
+                }
+            });
+
+            await().untilAsserted(() -> assertThat(snapshotRef.get()).isNotNull());
+            final ListenerSnapshot listenerSnapshot = snapshotRef.get();
+            final TransportSocketSnapshot tlsSnapshot =
+                    listenerSnapshot.routeSnapshot().virtualHostSnapshots().get(0)
+                                    .routeEntries().get(0).clusterSnapshot().transportSocket();
+            final ClientTlsSpec clientTlsSpec = tlsSnapshot.clientTlsSpec();
+            assertThat(clientTlsSpec).isNotNull();
+            assertThat(clientTlsSpec.trustedCertificates()).containsExactly(certificate.certificate());
+            assertThat(clientTlsSpec.verifierFactories())
+                    .hasSize(2)
+                    .extracting(factory -> factory.getClass().getName())
+                    .containsExactlyInAnyOrder(
+                            "com.linecorp.armeria.xds.PinnedPeerVerifierFactory",
+                            "com.linecorp.armeria.xds.SanPeerVerifierFactory");
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("testDataSources")
+    void clientTlsSpecUsesNoVerifyWithoutValidationContext(
+            String secretYamlTemplate, SecretProvider keyProvider, SecretProvider certProvider)
+            throws Exception {
+        final String serviceKey = keyProvider.getSecret(certificate.privateKeyFile());
+        final String serviceCert = certProvider.getSecret(certificate.certificateFile());
+        final String bootstrapStr = tlsCertBootstrap.formatted(secretYamlTemplate.formatted(serviceKey),
+                                                               secretYamlTemplate.formatted(serviceCert));
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
+            final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
+            listenerRoot.addSnapshotWatcher((snapshot, t) -> {
+                if (snapshot != null) {
+                    snapshotRef.set(snapshot);
+                }
+            });
+
+            await().untilAsserted(() -> assertThat(snapshotRef.get()).isNotNull());
+            final ListenerSnapshot listenerSnapshot = snapshotRef.get();
+            final TransportSocketSnapshot tlsSnapshot =
+                    listenerSnapshot.routeSnapshot().virtualHostSnapshots().get(0)
+                                    .routeEntries().get(0).clusterSnapshot().transportSocket();
+            final ClientTlsSpec clientTlsSpec = tlsSnapshot.clientTlsSpec();
+            assertThat(clientTlsSpec).isNotNull();
+            assertThat(clientTlsSpec.trustedCertificates()).isEmpty();
+            assertThat(clientTlsSpec.verifierFactories())
+                    .extracting(factory -> factory.getClass().getName())
+                    .containsExactly("com.linecorp.armeria.common.NoVerifyPeerVerifierFactory");
+        }
+    }
+
     @FunctionalInterface
     interface SecretProvider {
         String getSecret(File file) throws Exception;
@@ -328,5 +471,24 @@ class TransportSocketSnapshotTest {
             return abs;
         }
         return cwd.relativize(abs);
+    }
+
+    private static String spkiPin(X509Certificate certificate) throws CertificateException {
+        final byte[] digest = sha256(certificate.getPublicKey().getEncoded());
+        return Base64.getEncoder().encodeToString(digest);
+    }
+
+    private static String certHash(X509Certificate certificate) throws CertificateException {
+        final byte[] digest = sha256(certificate.getEncoded());
+        return BaseEncoding.base16().lowerCase().encode(digest);
+    }
+
+    private static byte[] sha256(byte[] input) throws CertificateException {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return digest.digest(input);
+        } catch (NoSuchAlgorithmException e) {
+            throw new CertificateException("SHA-256 is not available.", e);
+        }
     }
 }

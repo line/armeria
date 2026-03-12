@@ -20,9 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
-import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -35,7 +33,6 @@ import io.netty.util.concurrent.EventExecutor;
 final class ControlPlaneClientManager implements SafeCloseable {
     private final Node bootstrapNode;
     private final EventExecutor eventLoop;
-    private final Consumer<GrpcClientBuilder> configClientCustomizer;
     private final BootstrapClusters bootstrapClusters;
     private final ConfigSourceMapper configSourceMapper;
     private final MeterRegistry meterRegistry;
@@ -44,13 +41,11 @@ final class ControlPlaneClientManager implements SafeCloseable {
     private boolean closed;
 
     ControlPlaneClientManager(Bootstrap bootstrap, EventExecutor eventLoop,
-                              Consumer<GrpcClientBuilder> configClientCustomizer,
                               BootstrapClusters bootstrapClusters,
                               ConfigSourceMapper configSourceMapper,
                               MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         bootstrapNode = bootstrap.getNode();
         this.eventLoop = eventLoop;
-        this.configClientCustomizer = configClientCustomizer;
         this.bootstrapClusters = bootstrapClusters;
         this.configSourceMapper = configSourceMapper;
         this.meterRegistry = meterRegistry;
@@ -69,8 +64,7 @@ final class ControlPlaneClientManager implements SafeCloseable {
 
         final ConfigSourceClient client = clientMap.computeIfAbsent(
                 configSource, ignored -> new ConfigSourceClient(
-                        configSource, eventLoop, bootstrapNode,
-                        configClientCustomizer, bootstrapClusters, configSourceMapper,
+                        configSource, eventLoop, bootstrapNode, bootstrapClusters, configSourceMapper,
                         meterRegistry, meterIdPrefix));
         client.addSubscriber(type, name, node);
     }

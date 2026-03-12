@@ -19,11 +19,9 @@ package com.linecorp.armeria.xds;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.re2j.Pattern;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -39,9 +37,7 @@ import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher;
 import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher.QueryParameterMatchSpecifierCase;
 import io.envoyproxy.envoy.config.route.v3.RouteMatch;
 import io.envoyproxy.envoy.config.route.v3.RouteMatch.PathSpecifierCase;
-import io.envoyproxy.envoy.type.matcher.v3.RegexMatcher;
 import io.envoyproxy.envoy.type.matcher.v3.StringMatcher;
-import io.envoyproxy.envoy.type.matcher.v3.StringMatcher.MatchPatternCase;
 import io.envoyproxy.envoy.type.v3.Int64Range;
 
 final class RouteEntryMatcher {
@@ -288,74 +284,6 @@ final class RouteEntryMatcher {
 
         boolean match(ClientRequestContext ctx) {
             return predicate.test(ctx);
-        }
-    }
-
-    private static class StringMatcherImpl {
-
-        private final boolean ignoreCase;
-        private final MatchPatternCase patternCase;
-        private final Predicate<String> predicate;
-
-        StringMatcherImpl(StringMatcher stringMatcher) {
-            ignoreCase = stringMatcher.getIgnoreCase();
-            patternCase = stringMatcher.getMatchPatternCase();
-            switch (patternCase) {
-                case EXACT:
-                    final String exact;
-                    if (ignoreCase) {
-                        exact = Ascii.toLowerCase(stringMatcher.getExact());
-                    } else {
-                        exact = stringMatcher.getExact();
-                    }
-                    predicate = str -> str.equals(exact);
-                    break;
-                case PREFIX:
-                    final String prefix;
-                    if (ignoreCase) {
-                        prefix = Ascii.toLowerCase(stringMatcher.getPrefix());
-                    } else {
-                        prefix = stringMatcher.getPrefix();
-                    }
-                    predicate = str -> str.startsWith(prefix);
-                    break;
-                case SUFFIX:
-                    final String suffix;
-                    if (ignoreCase) {
-                        suffix = Ascii.toLowerCase(stringMatcher.getSuffix());
-                    } else {
-                        suffix = stringMatcher.getSuffix();
-                    }
-                    predicate = str -> str.endsWith(suffix);
-                    break;
-                case SAFE_REGEX:
-                    final RegexMatcher safeRegex = stringMatcher.getSafeRegex();
-                    final Pattern pattern = Pattern.compile(safeRegex.getRegex());
-                    predicate = pattern::matches;
-                    break;
-                case CONTAINS:
-                    final String contains;
-                    if (ignoreCase) {
-                        contains = Ascii.toLowerCase(stringMatcher.getContains());
-                    } else {
-                        contains = stringMatcher.getContains();
-                    }
-                    predicate = str -> str.contains(contains);
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "Unsupported string matcher patternCase: " + patternCase);
-            }
-        }
-
-        boolean match(@Nullable String input) {
-            if (input == null) {
-                return false;
-            }
-            if (ignoreCase && patternCase != MatchPatternCase.SAFE_REGEX) {
-                input = Ascii.toLowerCase(input);
-            }
-            return predicate.test(input);
         }
     }
 }
