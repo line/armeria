@@ -34,6 +34,9 @@ public final class FlagsLoaded {
     }
 
     public static void set() {
+        // Ensure that all static initializations in RequestContextUtil are completed before setting
+        // the flag to true.
+        RequestContextUtil.init();
         loaded = true;
     }
 
