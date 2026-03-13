@@ -295,7 +295,7 @@ final class DefaultClientFactory implements ClientFactory {
 
     private boolean checkDefault() {
         // The global default should never be closed.
-        if (this == DEFAULT || this == INSECURE) {
+        if (this == DEFAULT || this == INSECURE || this == ClientFactory.ofDefault()) {
             logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
                          ClientFactory.class.getSimpleName());
             return true;

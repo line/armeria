@@ -32,6 +32,7 @@ import javax.net.ssl.SSLException;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
@@ -819,6 +820,21 @@ public interface FlagsProvider {
     @UnstableApi
     @Nullable
     default Long defaultRequestAutoAbortDelayMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default {@link ClientFactory} returned by {@link ClientFactory#ofDefault()}.
+     *
+     * <p>If {@code null} is returned, the next available {@link FlagsProvider} is consulted.</p>
+     *
+     * <p>The returned {@link ClientFactory} must not be obtained from
+     * {@link ClientFactory#ofDefault()} or {@link Flags#defaultClientFactory()}, because doing so causes
+     * recursive initialization.</p>
+     */
+    @UnstableApi
+    @Nullable
+    default ClientFactory defaultClientFactory() {
         return null;
     }
 

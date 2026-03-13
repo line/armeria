@@ -46,6 +46,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
@@ -1632,6 +1633,23 @@ public final class Flags {
     @UnstableApi
     public static MeterRegistry meterRegistry() {
         return METER_REGISTRY;
+    }
+
+    /**
+     * Returns the default {@link ClientFactory} resolved from
+     * {@link FlagsProvider#defaultClientFactory()}.
+     *
+     * <p>This value is initialized lazily to avoid initialization cycles while creating the default
+     * {@link ClientFactory}.</p>
+     */
+    @UnstableApi
+    public static ClientFactory defaultClientFactory() {
+        return DefaultClientFactoryHolder.INSTANCE;
+    }
+
+    private static final class DefaultClientFactoryHolder {
+        static final ClientFactory INSTANCE =
+                getValue(FlagsProvider::defaultClientFactory, "defaultClientFactory");
     }
 
     /**

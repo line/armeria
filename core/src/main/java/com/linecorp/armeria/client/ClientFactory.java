@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.FlagsProvider;
 import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.Scheme;
@@ -76,7 +77,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * Returns the default {@link ClientFactory} implementation.
      */
     static ClientFactory ofDefault() {
-        return DefaultClientFactory.DEFAULT;
+        return Flags.defaultClientFactory();
     }
 
     /**
@@ -100,8 +101,15 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
     static void closeDefault() {
         final Logger logger = LoggerFactory.getLogger(ClientFactory.class);
         logger.debug("Closing the default client factories");
+        final ClientFactory defaultFactory = Flags.defaultClientFactory();
+        final CompletableFuture<?> defaultCloseFuture;
+        if (defaultFactory instanceof DefaultClientFactory) {
+            defaultCloseFuture = ((DefaultClientFactory) defaultFactory).closeAsync(false);
+        } else {
+            defaultCloseFuture = defaultFactory.closeAsync();
+        }
         final CompletableFuture<Void> closeFuture = CompletableFuture.allOf(
-                DefaultClientFactory.DEFAULT.closeAsync(false),
+                defaultCloseFuture,
                 DefaultClientFactory.INSECURE.closeAsync(false)).handle((unused1, cause) -> {
             if (cause == null) {
                 logger.debug("Closed the default client factories");
