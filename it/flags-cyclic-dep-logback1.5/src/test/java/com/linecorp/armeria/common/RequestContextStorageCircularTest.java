@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientFactory;
 
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.core.status.ErrorStatus;
 import ch.qos.logback.core.status.Status;
 
 class RequestContextStorageCircularTest {
@@ -38,9 +37,6 @@ class RequestContextStorageCircularTest {
         try (ClientFactory ignored = ClientFactory.builder().build()) {
             final List<Status> statuses = context.getStatusManager().getCopyOfStatusList();
             assertThat(statuses).allSatisfy(status -> {
-                if (status instanceof ErrorStatus) {
-                    status.getThrowable().printStackTrace();
-                }
                 assertThat(status.getMessage()).doesNotContain("Appender [RCEA] failed to append");
             });
         }

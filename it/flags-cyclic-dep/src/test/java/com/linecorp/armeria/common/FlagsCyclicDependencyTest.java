@@ -42,8 +42,8 @@ class FlagsCyclicDependencyTest {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            // Calls Flags.requestContextStorageProvider() internally when initializing RequestContextUtil.
-            RequestContextUtil.get();
+                // Calls Flags.requestContextStorageProvider() internally when initializing RequestContextUtil.
+                RequestContextUtil.get();
             counter.incrementAndGet();
         });
 
@@ -55,7 +55,7 @@ class FlagsCyclicDependencyTest {
             }
             // If RequestContextExportingAppender is enabled, when initializing Flags,
             // it calls RequestContextUtil.get() internally if FlagsLoaded doesn't work properly.
-            Flags.requestContextStorageProvider();
+                Flags.requestContextStorageProvider();
             counter.incrementAndGet();
         });
         latch.countDown();
