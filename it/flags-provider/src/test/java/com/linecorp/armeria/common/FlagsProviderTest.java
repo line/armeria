@@ -184,6 +184,24 @@ class FlagsProviderTest {
         }
     }
 
+    @Test
+    void closeDefaultClosesCurrentDefaultClientFactory() throws Throwable {
+        final Method defaultClientFactoryMethod = flags.getDeclaredMethod("defaultClientFactory");
+        final Object clientFactory = defaultClientFactoryMethod.invoke(null);
+
+        final Method isClosedMethod = clientFactory.getClass().getMethod("isClosed");
+        isClosedMethod.setAccessible(true);
+        assertThat(isClosedMethod.invoke(clientFactory)).isEqualTo(false);
+
+        final Class<?> clientFactoryClass =
+                flags.getClassLoader().loadClass("com.linecorp.armeria.client.ClientFactory");
+        final Method closeDefaultMethod = clientFactoryClass.getMethod("closeDefault");
+        closeDefaultMethod.setAccessible(true);
+        closeDefaultMethod.invoke(null);
+
+        assertThat(isClosedMethod.invoke(clientFactory)).isEqualTo(true);
+    }
+
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
         final Method method = flags.getDeclaredMethod(flagsMethod);
         return assertThat(method.invoke(null));
@@ -198,6 +216,11 @@ class FlagsProviderTest {
         public Class<?> loadClass(String name) throws ClassNotFoundException {
             if (!name.startsWith("com.linecorp.armeria")) {
                 return super.loadClass(name);
+            }
+
+            final Class<?> loadedClass = findLoadedClass(name);
+            if (loadedClass != null) {
+                return loadedClass;
             }
 
             // Reload every class in armeria package.
