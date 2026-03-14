@@ -60,15 +60,16 @@ import io.netty.channel.EventLoopGroup;
  * <p>
  * {@link Clients} or {@link ClientBuilder} uses the default {@link ClientFactory} returned by
  * {@link #ofDefault()}, unless you specified a {@link ClientFactory} explicitly. Calling {@link #close()}
- * on the default {@link ClientFactory} will neither terminate its I/O threads nor release other related
- * resources unlike other {@link ClientFactory} to protect itself from accidental premature termination.
+ * on the default {@link ClientFactory} returned by {@link #ofDefault()} will neither terminate its I/O
+ * threads nor release other related resources unlike other {@link ClientFactory} to protect itself from
+ * accidental premature termination.
  * </p><p>
  * Instead, when the current {@link ClassLoader} is {@linkplain ClassLoader#getSystemClassLoader() the system
  * class loader}, a {@linkplain Runtime#addShutdownHook(Thread) shutdown hook} is registered so that they are
  * released when the JVM exits.
  * </p><p>
  * If you are in a multi-classloader environment or you desire an early/explicit termination of the default
- * {@link ClientFactory}, use {@link #closeDefault()}.
+ * {@link ClientFactory} returned by {@link #ofDefault()}, use {@link #closeDefault()}.
  * </p>
  */
 public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
@@ -77,6 +78,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * Returns the default {@link ClientFactory} implementation.
      */
     static ClientFactory ofDefault() {
+        ShutdownHook.init();
         return Flags.defaultClientFactory();
     }
 
@@ -85,6 +87,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * certificate chain.
      */
     static ClientFactory insecure() {
+        ShutdownHook.init();
         return DefaultClientFactory.INSECURE;
     }
 
@@ -147,7 +150,34 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * full control over the life cycle of the default {@link ClientFactory}.
      */
     static void disableShutdownHook() {
-        DefaultClientFactory.disableShutdownHook0();
+        ShutdownHook.disable();
+    }
+
+    final class ShutdownHook {
+        private static volatile boolean disabled;
+
+        static {
+            if (ClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
+                try {
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        if (!disabled) {
+                            ClientFactory.closeDefault();
+                        }
+                    }));
+                } catch (IllegalStateException e) {
+                    LoggerFactory.getLogger(ClientFactory.class)
+                                 .debug("Skipped adding a shutdown hook to the default ClientFactory.", e);
+                }
+            }
+        }
+
+        static void init() {}
+
+        static void disable() {
+            disabled = true;
+        }
+
+        private ShutdownHook() {}
     }
 
     /**

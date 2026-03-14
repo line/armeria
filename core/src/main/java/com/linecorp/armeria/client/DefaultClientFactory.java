@@ -68,31 +68,11 @@ final class DefaultClientFactory implements ClientFactory {
     private static final ResourceLeakDetector<ClientFactory> leakDetector =
             ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ClientFactory.class);
 
-    private static volatile boolean shutdownHookDisabled;
-
     static final DefaultClientFactory DEFAULT =
             (DefaultClientFactory) ClientFactory.builder().build();
 
     static final DefaultClientFactory INSECURE =
             (DefaultClientFactory) ClientFactory.builder().tlsNoVerify().build();
-
-    static {
-        if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
-            try {
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    if (!shutdownHookDisabled) {
-                        ClientFactory.closeDefault();
-                    }
-                }));
-            } catch (IllegalStateException e) {
-                logger.debug("Skipped adding a shutdown hook to the DefaultClientFactory.", e);
-            }
-        }
-    }
-
-    static void disableShutdownHook0() {
-        shutdownHookDisabled = true;
-    }
 
     private final HttpClientFactory httpClientFactory;
     private final Multimap<Scheme, ClientFactory> clientFactories;
