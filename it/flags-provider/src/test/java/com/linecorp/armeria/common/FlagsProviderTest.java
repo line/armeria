@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Map;
 
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,8 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.TlsEngineType;
+
+import io.netty.channel.ChannelOption;
 
 import io.micrometer.core.instrument.Metrics;
 
@@ -157,6 +160,28 @@ class FlagsProviderTest {
     void testDistributionStatisticConfig() {
         assertThat(Flags.distributionStatisticConfig())
                 .isEqualTo(DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG);
+    }
+
+    @Test
+    void overrideDefaultClientFactory() throws Throwable {
+        final Method defaultClientFactoryMethod = flags.getDeclaredMethod("defaultClientFactory");
+        final Object clientFactory = defaultClientFactoryMethod.invoke(null);
+        try {
+            final Method optionsMethod = clientFactory.getClass().getMethod("options");
+            optionsMethod.setAccessible(true);
+            final Object options = optionsMethod.invoke(clientFactory);
+            final Method channelOptionsMethod = options.getClass().getMethod("channelOptions");
+            channelOptionsMethod.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            final Map<ChannelOption<?>, Object> channelOptions =
+                    (Map<ChannelOption<?>, Object>) channelOptionsMethod.invoke(options);
+            assertThat(channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS))
+                    .isEqualTo(4242);
+        } finally {
+            final Method closeMethod = clientFactory.getClass().getMethod("close");
+            closeMethod.setAccessible(true);
+            closeMethod.invoke(clientFactory);
+        }
     }
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
