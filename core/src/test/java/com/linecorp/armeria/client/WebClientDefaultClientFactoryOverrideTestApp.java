@@ -22,7 +22,9 @@ import com.linecorp.armeria.common.TestDefaultClientFactoryFlagsProvider;
 public final class WebClientDefaultClientFactoryOverrideTestApp {
 
     public static void main(String[] args) {
-        System.setProperty(TestDefaultClientFactoryFlagsProvider.ENABLE_PROPERTY, "true");
+        System.setProperty(
+                TestDefaultClientFactoryFlagsProvider.ENABLE_TEST_DEFAULT_CLIENT_FACTORY_PROPERTY,
+                "true");
         final WebClient client = WebClient.of("http://127.0.0.1");
         System.out.println("clientType: " + client.getClass().getName());
     }

@@ -20,7 +20,8 @@ import com.linecorp.armeria.client.ClientFactory;
 
 public final class TestDefaultClientFactoryFlagsProvider implements FlagsProvider {
 
-    public static final String ENABLE_PROPERTY = "com.linecorp.armeria.testDefaultClientFactoryFlagsProvider";
+    public static final String ENABLE_TEST_DEFAULT_CLIENT_FACTORY_PROPERTY =
+            "com.linecorp.armeria.testDefaultClientFactoryFlagsProvider";
 
     @Override
     public int priority() {
@@ -29,7 +30,7 @@ public final class TestDefaultClientFactoryFlagsProvider implements FlagsProvide
 
     @Override
     public ClientFactory defaultClientFactory() {
-        if (!Boolean.getBoolean(ENABLE_PROPERTY)) {
+        if (!Boolean.getBoolean(ENABLE_TEST_DEFAULT_CLIENT_FACTORY_PROPERTY)) {
             return null;
         }
         return new TestDefaultClientFactory();

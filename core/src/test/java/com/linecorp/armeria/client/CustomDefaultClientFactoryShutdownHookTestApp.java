@@ -30,7 +30,9 @@ import com.linecorp.armeria.common.TestDefaultClientFactoryFlagsProvider;
 public final class CustomDefaultClientFactoryShutdownHookTestApp {
 
     public static void main(String[] args) {
-        System.setProperty(TestDefaultClientFactoryFlagsProvider.ENABLE_PROPERTY, "true");
+        System.setProperty(
+                TestDefaultClientFactoryFlagsProvider.ENABLE_TEST_DEFAULT_CLIENT_FACTORY_PROPERTY,
+                "true");
         final ClientFactory clientFactory = ClientFactory.ofDefault();
         System.out.println("defaultClientFactory: " + clientFactory.getClass().getName());
         System.exit(0);
