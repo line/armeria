@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.Collections;
-import java.util.Set;
+import java.lang.reflect.Proxy;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
@@ -38,6 +39,7 @@ import io.netty.channel.EventLoopGroup;
 public final class ShutdownHookTestClientFactory implements ClientFactory {
 
     public static final String CLOSED_MARKER = "ShutdownHookTestClientFactory closed";
+    public static final String NEW_CLIENT_MARKER_PREFIX = "ShutdownHookTestClientFactory newClient: ";
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(future -> {
         System.out.println(CLOSED_MARKER);
@@ -45,8 +47,10 @@ public final class ShutdownHookTestClientFactory implements ClientFactory {
     });
 
     @Override
-    public Set<Scheme> supportedSchemes() {
-        return Collections.emptySet();
+    public java.util.Set<Scheme> supportedSchemes() {
+        return ImmutableSet.of(
+                Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP),
+                Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTPS));
     }
 
     @Override
@@ -81,7 +85,28 @@ public final class ShutdownHookTestClientFactory implements ClientFactory {
 
     @Override
     public Object newClient(ClientBuilderParams params) {
-        throw new UnsupportedOperationException();
+        final Class<?> clientType = params.clientType();
+        System.out.println(NEW_CLIENT_MARKER_PREFIX + clientType.getName());
+        if (!clientType.isInterface()) {
+            throw new UnsupportedOperationException("unsupported client type: " + clientType.getName());
+        }
+
+        return Proxy.newProxyInstance(
+                clientType.getClassLoader(),
+                new Class<?>[] { clientType },
+                (proxy, method, args) -> {
+                    final String methodName = method.getName();
+                    if ("toString".equals(methodName)) {
+                        return clientType.getSimpleName() + " proxy";
+                    }
+                    if ("hashCode".equals(methodName)) {
+                        return System.identityHashCode(proxy);
+                    }
+                    if ("equals".equals(methodName)) {
+                        return proxy == args[0];
+                    }
+                    throw new UnsupportedOperationException(methodName);
+                });
     }
 
     @Override
