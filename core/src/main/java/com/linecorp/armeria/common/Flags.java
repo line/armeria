@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -218,6 +219,10 @@ public final class Flags {
 
     @Nullable
     private static Boolean dumpOpenSslInfo;
+
+    @Nullable
+    private static volatile ClientFactory defaultClientFactory;
+    private static volatile boolean defaultClientFactoryInitialized;
 
     private static final int MAX_NUM_CONNECTIONS =
             getValue(FlagsProvider::maxNumConnections, "maxNumConnections", value -> value > 0);
@@ -1644,12 +1649,27 @@ public final class Flags {
      */
     @UnstableApi
     public static ClientFactory defaultClientFactory() {
-        return DefaultClientFactoryHolder.INSTANCE;
+        if (defaultClientFactoryInitialized) {
+            return requireNonNull(defaultClientFactory);
+        }
+
+        synchronized (Flags.class) {
+            if (!defaultClientFactoryInitialized) {
+                defaultClientFactory =
+                        getValue(FlagsProvider::defaultClientFactory, "defaultClientFactory");
+                defaultClientFactoryInitialized = true;
+            }
+            return requireNonNull(defaultClientFactory);
+        }
     }
 
-    private static final class DefaultClientFactoryHolder {
-        static final ClientFactory INSTANCE =
-                getValue(FlagsProvider::defaultClientFactory, "defaultClientFactory");
+    @UnstableApi
+    @Nullable
+    public static ClientFactory defaultClientFactoryIfInitialized() {
+        if (!defaultClientFactoryInitialized) {
+            return null;
+        }
+        return defaultClientFactory;
     }
 
     /**

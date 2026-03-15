@@ -36,6 +36,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsProvider;
@@ -275,7 +276,7 @@ final class DefaultClientFactory implements ClientFactory {
 
     private boolean checkDefault() {
         // The global default should never be closed.
-        if (this == DEFAULT || this == INSECURE || this == ClientFactory.ofDefault()) {
+        if (this == DEFAULT || this == INSECURE || this == Flags.defaultClientFactoryIfInitialized()) {
             logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
                          ClientFactory.class.getSimpleName());
             return true;

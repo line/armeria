@@ -154,6 +154,11 @@ class ClientFactoryBuilderTest {
         assertThat(defaultClientFactory.isClosed()).isFalse();
     }
 
+    @Test
+    void shouldReuseBuiltInDefaultClientFactoryForFallback() {
+        assertThat(ClientFactory.ofDefault()).isSameAs(DefaultClientFactory.DEFAULT);
+    }
+
     @ParameterizedTest
     @CsvSource({ "pkcs5.key", "pkcs8.key" })
     void shouldAllowPkcsPrivateKeys(String privateKeyPath) {
