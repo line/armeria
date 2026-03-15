@@ -153,33 +153,6 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
         ShutdownHook.disable();
     }
 
-    final class ShutdownHook {
-        private static volatile boolean disabled;
-
-        static {
-            if (ClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
-                try {
-                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                        if (!disabled) {
-                            ClientFactory.closeDefault();
-                        }
-                    }));
-                } catch (IllegalStateException e) {
-                    LoggerFactory.getLogger(ClientFactory.class)
-                                 .debug("Skipped adding a shutdown hook to the default ClientFactory.", e);
-                }
-            }
-        }
-
-        static void init() {}
-
-        static void disable() {
-            disabled = true;
-        }
-
-        private ShutdownHook() {}
-    }
-
     /**
      * Returns the {@link Scheme}s supported by this {@link ClientFactory}.
      */
@@ -427,4 +400,34 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * @param whenClosing the {@link Runnable} will be run before closing this {@link ClientFactory}
      */
     CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing);
+
+    /**
+     * Registers and manages the shutdown hook for closing the default {@link ClientFactory}s.
+     */
+    final class ShutdownHook {
+        private static volatile boolean disabled;
+
+        static {
+            if (ClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
+                try {
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        if (!disabled) {
+                            ClientFactory.closeDefault();
+                        }
+                    }));
+                } catch (IllegalStateException e) {
+                    LoggerFactory.getLogger(ClientFactory.class)
+                                 .debug("Skipped adding a shutdown hook to the default ClientFactory.", e);
+                }
+            }
+        }
+
+        static void init() {}
+
+        static void disable() {
+            disabled = true;
+        }
+
+        private ShutdownHook() {}
+    }
 }

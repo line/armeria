@@ -1663,6 +1663,11 @@ public final class Flags {
         }
     }
 
+    /**
+     * Returns the default {@link ClientFactory} if it has already been initialized.
+     *
+     * <p>This method does not trigger initialization of the default {@link ClientFactory}.
+     */
     @UnstableApi
     @Nullable
     public static ClientFactory defaultClientFactoryIfInitialized() {

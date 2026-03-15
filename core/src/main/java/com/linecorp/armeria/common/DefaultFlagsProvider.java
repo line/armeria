@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,7 +28,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.DefaultClientFactoryAccess;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.Sampler;
@@ -378,12 +378,28 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public ClientFactory defaultClientFactory() {
-        return DefaultClientFactoryAccess.defaultFactory();
+        return DefaultClientFactoryHolder.INSTANCE;
     }
 
     @Override
     public String routeCacheSpec() {
         return ROUTE_CACHE_SPEC;
+    }
+
+    private static final class DefaultClientFactoryHolder {
+        static final ClientFactory INSTANCE = defaultClientFactory();
+
+        private static ClientFactory defaultClientFactory() {
+            try {
+                final Class<?> defaultClientFactoryClass =
+                        Class.forName("com.linecorp.armeria.client.DefaultClientFactory");
+                final Field defaultFactoryField = defaultClientFactoryClass.getDeclaredField("DEFAULT");
+                defaultFactoryField.setAccessible(true);
+                return (ClientFactory) defaultFactoryField.get(null);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("failed to access the built-in default ClientFactory", e);
+            }
+        }
     }
 
     @Override
