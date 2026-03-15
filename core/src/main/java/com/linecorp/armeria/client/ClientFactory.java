@@ -78,7 +78,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * Returns the default {@link ClientFactory} implementation.
      */
     static ClientFactory ofDefault() {
-        ShutdownHook.init();
+        ShutdownHook.ensureRegistered();
         return Flags.defaultClientFactory();
     }
 
@@ -87,7 +87,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * certificate chain.
      */
     static ClientFactory insecure() {
-        ShutdownHook.init();
+        ShutdownHook.ensureRegistered();
         return DefaultClientFactory.INSECURE;
     }
 
@@ -422,7 +422,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
             }
         }
 
-        static void init() {}
+        static void ensureRegistered() {}
 
         static void disable() {
             disabled = true;

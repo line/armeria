@@ -387,9 +387,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     private static final class DefaultClientFactoryHolder {
-        static final ClientFactory INSTANCE = defaultClientFactory();
+        static final ClientFactory INSTANCE = loadBuiltInDefaultClientFactory();
 
-        private static ClientFactory defaultClientFactory() {
+        private static ClientFactory loadBuiltInDefaultClientFactory() {
             try {
                 final Class<?> defaultClientFactoryClass =
                         Class.forName("com.linecorp.armeria.client.DefaultClientFactory");
