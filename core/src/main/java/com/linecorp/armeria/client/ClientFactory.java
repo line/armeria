@@ -411,13 +411,59 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
             if (ClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
                 try {
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                        if (!disabled) {
-                            ClientFactory.closeDefault();
+                        if (disabled) {
+                            return;
                         }
+
+                        closeDefaultIfInitialized();
                     }));
                 } catch (IllegalStateException e) {
                     LoggerFactory.getLogger(ClientFactory.class)
                                  .debug("Skipped adding a shutdown hook to the default ClientFactory.", e);
+                }
+            }
+        }
+
+        private static void closeDefaultIfInitialized() {
+            final Logger logger = LoggerFactory.getLogger(ClientFactory.class);
+            logger.debug("Closing the initialized default client factories");
+            final ClientFactory defaultFactory = Flags.defaultClientFactoryIfInitialized();
+            final CompletableFuture<?> defaultCloseFuture;
+            if (defaultFactory == null) {
+                defaultCloseFuture = CompletableFuture.completedFuture(null);
+            } else if (defaultFactory instanceof DefaultClientFactory) {
+                defaultCloseFuture = ((DefaultClientFactory) defaultFactory).closeAsync(false);
+            } else {
+                defaultCloseFuture = defaultFactory.closeAsync();
+            }
+
+            final CompletableFuture<Void> closeFuture = CompletableFuture.allOf(
+                    defaultCloseFuture,
+                    DefaultClientFactory.INSECURE.closeAsync(false)).handle((unused1, cause) -> {
+                if (cause == null) {
+                    logger.debug("Closed the initialized default client factories");
+                } else {
+                    logger.warn("Failed to close the initialized default client factories:",
+                                Exceptions.peel(cause));
+                }
+                return null;
+            });
+
+            boolean interrupted = false;
+            try {
+                for (;;) {
+                    try {
+                        closeFuture.get();
+                        break;
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    } catch (ExecutionException | CancellationException ignored) {
+                        break;
+                    }
+                }
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
                 }
             }
         }
