@@ -36,10 +36,10 @@ import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
-public final class ShutdownHookTestClientFactory implements ClientFactory {
+public final class TestDefaultClientFactory implements ClientFactory {
 
-    public static final String CLOSED_MARKER = "ShutdownHookTestClientFactory closed";
-    public static final String NEW_CLIENT_MARKER_PREFIX = "ShutdownHookTestClientFactory newClient: ";
+    public static final String CLOSED_MARKER = "TestDefaultClientFactory closed";
+    public static final String NEW_CLIENT_MARKER_PREFIX = "TestDefaultClientFactory newClient: ";
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(future -> {
         System.out.println(CLOSED_MARKER);

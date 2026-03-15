@@ -25,7 +25,7 @@ import java.io.InputStream;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.ShutdownHookTestClientFactory;
+import com.linecorp.armeria.common.TestDefaultClientFactory;
 
 final class WebClientDefaultClientFactoryOverrideTest {
 
@@ -48,7 +48,7 @@ final class WebClientDefaultClientFactoryOverrideTest {
 
         assertThat(exitCode).withFailMessage(output).isZero();
         assertThat(output).contains(
-                ShutdownHookTestClientFactory.NEW_CLIENT_MARKER_PREFIX + WebClient.class.getName());
+                TestDefaultClientFactory.NEW_CLIENT_MARKER_PREFIX + WebClient.class.getName());
     }
 
     private static String readOutput(InputStream inputStream) throws IOException {

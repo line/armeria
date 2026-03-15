@@ -16,21 +16,21 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.ShutdownHookFlagsProvider;
+import com.linecorp.armeria.common.TestDefaultClientFactoryFlagsProvider;
 
 /**
  * For checking the behavior of the JVM shutdown hook for a custom default {@link ClientFactory}.
  * This app must output the following text:
  * <pre>{@code
- * - defaultClientFactory: com.linecorp.armeria.common.ShutdownHookTestClientFactory
- * - ShutdownHookTestClientFactory closed
+ * - defaultClientFactory: com.linecorp.armeria.common.TestDefaultClientFactory
+ * - TestDefaultClientFactory closed
  * }</pre>
  */
 @SuppressWarnings({ "checkstyle:HideUtilityClassConstructor", "checkstyle:UncommentedMain" })
 public final class CustomDefaultClientFactoryShutdownHookTestApp {
 
     public static void main(String[] args) {
-        System.setProperty(ShutdownHookFlagsProvider.ENABLE_PROPERTY, "true");
+        System.setProperty(TestDefaultClientFactoryFlagsProvider.ENABLE_PROPERTY, "true");
         final ClientFactory clientFactory = ClientFactory.ofDefault();
         System.out.println("defaultClientFactory: " + clientFactory.getClass().getName());
         System.exit(0);

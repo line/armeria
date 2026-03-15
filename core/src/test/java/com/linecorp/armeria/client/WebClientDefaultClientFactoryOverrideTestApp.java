@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.ShutdownHookFlagsProvider;
+import com.linecorp.armeria.common.TestDefaultClientFactoryFlagsProvider;
 
 @SuppressWarnings({ "checkstyle:HideUtilityClassConstructor", "checkstyle:UncommentedMain" })
 public final class WebClientDefaultClientFactoryOverrideTestApp {
 
     public static void main(String[] args) {
-        System.setProperty(ShutdownHookFlagsProvider.ENABLE_PROPERTY, "true");
+        System.setProperty(TestDefaultClientFactoryFlagsProvider.ENABLE_PROPERTY, "true");
         final WebClient client = WebClient.of("http://127.0.0.1");
         System.out.println("clientType: " + client.getClass().getName());
     }

@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.ShutdownHookFlagsProvider
+com.linecorp.armeria.common.TestDefaultClientFactoryFlagsProvider

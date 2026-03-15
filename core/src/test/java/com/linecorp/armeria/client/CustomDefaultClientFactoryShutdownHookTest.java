@@ -25,7 +25,7 @@ import java.io.InputStream;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.ShutdownHookTestClientFactory;
+import com.linecorp.armeria.common.TestDefaultClientFactory;
 
 final class CustomDefaultClientFactoryShutdownHookTest {
 
@@ -48,8 +48,8 @@ final class CustomDefaultClientFactoryShutdownHookTest {
 
         assertThat(exitCode).isZero();
         assertThat(output).contains(
-                "defaultClientFactory: " + ShutdownHookTestClientFactory.class.getName());
-        assertThat(output).contains(ShutdownHookTestClientFactory.CLOSED_MARKER);
+                "defaultClientFactory: " + TestDefaultClientFactory.class.getName());
+        assertThat(output).contains(TestDefaultClientFactory.CLOSED_MARKER);
     }
 
     private static String readOutput(InputStream inputStream) throws IOException {

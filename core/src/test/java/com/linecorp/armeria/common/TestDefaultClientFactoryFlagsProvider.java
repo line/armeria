@@ -18,9 +18,9 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.client.ClientFactory;
 
-public final class ShutdownHookFlagsProvider implements FlagsProvider {
+public final class TestDefaultClientFactoryFlagsProvider implements FlagsProvider {
 
-    public static final String ENABLE_PROPERTY = "com.linecorp.armeria.testShutdownHookFlagsProvider";
+    public static final String ENABLE_PROPERTY = "com.linecorp.armeria.testDefaultClientFactoryFlagsProvider";
 
     @Override
     public int priority() {
@@ -32,6 +32,6 @@ public final class ShutdownHookFlagsProvider implements FlagsProvider {
         if (!Boolean.getBoolean(ENABLE_PROPERTY)) {
             return null;
         }
-        return new ShutdownHookTestClientFactory();
+        return new TestDefaultClientFactory();
     }
 }
