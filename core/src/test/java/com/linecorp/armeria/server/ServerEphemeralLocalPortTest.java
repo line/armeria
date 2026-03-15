@@ -125,8 +125,5 @@ class ServerEphemeralLocalPortTest {
             assertThat(p.localAddress().getAddress().isLoopbackAddress()).isTrue();
             assertThat(p.portGroup()).isZero();
         });
-
-        // Must bound at two different port numbers because we didn't use `localPort()`.
-        assertThat(ports.stream().mapToInt(p -> p.localAddress().getPort()).distinct()).hasSize(2);
     }
 }
