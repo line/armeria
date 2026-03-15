@@ -146,8 +146,9 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
 
     /**
      * Disables the {@linkplain Runtime#addShutdownHook(Thread) shutdown hook} which closes
-     * {@linkplain #ofDefault() the default <code>ClientFactory</code>}. This method is useful when you need
-     * full control over the life cycle of the default {@link ClientFactory}.
+     * the {@linkplain #ofDefault() default} and {@linkplain #insecure() insecure default}
+     * {@link ClientFactory}s. This method is useful when you need full control over the life cycle
+     * of the default {@link ClientFactory}s.
      */
     static void disableShutdownHook() {
         ShutdownHook.disable();
