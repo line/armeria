@@ -10,7 +10,7 @@
   },
   "plugins": [
     {
-      "name": "armeria",
+      "name": "assistant",
       "source": {
         "source": "git-subdir",
         "url": "https://github.com/line/armeria.git",
