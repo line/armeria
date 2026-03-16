@@ -102,7 +102,9 @@ final class HttpJsonTranscodingGrpcService extends SimpleDecoratingHttpService
         final TranscodingSpec spec = transcoder.findSpec(ctx.config().mappedRoute());
         if (spec != null) {
             final HttpJsonGrpcMethod method = spec.method();
-            return method.definition;
+            if (method.definition != null) {
+                return method.definition;
+            }
         }
         return delegate.methodDefinition(ctx);
     }

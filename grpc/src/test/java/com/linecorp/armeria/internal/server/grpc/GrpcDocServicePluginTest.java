@@ -23,14 +23,20 @@ import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.bui
 import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.convertRegexPath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static testing.grpc.HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME;
+import static testing.grpc.HttpJsonTranscodingTestServiceGrpc.getServiceDescriptor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -39,6 +45,8 @@ import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.HttpEndpoint;
@@ -60,12 +68,12 @@ import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider;
 
 import io.grpc.MethodDescriptor;
 import testing.grpc.EmptyProtos.Empty;
-import testing.grpc.HttpJsonTranscodingTestServiceGrpc;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -80,8 +88,7 @@ class GrpcDocServicePluginTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
             testing.grpc.Test.getDescriptor()
-                                                  .findServiceByName("TestService");
-
+                             .findServiceByName("TestService");
     private static final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
 
     @Test
@@ -92,8 +99,8 @@ class GrpcDocServicePluginTest {
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME,
-                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
-                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              SERVICE_NAME,
+                                              SERVICE_NAME +
                                               GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
@@ -112,13 +119,13 @@ class GrpcDocServicePluginTest {
                                                       m.name());
             });
         });
-        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
+        services.get(SERVICE_NAME).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.HttpJsonTranscodingTestService/" +
                                                       m.name());
             });
         });
-        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+        services.get(SERVICE_NAME +
                      GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).satisfiesAnyOf(toVerifierArray(m));
@@ -150,8 +157,8 @@ class GrpcDocServicePluginTest {
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME,
-                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
-                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              SERVICE_NAME,
+                                              SERVICE_NAME +
                                               GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         // 2. Exclude specified.
@@ -160,8 +167,8 @@ class GrpcDocServicePluginTest {
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME,
-                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
-                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              SERVICE_NAME,
+                                              SERVICE_NAME +
                                               GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         List<String> methods = methods(services);
@@ -351,14 +358,32 @@ class GrpcDocServicePluginTest {
         assertThat(functions.get("UnimplementedCall").name()).isEqualTo("UnimplementedCall");
     }
 
-    @Test
-    void httpEndpoint() {
+    private static Stream<Arguments> httpEndpointCases() {
         final GrpcService grpcService =
                 GrpcService.builder().addService(mock(HttpJsonTranscodingTestServiceImplBase.class))
                            .enableHttpJsonTranscoding(true).build();
-        final HttpEndpointSupport httpEndpointSupport = grpcService.as(HttpEndpointSupport.class);
-        assertThat(httpEndpointSupport).isNotNull();
+        final HttpEndpointSupport grpcServiceSupport = grpcService.as(HttpEndpointSupport.class);
+        assertThat(grpcServiceSupport).isNotNull();
+        final ServiceConfig grpcServiceConfig = Server.builder().service(grpcService).build()
+                                                      .serviceConfigs().get(0);
 
+        final DelegatingHttpJsonTranscodingService transcoder =
+                DelegatingHttpJsonTranscodingService.builder((ctx, req) ->
+                                                                     HttpResponse.of(HttpStatus.NOT_FOUND))
+                                                    .serviceDescriptors(getServiceDescriptor())
+                                                    .build();
+        final ServiceConfig transcoderConfig = Server.builder().service(transcoder).build()
+                                                     .serviceConfigs().get(0);
+
+        return Stream.of(
+                Arguments.of("grpc-service", grpcServiceSupport, grpcServiceConfig),
+                Arguments.of("decorator", transcoder.as(HttpEndpointSupport.class), transcoderConfig));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("httpEndpointCases")
+    void httpEndpoint(String label, HttpEndpointSupport httpEndpointSupport,
+                      ServiceConfig serviceConfig) {
         // Expected generated routes. See 'transcoding.proto' file.
         final List<Route> routes = ImmutableList.of(
                 Route.builder().methods(HttpMethod.GET).path("/v1/messages/:p0").build(),
@@ -372,8 +397,6 @@ class GrpcDocServicePluginTest {
         assertThat(specs.size()).isEqualTo(routes.size());
 
         // Get ServiceConfig to build HTTP endpoints.
-        final ServiceConfig serviceConfig = Server.builder().service(grpcService).build()
-                                                  .serviceConfigs().get(0);
         final List<HttpEndpoint> httpEndpoints =
                 specs.stream().map(spec -> new HttpEndpoint(serviceConfig, spec)).collect(toImmutableList());
         final List<ServiceInfo> serviceInfos = buildHttpServiceInfos(httpEndpoints);
@@ -381,7 +404,7 @@ class GrpcDocServicePluginTest {
         // The endpoints are specified in the same service.
         assertThat(serviceInfos.size()).isOne();
         final ServiceInfo serviceInfo = serviceInfos.get(0);
-        assertThat(serviceInfo.name()).isEqualTo(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+        assertThat(serviceInfo.name()).isEqualTo(SERVICE_NAME +
                                                  GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         final String virtualHostNamePattern = serviceConfig.virtualHost().hostnamePattern();
@@ -460,9 +483,9 @@ class GrpcDocServicePluginTest {
                 ParamInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build(),
                 ParamInfo.builder("required_text", TypeSignature.ofBase(JavaType.STRING.name()))
-                        .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build(),
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build(),
                 ParamInfo.builder("optional_text", TypeSignature.ofBase(JavaType.STRING.name()))
-                        .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
+                         .location(FieldLocation.BODY).requirement(FieldRequirement.OPTIONAL).build()));
         assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
     }
 

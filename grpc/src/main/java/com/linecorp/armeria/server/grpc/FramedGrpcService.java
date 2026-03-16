@@ -425,13 +425,22 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        ServerMethodDefinition<?, ?> methodDef = null;
         if (lookupMethodFromAttribute) {
-            final ServerMethodDefinition<?, ?> methodDef = attrMethodDefinition(ctx);
-            if (methodDef != null) {
-                return methodDef;
-            }
+            methodDef = attrMethodDefinition(ctx, registry);
         }
-        return GrpcService.super.methodDefinition(ctx);
+        if (methodDef != null) {
+            return methodDef;
+        }
+        methodDef = GrpcService.super.methodDefinition(ctx);
+        if (methodDef != null) {
+            return methodDef;
+        }
+        if (!lookupMethodFromAttribute) {
+            // framed grpc may be used as a delegate of DelegatingHttpJsonTranscodingService
+            methodDef = attrMethodDefinition(ctx, registry);
+        }
+        return methodDef;
     }
 
     @Nullable
@@ -439,7 +448,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final HttpJsonGrpcMethod httpJsonGrpcMethod = ctx.attr(
                 HttpJsonTranscoder.HTTP_JSON_GRPC_METHOD_INFO);
         if (httpJsonGrpcMethod != null) {
-            return httpJsonGrpcMethod.definition;
+            if (httpJsonGrpcMethod.definition != null) {
+                return httpJsonGrpcMethod.definition;
+            }
+            return registry.lookupMethod(httpJsonGrpcMethod.descriptor);
         }
         return null;
     }

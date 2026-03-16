@@ -47,10 +47,12 @@ import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
+import com.linecorp.armeria.server.grpc.UnframedGrpcSupport.ResponseHandler;
 
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.Status;
 
 /**
  * A {@link SimpleDecoratingHttpService} which allows {@link GrpcService} to serve requests without the framing
@@ -198,13 +200,47 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                                            builder -> builder.contentType(contentType));
                                    return AggregatedHttpResponse.of(headers, response.content());
                                };
+                       final ResponseHandler responseHandler =
+                               new UnframedGrpcResponseHandler(responseFuture, ctx, responseConverter);
                        UnframedGrpcSupport.frameAndServe(
-                               unwrap(), ctx, grpcHeaders.build(), clientRequest.content(), responseFuture,
-                               errorHandler, responseConverter);
+                               unwrap(), ctx, grpcHeaders.build(), clientRequest.content(), responseHandler);
                    }
                }
                return null;
            });
         return HttpResponse.of(responseFuture);
+    }
+
+    private final class UnframedGrpcResponseHandler implements ResponseHandler {
+        private final CompletableFuture<HttpResponse> responseFuture;
+        private final ServiceRequestContext ctx;
+        private final Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter;
+
+        private UnframedGrpcResponseHandler(
+                CompletableFuture<HttpResponse> responseFuture,
+                ServiceRequestContext ctx,
+                Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
+            this.responseFuture = responseFuture;
+            this.ctx = ctx;
+            this.responseConverter = responseConverter;
+        }
+
+        @Override
+        public void handle(@Nullable AggregatedHttpResponse aggregatedResponse,
+                           @Nullable Status status, @Nullable Throwable cause) {
+            if (cause != null) {
+                responseFuture.completeExceptionally(cause);
+                return;
+            }
+            if (status != null) {
+                assert aggregatedResponse != null;
+                final HttpResponse errResponse = errorHandler.handle(ctx, status, aggregatedResponse);
+                responseFuture.complete(errResponse);
+                return;
+            }
+            assert aggregatedResponse != null;
+            final AggregatedHttpResponse convertedResponse = responseConverter.apply(aggregatedResponse);
+            responseFuture.complete(convertedResponse.toHttpResponse());
+        }
     }
 }
