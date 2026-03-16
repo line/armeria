@@ -1,7 +1,7 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2025 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -79,22 +79,20 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification.Parameter;
 import com.linecorp.armeria.internal.server.grpc.HttpEndpointSupport;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.PathVariable.ValueDefinition.Type;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngineBuilder.HttpJsonGrpcMethod;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.grpc.ServerMethodDefinition;
+import io.netty.util.AttributeKey;
 
-/**
- * Converts HTTP/JSON request to gRPC request and delegates it to the {@link FramedGrpcService}.
- */
-final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
-        implements HttpEndpointSupport {
-    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingService.class);
+final class HttpJsonTranscodingEngine implements HttpEndpointSupport {
+    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingEngine.class);
 
     @Nullable
     private static Function<AggregatedHttpResponse, AggregatedHttpResponse> generateResponseConverter(
@@ -187,21 +185,24 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
     }
 
-    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+    private static String grpcPath(MethodDescriptor methodDescriptor) {
+        return '/' + methodDescriptor.getService().getFullName() + '/' + methodDescriptor.getName();
+    }
 
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+    static final AttributeKey<HttpJsonGrpcMethod> HTTP_JSON_GRPC_METHOD_INFO =
+            AttributeKey.valueOf(FramedGrpcService.class, "HTTP_JSON_GRPC_METHOD_INFO");
+
+    private final HttpJsonTranscodingOptions options;
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
 
-    HttpJsonTranscodingService(GrpcService delegate,
-                               Map<Route, TranscodingSpec> routeAndSpecs,
-                               HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
-        super(delegate, httpJsonTranscodingOptions.errorHandler());
+    HttpJsonTranscodingEngine(Map<Route, TranscodingSpec> routeAndSpecs,
+                              HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
+        options = requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
         this.routeAndSpecs = routeAndSpecs;
 
-        final LinkedHashSet<Route> linkedHashSet = new LinkedHashSet<>(delegate.routes().size() +
-                                                                       routeAndSpecs.size());
-        linkedHashSet.addAll(delegate.routes());
-
+        final LinkedHashSet<Route> linkedHashSet = new LinkedHashSet<>(routeAndSpecs.size());
         routeAndSpecs.entrySet().stream().sorted((o1, o2) -> {
             if (o1.getValue().hasVerb) {
                 return -1;
@@ -242,40 +243,22 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                              spec.httpRule);
     }
 
-    /**
-     * Returns the {@link Route}s which are supported by this service and the {@code delegate}.
-     */
-    @Override
-    public Set<Route> routes() {
+    Set<Route> routes() {
         return routes;
     }
 
+    HttpResponse serve(ServiceRequestContext ctx, HttpRequest req,
+                       TranscodingSpec spec, HttpService delegate) throws Exception {
+        return serve0(ctx, req, spec, delegate);
+    }
+
     @Nullable
-    @Override
-    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
-        final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());
-        if (spec != null) {
-            return spec.method;
-        }
-        return super.methodDefinition(ctx);
-    }
-
-    @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());
-        if (spec != null) {
-            return serve0(ctx, req, spec);
-        }
-        return unwrap().serve(ctx, req);
-    }
-
-    @VisibleForTesting
-    Map<Route, TranscodingSpec> routeAndSpecs() {
-        return routeAndSpecs;
+    TranscodingSpec findSpec(Route route) {
+        return routeAndSpecs.get(route);
     }
 
     private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
-                                TranscodingSpec spec) throws Exception {
+                                TranscodingSpec spec, HttpService delegate) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
@@ -286,6 +269,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         grpcHeaders.method(HttpMethod.POST)
                    .contentType(GrpcSerializationFormats.JSON.mediaType());
+        grpcHeaders.path(grpcPath(spec.methodDescriptor));
         // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
@@ -300,7 +284,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     responseFuture.completeExceptionally(t);
                 } else {
                     try {
-                        ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
+                        ctx.setAttr(HTTP_JSON_GRPC_METHOD_INFO, spec.method);
                         final HttpData requestContent;
 
                         // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
@@ -312,9 +296,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             requestContent = convertToJson(ctx, clientRequest, spec);
                         }
 
-                        frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                      requestContent, responseFuture,
-                                      generateResponseConverter(spec));
+                        UnframedGrpcSupport.frameAndServe(
+                                delegate, ctx, grpcHeaders.build(), requestContent,
+                                responseFuture, options.errorHandler(), generateResponseConverter(spec));
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -584,7 +568,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     static final class TranscodingSpec {
         private final int order;
         private final HttpRule httpRule;
-        private final ServerMethodDefinition<?, ?> method;
+        private final HttpJsonGrpcMethod method;
         private final Descriptors.ServiceDescriptor serviceDescriptor;
         private final Descriptors.MethodDescriptor methodDescriptor;
         private final Map<String, Field> originalFields;
@@ -596,7 +580,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         TranscodingSpec(int order,
                         HttpRule httpRule,
-                        ServerMethodDefinition<?, ?> method,
+                        HttpJsonGrpcMethod method,
                         ServiceDescriptor serviceDescriptor,
                         MethodDescriptor methodDescriptor,
                         Map<String, Field> originalFields,
@@ -618,6 +602,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         MethodDescriptor methodDescriptor() {
             return methodDescriptor;
+        }
+
+        HttpJsonGrpcMethod method() {
+            return method;
         }
     }
 
