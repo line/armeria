@@ -72,5 +72,7 @@ public final class CoreBlockHoundIntegration implements BlockHoundIntegration {
         // StampedLock.writeLock() can be called
         builder.allowBlockingCallsInside("io.netty.buffer.AdaptivePoolingAllocator", "allocate");
         builder.allowBlockingCallsInside("com.linecorp.armeria.common.util.Version", "getAll");
+        // Flags in general are lazily initialized
+        builder.allowBlockingCallsInside("com.linecorp.armeria.common.Flags", "tlsEngineType");
     }
 }
