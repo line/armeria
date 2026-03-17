@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Objects;
 
@@ -31,7 +32,8 @@ import io.netty.util.AttributeKey;
 final class DefaultRequestOptions implements RequestOptions {
 
     static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, null,
-                                                                         ImmutableMap.of(), null, null, null);
+                                                                         ImmutableMap.of(), null, null, null,
+                                                                         null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
@@ -45,13 +47,16 @@ final class DefaultRequestOptions implements RequestOptions {
     private final ResponseTimeoutMode responseTimeoutMode;
     @Nullable
     private final ClientTlsSpec clientTlsSpec;
+    @Nullable
+    private final InetSocketAddress localBindAddress;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
                           long maxResponseLength, @Nullable Long requestAutoAbortDelayMillis,
                           Map<AttributeKey<?>, Object> attributeMap,
                           @Nullable ExchangeType exchangeType,
                           @Nullable ResponseTimeoutMode responseTimeoutMode,
-                          @Nullable ClientTlsSpec clientTlsSpec) {
+                          @Nullable ClientTlsSpec clientTlsSpec,
+                          @Nullable InetSocketAddress localBindAddress) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
@@ -60,6 +65,7 @@ final class DefaultRequestOptions implements RequestOptions {
         this.exchangeType = exchangeType;
         this.responseTimeoutMode = responseTimeoutMode;
         this.clientTlsSpec = clientTlsSpec;
+        this.localBindAddress = localBindAddress;
     }
 
     @Override
@@ -107,6 +113,12 @@ final class DefaultRequestOptions implements RequestOptions {
     }
 
     @Override
+    @UnstableApi
+    public @Nullable InetSocketAddress localBindAddress() {
+        return localBindAddress;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -124,13 +136,14 @@ final class DefaultRequestOptions implements RequestOptions {
                attributeMap.equals(that.attributeMap) &&
                exchangeType == that.exchangeType &&
                responseTimeoutMode == that.responseTimeoutMode &&
-               Objects.equals(clientTlsSpec, that.clientTlsSpec);
+               Objects.equals(clientTlsSpec, that.clientTlsSpec) &&
+               Objects.equals(localBindAddress, that.localBindAddress);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
-                            attributeMap, exchangeType, responseTimeoutMode, clientTlsSpec);
+                            attributeMap, exchangeType, responseTimeoutMode, clientTlsSpec, localBindAddress);
     }
 
     @Override
@@ -144,6 +157,7 @@ final class DefaultRequestOptions implements RequestOptions {
                           .add("exchangeType", exchangeType)
                           .add("responseTimeoutMode", responseTimeoutMode)
                           .add("clientTlsSpec", clientTlsSpec)
+                          .add("localBindAddress", localBindAddress)
                           .toString();
     }
 }

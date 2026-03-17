@@ -28,14 +28,13 @@ import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
 import io.envoyproxy.envoy.config.core.v3.HeaderValue;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 final class GrpcServicesPreprocessor implements HttpPreprocessor {
 
@@ -68,17 +67,11 @@ final class GrpcServicesPreprocessor implements HttpPreprocessor {
                 bootstrapClusters.snapshotFuture(clusterName);
         checkArgument(snapshotFuture != null, "No cluster found for name: %s", clusterName);
         return HttpResponse.of(snapshotFuture.thenApply(snapshot -> {
-            final UpstreamTlsContext tlsContext = snapshot.xdsResource().upstreamTlsContext();
-            if (tlsContext != null) {
-                ctx.setSessionProtocol(SessionProtocol.HTTPS);
-            } else {
-                ctx.setSessionProtocol(SessionProtocol.HTTP);
-            }
-
             final XdsLoadBalancer loadBalancer = snapshot.loadBalancer();
             checkArgument(loadBalancer != null, "No endpoints found for name: %s", clusterName);
             final Endpoint endpoint = loadBalancer.selectNow(ctx);
             checkArgument(endpoint != null, "Endpoint not selected found for name: %s", clusterName);
+            XdsCommonUtil.setTlsParams(ctx, endpoint);
             ctx.setEndpointGroup(endpoint);
             try {
                 return delegate.execute(ctx, req);

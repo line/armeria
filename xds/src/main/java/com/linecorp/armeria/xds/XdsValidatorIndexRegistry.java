@@ -43,7 +43,7 @@ final class XdsValidatorIndexRegistry {
         try {
             unpacked = message.unpack(clazz);
         } catch (InvalidProtocolBufferException e) {
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException("Error unpacking: " + clazz.getName(), e);
         }
         xdsValidatorIndex.assertValid(unpacked);
         return unpacked;

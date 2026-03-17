@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
+import com.linecorp.armeria.xds.TransportSocketSnapshot;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
@@ -37,11 +40,16 @@ final class XdsAttributeAssigningEndpointGroup extends DynamicEndpointGroup
     private final LocalityLbEndpoints localityLbEndpoints;
     private final LbEndpoint lbEndpoint;
     private final EndpointGroup delegate;
+    final TransportSocketSnapshot matched;
 
     XdsAttributeAssigningEndpointGroup(EndpointGroup delegate, LocalityLbEndpoints localityLbEndpoints,
-                                       LbEndpoint lbEndpoint) {
+                                       LbEndpoint lbEndpoint,
+                                       TransportSocketSnapshot transportSocket,
+                                       List<TransportSocketMatchSnapshot> transportSocketMatches) {
         this.localityLbEndpoints = localityLbEndpoints;
         this.lbEndpoint = lbEndpoint;
+        matched = TransportSocketMatchUtil.selectTransportSocket(transportSocket, transportSocketMatches,
+                                                                 lbEndpoint, localityLbEndpoints);
         this.delegate = delegate;
         delegate.addListener(this, true);
     }
@@ -50,9 +58,11 @@ final class XdsAttributeAssigningEndpointGroup extends DynamicEndpointGroup
     public void accept(List<Endpoint> endpoints) {
         final List<Endpoint> mappedEndpoints =
                 endpoints.stream()
-                         .map(endpoint -> endpoint.withAttr(LB_ENDPOINT_KEY, lbEndpoint)
-                                                  .withAttr(LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
-                                                  .withWeight(XdsEndpointUtil.endpointWeight(lbEndpoint)))
+                         .map(endpoint ->
+                                      endpoint.withAttr(LB_ENDPOINT_KEY, lbEndpoint)
+                                              .withAttr(LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
+                                              .withAttr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY, matched)
+                                              .withWeight(XdsEndpointUtil.endpointWeight(lbEndpoint)))
                          .collect(Collectors.toList());
         setEndpoints(mappedEndpoints);
     }

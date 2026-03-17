@@ -1,0 +1,19 @@
+---
+date: 2026-03-10
+---
+
+# v1.30.5
+
+## 🛠️ Bug fixes
+
+- Setting `pingIntervalMillis` to a value greater than 33 seconds no longer throws an exception. #6648
+  - Linux keepalive socket options (`SO_KEEPALIVE` `TCP_KEEPIDLE`, `TCP_KEEPINTVL`) are no longer set by default.
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />

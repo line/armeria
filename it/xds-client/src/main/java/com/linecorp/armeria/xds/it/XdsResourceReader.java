@@ -34,6 +34,7 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 public final class XdsResourceReader {
 
     private static final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper jsonMapper = new ObjectMapper();
     private static final Parser parser =
             JsonFormat.parser().usingTypeRegistry(TypeRegistry.newBuilder()
                                                               .add(HttpConnectionManager.getDescriptor())
@@ -58,6 +59,19 @@ public final class XdsResourceReader {
         try {
             builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
             final JsonNode jsonNode = mapper.reader().readTree(yaml);
+            parser.merge(jsonNode.toString(), builder);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return (T) builder.build();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends GeneratedMessage> T fromJson(String json, Class<T> clazz) {
+        final GeneratedMessage.Builder<?> builder;
+        try {
+            builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
+            final JsonNode jsonNode = jsonMapper.reader().readTree(json);
             parser.merge(jsonNode.toString(), builder);
         } catch (Exception e) {
             throw new RuntimeException(e);

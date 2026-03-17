@@ -49,6 +49,10 @@ final class TransportSocketStream extends RefCountedStream<TransportSocketSnapsh
             return SnapshotStream.just(new TransportSocketSnapshot(transportSocket))
                                  .subscribe(watcher);
         }
+        if (!transportSocket.hasTypedConfig()) {
+            return SnapshotStream.just(new TransportSocketSnapshot(TransportSocket.getDefaultInstance()))
+                                 .subscribe(watcher);
+        }
         final UpstreamTlsContext tlsContext = XdsValidatorIndexRegistry.unpack(transportSocket.getTypedConfig(),
                                                                                UpstreamTlsContext.class);
         final CommonTlsContext commonTlsContext = tlsContext.getCommonTlsContext();

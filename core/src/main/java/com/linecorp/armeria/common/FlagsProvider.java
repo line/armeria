@@ -1065,12 +1065,10 @@ public interface FlagsProvider {
 
     /**
      * Returns whether default socket options defined by Armeria are enabled.
-     * If enabled, the following socket options are set automatically when
+     * If enabled, the following socket option is set automatically when
      * {@code /dev/epoll} or {@code io_uring} is in use:
      * <ul>
      *   <li>TCP_USER_TIMEOUT</li>
-     *   <li>TCP_KEEPIDLE</li>
-     *   <li>TCP_KEEPINTVL</li>
      * </ul>
      *
      * <p>This flag is enabled by default.

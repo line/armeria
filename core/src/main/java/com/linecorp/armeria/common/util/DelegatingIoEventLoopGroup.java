@@ -29,43 +29,61 @@ import java.util.concurrent.TimeoutException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoHandle;
+import io.netty.channel.IoHandler;
+import io.netty.channel.IoRegistration;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
- * A delegating {@link EventLoopGroup} that forwards all calls to the underlying delegate.
+ * A delegating {@link IoEventLoopGroup} that forwards all calls to the underlying delegate.
  */
-class DelegatingEventLoopGroup implements EventLoopGroup {
+class DelegatingIoEventLoopGroup implements IoEventLoopGroup {
 
-    private final EventLoopGroup delegate;
+    private final IoEventLoopGroup delegate;
 
     /**
      * Creates a new instance.
      *
-     * @param delegate the {@link EventLoopGroup} to delegate to
+     * @param delegate the {@link IoEventLoopGroup} to delegate to
      */
-    DelegatingEventLoopGroup(EventLoopGroup delegate) {
+    DelegatingIoEventLoopGroup(IoEventLoopGroup delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
     /**
-     * Returns the underlying {@link EventLoopGroup}.
+     * Returns the underlying {@link IoEventLoopGroup}.
      */
-    protected EventLoopGroup delegate() {
+    protected IoEventLoopGroup delegate() {
         return delegate;
     }
 
     @Override
-    public EventLoop next() {
+    public IoEventLoop next() {
         return delegate.next();
+    }
+
+    @Override
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return delegate.isCompatible(handleType);
+    }
+
+    @Override
+    public boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return delegate.isIoType(handlerType);
     }
 
     @Override
     public Iterator<EventExecutor> iterator() {
         return delegate.iterator();
+    }
+
+    @Override
+    public Future<IoRegistration> register(IoHandle handle) {
+        return delegate.register(handle);
     }
 
     @Override

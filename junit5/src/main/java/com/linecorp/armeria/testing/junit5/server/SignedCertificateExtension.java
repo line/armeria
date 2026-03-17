@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -49,9 +51,8 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
     /**
      * Creates a new instance.
      */
-    @SuppressWarnings("CopyConstructorMissesField")
     public SignedCertificateExtension(SignedCertificateExtension parent) {
-        this(() -> new SignedCertificate(requireNonNull(parent, "parent").signedCertificate()));
+        this(parent, true);
     }
 
     /**
@@ -60,7 +61,7 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
      * @param fqdn a fully qualified domain name
      */
     public SignedCertificateExtension(String fqdn, SignedCertificateExtension parent) {
-        this(() -> new SignedCertificate(fqdn, requireNonNull(parent, "parent").signedCertificate()));
+        this(fqdn, parent, ImmutableList.of());
     }
 
     /**
@@ -72,8 +73,42 @@ public class SignedCertificateExtension extends AbstractAllOrEachExtension {
      */
     public SignedCertificateExtension(String fqdn, SignedCertificateExtension parent,
                                       Iterable<String> subjectAlternativeNames) {
+        this(fqdn, parent, subjectAlternativeNames, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param parent the parent extension to sign with
+     * @param isCA   whether the certificate should be a CA certificate
+     */
+    public SignedCertificateExtension(SignedCertificateExtension parent, boolean isCA) {
+        this("localhost", parent, isCA);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn   a fully qualified domain name
+     * @param parent the parent extension to sign with
+     * @param isCA   whether the certificate should be a CA certificate
+     */
+    public SignedCertificateExtension(String fqdn, SignedCertificateExtension parent, boolean isCA) {
+        this(fqdn, parent, ImmutableList.of(), isCA);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn                    a fully qualified domain name
+     * @param parent                  the parent extension to sign with
+     * @param subjectAlternativeNames additional Subject Alternative Names
+     * @param isCA                    whether the certificate should be a CA certificate
+     */
+    public SignedCertificateExtension(String fqdn, SignedCertificateExtension parent,
+                                      Iterable<String> subjectAlternativeNames, boolean isCA) {
         this(() -> new SignedCertificate(fqdn, requireNonNull(parent, "parent").signedCertificate(),
-                                         subjectAlternativeNames));
+                                         subjectAlternativeNames, isCA));
     }
 
     SignedCertificateExtension(ThrowingSupplier<SignedCertificate> certificateFactory) {

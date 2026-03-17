@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
+import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
+import com.linecorp.armeria.xds.TransportSocketSnapshot;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.netty.util.concurrent.EventExecutor;
@@ -50,13 +52,16 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
 
     @Override
     public void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+                         TransportSocketSnapshot transportSocket,
+                         List<TransportSocketMatchSnapshot> transportSocketMatches,
                          SnapshotWatcher<XdsLoadBalancer> watcher,
                          @Nullable XdsLoadBalancer localLoadBalancer) {
         assert eventLoop.inEventLoop();
         endpointGroup.closeAsync();
 
         observer.resourceUpdated(clusterXdsResource);
-        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterXdsResource, endpointSnapshot);
+        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterXdsResource, endpointSnapshot,
+                                                             transportSocket, transportSocketMatches);
         final EndpointGroup currentGroup = endpointGroup;
         endpointGroup.addListener(endpoints -> eventLoop.execute(() -> {
             if (currentGroup != endpointGroup) {

@@ -47,6 +47,7 @@ import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
+import io.envoyproxy.pgv.ValidationException;
 
 class CertificateValidationContextTest {
 
@@ -72,6 +73,7 @@ class CertificateValidationContextTest {
     @RegisterExtension
     static final SelfSignedCertificateExtension certificate2 = new SelfSignedCertificateExtension();
 
+    //language=YAML
     private static final String sdsBootstrapYaml =
             """
             dynamic_resources:
@@ -149,6 +151,7 @@ class CertificateValidationContextTest {
         final File invalidCaFile = new File(tempDir, "invalid_ca.pem");
         Files.writeString(invalidCaFile.toPath(), "this is not a valid CA certificate");
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: validation-certs
@@ -182,12 +185,83 @@ class CertificateValidationContextTest {
     }
 
     @Test
+    void invalidSpkiPinFailsSnapshot() throws Exception {
+        //language=YAML
+        final String secretYaml =
+                """
+                name: validation-certs
+                validation_context:
+                  verify_certificate_spki:
+                    - "not-base64"
+                """;
+        final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        final String bootstrapStr = sdsBootstrapYaml.formatted(
+                server.httpPort(),
+                certificate1.privateKeyFile().toPath().toString(),
+                certificate1.certificateFile().toPath().toString());
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
+                if (t != null) {
+                    errorRef.set(t);
+                }
+            });
+
+            await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
+            assertThat(errorRef.get()).hasRootCauseInstanceOf(ValidationException.class);
+        }
+    }
+
+    @Test
+    void invalidCertHashPinFailsSnapshot() throws Exception {
+        //language=YAML
+        final String secretYaml =
+                """
+                name: validation-certs
+                validation_context:
+                  verify_certificate_hash:
+                    - "abc"
+                """;
+        final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        final String bootstrapStr = sdsBootstrapYaml.formatted(
+                server.httpPort(),
+                certificate1.privateKeyFile().toPath().toString(),
+                certificate1.certificateFile().toPath().toString());
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
+                if (t != null) {
+                    errorRef.set(t);
+                }
+            });
+
+            await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
+            assertThat(errorRef.get()).hasRootCauseInstanceOf(ValidationException.class);
+        }
+    }
+
+    @Test
     void multipleCaCertificates(@TempDir File tempDir) throws Exception {
         final File multiCaFile = new File(tempDir, "multi_ca.pem");
         final String cert1Content = Files.readString(certificate1.certificateFile().toPath());
         final String cert2Content = Files.readString(certificate2.certificateFile().toPath());
-        Files.writeString(multiCaFile.toPath(), cert1Content + "\n" + cert2Content);
+        Files.writeString(multiCaFile.toPath(), cert1Content + '\n' + cert2Content);
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: validation-certs
@@ -235,6 +309,7 @@ class CertificateValidationContextTest {
         final File caFile = new File(tempDir, "ca.pem");
         Files.copy(certificate2.certificateFile().toPath(), caFile.toPath());
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: validation-certs
@@ -274,6 +349,7 @@ class CertificateValidationContextTest {
         }
     }
 
+    //language=YAML
     private static final String combinedValidationContextBootstrap =
             """
             dynamic_resources:
@@ -353,6 +429,7 @@ class CertificateValidationContextTest {
         final File caFile = new File(tempDir, "ca.pem");
         Files.copy(certificate2.certificateFile().toPath(), caFile.toPath());
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: validation-certs
@@ -400,6 +477,7 @@ class CertificateValidationContextTest {
         final File caFile = new File(tempDir, "ca.pem");
         Files.copy(certificate2.certificateFile().toPath(), caFile.toPath());
 
+        //language=YAML
         final String secretYaml =
                 """
                 name: validation-certs

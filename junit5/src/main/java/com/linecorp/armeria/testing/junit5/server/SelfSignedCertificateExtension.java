@@ -114,10 +114,27 @@ public final class SelfSignedCertificateExtension extends SignedCertificateExten
     public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits,
                                           TemporalAccessor notBefore, TemporalAccessor notAfter,
                                           Iterable<String> subjectAlternativeNames) {
+        this(fqdn, random, bits, notBefore, notAfter, subjectAlternativeNames, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param fqdn a fully qualified domain name
+     * @param random the {@link SecureRandom} to use
+     * @param bits the number of bits of the generated private key
+     * @param notBefore {@link Certificate} is not valid before this time
+     * @param notAfter {@link Certificate} is not valid after this time
+     * @param subjectAlternativeNames additional Subject Alternative Names
+     * @param isCA whether the certificate should be a CA certificate
+     */
+    public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits,
+                                          TemporalAccessor notBefore, TemporalAccessor notAfter,
+                                          Iterable<String> subjectAlternativeNames, boolean isCA) {
         super(() -> new SelfSignedCertificate(fqdn, random, bits,
                                               toDate(requireNonNull(notBefore, "notBefore")),
                                               toDate(requireNonNull(notAfter, "notAfter")), "RSA",
-                                              subjectAlternativeNames));
+                                              subjectAlternativeNames, isCA));
     }
 
     @SuppressWarnings("UseOfObsoleteDateTimeApi")

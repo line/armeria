@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.DefaultRequestOptions.EMPTY;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,6 +52,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     private ExchangeType exchangeType;
     @Nullable
     private ClientTlsSpec clientTlsSpec;
+    @Nullable
+    private InetSocketAddress localBindAddress;
 
     RequestOptionsBuilder(@Nullable RequestOptions options) {
         if (options != null) {
@@ -65,6 +68,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             exchangeType = options.exchangeType();
             responseTimeoutMode = options.responseTimeoutMode();
             clientTlsSpec = options.clientTlsSpec();
+            localBindAddress = options.localBindAddress();
         }
     }
 
@@ -156,13 +160,24 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Override
+    @UnstableApi
+    public RequestOptionsBuilder localBindAddress(InetSocketAddress localAddress) {
+        requireNonNull(localAddress, "localAddress");
+        checkArgument(!localAddress.isUnresolved(),
+                      "localAddress: %s (expected: a resolved address)", localAddress);
+        localBindAddress = localAddress;
+        return this;
+    }
+
     /**
      * Returns a newly created {@link RequestOptions} with the properties specified so far.
      */
     public RequestOptions build() {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
             maxResponseLength < 0 && requestAutoAbortDelayMillis == null && attributes == null &&
-            exchangeType == null && responseTimeoutMode == null && clientTlsSpec == null) {
+            exchangeType == null && responseTimeoutMode == null && clientTlsSpec == null &&
+            localBindAddress == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -174,7 +189,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
                                              maxResponseLength, requestAutoAbortDelayMillis,
                                              attributes, exchangeType, responseTimeoutMode,
-                                             clientTlsSpec);
+                                             clientTlsSpec, localBindAddress);
         }
     }
 }
