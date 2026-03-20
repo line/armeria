@@ -1,0 +1,21 @@
+{
+  "name": "armeria",
+  "owner": {
+    "name": "armerian",
+    "email": "dl_armeria@linecorp.com"
+  },
+  "metadata": {
+    "description": "Claude plugin for the Armeria microservice framework",
+    "version": "0.0.1"
+  },
+  "plugins": [
+    {
+      "name": "assistant",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/line/armeria.git",
+        "path": "tools/claude-plugins/assistant"
+      }
+    }
+  ]
+}
