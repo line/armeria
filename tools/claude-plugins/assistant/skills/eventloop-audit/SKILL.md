@@ -33,7 +33,7 @@ Before searching for problems, discover HOW the project uses Armeria. Launch an 
 
 ### 1.1 Find Armeria Server Configuration
 
-```
+```text
 Grep: Server\.builder\(\)|ServerBuilder
 Scope: **/*.java
 ```
@@ -47,7 +47,7 @@ Read each match and document:
 
 ### 1.2 Find HttpService Implementations
 
-```
+```text
 Grep: implements HttpService|extends AbstractHttpService|extends SimpleDecoratingHttpService
 Scope: **/*.java
 ```
@@ -56,7 +56,7 @@ These classes have `serve()` methods that run on the event loop. List all of the
 
 ### 1.3 Find Annotated Services
 
-```
+```text
 Grep: @Get\(|@Post\(|@Put\(|@Delete\(|@Head\(|@Patch\(|@Options\(
 Scope: **/*.java
 ```
@@ -65,7 +65,7 @@ For each, check if the method or class has `@Blocking`. Methods without `@Blocki
 
 ### 1.4 Find gRPC Services
 
-```
+```text
 Grep: extends \w+ImplBase|GrpcService\.builder\(\)
 Scope: **/*.java
 ```
@@ -74,7 +74,7 @@ Check whether `useBlockingTaskExecutor(true)` is configured in the `GrpcService.
 
 ### 1.5 Find Thrift Services
 
-```
+```text
 Grep: THttpService\.builder\(\)|THttpService\.of\(
 Scope: **/*.java
 ```
@@ -83,7 +83,7 @@ Same check — look for `useBlockingTaskExecutor(true)`.
 
 ### 1.6 Find Decorators
 
-```
+```text
 Grep: SimpleDecoratingHttpService|DecoratingHttpServiceFunction|\.decorate\(
 Scope: **/*.java
 ```
@@ -92,7 +92,7 @@ Every decorator's `serve()` method runs on the event loop. List them all.
 
 ### 1.7 Find Custom Executors and Thread Pools
 
-```
+```text
 Grep: blockingTaskExecutor\(\)|ctx\.eventLoop\(\)|Executors\.new|new ThreadPoolExecutor|new ForkJoinPool|ExecutorService
 Scope: **/*.java
 ```
@@ -101,7 +101,7 @@ Document all custom thread pools and how they're used. These are the "safe zones
 
 ### 1.8 Find Offloading Patterns
 
-```
+```text
 Grep: supplyAsync|thenApplyAsync|thenComposeAsync|thenAcceptAsync|ctx\.blockingTaskExecutor|makeContextAware
 Scope: **/*.java
 ```
@@ -148,7 +148,7 @@ For each finding from Phase 2, perform call chain analysis to determine the thre
 1. **Identify enclosing method** — What method contains the potentially blocking call?
 
 2. **Find all callers** — Grep for the method name across the project:
-   ```
+   ```text
    Grep: methodName\(
    Scope: **/*.java
    ```
@@ -171,7 +171,7 @@ For each finding from Phase 2, perform call chain analysis to determine the thre
 
 5. **Classify severity using this decision tree:**
 
-```
+```text
 Is the blocking call provably inside a blocking executor or thread pool?
 ├── YES → SAFE (exclude from report or list separately)
 ├── NO, it's provably on the event loop:
@@ -270,7 +270,7 @@ Always include these recommendations regardless of findings:
 1. **Runtime detection**: Consider adding [BlockHound](https://github.com/reactor/BlockHound) to the test suite — it detects blocking calls on non-blocking threads at runtime
 2. **Async logging**: Verify that the logging framework uses async appenders in production to avoid blocking on `log.*()` calls
 3. **Event loop monitoring**: Enable Armeria's built-in event loop blocking detection:
-   ```
+   ```text
    -Dcom.linecorp.armeria.reportBlockedEventLoop=true
    ```
 4. **Code review checklist**: Add "Does this handler offload blocking work?" to the team's code review checklist for Armeria services

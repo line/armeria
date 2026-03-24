@@ -90,7 +90,7 @@ Locks are only a problem if they can contend (block waiting) on an event loop th
 | Pattern | What it catches |
 |---------|----------------|
 | `synchronized\s*\(` | Synchronized blocks |
-| `synchronized\s+\w+\s*\(` | Synchronized methods (modifier on method signature) |
+| `\bsynchronized\b[^\n{;]*\(` | Synchronized methods (modifier in method signature) |
 | `ReentrantLock` | Explicit locking |
 | `ReentrantReadWriteLock` | Read-write locking |
 | `StampedLock` | Stamped locking |
@@ -122,7 +122,7 @@ When you chain `.thenApply()` (without `Async`), the continuation runs on whiche
 3. If both answers are problematic → needs `*Async` variant with explicit executor
 
 **Important — `*Async()` without executor is NOT always safe:**
-```
+```regex
 \.thenApplyAsync\(
 \.thenAcceptAsync\(
 \.thenComposeAsync\(
@@ -171,14 +171,14 @@ These are patterns where the project doesn't use Armeria's built-in mechanisms f
    - If yes → **CRITICAL**
 
 4. **Cancel handlers that block**
-   ```
+   ```text
    Grep: setOnCancelHandler|whenRequestCancelling
    ```
    - Cancel handler lambdas run on the event loop
    - Check if they call `.get()`, `.join()`, I/O, or any blocking operation → **CRITICAL**
 
 5. **Missing context propagation**
-   ```
+   ```text
    Grep: \.submit\(|\.execute\(|\.schedule\(
    ```
    - If work is submitted to a non-Armeria executor, check for `ctx.makeContextAware()` wrapping
@@ -200,7 +200,7 @@ These are blocking operations that are easy to overlook.
 
 **Configuration-level checks:**
 - **Logging framework**: Does the project use Logback or Log4j? Check `logback.xml` / `log4j2.xml` for synchronous appenders (`FileAppender`, `ConsoleAppender` without `AsyncAppender` wrapper). Every `log.info()` on the event loop becomes blocking I/O if appenders are synchronous.
-  ```
+  ```text
   Grep: <appender|<AsyncAppender|AsyncLogger
   Scope: **/logback*.xml, **/log4j2*.xml, **/logging*.xml
   ```
