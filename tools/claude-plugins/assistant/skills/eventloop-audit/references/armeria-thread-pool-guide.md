@@ -1,3 +1,5 @@
+<!-- A developer-facing version of this guide is published at /docs/advanced/threading-model -->
+
 # Armeria Thread Pool Guide for Developers
 
 ## Context
@@ -12,7 +14,7 @@ Armeria is built on Netty's non-blocking I/O model. Misusing thread pools — es
 
 | Pool | What it does | Thread name pattern | Default size | Daemon? |
 |------|-------------|---------------------|-------------|---------|
-| **bossGroup** | Accepts incoming TCP connections (one per server port) | `armeria-boss-{port}` | **1 per port** (fixed, not configurable) | No |
+| **bossGroup** | Accepts incoming TCP connections (one per server port) | `armeria-boss-{protocol}-*:{port}` | **1 per port** (fixed, not configurable) | No |
 | **workerGroup** | Handles all socket I/O (reads/writes) and executes non-blocking service logic | `armeria-common-worker-*` | `2 * CPU cores` (NIO/epoll/kqueue) or `CPU cores` (io_uring) | Yes |
 | **serviceWorkerGroup** | Optional dedicated EventLoopGroup for service method execution, isolating service logic from socket I/O | User-defined | Falls back to workerGroup if not set | Yes |
 | **blockingTaskExecutor** | Runs long-running or blocking operations (DB calls, file I/O, legacy sync APIs) | `armeria-common-blocking-tasks-*` | **200** threads (inspired by Tomcat default) | Yes |
@@ -47,7 +49,7 @@ Client request
 
 ### Client-Side Thread Pools
 
-The HTTP client (`WebClient`) uses the same `CommonPools.workerGroup()` by default. An `EventLoopScheduler` distributes connections across event loops per endpoint (default: 1 event loop per endpoint for HTTP/2, configurable for HTTP/1.1).
+The HTTP client (`WebClient`) uses the same `CommonPools.workerGroup()` by default. An `EventLoopScheduler` distributes connections across event loops per endpoint (default: 1 event loop per endpoint, configurable).
 
 Key client config class: `ClientFactoryBuilder` (`core/.../client/ClientFactoryBuilder.java`)
 
@@ -370,6 +372,8 @@ HttpService myService = (ctx, req) -> {
                         .collect(Collectors.toList());
                 return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                         .thenApply(v -> futures.stream()
+                                // join() is safe here: allOf() guarantees all futures
+                                // are already complete, so join() returns immediately.
                                 .map(CompletableFuture::join)
                                 .collect(Collectors.toList()));
             },
