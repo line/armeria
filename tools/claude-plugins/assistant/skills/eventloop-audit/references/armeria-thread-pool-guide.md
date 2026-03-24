@@ -14,14 +14,14 @@ Armeria is built on Netty's non-blocking I/O model. Misusing thread pools — es
 
 | Pool | What it does | Thread name pattern | Default size | Daemon? |
 |------|-------------|---------------------|-------------|---------|
-| **bossGroup** | Accepts incoming TCP connections (one per server port) | `armeria-boss-{protocol}-*:{port}` | **1 per port** (fixed, not configurable) | No |
+| **bossGroup** | Accepts incoming TCP connections (one per server port) | `armeria-boss-{protocol}-{addr}` where addr is `*:{port}`, `{ip}:{port}`, or `unix:{path}` | **1 per port** (fixed, not configurable) | No |
 | **workerGroup** | Handles all socket I/O (reads/writes) and executes non-blocking service logic | `armeria-common-worker-*` | `2 * CPU cores` (NIO/epoll/kqueue) or `CPU cores` (io_uring) | Yes |
 | **serviceWorkerGroup** | Optional dedicated EventLoopGroup for service method execution, isolating service logic from socket I/O | User-defined | Falls back to workerGroup if not set | Yes |
 | **blockingTaskExecutor** | Runs long-running or blocking operations (DB calls, file I/O, legacy sync APIs) | `armeria-common-blocking-tasks-*` | **200** threads (inspired by Tomcat default) | Yes |
 
 ### How a Request Flows Through the Pools
 
-```
+```text
 Client request
     |
     v
@@ -73,7 +73,7 @@ These two are the most commonly confused. They solve **different problems** and 
 
 **serviceWorkerGroup** — The service method still runs on an event loop, just a *different* one from the I/O channel. In `HttpServerHandler`, Armeria checks whether the configured serviceWorkerGroup differs from the main workerGroup. If so, it calls `req.subscribeOn(serviceEventLoop)` and invokes the service on that loop. Request reading, service execution, and response emission all happen on the service event loop. Response *writing* to the socket still goes back to the channel's original event loop.
 
-```
+```text
 [workerGroup event loop]  reads bytes from socket
         |
         v  (if serviceWorkerGroup != workerGroup)
@@ -85,7 +85,7 @@ These two are the most commonly confused. They solve **different problems** and 
 
 **blockingTaskExecutor** — The service method is submitted via `thenApplyAsync(..., ctx.blockingTaskExecutor())` to a traditional thread pool. The calling event loop is freed immediately. The blocking thread runs the service logic, and when done, the response flows back to the event loop for writing.
 
-```
+```text
 [event loop]  reads bytes, decodes request
         |
         v  (thenApplyAsync)
@@ -155,7 +155,7 @@ Most async services need neither. If your service just orchestrates async HTTP c
 
 ### JVM Flags
 
-```
+```properties
 -Dcom.linecorp.armeria.numCommonWorkers=<int>           # Override worker group size
 -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<int> # Override blocking executor size
 -Dcom.linecorp.armeria.reportBlockedEventLoop=true       # Enable event loop blocking warnings (default: true)
