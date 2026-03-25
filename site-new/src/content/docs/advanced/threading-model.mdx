@@ -1,0 +1,381 @@
+# Threading model
+
+Armeria is built on Netty's non-blocking I/O model. Understanding how Armeria's thread pools work is
+essential for writing correct, high-performance services. Blocking an event loop thread — even briefly —
+stalls all connections sharing that event loop, causing cascading latency and potential deadlocks.
+
+This page explains Armeria's thread pool architecture, how to choose the right executor for your workload,
+and common patterns for mixing blocking and non-blocking code safely.
+
+## Thread pool architecture
+
+### Thread pool roles
+
+Armeria uses four thread pools, each with a distinct role:
+
+| Pool | What it does | Thread name pattern | Default size |
+|------|-------------|---------------------|-------------|
+| **bossGroup** | Accepts incoming TCP connections (one per server port) | `armeria-boss-{protocol}-*:{port}` | 1 per port (fixed) |
+| **workerGroup** | Handles all socket I/O and executes non-blocking service logic | `armeria-common-worker-*` | 2 &times; CPU cores |
+| **serviceWorkerGroup** | Optional dedicated event loop group for service execution, isolating service logic from socket I/O | User-defined | Falls back to workerGroup if not set |
+| **blockingTaskExecutor** | Runs blocking operations (DB calls, file I/O, legacy sync APIs) | `armeria-common-blocking-tasks-*` | 200 threads |
+
+The global shared pools are managed by [CommonPools](type). You can create custom pools using
+[EventLoopGroups](type) and [BlockingTaskExecutor](type).
+
+### How a request flows through pools
+
+```
+Client request
+    │
+    ▼
+[bossGroup]  ── accepts TCP connection, hands channel to workerGroup
+    │
+    ▼
+[workerGroup]  ── reads bytes, decodes HTTP/2 frames, invokes service
+    │
+    ├──▶ Non-blocking service: runs directly on event loop thread
+    │
+    ├──▶ @Blocking / useBlockingTaskExecutor(true): dispatched to blockingTaskExecutor
+    │
+    └──▶ serviceWorkerGroup configured: service runs on dedicated event loop
+```
+
+### Client-side threading
+
+[WebClient](type) uses the same [CommonPools#workerGroup()](type) by default. An internal
+`EventLoopScheduler` distributes connections across event loops per endpoint
+(default: 1 event loop per endpoint, configurable). See [Client factory](/docs/client/factory)
+for configuration details.
+
+## Choosing the right executor
+
+### `serviceWorkerGroup` vs `blockingTaskExecutor`
+
+These two are the most commonly confused. They solve different problems and have fundamentally
+different runtime characteristics:
+
+| Aspect | `serviceWorkerGroup` | `blockingTaskExecutor` |
+|--------|----------------------|------------------------|
+| **Java type** | `EventLoopGroup` (Netty event loops) | `ScheduledExecutorService` (thread pool) |
+| **Thread type** | Event loop threads (`NonBlocking`) | Regular threads (blocking allowed) |
+| **Can you block in it?** | **No** — same rules as workerGroup | **Yes** — that's its purpose |
+| **Scheduling model** | Single-threaded per loop, run-to-completion | Traditional thread pool, one thread per task |
+| **Typical size** | Small (matches CPU cores) | Large (default 200) |
+
+**`serviceWorkerGroup` at runtime** — The service method still runs on an event loop, just a
+*different* one from the I/O channel:
+
+```
+[workerGroup event loop]  reads bytes from socket
+        │
+        ▼  (if serviceWorkerGroup ≠ workerGroup)
+[serviceWorkerGroup event loop]  decodes request, runs service, emits response
+        │
+        ▼  (response writing)
+[workerGroup event loop]  writes bytes to socket
+```
+
+**`blockingTaskExecutor` at runtime** — The service method is submitted to a traditional thread pool.
+The calling event loop is freed immediately:
+
+```
+[event loop]  reads bytes, decodes request
+        │
+        ▼  (thenApplyAsync)
+[blocking thread pool]  runs service method (blocking OK here)
+        │
+        ▼  (future completes)
+[event loop]  writes response bytes to socket
+```
+
+### Decision guide
+
+**Use `serviceWorkerGroup` when** your service does CPU-intensive but non-blocking work (e.g., JSON
+serialization of large payloads, in-memory computation) and you want to prevent it from starving
+socket I/O:
+
+```java
+Server.builder()
+      .serviceWorkerGroup(4)  // Dedicated event loops for service logic
+      .service("/heavy-json", (ctx, req) -> {
+          // Non-blocking but CPU-intensive
+          return HttpResponse.of(hugeObjectMapper.writeValueAsBytes(bigData));
+      })
+      .build();
+```
+
+**Use `blockingTaskExecutor` when** your code calls synchronous blocking APIs (JDBC, file I/O,
+`Thread.sleep`, legacy HTTP clients):
+
+```java
+Server.builder()
+      .service("/users", (ctx, req) ->
+          HttpResponse.of(CompletableFuture.supplyAsync(() -> {
+              // JDBC has no async API — this blocks the thread
+              User user = jdbcTemplate.queryForObject("SELECT ...", User.class);
+              return HttpResponse.of(HttpStatus.OK, MediaType.JSON, toJson(user));
+          }, ctx.blockingTaskExecutor())))
+      .build();
+```
+
+:::tip
+
+Most async services need neither. If your service just orchestrates async HTTP calls, reactive streams,
+or `CompletableFuture` chains, let it run on the default workerGroup.
+
+:::
+
+:::warning
+
+Do not use `serviceWorkerGroup` for blocking work — it is still an event loop. Blocking it has the
+same effect as blocking the main workerGroup.
+
+:::
+
+## Configuration
+
+### Server-side
+
+```java
+Server.builder()
+      // Custom worker group (only if default is insufficient)
+      .workerGroup(16)
+      // Custom blocking executor for this server
+      .blockingTaskExecutor(BlockingTaskExecutor.builder()
+              .numThreads(100)
+              .threadNamePrefix("my-app-blocking")
+              .build(), true)
+      .service("/api", myService)
+      .build();
+```
+
+### Client-side
+
+```java
+ClientFactory.builder()
+      .workerGroup(8)
+      // Distribute HTTP/2 connections across more event loops for high-throughput endpoints
+      .maxNumEventLoopsPerEndpoint(4)
+      .build();
+```
+
+### JVM flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-Dcom.linecorp.armeria.numCommonWorkers=<int>` | Override worker group size | 2 &times; CPU cores |
+| `-Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<int>` | Override blocking executor size | 200 |
+| `-Dcom.linecorp.armeria.reportBlockedEventLoop=true` | Enable event loop blocking warnings | `true` |
+
+## Best practices
+
+### Offloading blocking work
+
+For **annotated services**, add the `@Blocking` annotation to methods or classes that perform
+blocking operations:
+
+```java
+@Get("/users/{id}")
+@Blocking
+public User getUser(@Param int id) {
+    return database.findById(id); // Safe: runs on blocking executor
+}
+
+// Class-level annotation makes all methods blocking
+@Blocking
+public class MyDatabaseService {
+    @Get("/items")
+    public List<Item> list() { return db.listAll(); }
+}
+```
+
+For **gRPC and Thrift services**, enable `useBlockingTaskExecutor(true)` on the service builder:
+
+```java
+// gRPC
+Server.builder()
+      .service(GrpcService.builder()
+              .addService(new MyBlockingGrpcService())
+              .useBlockingTaskExecutor(true)
+              .build());
+
+// Thrift
+Server.builder()
+      .service("/thrift", THttpService.builder()
+              .addService(new MyBlockingThriftService())
+              .useBlockingTaskExecutor(true)
+              .build());
+```
+
+For **ad-hoc blocking work** in any service, use `ctx.blockingTaskExecutor()`:
+
+```java
+@Get("/report")
+public CompletableFuture<HttpResponse> generateReport(ServiceRequestContext ctx) {
+    return CompletableFuture.supplyAsync(() -> {
+        byte[] pdf = slowPdfGenerator.generate(); // blocking
+        return HttpResponse.of(HttpStatus.OK, MediaType.PDF, pdf);
+    }, ctx.blockingTaskExecutor());
+}
+```
+
+The `ctx.blockingTaskExecutor()` returns a context-aware executor — it automatically propagates
+[ServiceRequestContext](type) to the blocking thread, so logging, tracing, and
+`ServiceRequestContext.current()` work correctly.
+
+### `CompletableFuture` chaining with explicit executors
+
+Use `thenApplyAsync` / `thenComposeAsync` / `supplyAsync` with explicit executors to control where
+each stage runs:
+
+```java
+HttpService myService = (ctx, req) -> {
+    // Stage 1: blocking DB call on blocking executor
+    CompletableFuture<List<Long>> ids = CompletableFuture.supplyAsync(
+            () -> {
+                return jdbcTemplate.queryForList("SELECT id FROM items", Long.class);
+            },
+            ctx.blockingTaskExecutor());
+
+    // Stage 2: async HTTP calls back on event loop
+    CompletableFuture<List<AggregatedHttpResponse>> details = ids.thenComposeAsync(
+            idList -> {
+                List<CompletableFuture<AggregatedHttpResponse>> futures = idList.stream()
+                        .map(id -> backendClient.get("/items/" + id).aggregate())
+                        .collect(Collectors.toList());
+                return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                        .thenApply(v -> futures.stream()
+                                // join() is safe here: allOf() guarantees all futures
+                                // are already complete, so join() returns immediately.
+                                .map(CompletableFuture::join)
+                                .collect(Collectors.toList()));
+            },
+            ctx.eventLoop());
+
+    // Stage 3: assemble response (still on event loop)
+    CompletableFuture<HttpResponse> response = details.thenApply(
+            results -> HttpResponse.of(HttpStatus.OK, MediaType.JSON, toJson(results)));
+
+    return HttpResponse.of(response);
+};
+```
+
+### Context propagation across threads
+
+When switching threads, you must propagate [ServiceRequestContext](type) to avoid losing
+distributed tracing, logging, and other context-dependent features. See
+[Request context — Context propagation across threads](/docs/advanced/request-context#context-propagation-across-threads)
+for full details.
+
+The simplest approach is to use context-aware executors (`ctx.blockingTaskExecutor()`,
+`ctx.eventLoop()`). When you must use a third-party executor, wrap your task:
+
+```java
+// Wrapping a Runnable
+someExternalExecutor.submit(ctx.makeContextAware(() -> {
+    ServiceRequestContext.current(); // Works — context is mounted
+    doWork();
+}));
+
+// Wrapping a Function (for CompletableFuture chains)
+future.thenApply(ctx.makeContextAware(value -> {
+    ServiceRequestContext.current(); // Works
+    return transform(value);
+}));
+```
+
+### Reactor and RxJava integration
+
+**Reactor:**
+
+```java
+HttpService myService = (ctx, req) -> {
+    Scheduler blockingScheduler = Schedulers.fromExecutor(ctx.blockingTaskExecutor());
+    Scheduler eventLoopScheduler = Schedulers.fromExecutor(ctx.eventLoop());
+
+    Mono<String> result = Mono.fromCallable(() -> {
+                return database.query("SELECT ...");  // blocking
+            })
+            .subscribeOn(blockingScheduler)
+            .flatMap(dbResult ->
+                Mono.fromCompletionStage(backendClient.get("/enrich/" + dbResult).aggregate())
+                    .subscribeOn(eventLoopScheduler)
+                    .map(resp -> resp.contentUtf8())
+            );
+
+    return HttpResponse.of(result.map(body ->
+            HttpResponse.of(HttpStatus.OK, MediaType.JSON, body)).toFuture());
+};
+```
+
+**RxJava:**
+
+```java
+Scheduler blockingScheduler = Schedulers.from(ctx.blockingTaskExecutor());
+Scheduler eventLoopScheduler = Schedulers.from(ctx.eventLoop());
+
+Single<String> result = Single.fromCallable(() -> database.query("SELECT ..."))
+        .subscribeOn(blockingScheduler)       // blocking work here
+        .observeOn(eventLoopScheduler)        // switch to event loop
+        .flatMap(dbResult ->
+            Single.fromCompletionStage(backendClient.get("/enrich/" + dbResult).aggregate())
+                  .map(AggregatedHttpResponse::contentUtf8));
+```
+
+## Common pitfalls
+
+:::danger
+
+**Blocking the event loop** — Never call `.join()`, `.get()`, `Thread.sleep()`, or synchronous I/O
+on an event loop thread. Armeria logs a warning when `.get()` or `.join()` is called on an
+[EventLoopCheckingFuture](type) from an event loop. Treat these warnings as bugs.
+
+```java
+// NEVER do this without @Blocking or blockingTaskExecutor
+@Get("/bad")
+public String bad() {
+    Thread.sleep(1000);               // blocks event loop
+    return db.query("SELECT ...");    // blocks event loop
+}
+```
+
+:::
+
+:::warning
+
+**Using `serviceWorkerGroup` for blocking work** — `serviceWorkerGroup` is still an event loop.
+Blocking it has the same catastrophic effect as blocking the main workerGroup.
+
+**Creating unbounded thread pools** — Use `ctx.blockingTaskExecutor()` instead of creating
+custom thread pools. It provides context propagation, metrics, and coordinated shutdown.
+
+**Forgetting `@Blocking` or `useBlockingTaskExecutor`** — An annotated service method without
+`@Blocking` runs on the event loop. A gRPC/Thrift service without `useBlockingTaskExecutor(true)`
+runs on the event loop. Any blocking call in these methods blocks the event loop.
+
+**Non-async `CompletableFuture` continuations** — `.thenApply()` (without `Async`) runs on whatever
+thread completes the source future. If that thread is an event loop, the continuation blocks it.
+Use `.thenApplyAsync(fn, executor)` when the completing thread is uncertain.
+
+:::
+
+## Quick reference
+
+| Scenario | Pool | How |
+|----------|------|-----|
+| HTTP/gRPC request handling (async) | workerGroup (event loop) | Default — return `CompletableFuture` or reactive types |
+| Database queries, file I/O, sync APIs | blockingTaskExecutor | `@Blocking`, `useBlockingTaskExecutor(true)`, or `ctx.blockingTaskExecutor()` |
+| CPU-heavy non-blocking work that shouldn't starve I/O | serviceWorkerGroup | `ServerBuilder.serviceWorkerGroup(n)` (rare) |
+| Client HTTP calls | workerGroup (event loop) | Default — [WebClient](type) is async |
+| Legacy synchronous library calls | blockingTaskExecutor | Wrap with `ctx.blockingTaskExecutor().submit(...)` |
+| Delayed/scheduled non-blocking work | event loop | `ctx.eventLoop().schedule(...)` |
+| Reactor blocking operations | blockingTaskExecutor | `.subscribeOn(Schedulers.fromExecutor(ctx.blockingTaskExecutor()))` |
+| Custom third-party executor | context-wrap it | `ctx.makeContextAware(runnable)` |
+
+## See also
+
+- [Request context](/docs/advanced/request-context) — context propagation, executors, and timeout control
+- [Production checklist](/docs/advanced/production-checklist) — tuning thread pool sizes for production
+- [gRPC services](/docs/server/grpc) — configuring `useBlockingTaskExecutor` for gRPC
+- [Thrift services](/docs/server/thrift) — configuring `useBlockingTaskExecutor` for Thrift
