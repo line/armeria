@@ -61,14 +61,14 @@ class HttpJsonTranscodingPathParserTest {
         assertThat(generatedPath).isEqualTo(generatedPathAnswer);
 
         // Check path variables and their values.
-        final List<HttpJsonTranscodingService.PathVariable> pathVariables =
-                HttpJsonTranscodingService.PathVariable.from(segments, typeAnswer);
+        final List<HttpJsonTranscoder.PathVariable> pathVariables =
+                HttpJsonTranscoder.PathVariable.from(segments, typeAnswer);
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         pathParams.forEach((name, value) -> when(ctx.pathParam(name)).thenReturn(value));
 
         final Map<String, String> populated =
-                HttpJsonTranscodingService.populatePathVariables(ctx, pathVariables);
+                HttpJsonTranscoder.populatePathVariables(ctx, pathVariables);
 
         assertThat(populated.size()).isEqualTo(pathVariablesAnswer.size());
         assertThat(pathVariablesAnswer).containsExactlyInAnyOrderEntriesOf(populated);

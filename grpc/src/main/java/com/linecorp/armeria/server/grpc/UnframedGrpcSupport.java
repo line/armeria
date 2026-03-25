@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -52,48 +47,26 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.grpc.ServerMethodDefinition;
-import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
 
 /**
- * Common part of the {@link UnframedGrpcService} and {@link HttpJsonTranscodingService}.
+ * Shared helpers for unframed gRPC services.
  */
-abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
+final class UnframedGrpcSupport {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnframedGrpcSupport.class);
     static final AttributeKey<Boolean> IS_UNFRAMED_GRPC =
-            AttributeKey.valueOf(AbstractUnframedGrpcService.class, "IS_UNFRAMED_GRPC");
+            AttributeKey.valueOf(UnframedGrpcSupport.class, "IS_UNFRAMED_GRPC");
 
-    private final GrpcService delegate;
-    private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
-
-    /**
-     * Creates a new instance that decorates the specified {@link HttpService}.
-     */
-    AbstractUnframedGrpcService(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
-        super(delegate);
-        this.delegate = delegate;
-        this.unframedGrpcErrorHandler = requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
-    }
-
-    @Override
-    public Set<Route> routes() {
-        return delegate.routes();
-    }
-
-    @Override
-    public ExchangeType exchangeType(RoutingContext routingContext) {
+    static ExchangeType exchangeType(RoutingContext routingContext, HttpService delegate) {
         final MediaType contentType = routingContext.headers().contentType();
         if (contentType == null) {
             return ExchangeType.BIDI_STREAMING;
@@ -101,7 +74,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
-                return ((HttpService) unwrap()).exchangeType(routingContext);
+                return delegate.exchangeType(routingContext);
             }
         }
 
@@ -112,37 +85,13 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         return ExchangeType.BIDI_STREAMING;
     }
 
-    @Override
-    public boolean isFramed() {
-        return false;
-    }
-
-    @Override
-    public Map<String, ServerMethodDefinition<?, ?>> methods() {
-        return delegate.methods();
-    }
-
-    @Override
-    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
-        return delegate.methodsByRoute();
-    }
-
-    @Override
-    public List<ServerServiceDefinition> services() {
-        return delegate.services();
-    }
-
-    @Override
-    public Set<SerializationFormat> supportedSerializationFormats() {
-        return delegate.supportedSerializationFormats();
-    }
-
-    protected void frameAndServe(
+    static void frameAndServe(
             Service<HttpRequest, HttpResponse> delegate,
             ServiceRequestContext ctx,
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
+            UnframedGrpcErrorHandler unframedGrpcErrorHandler,
             @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         final HttpRequest grpcRequest;
         ctx.setAttr(IS_UNFRAMED_GRPC, true);
@@ -283,4 +232,6 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             }
         };
     }
+
+    private UnframedGrpcSupport() {}
 }

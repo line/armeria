@@ -32,12 +32,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.PathVariable;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.PathVariable.ValueDefinition.Type;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VerbPathSegment;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
 
 final class HttpJsonTranscodingRouteAndPathVariables {
 

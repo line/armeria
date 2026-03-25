@@ -1076,8 +1076,14 @@ public final class GrpcServiceBuilder {
             } else {
                 httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
             }
-            grpcService = HttpJsonTranscodingServiceBuilder.of(grpcService, httpJsonTranscodingOptions)
-                                                           .build();
+            final HttpJsonTranscoder transcoder =
+                    new HttpJsonTranscoderBuilder()
+                            .options(httpJsonTranscodingOptions)
+                            .serviceDefinitions(grpcService.services())
+                            .build();
+            if (transcoder != null) {
+                grpcService = new HttpJsonTranscodingGrpcService(grpcService, transcoder);
+            }
         }
         if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
