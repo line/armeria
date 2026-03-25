@@ -92,14 +92,14 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
     public DelegatingHttpJsonTranscodingService build() {
         final Set<ServiceDescriptor> serviceDescriptors = serviceDescriptorsBuilder.build();
         checkState(!serviceDescriptors.isEmpty(), "serviceDescriptors must be set.");
-        final HttpJsonTranscodingEngine engine =
-                new HttpJsonTranscodingEngineBuilder()
+        final HttpJsonTranscoder transcoder =
+                new HttpJsonTranscoderBuilder()
                         .options(options)
                         .serviceDescriptors(serviceDescriptors)
                         .build();
-        if (engine == null) {
+        if (transcoder == null) {
             throw new IllegalStateException("No HTTP rules are configured.");
         }
-        return new DelegatingHttpJsonTranscodingService(delegate, engine);
+        return new DelegatingHttpJsonTranscodingService(delegate, transcoder);
     }
 }

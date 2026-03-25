@@ -45,7 +45,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class DelegatingHttpJsonTranscodingService implements HttpServiceWithRoutes {
 
     private final HttpService delegate;
-    private final HttpJsonTranscodingEngine engine;
+    private final HttpJsonTranscoder transcoder;
 
     /**
      * Returns a new {@link DelegatingHttpJsonTranscodingServiceBuilder}.
@@ -54,14 +54,14 @@ public final class DelegatingHttpJsonTranscodingService implements HttpServiceWi
         return new DelegatingHttpJsonTranscodingServiceBuilder(delegate);
     }
 
-    DelegatingHttpJsonTranscodingService(HttpService delegate, HttpJsonTranscodingEngine engine) {
+    DelegatingHttpJsonTranscodingService(HttpService delegate, HttpJsonTranscoder transcoder) {
         this.delegate = requireNonNull(delegate, "delegate");
-        this.engine = requireNonNull(engine, "engine");
+        this.transcoder = requireNonNull(transcoder, "transcoder");
     }
 
     @Override
     public Set<Route> routes() {
-        return engine.routes();
+        return transcoder.routes();
     }
 
     @Nullable
@@ -70,22 +70,22 @@ public final class DelegatingHttpJsonTranscodingService implements HttpServiceWi
         requireNonNull(type, "type");
         // Expose the internal HttpEndpointSupport without leaking it into the public API.
         if (type == HttpEndpointSupport.class) {
-            return type.cast(engine);
+            return type.cast(transcoder);
         }
         return HttpServiceWithRoutes.super.as(type);
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.attr(HttpJsonTranscodingEngine.HTTP_JSON_GRPC_METHOD_INFO) != null) {
+        if (ctx.attr(HttpJsonTranscoder.HTTP_JSON_GRPC_METHOD_INFO) != null) {
             throw new IllegalStateException(
                     "DelegatingHttpJsonTranscodingService must not be used as a delegate of " +
                     "another DelegatingHttpJsonTranscodingService.");
         }
-        final HttpJsonTranscodingEngine.TranscodingSpec spec =
-                engine.findSpec(ctx.config().mappedRoute());
+        final HttpJsonTranscoder.TranscodingSpec spec =
+                transcoder.findSpec(ctx.config().mappedRoute());
         if (spec != null) {
-            return engine.serve(ctx, req, spec, delegate);
+            return transcoder.serve(ctx, req, spec, delegate);
         }
         return HttpResponse.of(HttpStatus.NOT_FOUND);
     }

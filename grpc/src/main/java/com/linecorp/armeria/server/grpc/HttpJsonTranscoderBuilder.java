@@ -106,7 +106,7 @@ final class HttpJsonTranscoderBuilder {
         return this;
     }
 
-    HttpJsonTranscodingEngineBuilder serviceDescriptors(
+    HttpJsonTranscoderBuilder serviceDescriptors(
             Iterable<io.grpc.ServiceDescriptor> serviceDescriptors) {
         requireNonNull(serviceDescriptors, "serviceDescriptors");
         for (io.grpc.ServiceDescriptor serviceDescriptor : serviceDescriptors) {
