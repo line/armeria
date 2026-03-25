@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.PathVariable;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.PathVariable;
 
 public class HttpJsonTranscodingServiceTest {
 

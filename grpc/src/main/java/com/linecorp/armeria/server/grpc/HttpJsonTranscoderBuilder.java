@@ -63,8 +63,8 @@ import com.google.protobuf.Value;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.Field;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.TranscodingSpec;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.Field;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.TranscodingSpec;
 
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
@@ -72,14 +72,14 @@ import io.grpc.protobuf.ProtoMethodDescriptorSupplier;
 import io.grpc.protobuf.ProtoServiceDescriptorSupplier;
 import io.netty.util.internal.StringUtil;
 
-final class HttpJsonTranscodingEngineBuilder {
+final class HttpJsonTranscoderBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingEngineBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscoderBuilder.class);
 
     private final Map<String, HttpJsonGrpcMethod> methods = new HashMap<>();
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
 
-    HttpJsonTranscodingEngineBuilder serviceDefinitions(
+    HttpJsonTranscoderBuilder serviceDefinitions(
             Iterable<ServerServiceDefinition> serviceDefinitions) {
         requireNonNull(serviceDefinitions, "serviceDefinitions");
         for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
@@ -88,7 +88,7 @@ final class HttpJsonTranscodingEngineBuilder {
         return this;
     }
 
-    private HttpJsonTranscodingEngineBuilder serviceDefinition(
+    private HttpJsonTranscoderBuilder serviceDefinition(
             ServerServiceDefinition serviceDefinition) {
         final Descriptors.ServiceDescriptor serviceDesc = serviceDescriptor(serviceDefinition);
         if (serviceDesc == null) {
@@ -105,7 +105,7 @@ final class HttpJsonTranscodingEngineBuilder {
         return this;
     }
 
-    HttpJsonTranscodingEngineBuilder options(HttpJsonTranscodingOptions options) {
+    HttpJsonTranscoderBuilder options(HttpJsonTranscodingOptions options) {
         this.options = requireNonNull(options, "options");
         return this;
     }
@@ -329,13 +329,13 @@ final class HttpJsonTranscodingEngineBuilder {
     }
 
     @Nullable
-    HttpJsonTranscodingEngine build() {
+    HttpJsonTranscoder build() {
         final Map<MethodDescriptor, HttpRule> httpRules = buildHttpRules();
         if (httpRules.isEmpty()) {
             return null;
         }
         final Map<Route, TranscodingSpec> routeAndSpecs = buildRouteAndSpecs(httpRules);
-        return new HttpJsonTranscodingEngine(routeAndSpecs, options);
+        return new HttpJsonTranscoder(routeAndSpecs, options);
     }
 
     private Map<Descriptors.MethodDescriptor, HttpRule> buildHttpRules() {

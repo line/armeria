@@ -35,8 +35,8 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.TranscodingSpec;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngineBuilder.HttpJsonGrpcMethod;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.TranscodingSpec;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoderBuilder.HttpJsonGrpcMethod;
 
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
@@ -47,20 +47,20 @@ import io.grpc.ServerServiceDefinition;
 final class HttpJsonTranscodingGrpcService extends SimpleDecoratingHttpService
         implements GrpcService, HttpEndpointSupport {
     private final GrpcService delegate;
-    private final HttpJsonTranscodingEngine engine;
+    private final HttpJsonTranscoder transcoder;
     private final Set<Route> routes;
 
-    HttpJsonTranscodingGrpcService(GrpcService delegate, HttpJsonTranscodingEngine engine) {
+    HttpJsonTranscodingGrpcService(GrpcService delegate, HttpJsonTranscoder transcoder) {
         super(delegate);
         this.delegate = delegate;
-        this.engine = requireNonNull(engine, "engine");
-        routes = buildRoutes(delegate.routes(), this.engine.routes());
+        this.transcoder = requireNonNull(transcoder, "engine");
+        routes = buildRoutes(delegate.routes(), this.transcoder.routes());
     }
 
     @Nullable
     @Override
     public HttpEndpointSpecification httpEndpointSpecification(Route route) {
-        return engine.httpEndpointSpecification(route);
+        return transcoder.httpEndpointSpecification(route);
     }
 
     /**
@@ -99,7 +99,7 @@ final class HttpJsonTranscodingGrpcService extends SimpleDecoratingHttpService
     @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
-        final TranscodingSpec spec = engine.findSpec(ctx.config().mappedRoute());
+        final TranscodingSpec spec = transcoder.findSpec(ctx.config().mappedRoute());
         if (spec != null) {
             final HttpJsonGrpcMethod method = spec.method();
             return method.definition;
@@ -109,13 +109,13 @@ final class HttpJsonTranscodingGrpcService extends SimpleDecoratingHttpService
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.attr(HttpJsonTranscodingEngine.HTTP_JSON_GRPC_METHOD_INFO) != null) {
+        if (ctx.attr(HttpJsonTranscoder.HTTP_JSON_GRPC_METHOD_INFO) != null) {
             // GrpcService with transcoding enabled is nested inside a DelegatingHttpJsonTranscodingService.
             return delegate.serve(ctx, req);
         }
-        final TranscodingSpec spec = engine.findSpec(ctx.config().mappedRoute());
+        final TranscodingSpec spec = transcoder.findSpec(ctx.config().mappedRoute());
         if (spec != null) {
-            return engine.serve(ctx, req, spec, delegate);
+            return transcoder.serve(ctx, req, spec, delegate);
         }
         return delegate.serve(ctx, req);
     }

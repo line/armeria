@@ -70,7 +70,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngineBuilder.HttpJsonGrpcMethod;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoderBuilder.HttpJsonGrpcMethod;
 
 import io.grpc.Codec.Identity;
 import io.grpc.CompressorRegistry;
@@ -426,7 +426,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         if (lookupMethodFromAttribute) {
-            final ServerMethodDefinition<?, ?> methodDef = attrMethodDefinition(ctx, registry);
+            final ServerMethodDefinition<?, ?> methodDef = attrMethodDefinition(ctx);
             if (methodDef != null) {
                 return methodDef;
             }
@@ -435,10 +435,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Nullable
-    private static ServerMethodDefinition<?, ?> attrMethodDefinition(ServiceRequestContext ctx,
-                                                                     HandlerRegistry registry) {
+    private static ServerMethodDefinition<?, ?> attrMethodDefinition(ServiceRequestContext ctx) {
         final HttpJsonGrpcMethod httpJsonGrpcMethod = ctx.attr(
-                HttpJsonTranscodingEngine.HTTP_JSON_GRPC_METHOD_INFO);
+                HttpJsonTranscoder.HTTP_JSON_GRPC_METHOD_INFO);
         if (httpJsonGrpcMethod != null) {
             return httpJsonGrpcMethod.definition;
         }

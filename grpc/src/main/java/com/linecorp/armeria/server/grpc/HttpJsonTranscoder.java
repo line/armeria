@@ -83,16 +83,16 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngine.PathVariable.ValueDefinition.Type;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingEngineBuilder.HttpJsonGrpcMethod;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.PathVariable.ValueDefinition.Type;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoderBuilder.HttpJsonGrpcMethod;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.AttributeKey;
 
-final class HttpJsonTranscodingEngine implements HttpEndpointSupport {
-    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscodingEngine.class);
+final class HttpJsonTranscoder implements HttpEndpointSupport {
+    private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscoder.class);
 
     @Nullable
     private static Function<AggregatedHttpResponse, AggregatedHttpResponse> generateResponseConverter(
@@ -197,8 +197,8 @@ final class HttpJsonTranscodingEngine implements HttpEndpointSupport {
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
 
-    HttpJsonTranscodingEngine(Map<Route, TranscodingSpec> routeAndSpecs,
-                              HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
+    HttpJsonTranscoder(Map<Route, TranscodingSpec> routeAndSpecs,
+                       HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
         options = requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
         this.routeAndSpecs = routeAndSpecs;
 
@@ -247,18 +247,13 @@ final class HttpJsonTranscodingEngine implements HttpEndpointSupport {
         return routes;
     }
 
-    HttpResponse serve(ServiceRequestContext ctx, HttpRequest req,
-                       TranscodingSpec spec, HttpService delegate) throws Exception {
-        return serve0(ctx, req, spec, delegate);
-    }
-
     @Nullable
     TranscodingSpec findSpec(Route route) {
         return routeAndSpecs.get(route);
     }
 
-    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req,
-                                TranscodingSpec spec, HttpService delegate) throws Exception {
+    HttpResponse serve(ServiceRequestContext ctx, HttpRequest req,
+                       TranscodingSpec spec, HttpService delegate) throws Exception {
         final RequestHeaders clientHeaders = req.headers();
         final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
