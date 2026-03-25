@@ -63,6 +63,8 @@ public final class RequestContextUtil {
     private static final Set<Thread> REPORTED_THREADS =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
+    private static boolean loaded;
+
     private static RequestContextStorage requestContextStorage;
 
     static {
@@ -265,6 +267,14 @@ public final class RequestContextUtil {
             throw new IllegalArgumentException(
                     "cannot create a " + type.getSimpleName() + " using another " + contextHolder);
         }
+    }
+
+    public static boolean isLoaded() {
+        return loaded;
+    }
+
+    static {
+        loaded = true;
     }
 
     private RequestContextUtil() {}
