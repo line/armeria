@@ -62,6 +62,16 @@ class ServerEphemeralLocalPortTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension serverBuiltWithoutLocalPortIpV4 = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.http(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+            sb.http(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+            sb.service("/", (ctx, req) -> HttpResponse.of(200));
+        }
+    };
+
     /**
      * {@link Server} must use the same port number for all loopback addresses when 1) the port number is 0 and
      * 2) the port number was specified with {@link ServerBuilder#localPort(int, Iterable)}.
@@ -125,8 +135,28 @@ class ServerEphemeralLocalPortTest {
             assertThat(p.localAddress().getAddress().isLoopbackAddress()).isTrue();
             assertThat(p.portGroup()).isZero();
         });
+    }
 
-        // Must bound at two different port numbers because we didn't use `localPort()`.
-        assertThat(ports.stream().mapToInt(p -> p.localAddress().getPort()).distinct()).hasSize(2);
+    /**
+     * Similar to {@link #builtWithoutLocalPort()} but we bind two IPv4 loopback addresses only.
+     * The two ports must have different port numbers and must not belong to any port group.
+     */
+    @Test
+    void builtWithoutLocalPortIpV4() {
+        final Collection<ServerPort> ports = serverBuiltWithoutLocalPortIpV4.server().activePorts().values();
+
+        // Must bound to both IPv4 loopback addresses.
+        assertThat(ports).hasSize(2);
+
+        // Must be IPv4 loopback addresses and not belong to any port group.
+        ports.forEach(p -> {
+            assertThat(p.localAddress().getAddress()).isEqualTo(NetUtil.LOCALHOST4);
+            assertThat(p.portGroup()).isZero();
+        });
+
+        // Must be bound at different port numbers since they were bound independently.
+        assertThat(ports.stream()
+                        .mapToInt(p -> p.localAddress().getPort())
+                        .distinct()).hasSize(2);
     }
 }
