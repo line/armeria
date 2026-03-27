@@ -19,6 +19,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -366,6 +368,192 @@ public enum BuiltInProperty {
     TLS_PROTO("tls.proto", log -> {
         final SSLSession s = log.context().sslSession();
         return s != null ? s.getProtocol() : null;
+    }),
+
+    /**
+     * {@code "req.start_time_millis"} - the time when the request started, in milliseconds since
+     * the epoch. Unavailable if the request has not started yet.
+     */
+    REQ_START_TIME_MILLIS("req.start_time_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
+            return String.valueOf(log.requestStartTimeMillis());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "req.end_time_millis"} - the time when the request ended, in milliseconds since
+     * the epoch. Unavailable if the request has not ended yet.
+     */
+    REQ_END_TIME_MILLIS("req.end_time_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_END_TIME)) {
+            return String.valueOf(
+                    Instant.ofEpochMilli(log.requestStartTimeMillis())
+                           .plusNanos(log.requestDurationNanos()).toEpochMilli());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "req.duration_nanos"} - the duration of the request in nanoseconds.
+     * Unavailable if the request has not ended yet.
+     */
+    REQ_DURATION_NANOS("req.duration_nanos", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_END_TIME)) {
+            return String.valueOf(log.requestDurationNanos());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "req.duration_millis"} - the duration of the request in milliseconds.
+     * Unavailable if the request has not ended yet.
+     */
+    REQ_DURATION_MILLIS("req.duration_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_END_TIME)) {
+            return String.valueOf(Duration.ofNanos(log.requestDurationNanos()).toMillis());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.start_time_millis"} - the time when the response started, in milliseconds since
+     * the epoch. Unavailable if the response has not started yet.
+     */
+    RES_START_TIME_MILLIS("res.start_time_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
+            return String.valueOf(log.responseStartTimeMillis());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.end_time_millis"} - the time when the response ended, in milliseconds since
+     * the epoch. Unavailable if the response has not ended yet.
+     */
+    RES_END_TIME_MILLIS("res.end_time_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+            return String.valueOf(
+                    Instant.ofEpochMilli(log.responseStartTimeMillis())
+                           .plusNanos(log.responseDurationNanos()).toEpochMilli());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.duration_nanos"} - the duration of the response in nanoseconds.
+     * Unavailable if the response has not ended yet.
+     */
+    RES_DURATION_NANOS("res.duration_nanos", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+            return String.valueOf(log.responseDurationNanos());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.duration_millis"} - the duration of the response in milliseconds.
+     * Unavailable if the response has not ended yet.
+     */
+    RES_DURATION_MILLIS("res.duration_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+            return String.valueOf(Duration.ofNanos(log.responseDurationNanos()).toMillis());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "total_duration_nanos"} - the total duration from the request start to the response end,
+     * in nanoseconds. Unavailable if the response has not ended yet.
+     *
+     * @see #ELAPSED_NANOS
+     */
+    TOTAL_DURATION_NANOS("total_duration_nanos", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+            return String.valueOf(log.totalDurationNanos());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "total_duration_millis"} - the total duration from the request start to the response end,
+     * in milliseconds. Unavailable if the response has not ended yet.
+     *
+     * @see #ELAPSED_NANOS
+     */
+    TOTAL_DURATION_MILLIS("total_duration_millis", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+            return String.valueOf(Duration.ofNanos(log.totalDurationNanos()).toMillis());
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "req.content_preview"} - the preview of the request content.
+     * Unavailable if the preview is disabled or not fully produced yet.
+     *
+     * <p>Unlike {@link #REQ_CONTENT}, this property returns only the content preview
+     * without falling back to the RPC request parameters.
+     */
+    REQ_CONTENT_PREVIEW("req.content_preview", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            return log.requestContentPreview();
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.content_preview"} - the preview of the response content.
+     * Unavailable if the preview is disabled or not fully produced yet.
+     *
+     * <p>Unlike {@link #RES_CONTENT}, this property returns only the content preview
+     * without falling back to the RPC response result.
+     */
+    RES_CONTENT_PREVIEW("res.content_preview", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            return log.responseContentPreview();
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "serialization.format"} - the serialization format of the request, represented by
+     * {@link com.linecorp.armeria.common.SerializationFormat#uriText()}, such as {@code "tbinary"}
+     * and {@code "none"}. Unavailable if the serialization format is not determined yet.
+     */
+    SERIALIZATION_FORMAT("serialization.format", log -> {
+        if (log.isAvailable(RequestLogProperty.SCHEME)) {
+            return log.scheme().serializationFormat().uriText();
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "session.protocol"} - the session-level protocol of the request, represented by
+     * {@link com.linecorp.armeria.common.SessionProtocol#uriText()}, such as {@code "h2"}
+     * and {@code "h1c"}. Unavailable if the session protocol is not determined yet.
+     */
+    SESSION_PROTOCOL("session.protocol", log -> {
+        if (log.isAvailable(RequestLogProperty.SESSION)) {
+            return log.sessionProtocol().uriText();
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "host"} - the authority of the request, derived from the {@code :authority} header.
+     * The value may contain a port number, such as {@code "example.com:8080"}.
+     * Falls back to the remote address if the header is not available.
+     */
+    HOST("host", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_HEADERS)) {
+            final String authority = log.requestHeaders().authority();
+            if (authority != null && !"?".equals(authority)) {
+                return authority;
+            }
+        }
+        final InetSocketAddress remoteAddr = log.context().remoteAddress();
+        return remoteAddr != null ? remoteAddr.getHostString() : null;
     });
 
     private static final Map<String, BuiltInProperty> keyToEnum;
