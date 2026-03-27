@@ -40,7 +40,7 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
  */
 public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedResponse {
 
-    private final Map<String, StreamDecoderFactory> availableDecoders;
+    private final Iterable<? extends StreamDecoderFactory> availableDecoders;
     private final ClientRequestContext ctx;
     private final boolean strictContentEncoding;
 
@@ -49,7 +49,7 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
     private boolean headersReceived;
 
     public DefaultHttpDecodedResponse(HttpResponse delegate,
-                                      Map<String, StreamDecoderFactory> availableDecoders,
+                                      Iterable<? extends StreamDecoderFactory> availableDecoders,
                                       ClientRequestContext ctx, boolean strictContentEncoding) {
         super(delegate);
         this.availableDecoders = availableDecoders;
@@ -82,12 +82,13 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
 
             final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
             if (contentEncoding != null) {
-                final StreamDecoderFactory decoderFactory =
-                        availableDecoders.get(Ascii.toLowerCase(contentEncoding));
-                if (decoderFactory != null) {
-                    decoder = decoderFactory.newDecoder(ctx.alloc(),
-                                                        Ints.saturatedCast(ctx.maxResponseLength()));
-                } else {
+                for (StreamDecoderFactory availableDecoder : availableDecoders) {
+                    if (availableDecoder.matchesEncodingHeaderValue(contentEncoding)) {
+                        decoder = availableDecoder.newDecoder(ctx.alloc(), Ints.saturatedCast(ctx.maxResponseLength()));
+                        break;
+                    }
+                }
+                if (decoder == null) {
                     // The server returned an encoding that this response doesn't support.
                     // This shouldn't happen normally since we set Accept-Encoding.
                     if (strictContentEncoding) {

@@ -51,6 +51,10 @@ public interface StreamDecoderFactory {
      */
     String encodingHeaderValue();
 
+    default boolean matchesEncodingHeaderValue(String encodingValue) {
+        return encodingValue.equalsIgnoreCase(encodingHeaderValue());
+    }
+
     /**
      * Construct a new {@link StreamDecoder} to use to decode an {@link HttpMessage}.
      */

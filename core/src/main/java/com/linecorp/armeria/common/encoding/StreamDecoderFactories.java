@@ -67,6 +67,11 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         }
 
         @Override
+        public boolean matchesEncodingHeaderValue(String encodingValue) {
+            return "snappy".equalsIgnoreCase(encodingValue) || encodingHeaderValue().equalsIgnoreCase(encodingValue);
+        }
+
+        @Override
         public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
             return new SnappyStreamDecoder(new SnappyFrameDecoder(), alloc, maxLength);
         }
