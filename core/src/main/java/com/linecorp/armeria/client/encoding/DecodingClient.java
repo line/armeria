@@ -16,12 +16,9 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -29,7 +26,6 @@ import java.util.stream.Collectors;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -137,7 +133,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
 
         for (String encoding : encodings) {
             for (StreamDecoderFactory decoderFactory : decoderFactories) {
-                if (decoderFactory.matchesEncodingHeaderValue(encoding)) {
+                if (decoderFactory.supportsContentEncoding(encoding)) {
                     factoryBuilder.add(decoderFactory);
                 }
             }

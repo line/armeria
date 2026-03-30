@@ -30,21 +30,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
@@ -220,7 +218,7 @@ class DefaultHttpDecodedResponseTest {
                 com.linecorp.armeria.common.encoding.StreamDecoderFactory.class);
         final com.linecorp.armeria.common.encoding.StreamDecoder streamDecoder = mock(StreamDecoder.class);
         when(factory.newDecoder(any(), eq((int) ctx.maxResponseLength()))).thenReturn(streamDecoder);
-        when(factory.matchesEncodingHeaderValue(eq("foo"))).thenReturn(true);
+        when(factory.supportsContentEncoding(eq("foo"))).thenReturn(true);
         when(streamDecoder.decode(any())).thenReturn(data);
 
         final HttpResponse decoded = new DefaultHttpDecodedResponse(response, ImmutableSet.of(factory),

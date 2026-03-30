@@ -17,9 +17,7 @@
 package com.linecorp.armeria.internal.common.encoding;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Map;
 
-import com.google.common.base.Ascii;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -83,8 +81,9 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
             final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
             if (contentEncoding != null) {
                 for (StreamDecoderFactory availableDecoder : availableDecoders) {
-                    if (availableDecoder.matchesEncodingHeaderValue(contentEncoding)) {
-                        decoder = availableDecoder.newDecoder(ctx.alloc(), Ints.saturatedCast(ctx.maxResponseLength()));
+                    if (availableDecoder.supportsContentEncoding(contentEncoding)) {
+                        decoder = availableDecoder.newDecoder(
+                                ctx.alloc(), Ints.saturatedCast(ctx.maxResponseLength()));
                         break;
                     }
                 }

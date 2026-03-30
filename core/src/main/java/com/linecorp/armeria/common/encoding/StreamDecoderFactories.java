@@ -67,8 +67,9 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         }
 
         @Override
-        public boolean matchesEncodingHeaderValue(String encodingValue) {
-            return "snappy".equalsIgnoreCase(encodingValue) || encodingHeaderValue().equalsIgnoreCase(encodingValue);
+        public boolean supportsContentEncoding(String encodingValue) {
+            return "snappy".equalsIgnoreCase(encodingValue) ||
+                    encodingHeaderValue().equalsIgnoreCase(encodingValue);
         }
 
         @Override

@@ -51,7 +51,13 @@ public interface StreamDecoderFactory {
      */
     String encodingHeaderValue();
 
-    default boolean matchesEncodingHeaderValue(String encodingValue) {
+    /**
+     * Predicate to check if this factory supports the given content encoding.
+     *
+     * @param encodingValue the incoming content encoding value
+     */
+    @UnstableApi
+    default boolean supportsContentEncoding(String encodingValue) {
         return encodingValue.equalsIgnoreCase(encodingHeaderValue());
     }
 
