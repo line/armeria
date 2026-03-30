@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.grpc.UnframedGrpcService.UnframedGrpcResponseHandler;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.grpc.BindableService;
@@ -124,24 +125,11 @@ class UnframedGrpcServiceTest {
 
     private static UnframedGrpcSupport.ResponseHandler handler(
             CompletableFuture<HttpResponse> res,
+            ServiceRequestContext ctx,
             Function<AggregatedHttpResponse, AggregatedHttpResponse> converter) {
-        return (aggregatedResponse, status, cause) -> {
-            if (cause != null) {
-                res.completeExceptionally(cause);
-            } else {
-                if (status != null) {
-                    res.complete(UnframedGrpcErrorHandler.of()
-                                                         .handle(ctx, status,
-                                                                 java.util.Objects.requireNonNull(
-                                                                         aggregatedResponse,
-                                                                         "aggregatedResponse")));
-                } else {
-                    final AggregatedHttpResponse convertedResponse =
-                            converter != null ? converter.apply(aggregatedResponse) : aggregatedResponse;
-                    res.complete(convertedResponse.toHttpResponse());
-                }
-            }
-        };
+
+        return new UnframedGrpcResponseHandler(res,  ctx, converter,
+                                               UnframedGrpcErrorHandler.of());
     }
 
     @Test
@@ -155,7 +143,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
         UnframedGrpcSupport.deframeAndRespond(ctx, framedResponse,
-                                              handler(res, contentType(MediaType.PROTOBUF)));
+                                              handler(res, ctx, contentType(MediaType.PROTOBUF)));
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -169,7 +157,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         UnframedGrpcSupport.deframeAndRespond(ctx, framedResponse,
-                                              handler(res, contentType(MediaType.PROTOBUF)));
+                                              handler(res, ctx, contentType(MediaType.PROTOBUF)));
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -183,7 +171,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
         UnframedGrpcSupport.deframeAndRespond(ctx, framedResponse,
-                                              handler(res, contentType(MediaType.PROTOBUF)));
+                                              handler(res, ctx, contentType(MediaType.PROTOBUF)));
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -198,7 +186,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         UnframedGrpcSupport.deframeAndRespond(ctx, framedResponse,
-                                              handler(res, contentType(MediaType.PROTOBUF)));
+                                              handler(res, ctx, contentType(MediaType.PROTOBUF)));
         assertThat(HttpResponse.of(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 

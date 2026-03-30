@@ -201,28 +201,34 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                                    return AggregatedHttpResponse.of(headers, response.content());
                                };
                        final ResponseHandler responseHandler =
-                               new UnframedGrpcResponseHandler(responseFuture, ctx, responseConverter);
+                               new UnframedGrpcResponseHandler(responseFuture, ctx, responseConverter,
+                                                               errorHandler);
                        UnframedGrpcSupport.frameAndServe(
                                unwrap(), ctx, grpcHeaders.build(), clientRequest.content(), responseHandler);
                    }
+               } catch (Exception e) {
+                     responseFuture.completeExceptionally(e);
                }
                return null;
            });
         return HttpResponse.of(responseFuture);
     }
 
-    private final class UnframedGrpcResponseHandler implements ResponseHandler {
+    static final class UnframedGrpcResponseHandler implements ResponseHandler {
         private final CompletableFuture<HttpResponse> responseFuture;
         private final ServiceRequestContext ctx;
         private final Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter;
+        private final UnframedGrpcErrorHandler errorHandler;
 
-        private UnframedGrpcResponseHandler(
+        UnframedGrpcResponseHandler(
                 CompletableFuture<HttpResponse> responseFuture,
                 ServiceRequestContext ctx,
-                Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
+                Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter,
+                UnframedGrpcErrorHandler errorHandler) {
             this.responseFuture = responseFuture;
             this.ctx = ctx;
             this.responseConverter = responseConverter;
+            this.errorHandler = errorHandler;
         }
 
         @Override

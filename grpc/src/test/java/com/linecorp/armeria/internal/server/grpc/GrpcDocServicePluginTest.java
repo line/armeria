@@ -23,7 +23,6 @@ import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.bui
 import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.convertRegexPath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static testing.grpc.HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME;
 import static testing.grpc.HttpJsonTranscodingTestServiceGrpc.getServiceDescriptor;
 
 import java.util.ArrayList;
@@ -74,6 +73,7 @@ import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider;
 
 import io.grpc.MethodDescriptor;
 import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.HttpJsonTranscodingTestServiceGrpc;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -99,8 +99,8 @@ class GrpcDocServicePluginTest {
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME,
-                                              SERVICE_NAME,
-                                              SERVICE_NAME +
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                                               GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
@@ -119,13 +119,13 @@ class GrpcDocServicePluginTest {
                                                       m.name());
             });
         });
-        services.get(SERVICE_NAME).methods().forEach(m -> {
+        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.HttpJsonTranscodingTestService/" +
                                                       m.name());
             });
         });
-        services.get(SERVICE_NAME +
+        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                      GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).satisfiesAnyOf(toVerifierArray(m));
@@ -157,8 +157,8 @@ class GrpcDocServicePluginTest {
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME,
-                                              SERVICE_NAME,
-                                              SERVICE_NAME +
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                                               GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         // 2. Exclude specified.
@@ -167,8 +167,8 @@ class GrpcDocServicePluginTest {
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME,
-                                              SERVICE_NAME,
-                                              SERVICE_NAME +
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                                               GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         List<String> methods = methods(services);
@@ -404,7 +404,7 @@ class GrpcDocServicePluginTest {
         // The endpoints are specified in the same service.
         assertThat(serviceInfos.size()).isOne();
         final ServiceInfo serviceInfo = serviceInfos.get(0);
-        assertThat(serviceInfo.name()).isEqualTo(SERVICE_NAME +
+        assertThat(serviceInfo.name()).isEqualTo(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                                                  GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         final String virtualHostNamePattern = serviceConfig.virtualHost().hostnamePattern();
