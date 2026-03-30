@@ -70,6 +70,22 @@ class DecodingClientTest {
                             HttpData.ofUtf8("more content to compress"));
                 }
             }.decorate(EncodingService.newDecorator()));
+            sb.service("/snappy-encoding", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    return HttpResponse.of(
+                            ResponseHeaders.of(HttpStatus.OK),
+                            HttpData.ofUtf8("some content to compress "),
+                            HttpData.ofUtf8("more content to compress"));
+                }
+            }.decorate(EncodingService.newDecorator()).decorate((delegate, ctx, req) -> {
+                final HttpResponse response = delegate.serve(ctx, req);
+                // Override content-encoding: x-snappy-framed as provided by StreamEncoderFactory
+                return response.mapHeaders(entries -> entries.toBuilder()
+                        .set(HttpHeaderNames.CONTENT_ENCODING, "snappy")
+                        .build());
+            }));
 
             sb.service("/high-compression", new AbstractHttpService() {
                 @Override
@@ -103,6 +119,23 @@ class DecodingClientTest {
             final AggregatedHttpResponse response =
                     client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test"));
             assertContentEncoding(captor.get().log(), response, factory.encodingHeaderValue());
+            assertThat(response.contentUtf8())
+                    .isEqualTo("some content to compress more content to compress");
+        }
+    }
+
+    @Test
+    void snappyDecoding() {
+        final StreamDecoderFactory snappy = com.linecorp.armeria.common.encoding.StreamDecoderFactory.snappy();
+        final BlockingWebClient client =
+                server.blockingWebClient(cb -> {
+                    cb.decorator(DecodingClient.newDecorator(snappy));
+                });
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/snappy-encoding"));
+            assertContentEncoding(captor.get().log(), response, "snappy");
             assertThat(response.contentUtf8())
                     .isEqualTo("some content to compress more content to compress");
         }
