@@ -248,6 +248,34 @@ class OAuth2ClientCredentialsGrantTest {
         }
     }
 
+    @Test
+    void testPreload() throws Exception {
+        final WebClient authClient = WebClient.of(authServer.httpUri());
+        final AccessTokenRequest accessTokenRequest =
+                AccessTokenRequest.ofClientCredentials("test_client", "client_secret");
+        final AtomicInteger newTokenCounter = new AtomicInteger();
+        final OAuth2AuthorizationGrant grant =
+                OAuth2AuthorizationGrant
+                        .builder(authClient, "/token/client/")
+                        .accessTokenRequest(accessTokenRequest)
+                        .newTokenConsumer(newToken -> newTokenCounter.incrementAndGet())
+                        .preload(true)
+                        .build();
+
+        // The token should be acquired proactively during build().
+        await().untilAsserted(() -> assertThat(newTokenCounter.get()).isOne());
+
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+
+        // The first request should use the preloaded token without an additional token fetch.
+        final AggregatedHttpResponse response =
+                client.get("/resource-read-write/").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(newTokenCounter.get()).isOne();
+    }
+
     @ValueSource(booleans = { true, false })
     @ParameterizedTest
     void testUnauthorized(boolean useLegacyApi) {

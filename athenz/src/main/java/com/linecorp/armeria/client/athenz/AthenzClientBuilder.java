@@ -63,6 +63,7 @@ public final class AthenzClientBuilder {
     private AthenzTokenHeader tokenHeader = TokenType.ACCESS_TOKEN;
     private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
     private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
+    private boolean preload;
 
     AthenzClientBuilder(ZtsBaseClient ztsBaseClient) {
         this.ztsBaseClient = requireNonNull(ztsBaseClient, "ztsBaseClient");
@@ -142,6 +143,19 @@ public final class AthenzClientBuilder {
     }
 
     /**
+     * Sets whether to acquire an Athenz token before the first request is made.
+     * If {@code true}, the client will attempt to acquire an Athenz token as soon as the client is created.
+     * This can help reduce latency for the first request. However, it may lead to unnecessary token acquisition
+     * if the client is not used immediately.
+     *
+     * <p>If not set, the default is {@code false}.
+     */
+    public AthenzClientBuilder preload(boolean preload) {
+        this.preload = preload;
+        return this;
+    }
+
+    /**
      * Returns a new {@link HttpClient} decorator configured with the settings in this builder.
      */
     public Function<? super HttpClient, AthenzClient> newDecorator() {
@@ -150,7 +164,7 @@ public final class AthenzClientBuilder {
 
         final List<String> roleNames = roleNamesBuilder.build();
         return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames,
-                                            tokenHeader, refreshBefore, meterIdPrefix);
+                                            tokenHeader, refreshBefore, meterIdPrefix, preload);
     }
 }
 
