@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AsciiString;
 
 /**
@@ -54,10 +55,14 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
 
     private final AthenzAuthorizer authorizer;
     private final MeterIdPrefix meterIdPrefix;
+    @Nullable
+    private final MeterRegistry meterRegistry;
 
-    AthenzServiceDecoratorFactory(AthenzAuthorizer authorizer, MeterIdPrefix meterIdPrefix) {
+    AthenzServiceDecoratorFactory(AthenzAuthorizer authorizer, MeterIdPrefix meterIdPrefix,
+                                  @Nullable MeterRegistry meterRegistry) {
         this.authorizer = authorizer;
         this.meterIdPrefix = meterIdPrefix;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -83,7 +88,7 @@ public final class AthenzServiceDecoratorFactory implements DecoratorFactoryFunc
         checkArgument(!tokenHeaders.isEmpty(), "tokenType and customHeaders must not both be empty");
 
         return delegate -> new AthenzService(delegate, authorizer, resource, action, tokenHeaders,
-                                             meterIdPrefix);
+                                             meterIdPrefix, meterRegistry);
     }
 
     /**

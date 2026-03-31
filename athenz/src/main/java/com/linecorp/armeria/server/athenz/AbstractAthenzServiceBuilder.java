@@ -16,11 +16,8 @@
 
 package com.linecorp.armeria.server.athenz;
 
-import static java.util.Objects.requireNonNull;
-
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 /**
  * A base builder for creating an Athenz service that checks access permissions using Athenz policies.
@@ -29,29 +26,9 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 public abstract class AbstractAthenzServiceBuilder<SELF extends AbstractAthenzServiceBuilder<SELF>>
         extends AbstractAthenzAuthorizerBuilder<SELF> {
 
-    static final MeterIdPrefix DEFAULT_METER_ID_PREFIX = new MeterIdPrefix("armeria.server.athenz");
-
-    private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
-
     AbstractAthenzServiceBuilder(ZtsBaseClient ztsBaseClient) {
         super(ztsBaseClient);
     }
 
-    /**
-     * Sets the {@link MeterIdPrefix} of the metrics collected through {@link AthenzService}.
-     * If not set, a default {@link MeterIdPrefix} with the name {@code "armeria.server.athenz"} is used.
-     */
-    public SELF meterIdPrefix(MeterIdPrefix meterIdPrefix) {
-        this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
-        return self();
-    }
-
-    MeterIdPrefix meterIdPrefix() {
-        return meterIdPrefix;
-    }
-
-    @SuppressWarnings("unchecked")
-    private SELF self() {
-        return (SELF) this;
-    }
+    // Keep this class since we may add APIs in the future.
 }

@@ -126,6 +126,8 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     private final String athenzAction;
     private final List<AthenzTokenHeader> tokenHeaders;
     private final MeterIdPrefix meterIdPrefix;
+    @Nullable
+    private final MeterRegistry meterRegistry;
     private final String resourceTagValue;
 
     @Nullable
@@ -136,7 +138,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     AthenzService(HttpService delegate, AthenzAuthorizer authorizer,
                   AthenzResourceProvider athenzResourceProvider, String athenzAction,
                   List<AthenzTokenHeader> tokenHeaders, MeterIdPrefix meterIdPrefix,
-                  String resourceTagValue) {
+                  @Nullable MeterRegistry meterRegistry, String resourceTagValue) {
         super(delegate);
 
         this.authorizer = authorizer;
@@ -144,20 +146,32 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         this.athenzAction = athenzAction;
         this.tokenHeaders = tokenHeaders;
         this.meterIdPrefix = meterIdPrefix;
+        this.meterRegistry = meterRegistry;
         this.resourceTagValue = resourceTagValue;
     }
 
     AthenzService(HttpService delegate, AthenzAuthorizer authorizer, String athenzResource,
                   String athenzAction, List<AthenzTokenHeader> tokenHeaders,
-                  MeterIdPrefix meterIdPrefix) {
-        this(delegate, authorizer, (ctx, req) -> UnmodifiableFuture.completedFuture(athenzResource),
-             athenzAction, tokenHeaders, meterIdPrefix, athenzResource);
+                  MeterIdPrefix meterIdPrefix, @Nullable MeterRegistry meterRegistry) {
+        super(delegate);
+
+        this.authorizer = authorizer;
+        final UnmodifiableFuture<String> resourceFuture = UnmodifiableFuture.completedFuture(athenzResource);
+        athenzResourceProvider = (ctx, req) -> resourceFuture;
+        this.athenzAction = athenzAction;
+        this.tokenHeaders = tokenHeaders;
+        this.meterIdPrefix = meterIdPrefix;
+        this.meterRegistry = meterRegistry;
+        resourceTagValue = athenzResource;
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         super.serviceAdded(cfg);
-        final MeterRegistry meterRegistry = cfg.server().meterRegistry();
+        MeterRegistry meterRegistry = this.meterRegistry;
+        if (meterRegistry == null) {
+            meterRegistry = cfg.server().meterRegistry();
+        }
         final String name = meterIdPrefix.name("token.authorization");
         allowedTimer = MoreMeters.newTimer(meterRegistry, name,
                                            meterIdPrefix.tags("result", "allowed",

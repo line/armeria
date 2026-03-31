@@ -37,6 +37,10 @@ import com.yahoo.rdl.Struct;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 final class AthenzPolicyClient implements ZpeClient {
 
@@ -45,7 +49,7 @@ final class AthenzPolicyClient implements ZpeClient {
     private final Map<String, AthenzPolicyLoader> policyLoaders;
 
     AthenzPolicyClient(ZtsBaseClient baseClient, AthenzPolicyConfig policyConfig, PublicKeyStore publicKeyStore,
-                       int maxTokenCacheSize) {
+                       int maxTokenCacheSize, MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         final Executor executor = CommonPools.blockingTaskExecutor();
         roleTokenCache = Caffeine.newBuilder()
                                  .maximumSize(maxTokenCacheSize)
@@ -58,10 +62,21 @@ final class AthenzPolicyClient implements ZpeClient {
                                    .executor(executor)
                                    .build();
 
+        final String domains = String.join(",", policyConfig.domains());
+        CaffeineMetricSupport.setup(meterRegistry,
+                                    meterIdPrefix.appendWithTags("token.cache",
+                                                                 "type", "role", "domains", domains),
+                                    roleTokenCache);
+        CaffeineMetricSupport.setup(meterRegistry,
+                                    meterIdPrefix.appendWithTags("token.cache",
+                                                                 "type", "access", "domains", domains),
+                                    accessTokenCache);
+
         final ImmutableMap.Builder<String, AthenzPolicyLoader> builder =
                 ImmutableMap.builderWithExpectedSize(policyConfig.domains().size());
         for (String domain : policyConfig.domains()) {
-            builder.put(domain, new AthenzPolicyLoader(baseClient, domain, policyConfig, publicKeyStore));
+            builder.put(domain, new AthenzPolicyLoader(baseClient, domain, policyConfig, publicKeyStore,
+                                                       meterRegistry, meterIdPrefix));
         }
         policyLoaders = builder.buildKeepingLast();
     }

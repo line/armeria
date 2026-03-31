@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,7 @@ class AthenzMetricsTest {
                     AthenzServiceDecoratorFactory.builder(baseClient)
                                                  .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                  .meterIdPrefix(new MeterIdPrefix("athenz.service.test"))
+                                                 .meterRegistry(serverMeterRegistry)
                                                  .build();
             sb.annotatedService(new AthenzAnnotatedService());
             final DependencyInjector di = DependencyInjector.ofSingletons(decoratorFactory)
@@ -213,6 +215,38 @@ class AthenzMetricsTest {
         await().untilAsserted(() -> {
             assertThat(serviceAllowed.count() - numServiceAllowed).isZero();
             assertThat(serviceDenied.count() - numServiceDenied).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void shouldRecordPolicyLoadMetrics() {
+        // The policy loader should have recorded at least one successful load during initialization.
+        final double successCount =
+                serverMeterRegistry.counter("athenz.service.test.policy.loads",
+                                            "domain", TEST_DOMAIN_NAME,
+                                            "result", "success",
+                                            "type", "jws").count();
+        assertThat(successCount).isGreaterThanOrEqualTo(1);
+
+        final double failureCount =
+                serverMeterRegistry.counter("athenz.service.test.policy.loads",
+                                            "domain", TEST_DOMAIN_NAME,
+                                            "result", "failure",
+                                            "type", "jws").count();
+        assertThat(failureCount).isZero();
+    }
+
+    @Test
+    void shouldRecordTokenCacheMetrics() {
+        // Verify that Caffeine cache metrics are registered for the token caches.
+        final Map<String, Double> meters = MoreMeters.measureAll(serverMeterRegistry);
+        assertThat(meters).anySatisfy((meterId, value) -> {
+            assertThat(meterId).startsWith("athenz.service.test.token.cache");
+            assertThat(meterId).contains("type=role");
+        });
+        assertThat(meters).anySatisfy((meterId, value) -> {
+            assertThat(meterId).startsWith("athenz.service.test.token.cache");
+            assertThat(meterId).contains("type=access");
         });
     }
 
