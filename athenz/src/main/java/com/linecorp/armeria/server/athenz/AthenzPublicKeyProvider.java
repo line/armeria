@@ -72,6 +72,11 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
         zmsKeyLoader.load();
     }
 
+    void init() {
+        ztsKeyLoader.load().join();
+        zmsKeyLoader.load().join();
+    }
+
     @Override
     public PublicKey getZtsKey(String keyId) {
         return getKey(ztsKeyLoader, keyId, true).join();

@@ -25,7 +25,6 @@ import java.time.Duration;
 
 import com.yahoo.athenz.zpe.ZpeClient;
 import com.yahoo.athenz.zpe.ZpeConsts;
-import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -104,8 +103,10 @@ public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthen
     final MinifiedAuthZpeClient buildAuthZpeClient() {
         checkState(policyConfig != null, "policyConfig must be set before creating an " +
                                          "Athenz authorizer");
-        final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(
+        final AthenzPublicKeyProvider publicKeyStore = new AthenzPublicKeyProvider(
                 ztsBaseClient, oauth2KeysRefreshInterval, oauth2KeysPath);
+        // NB: publicKeyStore.init() will block until the initial keys are loaded.
+        publicKeyStore.init();
         final ZpeClient zpeClient = new AthenzPolicyClient(ztsBaseClient, policyConfig, publicKeyStore,
                                                            maxTokenCacheSize);
         // NB: zpeClient.init() will block until the initial policy data is loaded.
