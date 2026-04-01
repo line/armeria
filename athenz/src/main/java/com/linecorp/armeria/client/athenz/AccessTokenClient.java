@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.yahoo.athenz.auth.AuthorityConsts;
 
@@ -36,7 +37,7 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.util.Exceptions;
 
-final class AccessTokenClient implements TokenClient {
+final class AccessTokenClient implements AthenzTokenClient {
 
     private final AtomicBoolean tlsKeyPairUpdated = new AtomicBoolean();
 
@@ -89,6 +90,16 @@ final class AccessTokenClient implements TokenClient {
     }
 
     @Override
+    public String domainName() {
+        return domainName;
+    }
+
+    @Override
+    public List<String> roleNames() {
+        return roleNames;
+    }
+
+    @Override
     public CompletableFuture<String> getToken() {
         return authorizationGrant.getAccessToken().handle((token, cause) -> {
             if (cause != null) {
@@ -99,6 +110,16 @@ final class AccessTokenClient implements TokenClient {
             }
             return token.accessToken();
         }).toCompletableFuture();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("refreshBeforeMillis", refreshBeforeMillis)
+                          .add("domainName", domainName)
+                          .add("roleNames", roleNames)
+                          .add("authorizationGrant", authorizationGrant)
+                          .toString();
     }
 
     private enum NoopClientAuthentication implements ClientAuthentication {

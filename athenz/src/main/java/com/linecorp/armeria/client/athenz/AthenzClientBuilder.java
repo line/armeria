@@ -16,17 +16,12 @@
 
 package com.linecorp.armeria.client.athenz;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.function.Function;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.athenz.TokenType;
@@ -50,49 +45,48 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
  * <p>For custom header implementation, see {@link AthenzTokenHeader}.
  */
 @UnstableApi
-public final class AthenzClientBuilder {
+public final class AthenzClientBuilder implements TokenClientSetters<AthenzClientBuilder> {
 
-    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(10);
     private static final MeterIdPrefix DEFAULT_METER_ID_PREFIX =
             new MeterIdPrefix("armeria.client.athenz");
 
     private final ZtsBaseClient ztsBaseClient;
-    @Nullable
-    private String domainName;
-    private final ImmutableList.Builder<String> roleNamesBuilder = ImmutableList.builder();
     private AthenzTokenHeader tokenHeader = TokenType.ACCESS_TOKEN;
-    private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
     private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
-    private boolean preload;
+    private final AthenzTokenClientBuilder tokenClientBuilder;
 
     AthenzClientBuilder(ZtsBaseClient ztsBaseClient) {
         this.ztsBaseClient = requireNonNull(ztsBaseClient, "ztsBaseClient");
+        tokenClientBuilder = AthenzTokenClient.builder(ztsBaseClient)
+                                              .roleToken(tokenHeader.isRoleToken());
     }
 
     /**
      * Sets the Athenz domain name.
      * The domain name must be set before calling {@link #newDecorator()}.
      */
+    @Override
     public AthenzClientBuilder domainName(String domainName) {
-        this.domainName = requireNonNull(domainName, "domainName");
+        tokenClientBuilder.domainName(domainName);
         return this;
     }
 
-    /**
-     * Adds Athenz role names.
-     */
-    public AthenzClientBuilder roleNames(String... roleNames) {
-        requireNonNull(roleNames, "roleNames");
-        roleNamesBuilder.add(roleNames);
-        return this;
-    }
-
-    /**
-     * Adds Athenz role names.
-     */
+    @Override
     public AthenzClientBuilder roleNames(Iterable<String> roleNames) {
         requireNonNull(roleNames, "roleNames");
-        roleNamesBuilder.addAll(roleNames);
+        tokenClientBuilder.roleNames(roleNames);
+        return this;
+    }
+
+    @Override
+    public AthenzClientBuilder refreshBefore(Duration refreshBefore) {
+        tokenClientBuilder.refreshBefore(refreshBefore);
+        return this;
+    }
+
+    @Override
+    public AthenzClientBuilder preload(boolean preload) {
+        tokenClientBuilder.preload(preload);
         return this;
     }
 
@@ -119,17 +113,7 @@ public final class AthenzClientBuilder {
      */
     public AthenzClientBuilder tokenHeader(AthenzTokenHeader tokenHeader) {
         this.tokenHeader = requireNonNull(tokenHeader, "tokenHeader");
-        return this;
-    }
-
-    /**
-     * Sets the duration before the token expires to refresh it.
-     * If not set, the default is 10 minutes.
-     */
-    public AthenzClientBuilder refreshBefore(Duration refreshBefore) {
-        requireNonNull(refreshBefore, "refreshBefore");
-        checkState(!refreshBefore.isNegative(), "refreshBefore: %s (expected: >= 0)", refreshBefore);
-        this.refreshBefore = refreshBefore;
+        tokenClientBuilder.roleToken(tokenHeader.isRoleToken());
         return this;
     }
 
@@ -143,28 +127,12 @@ public final class AthenzClientBuilder {
     }
 
     /**
-     * Sets whether to acquire an Athenz token before the first request is made.
-     * If {@code true}, the client will attempt to acquire an Athenz token as soon as the client is created.
-     * This can help reduce latency for the first request. However, it may lead to unnecessary token acquisition
-     * if the client is not used immediately.
-     *
-     * <p>If not set, the default is {@code false}.
-     */
-    public AthenzClientBuilder preload(boolean preload) {
-        this.preload = preload;
-        return this;
-    }
-
-    /**
      * Returns a new {@link HttpClient} decorator configured with the settings in this builder.
      */
     public Function<? super HttpClient, AthenzClient> newDecorator() {
-        final String domainName = this.domainName;
-        checkState(domainName != null, "domainName is not set");
-
-        final List<String> roleNames = roleNamesBuilder.build();
-        return delegate -> new AthenzClient(delegate, ztsBaseClient, domainName, roleNames,
-                                            tokenHeader, refreshBefore, meterIdPrefix, preload);
+        final AthenzTokenClient tokenClient = tokenClientBuilder.build();
+        return delegate -> new AthenzClient(delegate, ztsBaseClient, tokenClient,
+                                            tokenHeader, meterIdPrefix);
     }
 }
 

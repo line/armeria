@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.yahoo.athenz.zts.RoleToken;
 
 import com.linecorp.armeria.client.InvalidHttpResponseException;
@@ -33,13 +34,14 @@ import com.linecorp.armeria.common.util.AsyncLoader;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-final class RoleTokenClient implements TokenClient {
+final class RoleTokenClient implements AthenzTokenClient {
 
     static final Joiner ROLE_JOINER = Joiner.on(",");
 
     private final WebClient webClient;
     private final String domainName;
-    private final String roleNames;
+    private final List<String> roleNames;
+    private final String roleNamesString;
     private final long refreshBeforeSec;
     private final AsyncLoader<RoleToken> tokenLoader;
 
@@ -47,15 +49,26 @@ final class RoleTokenClient implements TokenClient {
                     Duration refreshBefore, boolean preload) {
         webClient = ztsBaseClient.webClient();
         this.domainName = domainName;
-        this.roleNames = ROLE_JOINER.join(roleNames);
+        this.roleNames = roleNames;
+        roleNamesString = ROLE_JOINER.join(roleNames);
         refreshBeforeSec = refreshBefore.getSeconds();
         tokenLoader = AsyncLoader.<RoleToken>builder(unused -> fetchRoleToken())
-                                 .name("athenz-role-token/" + domainName + '/' + this.roleNames)
+                                 .name("athenz-role-token/" + domainName + '/' + roleNamesString)
                                  .exceptionHandler(this::errorHandler)
                                  .refreshIf(token -> remainingTimeSec(token) < refreshBeforeSec)
                                  .expireIf(token -> remainingTimeSec(token) == 0)
                                  .preload(preload)
                                  .build();
+    }
+
+    @Override
+    public String domainName() {
+        return domainName;
+    }
+
+    @Override
+    public List<String> roleNames() {
+        return roleNames;
     }
 
     @Override
@@ -73,8 +86,8 @@ final class RoleTokenClient implements TokenClient {
                 webClient.prepare()
                          .get("/domain/{domainName}/token")
                          .pathParam("domainName", domainName);
-        if (!roleNames.isEmpty()) {
-            preparation.queryParam("role", roleNames);
+        if (!roleNamesString.isEmpty()) {
+            preparation.queryParam("role", roleNamesString);
         }
         return preparation
                 .asJson(RoleToken.class)
@@ -87,7 +100,7 @@ final class RoleTokenClient implements TokenClient {
                             if (exception.response().status() == HttpStatus.FORBIDDEN) {
                                 throw new AccessDeniedException(
                                         "Failed to obtain an Athenz role token. (domain: " + domainName +
-                                        ", roles: " + roleNames + ')', exception);
+                                        ", roles: " + roleNamesString + ')', exception);
                             }
                         }
                     }
@@ -102,10 +115,19 @@ final class RoleTokenClient implements TokenClient {
             if (exception.response().status() == HttpStatus.FORBIDDEN) {
                 return UnmodifiableFuture.exceptionallyCompletedFuture(
                         new AccessDeniedException("Failed to obtain an Athenz role token. " +
-                                                  "(domain: " + domainName + ", roles: " + roleNames + ')',
+                                                  "(domain: " + domainName + ", roles: " + roleNamesString + ')',
                                                   exception));
             }
         }
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("domainName", domainName)
+                          .add("roleNames", roleNames)
+                          .add("refreshBeforeSec", refreshBeforeSec)
+                          .toString();
     }
 }
