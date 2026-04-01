@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
@@ -236,18 +237,32 @@ class AthenzMetricsTest {
         assertThat(failureCount).isZero();
     }
 
-    @Test
-    void shouldRecordTokenCacheMetrics() {
-        // Verify that Caffeine cache metrics are registered for the token caches.
-        final Map<String, Double> meters = MoreMeters.measureAll(serverMeterRegistry);
-        assertThat(meters).anySatisfy((meterId, value) -> {
-            assertThat(meterId).startsWith("athenz.service.test.token.cache");
-            assertThat(meterId).contains("type=role");
-        });
-        assertThat(meters).anySatisfy((meterId, value) -> {
-            assertThat(meterId).startsWith("athenz.service.test.token.cache");
-            assertThat(meterId).contains("type=access");
-        });
+    @EnumSource(TokenType.class)
+    @ParameterizedTest
+    void shouldRecordTokenCacheMetrics(TokenType tokenType) {
+        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("test-service")) {
+            final BlockingWebClient client =
+                    WebClient.builder(server.httpUri())
+                             .decorator(AthenzClient.builder(ztsBaseClient)
+                                                    .domainName(TEST_DOMAIN_NAME)
+                                                    .roleNames(ADMIN_ROLE)
+                                                    .tokenType(tokenType)
+                                                    .meterIdPrefix(new MeterIdPrefix("athenz.client.test"))
+                                                    .newDecorator())
+                             .build()
+                             .blocking();
+
+            final AggregatedHttpResponse res = client.get("/secrets");
+            // Verify that Caffeine cache metrics are registered for the token caches.
+            await().untilAsserted(() -> {
+                final Map<String, Double> meters = MoreMeters.measureAll(serverMeterRegistry);
+                final String type = tokenType.isRoleToken() ? "role" : "access";
+                assertThat(meters).anySatisfy((meterId, value) -> {
+                    assertThat(meterId).startsWith("athenz.service.test.token.cache");
+                    assertThat(meterId).contains("type=" + type);
+                });
+            });
+        }
     }
 
     private static final class AthenzAnnotatedService {

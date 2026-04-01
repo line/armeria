@@ -55,11 +55,13 @@ final class AthenzPolicyClient implements ZpeClient {
                                  .maximumSize(maxTokenCacheSize)
                                  .expireAfter(new TokenExpiry<>(RoleToken::getExpiryTime))
                                  .executor(executor)
+                                 .recordStats()
                                  .build();
         accessTokenCache = Caffeine.newBuilder()
                                    .maximumSize(maxTokenCacheSize)
                                    .expireAfter(new TokenExpiry<>(AccessToken::getExpiryTime))
                                    .executor(executor)
+                                   .recordStats()
                                    .build();
 
         final String domains = String.join(",", policyConfig.domains());
