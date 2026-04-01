@@ -651,6 +651,7 @@ public final class GrpcServiceBuilder {
      *     <li>Applies only to HTTP/1.1 connections; HTTP/2 connections are unaffected.</li>
      * </ul>
      */
+    @UnstableApi
     public GrpcServiceBuilder enableEnvoyHttp1Bridge(boolean enableEnvoyHttp1Bridge) {
         this.enableEnvoyHttp1Bridge = enableEnvoyHttp1Bridge;
         return this;
