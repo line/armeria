@@ -86,12 +86,11 @@ public final class AthenzServiceDecoratorFactoryProvider {
             factoryBuilder.oauth2KeysPath(oauth2KeysPath);
         }
         if (meterRegistry != null) {
-            factoryBuilder.meterRegistry(meterRegistry)
-                          .meterIdPrefix(new MeterIdPrefix(meterIdPrefix));
+            factoryBuilder.meterRegistry(meterRegistry);
         }
-        return factoryBuilder
-                .policyConfig(athenzPolicyConfig)
-                .build();
+        return factoryBuilder.meterIdPrefix(new MeterIdPrefix(meterIdPrefix))
+                             .policyConfig(athenzPolicyConfig)
+                             .build();
     }
 
     private AthenzServiceDecoratorFactoryProvider() {}

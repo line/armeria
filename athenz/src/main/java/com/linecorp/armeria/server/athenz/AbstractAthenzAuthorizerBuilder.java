@@ -111,7 +111,7 @@ public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthen
     }
 
     /**
-     * Sets the {@link MeterIdPrefix} of the metrics collected through {@link AthenzService}.
+     * Sets the {@link MeterIdPrefix} of the metrics collected for the Athenz authorizer.
      * If not set, a default {@link MeterIdPrefix} with the name {@code "armeria.server.athenz"} is used.
      */
     public SELF meterIdPrefix(MeterIdPrefix meterIdPrefix) {
