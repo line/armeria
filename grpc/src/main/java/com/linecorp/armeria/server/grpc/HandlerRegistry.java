@@ -70,6 +70,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
@@ -115,7 +116,8 @@ final class HandlerRegistry {
                             Set<ServerMethodDefinition<?, ?>> blockingMethods,
                             Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                                     grpcExceptionHandlers,
-                            GrpcExceptionHandlerFunction defaultExceptionHandler) {
+                            GrpcExceptionHandlerFunction defaultExceptionHandler,
+                            @Nullable AsyncGrpcExceptionHandlerFunction defaultAsyncExceptionHandler) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -130,7 +132,12 @@ final class HandlerRegistry {
                                      .collect(toImmutableMap(Map.Entry::getKey,
                                                              e -> new InternalGrpcExceptionHandler(
                                                                      e.getValue())));
-        this.defaultExceptionHandler = new InternalGrpcExceptionHandler(defaultExceptionHandler);
+        if (defaultAsyncExceptionHandler != null) {
+            this.defaultExceptionHandler = new InternalGrpcExceptionHandler(
+                    defaultAsyncExceptionHandler, defaultExceptionHandler);
+        } else {
+            this.defaultExceptionHandler = new InternalGrpcExceptionHandler(defaultExceptionHandler);
+        }
     }
 
     @Nullable
@@ -212,6 +219,9 @@ final class HandlerRegistry {
         @Nullable
         private GrpcExceptionHandlerFunction defaultExceptionHandler;
 
+        @Nullable
+        private AsyncGrpcExceptionHandlerFunction defaultAsyncExceptionHandler;
+
         Builder addService(ServerServiceDefinition service, @Nullable Class<?> type,
                            List<? extends Function<? super HttpService,
                                    ? extends HttpService>> additionalDecorators) {
@@ -238,6 +248,12 @@ final class HandlerRegistry {
         Builder setDefaultExceptionHandler(GrpcExceptionHandlerFunction defaultExceptionHandler) {
             requireNonNull(defaultExceptionHandler, "defaultExceptionHandler");
             this.defaultExceptionHandler = defaultExceptionHandler;
+            return this;
+        }
+
+        Builder setDefaultAsyncExceptionHandler(AsyncGrpcExceptionHandlerFunction asyncExceptionHandler) {
+            requireNonNull(asyncExceptionHandler, "asyncExceptionHandler");
+            this.defaultAsyncExceptionHandler = asyncExceptionHandler;
             return this;
         }
 
@@ -410,7 +426,8 @@ final class HandlerRegistry {
                                        additionalDecoratorsBuilder.build(),
                                        blockingMethods.build(),
                                        grpcExceptionHandlersBuilder.build(),
-                                       defaultExceptionHandler);
+                                       defaultExceptionHandler,
+                                       defaultAsyncExceptionHandler);
         }
     }
 

@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
@@ -117,6 +118,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private GrpcExceptionHandlerFunction exceptionHandler;
+
+    @Nullable
+    private AsyncGrpcExceptionHandlerFunction asyncExceptionHandler;
 
     @Nullable
     private ImmutableList.Builder<ServerInterceptor> interceptors;
@@ -875,11 +879,39 @@ public final class GrpcServiceBuilder {
         requireNonNull(exceptionHandler, "exceptionHandler");
         checkState(exceptionMappingsBuilder == null,
                    "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
+        checkState(asyncExceptionHandler == null,
+                   "exceptionHandler() and asyncExceptionHandler() are mutually exclusive.");
 
         if (this.exceptionHandler == null) {
             this.exceptionHandler = exceptionHandler;
         } else {
             this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
+        }
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link AsyncGrpcExceptionHandlerFunction} that asynchronously maps
+     * a {@link Throwable} to a gRPC {@link Status}.
+     *
+     * <p>If the async handler returns {@code null}, the default {@link GrpcExceptionHandlerFunction}
+     * will be used as a fallback.
+     *
+     * <p>Note that this method, {@link #exceptionHandler(GrpcExceptionHandlerFunction)} and
+     * {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        checkState(exceptionMappingsBuilder == null,
+                   "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
+        checkState(this.exceptionHandler == null,
+                   "exceptionHandler() and asyncExceptionHandler() are mutually exclusive.");
+
+        if (asyncExceptionHandler == null) {
+            asyncExceptionHandler = exceptionHandler;
+        } else {
+            asyncExceptionHandler = asyncExceptionHandler.orElse(exceptionHandler);
         }
         return this;
     }
@@ -1026,6 +1058,9 @@ public final class GrpcServiceBuilder {
             grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
         registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
+        if (asyncExceptionHandler != null) {
+            registryBuilder.setDefaultAsyncExceptionHandler(asyncExceptionHandler);
+        }
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -1039,6 +1074,9 @@ public final class GrpcServiceBuilder {
             }
             if (grpcExceptionHandler != null) {
                 newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
+            }
+            if (asyncExceptionHandler != null) {
+                newRegistryBuilder.setDefaultAsyncExceptionHandler(asyncExceptionHandler);
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {
