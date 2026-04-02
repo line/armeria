@@ -891,9 +891,6 @@ public final class GrpcServiceBuilder {
      * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
      * to a gRPC {@link Status}.
      *
-     * <p>If an {@link AsyncGrpcExceptionHandlerFunction} is also set, the async handler is tried first.
-     * When the async handler returns {@code null}, this sync handler is used as a fallback.
-     *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
     @UnstableApi
@@ -901,6 +898,8 @@ public final class GrpcServiceBuilder {
         requireNonNull(exceptionHandler, "exceptionHandler");
         checkState(exceptionMappingsBuilder == null,
                    "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
+        checkState(asyncExceptionHandler == null,
+                   "exceptionHandler() and asyncExceptionHandler() are mutually exclusive.");
 
         if (this.exceptionHandler == null) {
             this.exceptionHandler = exceptionHandler;
@@ -914,17 +913,19 @@ public final class GrpcServiceBuilder {
      * Sets the specified {@link AsyncGrpcExceptionHandlerFunction} that asynchronously maps
      * a {@link Throwable} to a gRPC {@link Status}.
      *
-     * <p>The async handler is tried first. If it returns {@code null}, the sync
-     * {@link GrpcExceptionHandlerFunction} set via {@link #exceptionHandler(GrpcExceptionHandlerFunction)}
-     * is used as a fallback. If no sync handler is set, the default handler is used.
+     * <p>If the async handler returns {@code null}, the default {@link GrpcExceptionHandlerFunction}
+     * will be used as a fallback.
      *
-     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
+     * <p>Note that this method, {@link #exceptionHandler(GrpcExceptionHandlerFunction)} and
+     * {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
     @UnstableApi
     public GrpcServiceBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {
         requireNonNull(exceptionHandler, "exceptionHandler");
         checkState(exceptionMappingsBuilder == null,
                    "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
+        checkState(this.exceptionHandler == null,
+                   "exceptionHandler() and asyncExceptionHandler() are mutually exclusive.");
 
         if (asyncExceptionHandler == null) {
             asyncExceptionHandler = exceptionHandler;
@@ -1136,7 +1137,6 @@ public final class GrpcServiceBuilder {
             final HttpJsonTranscoder transcoder =
                     new HttpJsonTranscoderBuilder()
                             .options(httpJsonTranscodingOptions)
-                            .protoSerialization(false)
                             .serviceDefinitions(grpcService.services())
                             .build();
             if (transcoder != null) {
