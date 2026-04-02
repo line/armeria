@@ -69,7 +69,8 @@ public final class KubernetesEndpointGroupBuilder
     @Nullable
     private String portName;
 
-    private Function<Node, @Nullable String> nodeIpExtractor = toNodeIpExtractor(DEFAULT_NODE_ADDRESS_FILTER);
+    @Nullable
+    private Function<Node, @Nullable String> nodeIpExtractor;
 
     private KubernetesEndpointMode mode = KubernetesEndpointMode.NODE_PORT;
 
@@ -149,7 +150,8 @@ public final class KubernetesEndpointGroupBuilder
      * <p>Note that this method is mutually exclusive with {@link #nodeAddressFilter(Predicate)}. If both
      * methods are called, the last one will take precedence.
      *
-     * <p>This option is ignored when {@link KubernetesEndpointMode#POD} is used.
+     * <p>If {@link KubernetesEndpointMode#POD} is used, this method is not supported and an
+     * {@link IllegalStateException} will be thrown when {@link #build()} is called.
      */
     public KubernetesEndpointGroupBuilder nodeIpExtractor(
             Function<? super Node, @Nullable String> nodeIpExtractor) {
@@ -199,6 +201,12 @@ public final class KubernetesEndpointGroupBuilder
      */
     public KubernetesEndpointGroup build() {
         checkState(serviceName != null, "serviceName not set");
+        if (mode == KubernetesEndpointMode.POD && nodeIpExtractor != null) {
+            throw new IllegalStateException("nodeIpExtractor is not supported in POD mode");
+        }
+        if (nodeIpExtractor == null) {
+            nodeIpExtractor = toNodeIpExtractor(DEFAULT_NODE_ADDRESS_FILTER);
+        }
         return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName,
                                            nodeIpExtractor, autoClose, mode,
                                            selectionStrategy, shouldAllowEmptyEndpoints(),

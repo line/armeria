@@ -235,6 +235,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final String serviceName;
     @Nullable
     private final String portName;
+    @Nullable
     private final Function<Node, @Nullable String> nodeIpExtractor;
     private final long maxWatchAgeMillis;
 
@@ -277,7 +278,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private volatile int numPodFailures;
 
     KubernetesEndpointGroup(KubernetesClient client, @Nullable String namespace, String serviceName,
-                            @Nullable String portName, Function<Node, @Nullable String> nodeIpExtractor,
+                            @Nullable String portName,
+                            @Nullable Function<Node, @Nullable String> nodeIpExtractor,
                             boolean autoClose, KubernetesEndpointMode mode,
                             EndpointSelectionStrategy selectionStrategy,
                             boolean allowEmptyEndpoints, long selectionTimeoutMillis, long maxWatchAgeMillis) {
@@ -835,6 +837,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     return;
                 }
 
+                final Integer nodePort = this.nodePort;
                 assert nodePort != null;
                 endpoints =
                         podToNode.values().stream()
