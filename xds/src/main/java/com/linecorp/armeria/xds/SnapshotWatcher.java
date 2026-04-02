@@ -30,5 +30,5 @@ public interface SnapshotWatcher<T> {
      * Invoked when a snapshot is updated or an error occurs.
      * Either snapshot or error will be non-null.
      */
-    void onUpdate(@Nullable T snapshot, @Nullable XdsResourceException t);
+    void onUpdate(@Nullable T snapshot, @Nullable Throwable t);
 }

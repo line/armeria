@@ -17,9 +17,12 @@ package com.linecorp.armeria.server.throttling;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceOptions;
 
 /**
  * Decorates an {@link HttpService} to throttle incoming requests.
@@ -63,5 +66,15 @@ public final class ThrottlingService extends AbstractThrottlingService<HttpReque
                       ThrottlingAcceptHandler<HttpRequest, HttpResponse> acceptHandler,
                       ThrottlingRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
         super(delegate, strategy, HttpResponse::of, acceptHandler, rejectHandler);
+    }
+
+    @Override
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        return ((HttpService) unwrap()).exchangeType(routingContext);
+    }
+
+    @Override
+    public ServiceOptions options() {
+        return ((HttpService) unwrap()).options();
     }
 }

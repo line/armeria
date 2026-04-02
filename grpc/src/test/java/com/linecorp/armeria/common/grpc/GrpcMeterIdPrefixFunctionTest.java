@@ -26,6 +26,7 @@ import static org.awaitility.Awaitility.given;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.CallOptions;
+import io.grpc.ClientCall;
+import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
@@ -60,6 +64,7 @@ import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Statistic;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.ExtendedTestMessage;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc;
@@ -182,6 +187,40 @@ class GrpcMeterIdPrefixFunctionTest {
                 .isGreaterThan(0.0);
     }
 
+    @Test
+    void grpcStatusFromResponseContent_clientCancellation() {
+        // Verifies grpc-status is extracted from responseContent when client cancels
+        // before receiving headers/trailers (the fallback path in GrpcMeterIdPrefixFunction)
+        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        clientFactory = ClientFactory.builder().meterRegistry(registry).build();
+        final TestServiceGrpc.TestServiceStub client =
+                GrpcClients.builder(server.uri(SessionProtocol.H2C, GrpcSerializationFormats.PROTO))
+                           .factory(clientFactory)
+                           .decorator(MetricCollectingClient.newDecorator(
+                                   GrpcMeterIdPrefixFunction.of("client")))
+                           .build(TestServiceGrpc.TestServiceStub.class);
+
+        // Use low-level ClientCall API to properly cancel with CANCELLED status
+        final ClientCall<ExtendedTestMessage, ExtendedTestMessage> call =
+                client.getChannel().newCall(
+                        TestServiceGrpc.getUnaryCallWithAllDifferentParameterTypesMethod(),
+                        CallOptions.DEFAULT);
+
+        call.start(new ClientCall.Listener<ExtendedTestMessage>() {}, new Metadata());
+        call.sendMessage(ExtendedTestMessage.getDefaultInstance());
+        call.halfClose();
+        call.request(1);
+
+        // Cancel the call to trigger CANCELLED status
+        call.cancel("Test cancellation", null);
+
+        // grpc.status=1 (CANCELLED) confirms the responseContent fallback path is working
+        given().ignoreExceptions().untilAsserted(() -> assertThat(
+                findClientMeterWithHttpStatus(registry, "UnaryCallWithAllDifferentParameterTypes",
+                                              "requests", COUNT, "0",
+                                              "result", "failure", "grpc.status", "1")).isEqualTo(1.0));
+    }
+
     private TestServiceBlockingStub newClient(SerializationFormat serializationFormat,
                                               PrometheusMeterRegistry registry) {
         clientFactory = ClientFactory.builder().meterRegistry(registry).build();
@@ -196,11 +235,18 @@ class GrpcMeterIdPrefixFunctionTest {
     private static Double findClientMeter(
             PrometheusMeterRegistry registry, String method, String suffix,
             Statistic type, String... keyValues) {
+        return findClientMeterWithHttpStatus(registry, method, suffix, type, "200", keyValues);
+    }
+
+    @Nullable
+    private static Double findClientMeterWithHttpStatus(
+            PrometheusMeterRegistry registry, String method, String suffix,
+            Statistic type, String httpStatus, String... keyValues) {
         final MeterIdPrefix prefix = new MeterIdPrefix(
                 "client." + suffix + '#' + type.getTagValueRepresentation(),
                 "service", "armeria.grpc.testing.TestService",
                 "method", method,
-                "http.status", "200");
+                "http.status", httpStatus);
         final String meterIdStr = prefix.withTags(keyValues).toString();
         return measureAll(registry).get(meterIdStr);
     }
@@ -227,6 +273,20 @@ class GrpcMeterIdPrefixFunctionTest {
         @Override
         public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void unaryCallWithAllDifferentParameterTypes(
+                ExtendedTestMessage request, StreamObserver<ExtendedTestMessage> responseObserver) {
+            try {
+                // Delay to allow client cancellation test
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            responseObserver.onNext(ExtendedTestMessage.getDefaultInstance());
             responseObserver.onCompleted();
         }
     }

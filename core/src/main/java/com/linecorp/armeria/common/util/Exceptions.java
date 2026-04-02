@@ -82,7 +82,7 @@ public final class Exceptions {
             return;
         }
 
-        logger.warn("{} Unexpected exception:", ch, cause);
+        logger.warn("{} Unexpected exception: {}", ch, cause.getMessage(), cause);
     }
 
     /**
@@ -112,8 +112,8 @@ public final class Exceptions {
             return;
         }
 
-        logger.warn("{}[{}] Unexpected exception:",
-                    ch, protocolName(protocol), cause);
+        logger.warn("{}[{}] Unexpected exception: {}",
+                    ch, protocolName(protocol), cause.getMessage(), cause);
     }
 
     /**

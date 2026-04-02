@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
@@ -37,7 +36,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -45,7 +43,6 @@ import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.XdsResourceException;
 
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
@@ -102,7 +99,6 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
 
     private final XdsEndpointSelectionStrategy selectionStrategy;
     private final boolean allowEmptyEndpoints;
-    private final Lock stateLock = new ReentrantShortLock();
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new CompletableFuture<>();
 
     private final EndpointSelector selector;
@@ -120,7 +116,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
     }
 
     @Override
-    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable XdsResourceException t) {
+    public void onUpdate(@Nullable ListenerSnapshot snapshot, @Nullable Throwable t) {
         if (snapshot == null) {
             return;
         }
@@ -145,17 +141,10 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
             return;
         }
 
-        stateLock.lock();
-        try {
-            final XdsLoadBalancer prevLoadBalancer = this.loadBalancer;
-            if (prevLoadBalancer != null) {
-                prevLoadBalancer.removeEndpointsListener(this);
-            }
-            this.loadBalancer = loadBalancer;
-            loadBalancer.addEndpointsListener(this);
-        } finally {
-            stateLock.unlock();
-        }
+        this.loadBalancer = loadBalancer;
+        endpoints = loadBalancer.allEndpoints();
+        notifyListeners(endpoints);
+        maybeCompleteInitialEndpointsFuture(endpoints);
     }
 
     private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {

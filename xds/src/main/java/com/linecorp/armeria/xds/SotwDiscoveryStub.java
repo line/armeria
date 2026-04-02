@@ -25,6 +25,7 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 import io.envoyproxy.envoy.service.endpoint.v3.EndpointDiscoveryServiceGrpc.EndpointDiscoveryServiceStub;
 import io.envoyproxy.envoy.service.listener.v3.ListenerDiscoveryServiceGrpc.ListenerDiscoveryServiceStub;
 import io.envoyproxy.envoy.service.route.v3.RouteDiscoveryServiceGrpc.RouteDiscoveryServiceStub;
+import io.envoyproxy.envoy.service.secret.v3.SecretDiscoveryServiceGrpc.SecretDiscoveryServiceStub;
 import io.grpc.stub.StreamObserver;
 
 @FunctionalInterface
@@ -55,6 +56,10 @@ interface SotwDiscoveryStub {
                 final EndpointDiscoveryServiceStub endpointStub =
                         builder.build(EndpointDiscoveryServiceStub.class);
                 return endpointStub::streamEndpoints;
+            case SECRET:
+                final SecretDiscoveryServiceStub secretStub =
+                        builder.build(SecretDiscoveryServiceStub.class);
+                return secretStub::streamSecrets;
             default:
                 throw new Error("Unexpected value: " + type);
         }

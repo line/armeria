@@ -68,7 +68,7 @@ public final class XdsBootstrapBuilder {
     static final SnapshotWatcher<Object> DEFAULT_SNAPSHOT_WATCHER = new SnapshotWatcher<Object>() {
 
         @Override
-        public void onUpdate(@Nullable Object snapshot, @Nullable XdsResourceException t) {
+        public void onUpdate(@Nullable Object snapshot, @Nullable Throwable t) {
             if (t != null) {
                 logger.warn("Error fetching resource e: ", t);
             }
@@ -125,6 +125,6 @@ public final class XdsBootstrapBuilder {
     public XdsBootstrap build() {
         final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
         return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
-                                    ignored -> {}, snapshotWatcher);
+                                    snapshotWatcher);
     }
 }

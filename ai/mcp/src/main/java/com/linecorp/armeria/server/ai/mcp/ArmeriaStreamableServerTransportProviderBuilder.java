@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.modelcontextprotocol.common.McpTransportContext;
+import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.json.McpJsonMapper;
 import io.modelcontextprotocol.server.McpTransportContextExtractor;
 
@@ -32,7 +33,7 @@ import io.modelcontextprotocol.server.McpTransportContextExtractor;
  */
 public final class ArmeriaStreamableServerTransportProviderBuilder {
 
-    private McpJsonMapper jsonMapper = McpJsonMapper.getDefault();
+    private McpJsonMapper jsonMapper = McpJsonDefaults.getMapper();
     private McpTransportContextExtractor<ServiceRequestContext> contextExtractor =
             ctx -> McpTransportContext.EMPTY;
     private boolean disallowDelete;

@@ -70,6 +70,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscoderBuilder.HttpJsonGrpcMethod;
 
 import io.grpc.Codec.Identity;
 import io.grpc.CompressorRegistry;
@@ -93,9 +94,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
     static final Listener<?> EMPTY_LISTENER = new EmptyListener<>();
-
-    static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
-            AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
 
     static final AttributeKey<Boolean> GRPC_USE_BLOCKING_EXECUTOR =
             AttributeKey.valueOf(FramedGrpcService.class, "GRPC_USE_BLOCKING_EXECUTOR");
@@ -253,7 +251,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                     metadata));
                 }
             } else {
-                if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
+                if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
                     // For unframed gRPC, we use the default timeout.
                 } else {
                     // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
@@ -427,13 +425,23 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
-        // method could be set in HttpJsonTranscodingService.
-        final ServerMethodDefinition<?, ?> method =
-                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
-        if (method != null) {
-            return method;
+        if (lookupMethodFromAttribute) {
+            final ServerMethodDefinition<?, ?> methodDef = attrMethodDefinition(ctx);
+            if (methodDef != null) {
+                return methodDef;
+            }
         }
         return GrpcService.super.methodDefinition(ctx);
+    }
+
+    @Nullable
+    private static ServerMethodDefinition<?, ?> attrMethodDefinition(ServiceRequestContext ctx) {
+        final HttpJsonGrpcMethod httpJsonGrpcMethod = ctx.attr(
+                HttpJsonTranscoder.HTTP_JSON_GRPC_METHOD_INFO);
+        if (httpJsonGrpcMethod != null) {
+            return httpJsonGrpcMethod.definition;
+        }
+        return null;
     }
 
     private static Server newDummyServer(Map<String, ServerServiceDefinition> grpcServices) {

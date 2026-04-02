@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestContextExporter;
 import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
@@ -210,6 +211,14 @@ public final class RequestContextExportingAppender
             customizer.accept(builder);
             exporter = builder.build();
         }
+
+        if (!RequestContextUtil.isLoaded()) {
+            // It is possible that RequestContextUtil hasn't been initialized yet
+            // due to static variable circular dependency.
+            aai.appendLoopOnAppenders(eventObject);
+            return;
+        }
+
         final Map<String, String> contextMap = exporter.export();
         if (!contextMap.isEmpty()) {
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();

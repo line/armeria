@@ -23,6 +23,8 @@ You may want to consider the following options before putting your Armeria appli
   a service that uses it, such as [TomcatService](type), [JettyService](type) and [THttpService](type) with
   synchronous service implementation. The default is a simple `ScheduledThreadPoolExecutor` with maximum
   200 threads, provided by [CommonPools](type).
+  See [Threading model](/docs/advanced/threading-model) for a comprehensive guide to Armeria's thread pools
+  and executor selection.
 
   ```java
   import com.linecorp.armeria.server.ServerBuilder;

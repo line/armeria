@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.protobuf.Duration;
@@ -46,8 +45,7 @@ final class ConfigSourceClient implements SafeCloseable {
 
     ConfigSourceClient(ConfigSource configSource,
                        EventExecutor eventLoop,
-                       Node node, Consumer<GrpcClientBuilder> clientCustomizer,
-                       BootstrapClusters bootstrapClusters,
+                       Node node, BootstrapClusters bootstrapClusters,
                        ConfigSourceMapper configSourceMapper, MeterRegistry meterRegistry,
                        MeterIdPrefix meterIdPrefix) {
         final ApiConfigSource apiConfigSource;
@@ -75,7 +73,6 @@ final class ConfigSourceClient implements SafeCloseable {
                 GrpcClients.builder(new GrpcServicesPreprocessor(grpcServices, bootstrapClusters));
         builder.responseTimeoutMillis(Long.MAX_VALUE);
         builder.maxResponseLength(0);
-        clientCustomizer.accept(builder);
 
         final Function<String, DefaultConfigSourceLifecycleObserver> metersFunction =
                 xdsType -> new DefaultConfigSourceLifecycleObserver(

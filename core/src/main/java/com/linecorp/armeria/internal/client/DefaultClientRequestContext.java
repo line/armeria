@@ -184,6 +184,8 @@ public final class DefaultClientRequestContext
     private Function<RpcClient, RpcClient> rpcClientCustomizer = Function.identity();
     @Nullable
     private ClientTlsSpec clientTlsSpec;
+    @Nullable
+    private InetSocketAddress localBindAddress;
 
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, HttpRequest httpRequest,
                                        @Nullable RpcRequest rpcRequest, RequestTarget requestTarget,
@@ -285,6 +287,7 @@ public final class DefaultClientRequestContext
         this.root = root;
         this.endpointGroup = endpointGroup;
         clientTlsSpec = requestOptions.clientTlsSpec();
+        localBindAddress = requestOptions.localBindAddress();
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -641,6 +644,7 @@ public final class DefaultClientRequestContext
         additionalRequestHeaders = ctx.additionalRequestHeaders();
         responseTimeoutMode = ctx.responseTimeoutMode();
         clientTlsSpec = ctx.clientTlsSpec();
+        localBindAddress = ctx.localBindAddress();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
@@ -1104,6 +1108,16 @@ public final class DefaultClientRequestContext
     @Override
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
         this.clientTlsSpec = requireNonNull(clientTlsSpec, "clientTlsSpec");
+    }
+
+    @Override
+    public @Nullable InetSocketAddress localBindAddress() {
+        return localBindAddress;
+    }
+
+    @Override
+    public void setLocalBindAddress(InetSocketAddress localAddress) {
+        localBindAddress = requireNonNull(localAddress, "localAddress");
     }
 
     @Override

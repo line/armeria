@@ -1,0 +1,181 @@
+/*
+ * Copyright 2026 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.xds;
+
+import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.ClientTlsSpecBuilder;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.envoyproxy.envoy.config.core.v3.TransportSocket;
+
+/**
+ * A snapshot of a {@link TransportSocket} resource with its associated TLS configuration.
+ * This snapshot includes optional {@link TlsCertificateSnapshot} and
+ * {@link CertificateValidationContextSnapshot} for TLS connections.
+ */
+@UnstableApi
+public final class TransportSocketSnapshot implements Snapshot<TransportSocket> {
+
+    private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
+    private static boolean warnedNoVerify;
+
+    private final TransportSocket transportSocket;
+    @Nullable
+    private final TlsCertificateSnapshot tlsCertificate;
+    @Nullable
+    private final CertificateValidationContextSnapshot validationContext;
+    @Nullable
+    private final ClientTlsSpec clientTlsSpec;
+
+    TransportSocketSnapshot(TransportSocket transportSocket) {
+        this.transportSocket = transportSocket;
+        tlsCertificate = null;
+        validationContext = null;
+        clientTlsSpec = null;
+    }
+
+    TransportSocketSnapshot(TransportSocket transportSocket,
+                            Optional<TlsCertificateSnapshot> tlsCertificate,
+                            Optional<CertificateValidationContextSnapshot> validationContext) {
+        this.transportSocket = transportSocket;
+        this.tlsCertificate = tlsCertificate.orElse(null);
+        this.validationContext = validationContext.orElse(null);
+        clientTlsSpec = buildClientTlsSpec(this.tlsCertificate, this.validationContext);
+    }
+
+    @Override
+    public TransportSocket xdsResource() {
+        return transportSocket;
+    }
+
+    /**
+     * Returns the {@link TlsCertificateSnapshot} containing the certificate and private key
+     * for this transport socket, or {@code null} if not configured.
+     */
+    public @Nullable TlsCertificateSnapshot tlsCertificate() {
+        return tlsCertificate;
+    }
+
+    /**
+     * Returns the {@link CertificateValidationContextSnapshot} containing the trusted CA certificates
+     * for validating peer certificates, or {@code null} if not configured.
+     */
+    public @Nullable CertificateValidationContextSnapshot validationContext() {
+        return validationContext;
+    }
+
+    /**
+     * Returns the {@link ClientTlsSpec} resolved for this transport socket, or {@code null}
+     * if this transport socket does not configure TLS.
+     */
+    public @Nullable ClientTlsSpec clientTlsSpec() {
+        return clientTlsSpec;
+    }
+
+    private static ClientTlsSpec buildClientTlsSpec(
+            @Nullable TlsCertificateSnapshot tlsCertificate,
+            @Nullable CertificateValidationContextSnapshot validationContext) {
+        final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder();
+        final ImmutableList.Builder<TlsPeerVerifierFactory> verifiersBuilder = ImmutableList.builder();
+        if (validationContext != null) {
+            final boolean systemRootCerts = validationContext.xdsResource().hasSystemRootCerts();
+            final List<X509Certificate> trustedCa = validationContext.trustedCa();
+            // set the trusted CA certificates
+            if (trustedCa != null) {
+                specBuilder.trustedCertificates(trustedCa);
+            } else if (systemRootCerts) {
+                // use java default root CAs
+            } else {
+                warnNoVerifyOnce();
+                verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
+            }
+
+            // set peer verification rules - these are applied before trusted CA verification
+            // so that checks are run regardless of CA configuration
+            final List<TlsPeerVerifierFactory> verifierFactories = validationContext.peerVerifierFactories();
+            if (!verifierFactories.isEmpty()) {
+                verifiersBuilder.addAll(verifierFactories);
+            }
+        } else {
+            // don't verify ca certs if no validation context is configured
+            verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
+        }
+        if (tlsCertificate != null) {
+            final TlsKeyPair tlsKeyPair = tlsCertificate.tlsKeyPair();
+            if (tlsKeyPair != null) {
+                specBuilder.tlsKeyPair(tlsKeyPair);
+            }
+        }
+        final List<TlsPeerVerifierFactory> verifierFactories = verifiersBuilder.build();
+        if (!verifierFactories.isEmpty()) {
+            specBuilder.verifierFactories(verifierFactories);
+        }
+        return specBuilder.build();
+    }
+
+    private static void warnNoVerifyOnce() {
+        if (!warnedNoVerify) {
+            warnedNoVerify = true;
+            logger.warn("TLS peer verification is disabled because validation context has no trusted CA " +
+                        "and system_root_certs is unset. Set system_root_certs: \\{} to use the " +
+                        "default Java TLS roots.");
+        }
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final TransportSocketSnapshot that = (TransportSocketSnapshot) object;
+        return Objects.equal(transportSocket, that.transportSocket) &&
+               Objects.equal(tlsCertificate, that.tlsCertificate) &&
+               Objects.equal(validationContext, that.validationContext);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(transportSocket, tlsCertificate, validationContext);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("transportSocket", transportSocket)
+                          .add("tlsCertificate", tlsCertificate)
+                          .add("validationContext", validationContext)
+                          .toString();
+    }
+}

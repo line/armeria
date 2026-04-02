@@ -425,7 +425,17 @@ final class HttpChannelPool implements AsyncCloseable {
                         sessionPromise.tryFailure(connectFuture.cause());
                     }
                 });
-                channel.connect(remoteAddress, connectionPromise);
+                // For domain socket channels, the local address must be a Netty
+                // DomainSocketAddress. Convert if the user supplied one; otherwise pass null.
+                // For TCP channels, pass the local address as-is.
+                final SocketAddress localAddr;
+                if (poolKey.endpoint.isDomainSocket()) {
+                    localAddr = poolKey.localAddress instanceof DomainSocketAddress ?
+                                ((DomainSocketAddress) poolKey.localAddress).asNettyAddress() : null;
+                } else {
+                    localAddr = poolKey.localAddress;
+                }
+                channel.connect(remoteAddress, localAddr, connectionPromise);
             } catch (Throwable cause) {
                 maybeHandleProxyFailure(desiredProtocol, poolKey, cause);
                 sessionPromise.tryFailure(cause);
@@ -602,13 +612,17 @@ final class HttpChannelPool implements AsyncCloseable {
         final Endpoint endpoint;
         final ProxyConfig proxyConfig;
         private final ClientTlsSpec tlsSpec;
+        @Nullable
+        final InetSocketAddress localAddress;
         private final int hashCode;
 
-        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec) {
+        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec,
+                @Nullable InetSocketAddress localAddress) {
             this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
             this.tlsSpec = tlsSpec;
-            hashCode = Objects.hash(endpoint, proxyConfig, tlsSpec);
+            this.localAddress = localAddress;
+            hashCode = Objects.hash(endpoint, proxyConfig, tlsSpec, localAddress);
         }
 
         SocketAddress toRemoteAddress() {
@@ -637,7 +651,8 @@ final class HttpChannelPool implements AsyncCloseable {
             return hashCode == that.hashCode &&
                    endpoint.equals(that.endpoint) &&
                    proxyConfig.equals(that.proxyConfig) &&
-                   Objects.equals(tlsSpec, that.tlsSpec);
+                   Objects.equals(tlsSpec, that.tlsSpec) &&
+                   Objects.equals(localAddress, that.localAddress);
         }
 
         @Override
@@ -670,6 +685,10 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (tlsSpecStr != null) {
                     buf.append(", ");
                     buf.append(tlsSpecStr);
+                }
+                if (localAddress != null) {
+                    buf.append(", localAddress=");
+                    buf.append(localAddress);
                 }
                 buf.append('}');
                 return buf.toString();

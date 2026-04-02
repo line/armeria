@@ -17,7 +17,6 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
@@ -26,7 +25,7 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
  *
  * @param <T> the type of the current {@link XdsResource}
  */
-interface ResourceNode<T extends XdsResource> extends ResourceWatcher<T>, SafeCloseable {
+interface ResourceNode<T extends XdsResource> extends ResourceWatcher<T> {
 
     @Nullable
     ConfigSource configSource();

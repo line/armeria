@@ -22,15 +22,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -95,5 +101,37 @@ public class ThrottlingServiceTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().get("X-RateLimit-Limit"))
                 .isEqualTo("10, 10;window=1;burst=1000, 1000;window=3600");
+    }
+
+    @ParameterizedTest
+    @EnumSource(ExchangeType.class)
+    void shouldDelegateExchangeType(ExchangeType exchangeType) {
+        final ServiceOptions serviceOptions = ServiceOptions.builder()
+                                                            .requestTimeoutMillis(5000)
+                                                            .build();
+        final HttpService delegate = new HttpService() {
+            @Override
+            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                return HttpResponse.of(HttpStatus.OK);
+            }
+
+            @Override
+            public ExchangeType exchangeType(RoutingContext routingContext) {
+                return exchangeType;
+            }
+
+            @Override
+            public ServiceOptions options() {
+                return serviceOptions;
+            }
+        };
+
+        final ThrottlingService service =
+                ThrottlingService.newDecorator(always()).apply(delegate);
+
+        final RoutingContext routingContext =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")).routingContext();
+        assertThat(service.exchangeType(routingContext)).isEqualTo(exchangeType);
+        assertThat(service.options()).isSameAs(serviceOptions);
     }
 }
