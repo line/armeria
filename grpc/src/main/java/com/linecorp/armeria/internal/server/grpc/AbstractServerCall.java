@@ -216,11 +216,25 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
 
-        Status newStatus = exceptionHandler.handle(ctx, status, cause, metadata);
-        if (status.getDescription() != null) {
-            newStatus = newStatus.withDescription(status.getDescription());
+        if (exceptionHandler.isAsync()) {
+            exceptionHandler.handleAsync(ctx, status, cause, metadata)
+                            .handleAsync((newStatus, ex) -> {
+                                if (ex != null) {
+                                    newStatus = status;
+                                }
+                                if (status.getDescription() != null) {
+                                    newStatus = newStatus.withDescription(status.getDescription());
+                                }
+                                doClose(new ServerStatusAndMetadata(newStatus, metadata), cause);
+                                return null;
+                            }, ctx.eventLoop());
+        } else {
+            Status newStatus = exceptionHandler.handle(ctx, status, cause, metadata);
+            if (status.getDescription() != null) {
+                newStatus = newStatus.withDescription(status.getDescription());
+            }
+            close(new ServerStatusAndMetadata(newStatus, metadata), cause);
         }
-        close(new ServerStatusAndMetadata(newStatus, metadata), cause);
     }
 
     public final void close(Throwable exception) {
@@ -228,9 +242,23 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void close(Throwable exception, boolean cancelled) {
-        final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, exception);
-        close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
-                                          cancelled), exception);
+        if (exceptionHandler.isAsync()) {
+            exceptionHandler.handleAsync(ctx, exception)
+                            .handleAsync((statusAndMetadata, ex) -> {
+                                if (ex != null) {
+                                    statusAndMetadata = new StatusAndMetadata(
+                                            Status.INTERNAL.withCause(exception), new Metadata());
+                                }
+                                doClose(new ServerStatusAndMetadata(
+                                        statusAndMetadata.status(), statusAndMetadata.metadata(),
+                                        cancelled), exception);
+                                return null;
+                            }, ctx.eventLoop());
+        } else {
+            final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, exception);
+            close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
+                                              cancelled), exception);
+        }
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {
