@@ -19,12 +19,11 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -388,8 +387,8 @@ public enum BuiltInProperty {
     REQ_END_TIME_MILLIS("req.end_time_millis", log -> {
         if (log.isAvailable(RequestLogProperty.REQUEST_END_TIME)) {
             return String.valueOf(
-                    Instant.ofEpochMilli(log.requestStartTimeMillis())
-                           .plusNanos(log.requestDurationNanos()).toEpochMilli());
+                    log.requestStartTimeMillis() +
+                    TimeUnit.NANOSECONDS.toMillis(log.requestDurationNanos()));
         }
         return null;
     }),
@@ -411,7 +410,7 @@ public enum BuiltInProperty {
      */
     REQ_DURATION_MILLIS("req.duration_millis", log -> {
         if (log.isAvailable(RequestLogProperty.REQUEST_END_TIME)) {
-            return String.valueOf(Duration.ofNanos(log.requestDurationNanos()).toMillis());
+            return String.valueOf(TimeUnit.NANOSECONDS.toMillis(log.requestDurationNanos()));
         }
         return null;
     }),
@@ -434,8 +433,8 @@ public enum BuiltInProperty {
     RES_END_TIME_MILLIS("res.end_time_millis", log -> {
         if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
             return String.valueOf(
-                    Instant.ofEpochMilli(log.responseStartTimeMillis())
-                           .plusNanos(log.responseDurationNanos()).toEpochMilli());
+                    log.responseStartTimeMillis() +
+                    TimeUnit.NANOSECONDS.toMillis(log.responseDurationNanos()));
         }
         return null;
     }),
@@ -457,7 +456,7 @@ public enum BuiltInProperty {
      */
     RES_DURATION_MILLIS("res.duration_millis", log -> {
         if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
-            return String.valueOf(Duration.ofNanos(log.responseDurationNanos()).toMillis());
+            return String.valueOf(TimeUnit.NANOSECONDS.toMillis(log.responseDurationNanos()));
         }
         return null;
     }),
@@ -483,7 +482,7 @@ public enum BuiltInProperty {
      */
     TOTAL_DURATION_MILLIS("total_duration_millis", log -> {
         if (log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
-            return String.valueOf(Duration.ofNanos(log.totalDurationNanos()).toMillis());
+            return String.valueOf(TimeUnit.NANOSECONDS.toMillis(log.totalDurationNanos()));
         }
         return null;
     }),
@@ -541,7 +540,8 @@ public enum BuiltInProperty {
     }),
 
     /**
-     * {@code "host"} - the authority of the request, derived from the {@code :authority} header.
+     * {@code "host"} - the authority of the request, derived from the {@code :authority} header
+     * or the {@code Host} header for HTTP/1.1.
      * The value may contain a port number, such as {@code "example.com:8080"}.
      * Falls back to the remote address if the header is not available.
      */
