@@ -31,7 +31,7 @@ Key elements:
 - `[AthenzAuthorizer](type)` — Armeria API type link
 - Code block indented under the bullet (2 spaces)
 - `// 👈👈👈` on the line the reader should focus on
-- `#6607` PR reference at end of description line
+- `#6607` issue/PR references at end of description line (list both the issue and the PR)
 
 ---
 
@@ -148,6 +148,7 @@ Rules:
 Rules:
 - Usernames sorted alphabetically
 - Remove bot accounts: `dependabot[bot]`, `CLAassistant`
+- Core maintainers from `.github/CODEOWNERS` must always be included
 - One username per line, single-quoted, comma-separated
 
 ---

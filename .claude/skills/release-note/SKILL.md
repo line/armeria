@@ -150,7 +150,7 @@ Rewrite every entry following the formatting rules in `references/style-guide.md
     `` `enableEnvoyHttp1Bridge(true)` `` for Armeria public API references in prose.
   - Do NOT use this syntax for JDK types (`String`, `Duration`, `CompletableFuture`), third-party
     types, or types that are not part of Armeria's public API.
-- PR/issue references go at the end of the entry: `#6640 #6607`
+- Issue and PR references go at the end of the entry: `#6431 #6691` (list both the issue and the PR)
 - Do NOT copy PR titles verbatim — they are often terse commit-style messages.
 - Do NOT fabricate code examples. Derive them from PR descriptions or actual source code.
 - Keep entries self-contained — a reader should understand the change without clicking the PR link.
@@ -174,7 +174,8 @@ The raw script includes the full dependency update PR body, which uses a structu
 2. **Remove "Maybe ignore"**: The `🗑 Maybe ignore` section must not appear in the final output.
 3. **Deduplicate and sort contributors**: Ensure `<ThankYou usernames={[...]} />` has
    alphabetically sorted, deduplicated usernames. Remove bot accounts (`dependabot[bot]`,
-   `CLAassistant`).
+   `CLAassistant`). Core maintainers listed in `.github/CODEOWNERS` must always be included
+   in the Thank You section, even if they don't appear in the PR participant lists.
 4. **Ensure consistent bullet style**: Use `-` (dash) for all bullets, not `*`.
 5. **Write the final file** to `site-new/src/content/release-notes/<version>.mdx`.
 6. **Show a summary** to the user: list the sections, entry count per section, and any entries
