@@ -737,6 +737,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             case MODIFIED:
                 final String nodeIp;
                 try {
+                    assert nodeIpExtractor != null;
                     nodeIp = nodeIpExtractor.apply(node);
                 } catch (Throwable ex) {
                     logger.warn("[{}/{}] Failed to extract the IP address of the node: {}",
