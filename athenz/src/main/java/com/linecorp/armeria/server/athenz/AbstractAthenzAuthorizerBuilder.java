@@ -24,7 +24,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
-import com.yahoo.athenz.zpe.ZpeClient;
 import com.yahoo.athenz.zpe.ZpeConsts;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 
@@ -141,7 +140,7 @@ public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthen
                                          "Athenz authorizer");
         final PublicKeyStore publicKeyStore = new AthenzPublicKeyProvider(
                 ztsBaseClient, oauth2KeysRefreshInterval, oauth2KeysPath);
-        final ZpeClient zpeClient = new AthenzPolicyClient(
+        final AthenzPolicyClient zpeClient = new AthenzPolicyClient(
                 ztsBaseClient, policyConfig, publicKeyStore, maxTokenCacheSize,
                 firstNonNull(meterRegistry, Flags.meterRegistry()), meterIdPrefix);
         // NB: zpeClient.init() will block until the initial policy data is loaded.

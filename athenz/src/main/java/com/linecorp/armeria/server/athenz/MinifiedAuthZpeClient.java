@@ -44,13 +44,13 @@ import javax.net.ssl.SSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.oath.auth.KeyRefresher;
 import com.oath.auth.Utils;
 import com.yahoo.athenz.auth.token.AccessToken;
 import com.yahoo.athenz.auth.token.RoleToken;
 import com.yahoo.athenz.auth.token.jwts.JwtsSigningKeyResolver;
 import com.yahoo.athenz.auth.util.CryptoException;
-import com.yahoo.athenz.zpe.ZpeClient;
 import com.yahoo.athenz.zpe.ZpeConsts;
 import com.yahoo.athenz.zpe.match.ZpeMatch;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
@@ -86,10 +86,10 @@ final class MinifiedAuthZpeClient {
 
     private int allowedOffset = 300;
     private JwtsSigningKeyResolver accessSignKeyResolver;
-    private final ZpeClient zpeClt;
+    private final AthenzPolicyClient zpeClt;
     private final PublicKeyStore publicKeyStore;
 
-    MinifiedAuthZpeClient(ZtsBaseClient ztsBaseClient, PublicKeyStore publicKeyStore, ZpeClient zpeClt,
+    MinifiedAuthZpeClient(ZtsBaseClient ztsBaseClient, PublicKeyStore publicKeyStore, AthenzPolicyClient zpeClt,
                           String oauth2KeysPath) {
         this.publicKeyStore = publicKeyStore;
         this.zpeClt = zpeClt;
@@ -264,11 +264,14 @@ final class MinifiedAuthZpeClient {
     private AccessCheckStatus allowRoleTokenAccess(String roleToken, String resource, String action,
                                                    StringBuilder matchRoleName) {
 
-        final Map<String, RoleToken> tokenCache = zpeClt.getRoleTokenCacheMap();
-        RoleToken rToken = tokenCache.get(roleToken);
+        final Cache<String, RoleToken> tokenCache = zpeClt.getRoleTokenCache();
+        // NB: Cache.get() does not record statistics for cache hits/misses.
+        RoleToken rToken = tokenCache.getIfPresent(roleToken);
 
         if (rToken == null) {
 
+            // TODO(ikhoon): Consider using tokenCache.get() with a mapping function to avoid potential race
+            //               conditions where multiple threads might be validating the same token concurrently.
             rToken = new RoleToken(roleToken);
 
             // validate the token. validation also verifies that
@@ -306,40 +309,38 @@ final class MinifiedAuthZpeClient {
             accessToken = accessToken.substring(BEARER_TOKEN.length());
         }
 
-        final Map<String, AccessToken> tokenCache = zpeClt.getAccessTokenCacheMap();
-        AccessToken acsToken = tokenCache.get(accessToken);
+        final Cache<String, AccessToken> tokenCache = zpeClt.getAccessTokenCache();
+        final AccessToken acsToken;
+        try {
+            acsToken = tokenCache.get(accessToken, key -> {
+                if (cert == null && certHash == null) {
+                    return new AccessToken(key, accessSignKeyResolver);
+                } else {
+                    return new AccessToken(key, accessSignKeyResolver, cert, certHash);
+                }
+            });
+        } catch (CryptoException ex) {
+
+            logger.warn("allowAccess: Authorization denied. Authentication failed for token={}",
+                        ex.getMessage());
+            return (ex.getCode() == CryptoException.CERT_HASH_MISMATCH) ?
+                   AccessCheckStatus.DENY_CERT_HASH_MISMATCH : AccessCheckStatus.DENY_ROLETOKEN_INVALID;
+        } catch (Exception ex) {
+
+            logger.warn("allowAccess: Authorization denied. Authentication failed for token={}",
+                        ex.getMessage());
+            return AccessCheckStatus.DENY_ROLETOKEN_INVALID;
+        }
+
+        assert acsToken != null;
 
         // if we have an x.509 certificate provided then we need to
         // validate our mtls client certificate confirmation value
         // before accepting the token from the cache
 
-        if (acsToken != null && cert != null && !acsToken.confirmMTLSBoundToken(cert, certHash)) {
+        if (cert != null && !acsToken.confirmMTLSBoundToken(cert, certHash)) {
             logger.warn("allowAccess: mTLS Client certificate confirmation failed");
             return AccessCheckStatus.DENY_CERT_HASH_MISMATCH;
-        }
-
-        if (acsToken == null) {
-
-            try {
-                if (cert == null && certHash == null) {
-                    acsToken = new AccessToken(accessToken, accessSignKeyResolver);
-                } else {
-                    acsToken = new AccessToken(accessToken, accessSignKeyResolver, cert, certHash);
-                }
-            } catch (CryptoException ex) {
-
-                logger.warn("allowAccess: Authorization denied. Authentication failed for token={}",
-                            ex.getMessage());
-                return (ex.getCode() == CryptoException.CERT_HASH_MISMATCH) ?
-                       AccessCheckStatus.DENY_CERT_HASH_MISMATCH : AccessCheckStatus.DENY_ROLETOKEN_INVALID;
-            } catch (Exception ex) {
-
-                logger.warn("allowAccess: Authorization denied. Authentication failed for token={}",
-                            ex.getMessage());
-                return AccessCheckStatus.DENY_ROLETOKEN_INVALID;
-            }
-
-            addTokenToCache(tokenCache, accessToken, acsToken);
         }
 
         return allowAccess(acsToken, resource, action, matchRoleName);
@@ -769,7 +770,7 @@ final class MinifiedAuthZpeClient {
         return false;
     }
 
-    private static <T> void addTokenToCache(Map<String, T> tokenCache, final String tokenKey, T tokenValue) {
+    private static <T> void addTokenToCache(Cache<String, T> tokenCache, final String tokenKey, T tokenValue) {
         tokenCache.put(tokenKey, tokenValue);
     }
 }

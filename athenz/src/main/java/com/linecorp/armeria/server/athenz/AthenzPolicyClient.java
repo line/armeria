@@ -22,6 +22,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToLongFunction;
 
+import javax.annotation.Nullable;
+
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -84,7 +86,7 @@ final class AthenzPolicyClient implements ZpeClient {
     }
 
     @Override
-    public void init(String domain) {
+    public void init(@Nullable String domain) {
         for (AthenzPolicyLoader loader : policyLoaders.values()) {
             try {
                 loader.init();
@@ -97,14 +99,31 @@ final class AthenzPolicyClient implements ZpeClient {
     @Override
     public void close() {}
 
+    /**
+     * @deprecated Use {@link #getRoleTokenCache()} instead to get the Caffeine {@link Cache} instance directly.
+     */
+    @Deprecated
     @Override
     public Map<String, RoleToken> getRoleTokenCacheMap() {
         return roleTokenCache.asMap();
     }
 
+    Cache<String, RoleToken> getRoleTokenCache() {
+        return roleTokenCache;
+    }
+
+    /**
+     * @deprecated Use {@link #getAccessTokenCache()} instead to get the Caffeine {@link Cache} instance
+     *             directly.
+     */
+    @Deprecated
     @Override
     public Map<String, AccessToken> getAccessTokenCacheMap() {
         return accessTokenCache.asMap();
+    }
+
+    Cache<String, AccessToken> getAccessTokenCache() {
+        return accessTokenCache;
     }
 
     private AthenzAssertions assertionGroup(String domain) {
