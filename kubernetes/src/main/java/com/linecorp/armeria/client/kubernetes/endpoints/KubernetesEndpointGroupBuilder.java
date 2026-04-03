@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -68,7 +69,10 @@ public final class KubernetesEndpointGroupBuilder
     @Nullable
     private String portName;
 
-    private Function<Node, @Nullable String> nodeIpExtractor = toNodeIpExtractor(DEFAULT_NODE_ADDRESS_FILTER);
+    @Nullable
+    private Function<Node, @Nullable String> nodeIpExtractor;
+
+    private KubernetesEndpointMode mode = KubernetesEndpointMode.NODE_PORT;
 
     private long maxWatchAgeMillis = DEFAULT_MAX_WATCH_AGE_MILLIS;
 
@@ -98,12 +102,29 @@ public final class KubernetesEndpointGroupBuilder
     }
 
     /**
-     * Sets the name of the <a href="https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports">port</a>
-     * from which <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
-     * should be fetched from. If not set, the first node port will be used.
+     * Sets the port name used to select the target port.
+     *
+     * <p>In {@link KubernetesEndpointMode#NODE_PORT} mode, the port name is matched against the
+     * <a href="https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports">ServicePort</a>
+     * name to determine the
+     * <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>.
+     * If not set, the first node port will be used.
+     *
+     * <p>In {@link KubernetesEndpointMode#POD} mode, the port name is matched against the
+     * {@link ContainerPort#getName()} to determine the container port.
+     * If not set, the first container port will be used.
      */
     public KubernetesEndpointGroupBuilder portName(String portName) {
         this.portName = requireNonNull(portName, "portName");
+        return this;
+    }
+
+    /**
+     * Sets the {@link KubernetesEndpointMode} for endpoint discovery.
+     * If unspecified, {@link KubernetesEndpointMode#NODE_PORT} is used.
+     */
+    public KubernetesEndpointGroupBuilder mode(KubernetesEndpointMode mode) {
+        this.mode = requireNonNull(mode, "mode");
         return this;
     }
 
@@ -112,6 +133,8 @@ public final class KubernetesEndpointGroupBuilder
      * of a Kubernetes node.
      * The first selected {@link NodeAddress} of a node will be used to create the {@link Endpoint}.
      * If unspecified, the default is to select an {@code InternalIP} address that is not empty.
+     *
+     * <p>This option is ignored when {@link KubernetesEndpointMode#POD} is used.
      */
     public KubernetesEndpointGroupBuilder nodeAddressFilter(Predicate<? super NodeAddress> nodeAddressFilter) {
         requireNonNull(nodeAddressFilter, "nodeAddressFilter");
@@ -126,6 +149,9 @@ public final class KubernetesEndpointGroupBuilder
      *
      * <p>Note that this method is mutually exclusive with {@link #nodeAddressFilter(Predicate)}. If both
      * methods are called, the last one will take precedence.
+     *
+     * <p>If {@link KubernetesEndpointMode#POD} is used, this method is not supported and an
+     * {@link IllegalStateException} will be thrown when {@link #build()} is called.
      */
     public KubernetesEndpointGroupBuilder nodeIpExtractor(
             Function<? super Node, @Nullable String> nodeIpExtractor) {
@@ -175,8 +201,14 @@ public final class KubernetesEndpointGroupBuilder
      */
     public KubernetesEndpointGroup build() {
         checkState(serviceName != null, "serviceName not set");
+        if (mode == KubernetesEndpointMode.POD && nodeIpExtractor != null) {
+            throw new IllegalStateException("nodeIpExtractor is not supported in POD mode");
+        }
+        if (nodeIpExtractor == null) {
+            nodeIpExtractor = toNodeIpExtractor(DEFAULT_NODE_ADDRESS_FILTER);
+        }
         return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName,
-                                           nodeIpExtractor, autoClose,
+                                           nodeIpExtractor, autoClose, mode,
                                            selectionStrategy, shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis(), maxWatchAgeMillis);
     }
