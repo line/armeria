@@ -22,8 +22,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToLongFunction;
 
-import javax.annotation.Nullable;
-
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -39,6 +37,7 @@ import com.yahoo.rdl.Struct;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 
@@ -100,6 +99,8 @@ final class AthenzPolicyClient implements ZpeClient {
     public void close() {}
 
     /**
+     * Deprecated because some operations of {@link Map} does not record stats in Caffeine.
+     *
      * @deprecated Use {@link #getRoleTokenCache()} instead to get the Caffeine {@link Cache} instance directly.
      */
     @Deprecated
@@ -113,6 +114,8 @@ final class AthenzPolicyClient implements ZpeClient {
     }
 
     /**
+     * Deprecated because some operations of {@link Map} does not record stats in Caffeine.
+     *
      * @deprecated Use {@link #getAccessTokenCache()} instead to get the Caffeine {@link Cache} instance
      *             directly.
      */
