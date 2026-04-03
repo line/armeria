@@ -1,0 +1,139 @@
+---
+date: 2026-04-03
+---
+
+# v1.38.0
+
+## 🌟 New features
+
+- **HTTP/JSON to gRPC Proxy**: You can now use [DelegatingHttpJsonTranscodingService](type) to accept
+  HTTP/JSON traffic and forward it as gRPC to any [HttpService](type) delegate, without needing a
+  local gRPC service implementation. #6669
+  ```java
+  WebClient client = ...;
+  HttpService delegate = (ctx, req) -> client.execute(req);
+  DelegatingHttpJsonTranscodingService service =
+      DelegatingHttpJsonTranscodingService
+          .builder(delegate)
+          .serviceDescriptors(MyServiceGrpc.getServiceDescriptor()) // 👈👈👈
+          .build();
+  ```
+- **KubernetesEndpointGroup POD Mode**: [KubernetesEndpointGroup](type) now supports `POD` mode for
+  intra-cluster communication, connecting directly to `podIP:containerPort` for true client-side
+  load balancing. #6600 #6661
+  ```java
+  KubernetesEndpointGroup endpointGroup =
+      KubernetesEndpointGroup.builder(kubernetesClient)
+                              .namespace("my-namespace")
+                              .serviceName("my-service")
+                              .mode(KubernetesEndpointMode.POD) // 👈👈👈
+                              .build();
+  ```
+- **Envoy gRPC HTTP/1.1 Bridge**: [GrpcService](type) now supports the Envoy gRPC HTTP/1.1 bridge
+  specification via [GrpcServiceBuilder#enableEnvoyHttp1Bridge(boolean)](type). When enabled, unary
+  gRPC responses over HTTP/1.1 merge `grpc-status` and trailers into response headers, improving
+  compatibility with legacy proxy servers. This applies only to unary methods; streaming methods
+  are unaffected. #6664 #6689
+  ```java
+  GrpcService.builder()
+             .addService(myGrpcService)
+             .enableEnvoyHttp1Bridge(true) // 👈👈👈
+             .build();
+  ```
+- **Kubernetes Node IP Extractor**: [KubernetesEndpointGroup](type) can now extract a Node IP from
+  labels or annotations via [KubernetesEndpointGroupBuilder#nodeIpExtractor(Function)](type),
+  useful for CNI-managed environments like Calico. #6660
+- **Additional BuiltInProperty Entries**: [BuiltInProperty](type) now includes 15 new properties for
+  timing, content preview, and protocol information, aligning it with [AccessLogComponent](type).
+  #4403 #6683
+  - Timing: `req.start_time_millis`, `req.duration_millis`, `res.duration_millis`,
+    `total_duration_millis`, etc.
+  - Content preview: `req.content_preview`, `res.content_preview`
+  - Protocol: `serialization.format`, `session.protocol`, `host`
+- **Token Preloading**: You can now set [AsyncLoaderBuilder#preload(boolean)](type) to eagerly fetch
+  tokens at build time, reducing first-request latency. [OAuth2AuthorizationGrantBuilder](type) and
+  [AthenzClientBuilder](type) also support this option. #6688
+- **Standalone Athenz Token Client**: You can now use [AthenzTokenClient](type) to fetch Athenz
+  tokens independently of Armeria's HTTP decorator pipeline. #6431 #6691
+  ```java
+  AthenzTokenClient tokenClient =
+      AthenzTokenClient.builder(ztsBaseClient)
+                        .domainName("my-domain")
+                        .roleNames("my-role")
+                        .build();
+  tokenClient.getToken().thenAccept(token -> { // 👈👈👈
+      // Use the token with any HTTP client.
+  });
+  ```
+- **Athenz Metrics**: You can now monitor Athenz policy load success/failure rates and token cache
+  hit/miss metrics via a configurable `MeterRegistry` on [AthenzAuthorizer](type) and
+  [AthenzService](type) builders. #6690
+- **xDS SDS Integration**: xDS now supports transport-socket TLS with SAN and certificate pin
+  verification for upstream connections, and SDS integration with [XdsPreprocessor](type). #6628
+
+## 📈 Improvements
+
+- [StreamDecoderFactory](type) now supports flexible content-encoding matching via
+  [StreamDecoderFactory#matchesEncodingHeaderValue(String)](type). This fixes interoperability with
+  frameworks like Netty that return `snappy` instead of `x-snappy-framed`. #6681 #6684
+- You can now bind a [VirtualHost](type) to a random (ephemeral) port using a [ServerPort](type)
+  object, useful for CI environments where port conflicts must be avoided. #6410 #6603
+  ```java
+  ServerPort port1 = new ServerPort(0, SessionProtocol.HTTP);
+  ServerPort port2 = new ServerPort(0, SessionProtocol.HTTP);
+  Server server = Server.builder()
+      .port(port1)
+      .virtualHost(port1) // 👈👈👈
+          .service("/foo", (ctx, req) -> HttpResponse.of("foo"))
+      .and()
+      .port(port2)
+      .virtualHost(port2) // 👈👈👈
+          .service("/bar", (ctx, req) -> HttpResponse.of("bar"))
+      .and()
+      .build();
+  ```
+- [DocService](type) now correctly generates JSON Schema with `oneOf` and `discriminator` fields for
+  types annotated with Jackson's `@JsonTypeInfo` and `@JsonSubTypes`. #6370
+
+## 🛠️ Bug fixes
+
+- [RequestContextExportingAppender](type) no longer throws a `NullPointerException` during
+  [RequestContextStorage](type) initialization in Logback 1.5.21 and later. #6662
+
+## ⛓ Dependencies
+
+- Athenz 1.12.35 → 1.12.37
+- Brave 6.3.0 → 6.3.1
+- Brotli4j 1.20.0 → 1.22.0
+- Envoy control plane 1.0.49 → 1.0.52
+- Eureka 2.0.5 → 2.0.6
+- gRPC-Java 1.78.0 → 1.80.0
+- Jackson 2.21.1 → 2.21.2
+- Kubernetes client 7.5.2 → 7.6.1
+- Micrometer 1.16.3 → 1.16.4
+- Micrometer Tracing 1.6.3 → 1.6.4
+- Netty 4.2.10.Final → 4.2.12.Final
+- Prometheus 1.5.0 → 1.5.1
+- Protobuf 4.34.0 → 4.34.1
+- Reactor 3.8.3 → 3.8.4
+- Sangria 4.2.15 → 4.2.17
+- Spring Boot 4.0.3 → 4.0.5
+- Spring Framework 7.0.5 → 7.0.6
+- Testcontainers 2.0.3 → 2.0.4
+- ZooKeeper 3.9.4 → 3.9.5
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  '0x1306e6d',
+  'AlexKolpa',
+  'PreAgile',
+  'YoungHoney',
+  'davinkevin',
+  'ikhoon',
+  'injae-kim',
+  'jrhee17',
+  'junjunclub',
+  'kwondh5217',
+  'minwoox'
+]} />
