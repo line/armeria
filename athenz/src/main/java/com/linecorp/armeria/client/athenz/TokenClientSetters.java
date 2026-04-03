@@ -22,9 +22,12 @@ import java.time.Duration;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A set of setter methods for configuring a Athenz token client builder.
  */
+@UnstableApi
 public interface TokenClientSetters<SELF extends TokenClientSetters<SELF>> {
 
     /**

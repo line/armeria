@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2026 LY Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -67,9 +67,9 @@ public interface AthenzTokenClient {
     List<String> roleNames();
 
     /**
-     * Returns a token. The returned {@link CompletableFuture} is completed when the token is successfully fetched
-     * from Athenz ZTS. The returned {@link CompletableFuture} is completed exceptionally if the token cannot be
-     * fetched from Athenz ZTS.
+     * Returns a token. The returned {@link CompletableFuture} is completed when the token is successfully
+     * fetched from Athenz ZTS. The returned {@link CompletableFuture} is completed exceptionally if the token
+     * cannot be fetched from Athenz ZTS.
      */
     CompletableFuture<String> getToken();
 }

@@ -115,8 +115,8 @@ final class RoleTokenClient implements AthenzTokenClient {
             if (exception.response().status() == HttpStatus.FORBIDDEN) {
                 return UnmodifiableFuture.exceptionallyCompletedFuture(
                         new AccessDeniedException("Failed to obtain an Athenz role token. " +
-                                                  "(domain: " + domainName + ", roles: " + roleNamesString + ')',
-                                                  exception));
+                                                  "(domain: " + domainName + ", roles: " + roleNamesString +
+                                                  ')', exception));
             }
         }
         return null;
