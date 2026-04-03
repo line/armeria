@@ -225,7 +225,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                 if (status.getDescription() != null) {
                                     newStatus = newStatus.withDescription(status.getDescription());
                                 }
-                                doClose(new ServerStatusAndMetadata(newStatus, metadata), cause);
+                                close(new ServerStatusAndMetadata(newStatus, metadata), cause);
                                 return null;
                             }, ctx.eventLoop());
         } else {
@@ -249,7 +249,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                     statusAndMetadata = new StatusAndMetadata(
                                             Status.INTERNAL.withCause(exception), new Metadata());
                                 }
-                                doClose(new ServerStatusAndMetadata(
+                                close(new ServerStatusAndMetadata(
                                         statusAndMetadata.status(), statusAndMetadata.metadata(),
                                         cancelled), exception);
                                 return null;
