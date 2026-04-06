@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -174,7 +175,7 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
     void testRootsServerCloseWithActiveSubscription(String clientType) {
         final var clientBuilder = clientBuilders.get(clientType);
         final var roots = List.of(new McpSchema.Root("uri1://", "root1"));
-        final var rootsRef = new java.util.concurrent.atomic.AtomicReference<List<McpSchema.Root>>();
+        final var rootsRef = new AtomicReference<List<McpSchema.Root>>();
 
         final var mcpServer = prepareSyncServerBuilder()
                 .rootsChangeHandler((exchange, rootsUpdate) -> rootsRef.set(rootsUpdate))
