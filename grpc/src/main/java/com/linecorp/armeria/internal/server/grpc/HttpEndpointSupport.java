@@ -20,10 +20,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.grpc.GrpcService;
 
 /**
- * Marks a {@link GrpcService} as HTTP endpoints providable. Currently, we use this interface
+ * Marks a service as HTTP endpoints providable. Currently, we use this interface
  * when specifying an HTTP endpoint for HTTP/JSON to gRPC transcoding feature.
  */
 @UnstableApi
