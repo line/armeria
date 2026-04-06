@@ -142,6 +142,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private int maxRequestMessageLength;
     private final boolean lookupMethodFromAttribute;
     private final boolean autoCompression;
+    private final boolean enableEnvoyHttp1Bridge;
 
     FramedGrpcService(HandlerRegistry registry,
                       DecompressorRegistry decompressorRegistry,
@@ -155,7 +156,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
-                      boolean autoCompression, boolean useMethodMarshaller) {
+                      boolean autoCompression, boolean useMethodMarshaller,
+                      boolean enableEnvoyHttp1Bridge) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
@@ -175,6 +177,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         this.autoCompression = autoCompression;
         this.useMethodMarshaller = useMethodMarshaller;
+        this.enableEnvoyHttp1Bridge = enableEnvoyHttp1Bridge;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -372,7 +375,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     exceptionHandler,
                     blockingExecutor,
                     autoCompression,
-                    useMethodMarshaller);
+                    useMethodMarshaller,
+                    enableEnvoyHttp1Bridge);
         } else {
             return new StreamingServerCall<>(
                     req,
