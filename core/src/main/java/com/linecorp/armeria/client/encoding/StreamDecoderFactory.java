@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.encoding;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -58,7 +60,7 @@ public interface StreamDecoderFactory {
      */
     @UnstableApi
     default boolean supportsContentEncoding(String encodingValue) {
-        return encodingValue.equalsIgnoreCase(encodingHeaderValue());
+        return requireNonNull(encodingValue, "encodingValue").equalsIgnoreCase(encodingHeaderValue());
     }
 
     /**
