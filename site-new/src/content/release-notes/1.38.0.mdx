@@ -29,8 +29,8 @@ date: 2026-04-07
                               .mode(KubernetesEndpointMode.POD) // 👈👈👈
                               .build();
   ```
-- **Envoy gRPC HTTP/1.1 Bridge**: [GrpcService](type) now supports the Envoy gRPC HTTP/1.1 bridge
-  specification via [GrpcServiceBuilder#enableEnvoyHttp1Bridge(boolean)](type). When enabled, unary
+- **Envoy gRPC HTTP/1.1 Bridge**: [GrpcService](type) now supports the [Envoy gRPC HTTP/1.1 bridge specification](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_http1_bridge_filter)
+  via [GrpcServiceBuilder#enableEnvoyHttp1Bridge(boolean)](type). When enabled, unary
   gRPC responses over HTTP/1.1 merge `grpc-status` and trailers into response headers, improving
   compatibility with legacy proxy servers. This applies only to unary methods; streaming methods
   are unaffected. #6664 #6689
