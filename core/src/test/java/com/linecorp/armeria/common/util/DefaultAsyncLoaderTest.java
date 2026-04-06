@@ -664,6 +664,94 @@ class DefaultAsyncLoaderTest {
     }
 
     @Test
+    void preload() {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+                UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .preload(true)
+                .expireIf(i -> false)
+                .build();
+
+        // The loader should have been called once during build().
+        await().untilAsserted(() -> assertThat(loadCounter.get()).isOne());
+        // load() should return the preloaded value without calling the loader again.
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.load().join()).isOne();
+            assertThat(loadCounter.get()).isOne();
+        }
+    }
+
+    @Test
+    void preloadDisabledByDefault() {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+                UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> false)
+                .build();
+
+        // The loader should not be called until load() is called.
+        assertThat(loadCounter.get()).isZero();
+        assertThat(loader.load().join()).isOne();
+        assertThat(loadCounter.get()).isOne();
+    }
+
+    @Test
+    void preloadWithRefreshIf() {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final AtomicBoolean refresh = new AtomicBoolean();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+                UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .preload(true)
+                .refreshIf(i -> refresh.get())
+                .expireIf(i -> false)
+                .build();
+
+        // Preloaded value should be available.
+        await().untilAsserted(() -> assertThat(loadCounter.get()).isOne());
+        assertThat(loader.load().join()).isOne();
+
+        // Trigger refresh.
+        refresh.set(true);
+        await().untilAsserted(() -> {
+            final int val = loader.load().join();
+            refresh.set(false);
+            assertThat(val).isEqualTo(2);
+        });
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.load().join()).isEqualTo(2);
+            assertThat(loadCounter.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void preloadWithExpireAfterLoad() throws InterruptedException {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+                UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .preload(true)
+                .expireAfterLoad(Duration.ofSeconds(1))
+                .build();
+
+        // The preloaded value should be available.
+        await().untilAsserted(() -> assertThat(loadCounter.get()).isOne());
+        assertThat(loader.load().join()).isOne();
+
+        // After expiry, a new value should be loaded.
+        Thread.sleep(1500);
+        assertThat(loader.load().join()).isEqualTo(2);
+        assertThat(loadCounter.get()).isEqualTo(2);
+    }
+
+    @Test
     void testForceReload() {
         final AtomicInteger source = new AtomicInteger(0);
         final AsyncLoader<Integer> asyncLoader =

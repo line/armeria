@@ -44,7 +44,7 @@ final class RoleTokenClient implements TokenClient {
     private final AsyncLoader<RoleToken> tokenLoader;
 
     RoleTokenClient(ZtsBaseClient ztsBaseClient, String domainName, List<String> roleNames,
-                    Duration refreshBefore) {
+                    Duration refreshBefore, boolean preload) {
         webClient = ztsBaseClient.webClient();
         this.domainName = domainName;
         this.roleNames = ROLE_JOINER.join(roleNames);
@@ -54,6 +54,7 @@ final class RoleTokenClient implements TokenClient {
                                  .exceptionHandler(this::errorHandler)
                                  .refreshIf(token -> remainingTimeSec(token) < refreshBeforeSec)
                                  .expireIf(token -> remainingTimeSec(token) == 0)
+                                 .preload(preload)
                                  .build();
     }
 

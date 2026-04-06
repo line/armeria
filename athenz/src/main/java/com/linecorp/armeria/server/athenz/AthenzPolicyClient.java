@@ -37,6 +37,11 @@ import com.yahoo.rdl.Struct;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 final class AthenzPolicyClient implements ZpeClient {
 
@@ -45,29 +50,42 @@ final class AthenzPolicyClient implements ZpeClient {
     private final Map<String, AthenzPolicyLoader> policyLoaders;
 
     AthenzPolicyClient(ZtsBaseClient baseClient, AthenzPolicyConfig policyConfig, PublicKeyStore publicKeyStore,
-                       int maxTokenCacheSize) {
+                       int maxTokenCacheSize, MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         final Executor executor = CommonPools.blockingTaskExecutor();
         roleTokenCache = Caffeine.newBuilder()
                                  .maximumSize(maxTokenCacheSize)
                                  .expireAfter(new TokenExpiry<>(RoleToken::getExpiryTime))
                                  .executor(executor)
+                                 .recordStats()
                                  .build();
         accessTokenCache = Caffeine.newBuilder()
                                    .maximumSize(maxTokenCacheSize)
                                    .expireAfter(new TokenExpiry<>(AccessToken::getExpiryTime))
                                    .executor(executor)
+                                   .recordStats()
                                    .build();
+
+        final String domains = String.join(",", policyConfig.domains());
+        CaffeineMetricSupport.setup(meterRegistry,
+                                    meterIdPrefix.appendWithTags("token.cache",
+                                                                 "type", "role", "domains", domains),
+                                    roleTokenCache);
+        CaffeineMetricSupport.setup(meterRegistry,
+                                    meterIdPrefix.appendWithTags("token.cache",
+                                                                 "type", "access", "domains", domains),
+                                    accessTokenCache);
 
         final ImmutableMap.Builder<String, AthenzPolicyLoader> builder =
                 ImmutableMap.builderWithExpectedSize(policyConfig.domains().size());
         for (String domain : policyConfig.domains()) {
-            builder.put(domain, new AthenzPolicyLoader(baseClient, domain, policyConfig, publicKeyStore));
+            builder.put(domain, new AthenzPolicyLoader(baseClient, domain, policyConfig, publicKeyStore,
+                                                       meterRegistry, meterIdPrefix));
         }
         policyLoaders = builder.buildKeepingLast();
     }
 
     @Override
-    public void init(String domain) {
+    public void init(@Nullable String domain) {
         for (AthenzPolicyLoader loader : policyLoaders.values()) {
             try {
                 loader.init();
@@ -80,14 +98,35 @@ final class AthenzPolicyClient implements ZpeClient {
     @Override
     public void close() {}
 
+    /**
+     * Deprecated because some operations of {@link Map} does not record stats in Caffeine.
+     *
+     * @deprecated Use {@link #getRoleTokenCache()} instead to get the Caffeine {@link Cache} instance directly.
+     */
+    @Deprecated
     @Override
     public Map<String, RoleToken> getRoleTokenCacheMap() {
         return roleTokenCache.asMap();
     }
 
+    Cache<String, RoleToken> getRoleTokenCache() {
+        return roleTokenCache;
+    }
+
+    /**
+     * Deprecated because some operations of {@link Map} does not record stats in Caffeine.
+     *
+     * @deprecated Use {@link #getAccessTokenCache()} instead to get the Caffeine {@link Cache} instance
+     *             directly.
+     */
+    @Deprecated
     @Override
     public Map<String, AccessToken> getAccessTokenCacheMap() {
         return accessTokenCache.asMap();
+    }
+
+    Cache<String, AccessToken> getAccessTokenCache() {
+        return accessTokenCache;
     }
 
     private AthenzAssertions assertionGroup(String domain) {

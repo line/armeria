@@ -45,6 +45,7 @@ public final class OAuth2AuthorizationGrantBuilder {
      */
     private static final Predicate<? super GrantedOAuth2AccessToken> DEFAULT_REFRESH_IF =
             toRefreshIf(DEFAULT_REFRESH_BEFORE);
+    private boolean preload;
 
     private static Predicate<? super GrantedOAuth2AccessToken> toRefreshIf(Duration refreshBefore) {
         return token -> !token.isValid(Instant.now().plus(refreshBefore));
@@ -161,12 +162,22 @@ public final class OAuth2AuthorizationGrantBuilder {
     }
 
     /**
+     * Sets whether to acquire an access token proactively when the {@link OAuth2AuthorizationGrant} is built.
+     * This options is disabled by default and the client will acquire an access token lazily when the first
+     * request is made with the {@link OAuth2AuthorizationGrant}.
+     */
+    public OAuth2AuthorizationGrantBuilder preload(boolean preload) {
+        this.preload = preload;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link OAuth2AuthorizationGrant} based on the configuration set so far.
      */
     public OAuth2AuthorizationGrant build() {
         checkState(requestSupplier != null, "accessTokenRequest() is not set.");
         return new DefaultOAuth2AuthorizationGrant(
                 accessTokenEndpoint, accessTokenEndpointPath, requestSupplier, responseHandler, refreshIf,
-                fallbackTokenProvider, newTokenConsumer);
+                fallbackTokenProvider, newTokenConsumer, preload);
     }
 }

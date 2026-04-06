@@ -165,7 +165,7 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
 
     AthenzClient(HttpClient delegate, ZtsBaseClient ztsBaseClient, String domainName,
                  List<String> roleNames, AthenzTokenHeader tokenHeader, Duration refreshBefore,
-                 MeterIdPrefix meterIdPrefix) {
+                 MeterIdPrefix meterIdPrefix, boolean preload) {
         super(delegate);
         this.tokenHeader = tokenHeader;
         final MeterRegistry meterRegistry = ztsBaseClient.clientFactory().meterRegistry();
@@ -182,9 +182,9 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
                                                               "type", tokenHeader.name()));
 
         if (tokenHeader.isRoleToken()) {
-            tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
+            tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore, preload);
         } else {
-            tokenClient = new AccessTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore);
+            tokenClient = new AccessTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore, preload);
         }
     }
 
