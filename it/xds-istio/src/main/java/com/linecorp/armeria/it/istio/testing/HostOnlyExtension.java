@@ -32,8 +32,12 @@ abstract class HostOnlyExtension extends AbstractAllOrEachExtension {
 
     static final String RUNNING_IN_K8S_POD_ENV = "RUNNING_IN_K8S_POD";
 
+    static boolean isRunningInPod() {
+        return Boolean.parseBoolean(System.getenv(RUNNING_IN_K8S_POD_ENV));
+    }
+
     static boolean notRunningInPod() {
-        return !Boolean.parseBoolean(System.getenv(RUNNING_IN_K8S_POD_ENV));
+        return !isRunningInPod();
     }
 
     @Override

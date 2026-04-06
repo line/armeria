@@ -81,7 +81,6 @@ public final class IstioPodEntryPoint {
                 .build();
         final SummaryGeneratingListener listener = new SummaryGeneratingListener();
         final Launcher launcher = LauncherFactory.create();
-        launcher.discover(request);
         launcher.execute(request, listener);
 
         final long failures = listener.getSummary().getFailures().size();

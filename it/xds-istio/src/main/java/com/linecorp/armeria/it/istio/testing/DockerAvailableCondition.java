@@ -24,7 +24,7 @@ final class DockerAvailableCondition implements ExecutionCondition {
     @Override
     public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
         // When running inside a K8s pod, Docker is not available but the test should still run.
-        if (!HostOnlyExtension.notRunningInPod()) {
+        if (HostOnlyExtension.isRunningInPod()) {
             return ConditionEvaluationResult.enabled("Running inside K8s pod");
         }
         final boolean available = DockerClientFactory.instance().isDockerAvailable();

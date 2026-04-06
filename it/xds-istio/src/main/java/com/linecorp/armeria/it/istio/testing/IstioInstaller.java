@@ -34,6 +34,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 final class IstioInstaller {
 
     static final Duration DEFAULT_READY_TIMEOUT = Duration.ofMinutes(5);
+
     static final String DEFAULT_NAMESPACE = "istio-system";
 
     private static final String ISTIO_NAMESPACE_ENV = "ISTIO_NAMESPACE";
@@ -122,7 +123,13 @@ final class IstioInstaller {
                 logger.info("[{}] {}", logPrefix, line);
             }
         }
-        final int exitCode = process.waitFor();
+        final boolean finished = process.waitFor(DEFAULT_READY_TIMEOUT);
+        if (!finished) {
+            process.destroyForcibly();
+            throw new IllegalStateException("Command timed out after " + DEFAULT_READY_TIMEOUT +
+                                            " minutes: " + command);
+        }
+        final int exitCode = process.exitValue();
         if (exitCode != 0) {
             throw new IllegalStateException("Command failed (" + exitCode + "): " + command);
         }

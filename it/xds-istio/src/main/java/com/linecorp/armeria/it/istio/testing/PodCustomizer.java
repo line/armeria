@@ -40,6 +40,6 @@ public interface PodCustomizer {
      * The default implementation simply checks that the pod phase is {@code Running}.
      */
     default boolean isPodHealthy(Pod pod) {
-        return "Running".equals(pod.getStatus().getPhase());
+        return pod.getStatus() != null && "Running".equals(pod.getStatus().getPhase());
     }
 }

@@ -151,8 +151,9 @@ public final class IstioTestExtension implements InvocationInterceptor {
             return podCustomizer.isPodHealthy(pod);
         });
         if (!healthy) {
+            final String logs = collectPodLogs(client, podName, namespace);
             throw new IllegalStateException(
-                    "Timed out waiting for pod '" + podName + "' to become healthy");
+                    "Timed out waiting for pod '" + podName + "' to become healthy\nPod logs:\n" + logs);
         }
         logger.info("Pod '{}' is healthy", podName);
     }

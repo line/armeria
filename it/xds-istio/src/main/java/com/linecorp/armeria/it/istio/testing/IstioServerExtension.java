@@ -211,8 +211,20 @@ public final class IstioServerExtension extends HostOnlyExtension {
                                          .list()
                                          .getItems();
             return pods.stream().anyMatch(pod -> {
-                final String phase = pod.getStatus() != null ? pod.getStatus().getPhase() : null;
-                return "Running".equals(phase);
+                if (pod.getStatus() == null || !"Running".equals(pod.getStatus().getPhase())) {
+                    return false;
+                }
+                final var statuses = pod.getStatus().getContainerStatuses();
+                if (statuses == null) {
+                    return false;
+                }
+                final boolean serverReady = statuses.stream()
+                        .filter(cs -> "server".equals(cs.getName()))
+                        .anyMatch(cs -> Boolean.TRUE.equals(cs.getReady()));
+                final boolean proxyReady = statuses.stream()
+                        .filter(cs -> "istio-proxy".equals(cs.getName()))
+                        .anyMatch(cs -> Boolean.TRUE.equals(cs.getReady()));
+                return serverReady && proxyReady;
             });
         });
         if (!ready) {

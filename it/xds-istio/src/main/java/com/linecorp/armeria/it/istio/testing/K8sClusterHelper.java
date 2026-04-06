@@ -58,13 +58,18 @@ final class K8sClusterHelper {
 
     static K3sContainer startK3sAndWaitReady(Duration timeout, Duration pollInterval) throws Exception {
         final K3sContainer k3s = startK3s();
-        try (KubernetesClient client = createClient(k3s.getKubeConfigYaml())) {
-            if (!waitForReadyNode(client, timeout, pollInterval)) {
-                k3sLogger.warn("Failed to start K3s cluster within timeout: {}", k3s.getLogs());
-                throw new IllegalStateException("Timed out waiting for K3s cluster to be Ready.");
+        try {
+            try (KubernetesClient client = createClient(k3s.getKubeConfigYaml())) {
+                if (!waitForReadyNode(client, timeout, pollInterval)) {
+                    k3sLogger.warn("Failed to start K3s cluster within timeout: {}", k3s.getLogs());
+                    throw new IllegalStateException("Timed out waiting for K3s cluster to be Ready.");
+                }
             }
+            IstioTestImage.loadIntoK3s(k3s);
+        } catch (Exception e) {
+            k3s.stop();
+            throw e;
         }
-        IstioTestImage.loadIntoK3s(k3s);
         return k3s;
     }
 

@@ -22,6 +22,10 @@ import java.lang.annotation.Target;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
+/**
+ * Enables the annotated test class or method only when the Docker daemon is available,
+ * or when running inside a Kubernetes pod (where Docker is not needed).
+ */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(DockerAvailableCondition.class)

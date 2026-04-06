@@ -61,8 +61,11 @@ final class IstioTestImage {
             final Process saveProcess = new ProcessBuilder("docker", "save", IMAGE_NAME)
                     .redirectOutput(tempFile.toFile())
                     .start();
-            if (saveProcess.waitFor() != 0) {
-                throw new IllegalStateException("docker save exited with non-zero status");
+            final int exitCode = saveProcess.waitFor();
+            if (exitCode != 0) {
+                final String stderr = new String(saveProcess.getErrorStream().readAllBytes());
+                throw new IllegalStateException(
+                        "docker save exited with status " + exitCode + ": " + stderr);
             }
 
             // K3s's containerd cannot reach the host Docker socket, so we copy the tar in

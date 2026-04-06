@@ -92,7 +92,7 @@ krotodc = "1.2.2"
 ktlint-gradle-plugin = "14.0.1"
 kubernetes-client = "7.5.2"
 # used by :it:xds-istio
-istio = "1.29.0"
+istio = "1.29.1"
 logback12 = "1.2.13"
 logback13 = "1.3.14"
 logback14 = "1.4.14"

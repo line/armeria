@@ -91,6 +91,7 @@ class EnvoyDebugTest {
                               .collect(Collectors.toList());
         }
         logger.info("/etc/istio/proxy contents: {}", filenames);
+        assertThat(filenames).anyMatch(name -> name.endsWith(".json"));
 
         for (String name : filenames) {
             if (name.endsWith(".json")) {

@@ -50,7 +50,7 @@ public final class IstioPodCustomizer implements PodCustomizer {
 
     @Override
     public boolean isPodHealthy(Pod pod) {
-        if (!"Running".equals(pod.getStatus().getPhase())) {
+        if (pod.getStatus() == null || !"Running".equals(pod.getStatus().getPhase())) {
             return false;
         }
         final var statuses = pod.getStatus().getContainerStatuses();
