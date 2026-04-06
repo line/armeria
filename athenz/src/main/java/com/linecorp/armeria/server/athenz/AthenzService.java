@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.athenz.AthenzTokenHeader;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -148,21 +147,6 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         this.meterIdPrefix = meterIdPrefix;
         this.meterRegistry = meterRegistry;
         this.resourceTagValue = resourceTagValue;
-    }
-
-    AthenzService(HttpService delegate, AthenzAuthorizer authorizer, String athenzResource,
-                  String athenzAction, List<AthenzTokenHeader> tokenHeaders,
-                  MeterIdPrefix meterIdPrefix, @Nullable MeterRegistry meterRegistry) {
-        super(delegate);
-
-        this.authorizer = authorizer;
-        final UnmodifiableFuture<String> resourceFuture = UnmodifiableFuture.completedFuture(athenzResource);
-        athenzResourceProvider = (ctx, req) -> resourceFuture;
-        this.athenzAction = athenzAction;
-        this.tokenHeaders = tokenHeaders;
-        this.meterIdPrefix = meterIdPrefix;
-        this.meterRegistry = meterRegistry;
-        resourceTagValue = athenzResource;
     }
 
     @Override
