@@ -22,9 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -108,20 +105,5 @@ final class SubscriberStorage implements SafeCloseable {
             subscribers.values().forEach(XdsStreamSubscriber::close);
         });
         subscriberMap.clear();
-    }
-
-    static class ResourceCache {
-
-        private final Map<XdsType, Map<String, Object>> type2resources = new HashMap<>();
-
-        void updateResources(XdsType type, Map<String, Object> resources) {
-            type2resources.put(type, resources);
-        }
-
-        @Nullable
-        Object find(XdsType type, String resourceName) {
-            return type2resources.getOrDefault(type, ImmutableMap.of())
-                                 .get(resourceName);
-        }
     }
 }
