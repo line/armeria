@@ -39,7 +39,7 @@ interface Props {
   onDebugFormChange: (value: string) => void;
   method: Method;
   serviceType: ServiceType;
-  jsonSchemas: any[];
+  jsonSchemas: any;
 }
 
 const RequestBody: React.FunctionComponent<Props> = ({
@@ -59,13 +59,44 @@ const RequestBody: React.FunctionComponent<Props> = ({
     serviceType === ServiceType.GRPC || serviceType === ServiceType.THRIFT;
   useMemo(() => {
     if (supportsJsonSchema) {
-      const schema = jsonSchemas.find((s: any) => s.$id === method.id) || {};
+      // Find the method schema from the JSON Schema structure.
+      // Structure: { $defs: { methods: { "method-name": { $id: "service/method/HTTP", ... } } } }
+      let methodSchema: any = {};
+      const methods = jsonSchemas?.$defs?.methods;
+      const models = jsonSchemas?.$defs?.models;
+      if (methods && models) {
+        const found: any = Object.values(methods).find(
+          (m: any) => m.$id === method.id,
+        );
+        if (found) {
+          // Extract the request type schema directly for autocomplete
+          // The method schema has { properties: { request: { $ref: "..." } } }
+          // We want to use the referenced model as the root schema
+          const requestProp = found.properties?.request;
+          if (requestProp?.$ref) {
+            // Extract model name from $ref (e.g., "#/$defs/models/X" -> "X")
+            const modelName = requestProp.$ref.replace('#/$defs/models/', '');
+            const requestModel = models[modelName];
+            if (requestModel) {
+              methodSchema = {
+                ...requestModel,
+                $defs: { models },
+              };
+            }
+          } else {
+            methodSchema = {
+              ...found,
+              $defs: { models },
+            };
+          }
+        }
+      }
 
       monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
         validate: true,
         schemas: [
           {
-            schema,
+            schema: methodSchema,
             fileMatch: ['*'],
             uri: '*',
           },

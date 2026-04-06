@@ -681,7 +681,7 @@ class TlsPeerVerificationIntegrationTest {
 
     private static String mutateLastChar(String value) {
         final char last = value.charAt(value.length() - 1);
-        final char replacement = last == 'A' ? 'B' : 'A';
+        final char replacement = (last == 'A' || last == 'a') ? 'B' : 'A';
         return value.substring(0, value.length() - 1) + replacement;
     }
 

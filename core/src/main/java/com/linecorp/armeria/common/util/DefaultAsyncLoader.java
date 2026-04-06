@@ -67,6 +67,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                        @Nullable Predicate<? super T> expireIf,
                        @Nullable Duration refreshAfterLoad,
                        @Nullable Predicate<? super T> refreshIf,
+                       boolean preload,
                        @Nullable BiFunction<? super Throwable, ? super @Nullable T,
                                ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
         executor = CommonPools.blockingTaskExecutor();
@@ -80,6 +81,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         refreshAfterLoadNanos = refreshAfterLoad != null ? refreshAfterLoad.toNanos() : 0;
         this.refreshIf = refreshIf;
         this.exceptionHandler = exceptionHandler;
+        if (preload) {
+            load();
+        }
     }
 
     @Override

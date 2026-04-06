@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
@@ -68,6 +69,11 @@ public final class ServerPort implements Comparable<ServerPort> {
     private int hashCode;
     @Nullable
     private ServerPortMetric serverPortMetric;
+
+    /**
+     * The actual port after binding. -1 means not set yet.
+     */
+    private volatile int actualPort = -1;
 
     @Nullable
     private String strVal;
@@ -228,6 +234,37 @@ public final class ServerPort implements Comparable<ServerPort> {
         return portGroup;
     }
 
+    /**
+     * Returns the actual port this {@link ServerPort} is bound to.
+     * If the port was configured as 0 (ephemeral) and has been bound, returns the actual bound port.
+     * Otherwise, returns the configured port from {@link #localAddress()}.
+     */
+    @UnstableApi
+    public int actualPort() {
+        final int actualPort = this.actualPort;
+        if (actualPort > 0) {
+            return actualPort;
+        }
+        return localAddress.getPort();
+    }
+
+    /**
+     * Sets the actual port after binding.
+     * This is only allowed when the configured port is 0 (ephemeral) and hasn't been set yet.
+     *
+     * @param actualPort the actual bound port
+     * @throws IllegalArgumentException if actualPort is not positive
+     * @throws IllegalStateException if the configured port is not 0 or actualPort was already set
+     */
+    void setActualPort(int actualPort) {
+        checkArgument(actualPort > 0, "actualPort: %s (expected: > 0)", actualPort);
+        checkState(localAddress.getPort() == 0,
+                   "Cannot set actualPort for non-ephemeral port: %s", localAddress.getPort());
+        checkState(this.actualPort == -1,
+                   "actualPort is already set to %s", this.actualPort);
+        this.actualPort = actualPort;
+    }
+
     @Nullable
     ServerPortMetric serverPortMetric() {
         return serverPortMetric;
@@ -279,16 +316,24 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     @Override
     public String toString() {
+        final int ap = this.actualPort;
+        if (ap > 0 && localAddress.getPort() == 0) {
+            return toString(getClass(), localAddress(), protocols(), portGroup(), ap);
+        }
         String strVal = this.strVal;
         if (strVal == null) {
-            this.strVal = strVal = toString(getClass(), localAddress(), protocols(), portGroup());
+            this.strVal = strVal = toString(getClass(), localAddress(), protocols(), portGroup(), -1);
         }
-
         return strVal;
     }
 
     static String toString(@Nullable Class<?> type, InetSocketAddress localAddress,
                            Set<SessionProtocol> protocols, long portGroup) {
+        return toString(type, localAddress, protocols, portGroup, -1);
+    }
+
+    static String toString(@Nullable Class<?> type, InetSocketAddress localAddress,
+                           Set<SessionProtocol> protocols, long portGroup, int actualPort) {
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
             buf.append(type.getSimpleName());
@@ -299,6 +344,9 @@ public final class ServerPort implements Comparable<ServerPort> {
         buf.append(protocols);
         if (portGroup != 0) {
             buf.append(", group: ").append(portGroup);
+        }
+        if (actualPort > 0) {
+            buf.append(", actualPort: ").append(actualPort);
         }
         buf.append(')');
 

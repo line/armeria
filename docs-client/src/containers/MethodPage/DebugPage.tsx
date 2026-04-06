@@ -83,7 +83,7 @@ interface OwnProps {
   useRequestBody: boolean;
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
-  jsonSchemas: any[];
+  jsonSchemas: any;
   docServiceRoute?: Route;
 }
 

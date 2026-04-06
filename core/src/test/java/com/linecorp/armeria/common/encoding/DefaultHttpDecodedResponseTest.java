@@ -30,7 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,7 +42,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
@@ -71,11 +71,11 @@ import reactor.test.StepVerifier;
 
 class DefaultHttpDecodedResponseTest {
 
-    private static final Map<String, StreamDecoderFactory> OLD_DECODER =
-            ImmutableMap.of("gzip", StreamDecoderFactory.gzip());
+    private static final Set<StreamDecoderFactory> OLD_DECODER =
+            ImmutableSet.of(StreamDecoderFactory.gzip());
 
-    private static final Map<String, StreamDecoderFactory> DECODER =
-            ImmutableMap.of("gzip", com.linecorp.armeria.common.encoding.StreamDecoderFactory.gzip());
+    private static final Set<StreamDecoderFactory> DECODER =
+            ImmutableSet.of(com.linecorp.armeria.common.encoding.StreamDecoderFactory.gzip());
 
     private static final ResponseHeaders RESPONSE_HEADERS =
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_ENCODING, "gzip");
@@ -218,9 +218,10 @@ class DefaultHttpDecodedResponseTest {
                 com.linecorp.armeria.common.encoding.StreamDecoderFactory.class);
         final com.linecorp.armeria.common.encoding.StreamDecoder streamDecoder = mock(StreamDecoder.class);
         when(factory.newDecoder(any(), eq((int) ctx.maxResponseLength()))).thenReturn(streamDecoder);
+        when(factory.supportsContentEncoding(eq("foo"))).thenReturn(true);
         when(streamDecoder.decode(any())).thenReturn(data);
 
-        final HttpResponse decoded = new DefaultHttpDecodedResponse(response, ImmutableMap.of("foo", factory),
+        final HttpResponse decoded = new DefaultHttpDecodedResponse(response, ImmutableSet.of(factory),
                                                                     ctx, true);
         decoded.subscribe(new CancelSubscriber());
 
@@ -354,7 +355,7 @@ class DefaultHttpDecodedResponseTest {
                         };
                     }
                 };
-        return new DefaultHttpDecodedResponse(delegate, ImmutableMap.of("gzip", decoderFactory), ctx, false);
+        return new DefaultHttpDecodedResponse(delegate, ImmutableSet.of(decoderFactory), ctx, false);
     }
 
     private static HttpData responseData(HttpResponse decoded, boolean withPooledObjects) {
