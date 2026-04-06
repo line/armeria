@@ -25,12 +25,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableList;
 
@@ -76,6 +78,7 @@ class AthenzMetricsTest {
                     AthenzServiceDecoratorFactory.builder(baseClient)
                                                  .policyConfig(new AthenzPolicyConfig(TEST_DOMAIN_NAME))
                                                  .meterIdPrefix(new MeterIdPrefix("athenz.service.test"))
+                                                 .meterRegistry(serverMeterRegistry)
                                                  .build();
             sb.annotatedService(new AthenzAnnotatedService());
             final DependencyInjector di = DependencyInjector.ofSingletons(decoratorFactory)
@@ -214,6 +217,52 @@ class AthenzMetricsTest {
             assertThat(serviceAllowed.count() - numServiceAllowed).isZero();
             assertThat(serviceDenied.count() - numServiceDenied).isEqualTo(1);
         });
+    }
+
+    @Test
+    void shouldRecordPolicyLoadMetrics() {
+        // The policy loader should have recorded at least one successful load during initialization.
+        final double successCount =
+                serverMeterRegistry.counter("athenz.service.test.policy.loads",
+                                            "domain", TEST_DOMAIN_NAME,
+                                            "result", "success",
+                                            "type", "jws").count();
+        assertThat(successCount).isGreaterThanOrEqualTo(1);
+
+        final double failureCount =
+                serverMeterRegistry.counter("athenz.service.test.policy.loads",
+                                            "domain", TEST_DOMAIN_NAME,
+                                            "result", "failure",
+                                            "type", "jws").count();
+        assertThat(failureCount).isZero();
+    }
+
+    @EnumSource(TokenType.class)
+    @ParameterizedTest
+    void shouldRecordTokenCacheMetrics(TokenType tokenType) {
+        try (ZtsBaseClient ztsBaseClient = athenzExtension.newZtsBaseClient("test-service")) {
+            final BlockingWebClient client =
+                    WebClient.builder(server.httpUri())
+                             .decorator(AthenzClient.builder(ztsBaseClient)
+                                                    .domainName(TEST_DOMAIN_NAME)
+                                                    .roleNames(ADMIN_ROLE)
+                                                    .tokenType(tokenType)
+                                                    .meterIdPrefix(new MeterIdPrefix("athenz.client.test"))
+                                                    .newDecorator())
+                             .build()
+                             .blocking();
+
+            final AggregatedHttpResponse res = client.get("/secrets");
+            // Verify that Caffeine cache metrics are registered for the token caches.
+            await().untilAsserted(() -> {
+                final Map<String, Double> meters = MoreMeters.measureAll(serverMeterRegistry);
+                final String type = tokenType.isRoleToken() ? "role" : "access";
+                assertThat(meters).anySatisfy((meterId, value) -> {
+                    assertThat(meterId).startsWith("athenz.service.test.token.cache");
+                    assertThat(meterId).contains("type=" + type);
+                });
+            });
+        }
     }
 
     private static final class AthenzAnnotatedService {

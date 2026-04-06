@@ -93,10 +93,7 @@ public final class AthenzClientBuilder implements TokenClientSetters<AthenzClien
     /**
      * Sets the type of Athenz token to obtain.
      * If not set, the default is {@link TokenType#ACCESS_TOKEN}.
-     *
-     * @deprecated Use {@link #tokenHeader(AthenzTokenHeader)} instead.
      */
-    @Deprecated
     public AthenzClientBuilder tokenType(TokenType tokenType) {
         return tokenHeader(tokenType);
     }

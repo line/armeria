@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.athenz;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -23,12 +24,15 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
-import com.yahoo.athenz.zpe.ZpeClient;
 import com.yahoo.athenz.zpe.ZpeConsts;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A base builder for creating an Athenz authorizer that checks access permissions using Athenz policies.
@@ -36,6 +40,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthenzAuthorizerBuilder<SELF>> {
 
+    private static final MeterIdPrefix DEFAULT_METER_ID_PREFIX = new MeterIdPrefix("armeria.server.athenz");
     private static final Duration DEFAULT_OAUTH2_KEYS_REFRESH_INTERVAL = Duration.ofHours(1);
     private static final String DEFAULT_OAUTH2_KEY_PATH = "/oauth2/keys?rfc=true";
     private static final int MAX_TOKEN_CACHE_SIZE = 10240;
@@ -47,6 +52,9 @@ public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthen
     private AthenzPolicyConfig policyConfig;
     private String oauth2KeysPath = DEFAULT_OAUTH2_KEY_PATH;
     private int maxTokenCacheSize = MAX_TOKEN_CACHE_SIZE;
+    private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
+    @Nullable
+    private MeterRegistry meterRegistry;
 
     AbstractAthenzAuthorizerBuilder(ZtsBaseClient ztsBaseClient) {
         this.ztsBaseClient = ztsBaseClient;
@@ -100,6 +108,32 @@ public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthen
         return self();
     }
 
+    /**
+     * Sets the {@link MeterIdPrefix} of the metrics collected for the Athenz authorizer.
+     * If not set, a default {@link MeterIdPrefix} with the name {@code "armeria.server.athenz"} is used.
+     */
+    public SELF meterIdPrefix(MeterIdPrefix meterIdPrefix) {
+        this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
+        return self();
+    }
+
+    MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} to collect metrics of the Athenz authorizer.
+     */
+    public SELF meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return self();
+    }
+
+    @Nullable
+    MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
     final MinifiedAuthZpeClient buildAuthZpeClient() {
         checkState(policyConfig != null, "policyConfig must be set before creating an " +
                                          "Athenz authorizer");
@@ -107,8 +141,9 @@ public abstract class AbstractAthenzAuthorizerBuilder<SELF extends AbstractAthen
                 ztsBaseClient, oauth2KeysRefreshInterval, oauth2KeysPath);
         // NB: publicKeyStore.init() will block until the initial keys are loaded.
         publicKeyStore.init();
-        final ZpeClient zpeClient = new AthenzPolicyClient(ztsBaseClient, policyConfig, publicKeyStore,
-                                                           maxTokenCacheSize);
+        final AthenzPolicyClient zpeClient =
+                new AthenzPolicyClient(ztsBaseClient, policyConfig, publicKeyStore, maxTokenCacheSize,
+                                       firstNonNull(meterRegistry, Flags.meterRegistry()), meterIdPrefix);
         // NB: zpeClient.init() will block until the initial policy data is loaded.
         zpeClient.init(null);
         return new MinifiedAuthZpeClient(ztsBaseClient, publicKeyStore, zpeClient, oauth2KeysPath);
