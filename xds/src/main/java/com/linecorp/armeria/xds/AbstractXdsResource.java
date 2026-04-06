@@ -39,6 +39,8 @@ abstract class AbstractXdsResource implements XdsResource {
         return revision;
     }
 
+    abstract AbstractXdsResource withRevision(long revision);
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) {

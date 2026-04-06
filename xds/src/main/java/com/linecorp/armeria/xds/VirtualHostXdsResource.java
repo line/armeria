@@ -25,6 +25,10 @@ public final class VirtualHostXdsResource extends AbstractXdsResource {
 
     private final VirtualHost virtualHost;
 
+    VirtualHostXdsResource(VirtualHost virtualHost, String version) {
+        this(virtualHost, version, 0);
+    }
+
     VirtualHostXdsResource(VirtualHost virtualHost, String version, long revision) {
         super(version, revision);
         XdsValidatorIndexRegistry.assertValid(virtualHost);
@@ -44,5 +48,13 @@ public final class VirtualHostXdsResource extends AbstractXdsResource {
     @Override
     public String name() {
         return virtualHost.getName();
+    }
+
+    @Override
+    VirtualHostXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new VirtualHostXdsResource(virtualHost, version(), revision);
     }
 }

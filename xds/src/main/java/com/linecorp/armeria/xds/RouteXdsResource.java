@@ -28,14 +28,18 @@ public final class RouteXdsResource extends AbstractXdsResource {
 
     private final RouteConfiguration routeConfiguration;
 
-    RouteXdsResource(RouteConfiguration routeConfiguration, String version, long revision) {
+    RouteXdsResource(RouteConfiguration routeConfiguration, String version) {
+        this(routeConfiguration, version, 0);
+    }
+
+    private RouteXdsResource(RouteConfiguration routeConfiguration, String version, long revision) {
         super(version, revision);
         XdsValidatorIndexRegistry.assertValid(routeConfiguration);
         this.routeConfiguration = routeConfiguration;
     }
 
     RouteXdsResource(RouteConfiguration routeConfiguration) {
-        this(routeConfiguration, "", 0);
+        this(routeConfiguration, "");
     }
 
     @Override
@@ -51,5 +55,13 @@ public final class RouteXdsResource extends AbstractXdsResource {
     @Override
     public String name() {
         return routeConfiguration.getName();
+    }
+
+    @Override
+    RouteXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new RouteXdsResource(routeConfiguration, version(), revision);
     }
 }

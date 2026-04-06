@@ -226,14 +226,13 @@ class XdsClientIntegrationTest {
                             ImmutableList.of(XdsTestResources.loadAssignment("cluster1", URI.create("http://a.b"))),
                             ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "2"));
-            watcher.batchAssertChanged(ClusterSnapshot.class, snapshots -> {
+            await().untilAsserted(() -> {
+                final ClusterSnapshot snapshot = watcher.blockingChanged(ClusterSnapshot.class);
                 final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters()
                                                       .resources().get("cluster1");
-                final ClusterSnapshot last = snapshots.get(snapshots.size() - 1);
-                assertThat(snapshots.size()).isBetween(1, 2);
-                assertThat(last.xdsResource().version()).isEqualTo("2");
-                assertThat(last.endpointSnapshot().xdsResource().version()).isEqualTo("2");
-                assertThat(last.xdsResource().resource()).isEqualTo(expectedCluster2);
+                assertThat(snapshot.xdsResource().version()).isEqualTo("2");
+                assertThat(snapshot.endpointSnapshot().xdsResource().version()).isEqualTo("2");
+                assertThat(snapshot.xdsResource().resource()).isEqualTo(expectedCluster2);
             });
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)

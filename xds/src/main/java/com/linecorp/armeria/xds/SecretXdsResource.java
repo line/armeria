@@ -26,21 +26,22 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
  * used for securing transport sockets in xDS configurations.
  */
 @UnstableApi
-public final class SecretXdsResource implements XdsResource {
+public final class SecretXdsResource extends AbstractXdsResource {
 
     private final Secret secret;
-    private final String version;
-    private final long revision;
 
     SecretXdsResource(Secret secret) {
-        this(secret, "", 0);
+        this(secret, "");
     }
 
-    SecretXdsResource(Secret secret, String version, long revision) {
+    SecretXdsResource(Secret secret, String version) {
+        this(secret, version, 0);
+    }
+
+    private SecretXdsResource(Secret secret, String version, long revision) {
+        super(version, revision);
         XdsValidatorIndexRegistry.assertValid(secret);
         this.secret = secret;
-        this.version = version;
-        this.revision = revision;
     }
 
     @Override
@@ -59,12 +60,10 @@ public final class SecretXdsResource implements XdsResource {
     }
 
     @Override
-    public String version() {
-        return version;
-    }
-
-    @Override
-    public long revision() {
-        return revision;
+    SecretXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new SecretXdsResource(secret, version(), revision);
     }
 }

@@ -25,8 +25,8 @@ final class RouteResourceParser extends ResourceParser<RouteConfiguration, Route
     private RouteResourceParser() {}
 
     @Override
-    RouteXdsResource parse(RouteConfiguration message, String version, long revision) {
-        return new RouteXdsResource(message, version, revision);
+    RouteXdsResource parse(RouteConfiguration message, String version) {
+        return new RouteXdsResource(message, version);
     }
 
     @Override

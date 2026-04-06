@@ -49,10 +49,14 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     private final Router router;
 
     ListenerXdsResource(Listener listener) {
-        this(listener, "", 0);
+        this(listener, "");
     }
 
-    ListenerXdsResource(Listener listener, String version, long revision) {
+    ListenerXdsResource(Listener listener, String version) {
+        this(listener, version, 0);
+    }
+
+    private ListenerXdsResource(Listener listener, String version, long revision) {
         super(version, revision);
         XdsValidatorIndexRegistry.assertValid(listener);
         this.listener = listener;
@@ -91,6 +95,14 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     @Override
     public String name() {
         return listener.getName();
+    }
+
+    @Override
+    ListenerXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new ListenerXdsResource(listener, version(), revision);
     }
 
     /**

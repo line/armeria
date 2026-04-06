@@ -97,6 +97,34 @@ class ConfigSourceLifecycleObserverTest {
                         endpoints:
                         - lb_endpoints:
                           - endpoint:
+                                  address:
+                                    socket_address:
+                                      address: 127.0.0.1
+                                      port_value: %s
+                """;
+
+    //language=YAML
+    private static final String deltaBootstrapYaml =
+            """
+                dynamic_resources:
+                  ads_config:
+                    api_type: DELTA_GRPC
+                    grpc_services:
+                      - envoy_grpc:
+                          cluster_name: bootstrap-cluster
+                  lds_config:
+                    ads: {}
+                  cds_config:
+                    ads: {}
+                static_resources:
+                  clusters:
+                    - name: bootstrap-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: bootstrap-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
                               address:
                                 socket_address:
                                   address: 127.0.0.1
@@ -190,25 +218,93 @@ class ConfigSourceLifecycleObserverTest {
                 final var metrics = measureAll(meterRegistry);
 
                 // Basic stream metrics for bootstrap cluster ADS stream
-                assertThat(metrics).containsKey("armeria.xds.configsource.stream.active#" +
-                                                "value{name=bootstrap-cluster,type=ads,xdsType=ads}");
-                assertThat(ensureExistsAndGet(metrics, "armeria.xds.configsource.stream.opened#" +
-                                                       "count{name=bootstrap-cluster,type=ads,xdsType=ads}"))
+                final String grpcAds = "apiType=grpc,name=bootstrap-cluster,type=ads,xdsType=ads";
+                assertThat(metrics).containsKey(
+                        "armeria.xds.configsource.stream.active#value{" + grpcAds + '}');
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.stream.opened#count{" + grpcAds + '}'))
                         .isGreaterThan(0.0);
-                assertThat(ensureExistsAndGet(metrics, "armeria.xds.configsource.stream.request#" +
-                                                       "count{name=bootstrap-cluster,type=ads,xdsType=ads}"))
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.stream.request#count{" + grpcAds + '}'))
                         .isGreaterThan(0.0);
-                assertThat(ensureExistsAndGet(metrics, "armeria.xds.configsource.stream.response#" +
-                                                       "count{name=bootstrap-cluster,type=ads,xdsType=ads}"))
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.stream.response#count{" + grpcAds + '}'))
                         .isGreaterThan(0.0);
-                assertThat(ensureExistsAndGet(metrics, "armeria.xds.configsource.resource.parse.success#" +
-                                                       "count{name=bootstrap-cluster,type=ads,xdsType=ads}"))
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.resource.parse.success#count{" + grpcAds + '}'))
                         .isGreaterThan(0);
 
                 // No parse rejections should occur for valid resources
                 final Double parseRejectedCount =
-                        metrics.getOrDefault("armeria.xds.configsource.resource.parse.rejected#" +
-                                             "count{name=bootstrap-cluster,type=ads,xdsType=ads}", 0.0);
+                        metrics.getOrDefault(
+                                "armeria.xds.configsource.resource.parse.rejected#count{" + grpcAds + '}',
+                                0.0);
+                assertThat(parseRejectedCount).isEqualTo(0.0);
+            });
+
+            listenerRoot.close();
+        }
+
+        // Verify configsource metrics are cleaned up after XdsBootstrap closure
+        await().untilAsserted(() -> {
+            final var metrics = measureAll(meterRegistry);
+            assertThat(metrics).isEmpty();
+        });
+    }
+
+    @Test
+    void basicAdsStreamDelta() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Bootstrap bootstrap =
+                XdsResourceReader.fromYaml(deltaBootstrapYaml.formatted(server.httpPort()),
+                                           Bootstrap.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+
+            // Set up resources to trigger ADS stream activity
+            final Listener listener = XdsResourceReader.fromYaml(listenerYaml, Listener.class);
+            final RouteConfiguration route = XdsResourceReader.fromYaml(routeYaml, RouteConfiguration.class);
+            final Cluster cluster = XdsResourceReader.fromYaml(clusterYaml, Cluster.class);
+            final ClusterLoadAssignment loadAssignment =
+                    XdsResourceReader.fromYaml(endpointYaml, ClusterLoadAssignment.class);
+
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster),
+                                                     ImmutableList.of(loadAssignment),
+                                                     ImmutableList.of(listener),
+                                                     ImmutableList.of(route),
+                                                     ImmutableList.of(), version.toString()));
+
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
+
+            // Wait for ADS stream to fetch resources and verify metrics
+            await().untilAsserted(() -> {
+                final var metrics = measureAll(meterRegistry);
+
+                // Basic stream metrics for bootstrap cluster ADS stream
+                final String deltaGrpcAds = "apiType=delta_grpc,name=bootstrap-cluster,type=ads,xdsType=ads";
+                assertThat(metrics).containsKey(
+                        "armeria.xds.configsource.stream.active#value{" + deltaGrpcAds + '}');
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.stream.opened#count{" + deltaGrpcAds + '}'))
+                        .isGreaterThan(0.0);
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.stream.request#count{" + deltaGrpcAds + '}'))
+                        .isGreaterThan(0.0);
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.stream.response#count{" + deltaGrpcAds + '}'))
+                        .isGreaterThan(0.0);
+                assertThat(ensureExistsAndGet(
+                        metrics, "armeria.xds.configsource.resource.parse.success#count{" + deltaGrpcAds + '}'))
+                        .isGreaterThan(0);
+
+                // No parse rejections should occur for valid resources
+                final Double parseRejectedCount =
+                        metrics.getOrDefault(
+                                "armeria.xds.configsource.resource.parse.rejected#count{" + deltaGrpcAds + '}',
+                                0.0);
                 assertThat(parseRejectedCount).isEqualTo(0.0);
             });
 
@@ -357,27 +453,27 @@ class ConfigSourceLifecycleObserverTest {
                     // Verify stream is active and opened
                     assertThat(metrics).containsKey(String.format(
                             "armeria.xds.configsource.stream.active#value" +
-                            "{name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
+                            "{apiType=grpc,name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
                             xdsType));
                     assertThat(ensureExistsAndGet(metrics, String.format(
                             "armeria.xds.configsource.stream.opened#count" +
-                            "{name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
+                            "{apiType=grpc,name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
                             xdsType))).isGreaterThan(0.0);
 
                     // Verify request/response activity
                     assertThat(ensureExistsAndGet(metrics, String.format(
                             "armeria.xds.configsource.stream.request#count" +
-                            "{name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
+                            "{apiType=grpc,name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
                             xdsType))).isGreaterThan(0.0);
                     assertThat(ensureExistsAndGet(metrics, String.format(
                             "armeria.xds.configsource.stream.response#count" +
-                            "{name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
+                            "{apiType=grpc,name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
                             xdsType))).isGreaterThan(0.0);
 
                     // Verify successful resource parsing
                     assertThat(ensureExistsAndGet(metrics, String.format(
                             "armeria.xds.configsource.resource.parse.success#count" +
-                            "{name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
+                            "{apiType=grpc,name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
                             xdsType))).isGreaterThan(0.0);
                 }
             });
@@ -506,8 +602,57 @@ class ConfigSourceLifecycleObserverTest {
                 // Verify that the malformed resource type has rejection count > 0
                 final String rejectionMetricKey = String.format(
                         "armeria.xds.configsource.resource.parse.rejected#count" +
-                        "{name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
+                        "{apiType=grpc,name=bootstrap-cluster,type=api_config_source,xdsType=%s}",
                         metricXdsType);
+                assertThat(ensureExistsAndGet(metrics, rejectionMetricKey)).isGreaterThan(0.0);
+            });
+
+            listenerRoot.close();
+        }
+
+        // Verify configsource metrics are cleaned up after XdsBootstrap closure
+        await().untilAsserted(() -> {
+            final var metrics = measureAll(meterRegistry);
+            assertThat(metrics).isEmpty();
+        });
+    }
+
+    @Test
+    void resourceRejectionDelta() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Bootstrap bootstrap =
+                XdsResourceReader.fromYaml(deltaBootstrapYaml.formatted(server.httpPort()),
+                                           Bootstrap.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+
+            final Listener validListener = XdsResourceReader.fromYaml(listenerYaml, Listener.class);
+            final RouteConfiguration validRoute =
+                    XdsResourceReader.fromYaml(routeYaml, RouteConfiguration.class);
+            final Cluster validCluster = XdsResourceReader.fromYaml(clusterYaml, Cluster.class);
+            final ClusterLoadAssignment validEndpoint =
+                    XdsResourceReader.fromYaml(endpointYaml, ClusterLoadAssignment.class);
+            final Listener malformedListener =
+                    XdsResourceReader.fromYaml(malformedListenerYaml, Listener.class);
+
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(validCluster),
+                                                     ImmutableList.of(validEndpoint),
+                                                     ImmutableList.of(malformedListener),
+                                                     ImmutableList.of(validRoute),
+                                                     ImmutableList.of(), version.toString()));
+
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
+
+            // Wait for the malformed resource to be rejected and verify rejection metrics
+            await().untilAsserted(() -> {
+                final var metrics = measureAll(meterRegistry);
+
+                final String rejectionMetricKey =
+                        "armeria.xds.configsource.resource.parse.rejected#count" +
+                        "{apiType=delta_grpc,name=bootstrap-cluster,type=ads,xdsType=ads}";
                 assertThat(ensureExistsAndGet(metrics, rejectionMetricKey)).isGreaterThan(0.0);
             });
 

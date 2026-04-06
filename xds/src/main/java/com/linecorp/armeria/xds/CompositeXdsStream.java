@@ -16,39 +16,26 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
-import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.util.SafeCloseable;
-
-import io.envoyproxy.envoy.config.core.v3.Node;
-import io.netty.util.concurrent.EventExecutor;
+import com.google.common.collect.ImmutableMap;
 
 final class CompositeXdsStream implements XdsStream {
 
-    private final Map<XdsType, XdsStream> streamMap = new EnumMap<>(XdsType.class);
+    private final Map<XdsType, XdsStream> streamMap;
 
-    CompositeXdsStream(GrpcClientBuilder clientBuilder, Node node, Backoff backoff,
-                       EventExecutor eventLoop, XdsResponseHandler handler,
-                       SubscriberStorage subscriberStorage,
-                       Function<String, DefaultConfigSourceLifecycleObserver> metersFunction) {
-        for (XdsType type: XdsType.discoverableTypes()) {
-            final SotwXdsStream stream = new SotwXdsStream(
-                    SotwDiscoveryStub.basic(type, clientBuilder), node, backoff, eventLoop,
-                    handler, subscriberStorage, EnumSet.of(type),
-                    metersFunction.apply(type.name().toLowerCase(Locale.ROOT)));
-            streamMap.put(type, stream);
+    CompositeXdsStream(Function<XdsType, XdsStream> streamSupplier) {
+        final ImmutableMap.Builder<XdsType, XdsStream> streamMapBuilder = ImmutableMap.builder();
+        for (XdsType type : XdsType.discoverableTypes()) {
+            streamMapBuilder.put(type, streamSupplier.apply(type));
         }
+        streamMap = streamMapBuilder.build();
     }
 
     @Override
     public void close() {
-        streamMap.values().forEach(SafeCloseable::close);
+        streamMap.values().forEach(XdsStream::close);
     }
 
     @Override
