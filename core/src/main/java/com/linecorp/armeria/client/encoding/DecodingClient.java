@@ -16,20 +16,17 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
@@ -88,7 +85,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
         return new DecodingClientBuilder();
     }
 
-    private final Map<String, StreamDecoderFactory> decoderFactories;
+    private final Set<StreamDecoderFactory> decoderFactories;
     private final String acceptEncodingHeader;
     private final boolean autoFillAcceptEncoding;
     private final boolean strictContentEncoding;
@@ -97,21 +94,21 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
      * Creates a new instance that decorates the specified {@link HttpClient} with the provided decoders.
      */
     DecodingClient(HttpClient delegate,
-                   Iterable<? extends StreamDecoderFactory> decoderFactories,
+                   List<? extends StreamDecoderFactory> decoderFactories,
                    boolean autoFillAcceptEncoding,
                    boolean strictContentEncoding) {
         super(delegate);
-        this.decoderFactories = Streams.stream(decoderFactories)
-                                       .collect(toImmutableMap(StreamDecoderFactory::encodingHeaderValue,
-                                                               Function.identity()));
-        acceptEncodingHeader = String.join(",", this.decoderFactories.keySet());
+        this.decoderFactories = ImmutableSet.copyOf(decoderFactories);
+        acceptEncodingHeader = decoderFactories.stream()
+                .map(StreamDecoderFactory::encodingHeaderValue)
+                .collect(Collectors.joining(","));
         this.autoFillAcceptEncoding = autoFillAcceptEncoding;
         this.strictContentEncoding = strictContentEncoding;
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        Map<String, StreamDecoderFactory> decoderFactories = this.decoderFactories;
+        Set<StreamDecoderFactory> decoderFactories = this.decoderFactories;
 
         if (autoFillAcceptEncoding) {
             if (req.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
@@ -131,17 +128,18 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
         }
 
         final Set<String> encodings = ImmutableSet.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
-        final ImmutableMap.Builder<String, StreamDecoderFactory> factoryBuilder =
-                ImmutableMap.builderWithExpectedSize(encodings.size());
+        final ImmutableSet.Builder<StreamDecoderFactory> factoryBuilder =
+                ImmutableSet.builderWithExpectedSize(encodings.size());
 
         for (String encoding : encodings) {
-            final StreamDecoderFactory factory = decoderFactories.get(encoding);
-            if (factory != null) {
-                factoryBuilder.put(factory.encodingHeaderValue(), factory);
+            for (StreamDecoderFactory decoderFactory : decoderFactories) {
+                if (decoderFactory.supportsContentEncoding(encoding)) {
+                    factoryBuilder.add(decoderFactory);
+                }
             }
         }
 
-        final Map<String, StreamDecoderFactory> availableFactories = factoryBuilder.build();
+        final Set<StreamDecoderFactory> availableFactories = factoryBuilder.build();
         if (availableFactories.isEmpty()) {
             // Unsupported encoding.
             req = updateAcceptEncoding(ctx, req, null);
@@ -150,7 +148,9 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
 
         if (encodings.size() != availableFactories.size()) {
             // Use only supported encodings.
-            final String acceptEncodingHeader = String.join(",", availableFactories.keySet());
+            final String acceptEncodingHeader = availableFactories.stream()
+                    .map(StreamDecoderFactory::encodingHeaderValue)
+                    .collect(Collectors.joining(","));
             req = updateAcceptEncoding(ctx, req, acceptEncodingHeader);
         }
         decoderFactories = availableFactories;
@@ -160,7 +160,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
 
     private DefaultHttpDecodedResponse executeAndDecodeResponse(
             ClientRequestContext ctx, HttpRequest req,
-            Map<String, StreamDecoderFactory> decoderFactories) throws Exception {
+            Set<StreamDecoderFactory> decoderFactories) throws Exception {
         final HttpResponse res = unwrap().execute(ctx, req);
         return new DefaultHttpDecodedResponse(res, decoderFactories, ctx, strictContentEncoding);
     }
