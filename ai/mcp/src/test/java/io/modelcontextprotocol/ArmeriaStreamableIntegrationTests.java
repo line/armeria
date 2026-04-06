@@ -26,7 +26,6 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -162,13 +161,6 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
         } finally {
             mcpServer.closeGracefully().block();
         }
-    }
-
-    // TODO(ikhoon): Fix the resource subscription test with HttpClientStreamableHttpTransport.
-    @Disabled
-    @Override
-    void testResourceSubscription(String clientType) throws InterruptedException {
-        super.testResourceSubscription(clientType);
     }
 
     @Override
