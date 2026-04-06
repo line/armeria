@@ -6,8 +6,6 @@ import static org.assertj.core.api.Assertions.entry;
 
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Inject;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -26,6 +24,7 @@ import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.inject.Inject;
 
 @SpringBootTest(classes = Main.class)
 class CircuitBreakerTest {

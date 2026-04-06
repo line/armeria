@@ -71,7 +71,23 @@ If no comment exists, proceed with the Java version compatibility check:
 Edit the `[versions]` section in `dependencies.toml` to update the version strings.
 The file is located at the root of the repository: `dependencies.toml`.
 
-## Step 5: Upgrade Gradle Wrapper
+## Step 5: Cross-check Updated Versions
+
+After editing `dependencies.toml`, re-read the full diff (`git diff dependencies.toml`) and
+cross-check every changed entry against the `dependencyUpdates` report:
+
+1. **No entry was accidentally skipped** — compare the report's "The following dependencies
+   have later milestone versions" list against your edits. If a dependency appears in the
+   report but not in the diff, either upgrade it or document why it was skipped.
+2. **Versions match the report** — confirm each new version in the diff matches the latest
+   version from the report, not a typo or intermediate version.
+3. **Pinned-version comments were respected** — verify you did not upgrade a dependency whose
+   comment says to skip it, and that you did not remove or contradict an existing comment.
+4. **Linked-version constraints are satisfied** — some dependencies must stay in sync with
+   others (e.g. ZooKeeper with Curator, Protobuf with gRPC). Read the comments above those
+   entries and verify the constraint still holds after the upgrade.
+
+## Step 6: Upgrade Gradle Wrapper
 
 Check the latest stable Gradle release at https://gradle.org/releases/ and update
 `gradle/wrapper/gradle-wrapper.properties`:
@@ -80,7 +96,7 @@ Check the latest stable Gradle release at https://gradle.org/releases/ and updat
 distributionUrl=https\://services.gradle.org/distributions/gradle-X.Y.Z-all.zip
 ```
 
-## Step 6: Verify the Build
+## Step 7: Verify the Build
 
 Run the full build including tests to catch both compilation errors and runtime regressions:
 
@@ -91,7 +107,7 @@ Run the full build including tests to catch both compilation errors and runtime 
 If there are compilation errors, API breaking changes, or test failures caused by the upgrade,
 fix them before proceeding.
 
-## Step 7: Commit
+## Step 8: Commit
 
 Create a commit with the **exact** message format below. Follow it strictly — do not add extra
 sections, reorder bullets, or change the structure:
@@ -113,8 +129,10 @@ Rules:
 - Use the library's official name if one exists (e.g. `gRPC-Java`, `Jackson`, `Netty`, `Kotlin`,
   `Reactor`, `Logback`, `Micrometer`); otherwise use the key name as-is from `dependencies.toml`
 - Sort entries **alphabetically (A → Z)** within each section
-- Omit skipped dependencies from the commit message entirely
 - If no build-only deps were upgraded, omit the `- Build` section entirely
+- If any dependencies were **not upgraded** (due to Java version constraints, pinned-version
+  comments, or linked-version constraints), list them under a `- Unupdated` section with the
+  reason. This helps reviewers know which upgrades were intentionally skipped.
 
 Example:
 ```
@@ -125,4 +143,7 @@ Update dependencies
 - Build
    - checkstyle 10.14.0 -> 10.17.0
    - ErrorProne 2.27.0 -> 2.28.0
+- Unupdated
+   - Caffeine 2.9.3 -> 3.2.0 (requires Java 11)
+   - ZooKeeper 3.9.3 (pinned to Curator's version)
 ```
