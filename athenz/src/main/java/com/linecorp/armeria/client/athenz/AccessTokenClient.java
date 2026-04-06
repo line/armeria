@@ -46,7 +46,7 @@ final class AccessTokenClient implements TokenClient {
     private final OAuth2AuthorizationGrant authorizationGrant;
 
     AccessTokenClient(ZtsBaseClient ztsBaseClient, String domainName, List<String> roleNames,
-                      Duration refreshBefore) {
+                      Duration refreshBefore, boolean preload) {
         refreshBeforeMillis = refreshBefore.toMillis();
         this.domainName = domainName;
         this.roleNames = roleNames;
@@ -71,6 +71,7 @@ final class AccessTokenClient implements TokenClient {
                                                               "/oauth2/token")
                                                      .accessTokenRequest(tokenRequest)
                                                      .refreshIf(this::shouldRefreshToken)
+                                                     .preload(preload)
                                                      .build();
     }
 
