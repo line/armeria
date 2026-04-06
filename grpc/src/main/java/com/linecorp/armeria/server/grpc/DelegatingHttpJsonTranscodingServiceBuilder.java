@@ -24,6 +24,8 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 
@@ -44,13 +46,26 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
     private final ImmutableSet.Builder<ServiceDescriptor> serviceDescriptorsBuilder = ImmutableSet.builder();
     private final HttpService delegate;
 
+    private static final HttpService DEFAULT_FALLBACK =
+            (ctx, req) -> HttpResponse.of(HttpStatus.NOT_FOUND);
+
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
+    private HttpService fallback = DEFAULT_FALLBACK;
 
     /**
      * Creates a new builder for the specified delegate.
      */
     DelegatingHttpJsonTranscodingServiceBuilder(HttpService delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
+    }
+
+    /**
+     * Sets the fallback {@link HttpService} to invoke when no transcoding route matches.
+     * Defaults to returning {@link com.linecorp.armeria.common.HttpStatus#NOT_FOUND}.
+     */
+    public DelegatingHttpJsonTranscodingServiceBuilder fallback(HttpService fallback) {
+        this.fallback = requireNonNull(fallback, "fallback");
+        return this;
     }
 
     /**
@@ -100,6 +115,6 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
         if (transcoder == null) {
             throw new IllegalStateException("No HTTP rules are configured.");
         }
-        return new DelegatingHttpJsonTranscodingService(delegate, transcoder);
+        return new DelegatingHttpJsonTranscodingService(delegate, transcoder, fallback);
     }
 }

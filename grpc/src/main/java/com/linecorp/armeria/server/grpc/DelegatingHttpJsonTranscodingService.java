@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -29,6 +30,7 @@ import com.linecorp.armeria.internal.server.grpc.HttpEndpointSupport;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -38,14 +40,17 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * service, such as a proxy that forwards requests to an upstream gRPC server or a {@link GrpcService}
  * bound at a different path.
  *
- * <p>Requests that do not match any configured transcoding route are rejected with
- * {@link HttpStatus#NOT_FOUND} and the delegate is not invoked.
+ * <p>Requests that do not match any configured transcoding route are handled by the fallback
+ * {@link HttpService}, which defaults to returning {@link HttpStatus#NOT_FOUND}.
+ * Use {@link DelegatingHttpJsonTranscodingServiceBuilder#fallback(HttpService)} to customize
+ * this behavior.
  */
 @UnstableApi
 public final class DelegatingHttpJsonTranscodingService implements HttpServiceWithRoutes {
 
     private final HttpService delegate;
     private final HttpJsonTranscoder transcoder;
+    private final HttpService fallback;
 
     /**
      * Returns a new {@link DelegatingHttpJsonTranscodingServiceBuilder}.
@@ -54,9 +59,11 @@ public final class DelegatingHttpJsonTranscodingService implements HttpServiceWi
         return new DelegatingHttpJsonTranscodingServiceBuilder(delegate);
     }
 
-    DelegatingHttpJsonTranscodingService(HttpService delegate, HttpJsonTranscoder transcoder) {
+    DelegatingHttpJsonTranscodingService(HttpService delegate, HttpJsonTranscoder transcoder,
+                                         HttpService fallback) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.transcoder = requireNonNull(transcoder, "transcoder");
+        this.fallback = requireNonNull(fallback, "fallback");
     }
 
     @Override
@@ -87,6 +94,11 @@ public final class DelegatingHttpJsonTranscodingService implements HttpServiceWi
         if (spec != null) {
             return transcoder.serve(ctx, req, spec, delegate);
         }
-        return HttpResponse.of(HttpStatus.NOT_FOUND);
+        return fallback.serve(ctx, req);
+    }
+
+    @Override
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        return ExchangeType.UNARY;
     }
 }

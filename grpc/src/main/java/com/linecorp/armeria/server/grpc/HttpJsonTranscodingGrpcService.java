@@ -49,12 +49,14 @@ final class HttpJsonTranscodingGrpcService extends SimpleDecoratingHttpService
     private final GrpcService delegate;
     private final HttpJsonTranscoder transcoder;
     private final Set<Route> routes;
+    private final DelegatingHttpJsonTranscodingService transcodingService;
 
     HttpJsonTranscodingGrpcService(GrpcService delegate, HttpJsonTranscoder transcoder) {
         super(delegate);
         this.delegate = delegate;
         this.transcoder = requireNonNull(transcoder, "engine");
         routes = buildRoutes(delegate.routes(), this.transcoder.routes());
+        transcodingService = new DelegatingHttpJsonTranscodingService(delegate, transcoder, delegate);
     }
 
     @Nullable
@@ -115,11 +117,7 @@ final class HttpJsonTranscodingGrpcService extends SimpleDecoratingHttpService
             // GrpcService with transcoding enabled is nested inside a DelegatingHttpJsonTranscodingService.
             return delegate.serve(ctx, req);
         }
-        final TranscodingSpec spec = transcoder.findSpec(ctx.config().mappedRoute());
-        if (spec != null) {
-            return transcoder.serve(ctx, req, spec, delegate);
-        }
-        return delegate.serve(ctx, req);
+        return transcodingService.serve(ctx, req);
     }
 
     private static Set<Route> buildRoutes(Set<Route> delegateRoutes, Set<Route> transcodingRoutes) {

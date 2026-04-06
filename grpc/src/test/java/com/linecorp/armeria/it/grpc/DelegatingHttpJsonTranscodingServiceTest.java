@@ -265,6 +265,21 @@ class DelegatingHttpJsonTranscodingServiceTest {
     }
 
     @Test
+    void shouldUseCustomFallbackWhenRouteIsNotTranscoding() {
+        reconfigureProxyServer(sb -> {
+            final DelegatingHttpJsonTranscodingService customFallbackTranscoder =
+                    transcoderBuilder((ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                            .fallback((ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE))
+                            .build();
+            sb.route().pathPrefix("/custom-fallback").build(customFallbackTranscoder);
+        });
+        final WebClient client = WebClient.of(proxyServer.httpUri());
+        final AggregatedHttpResponse response =
+                client.get("/custom-fallback/not-a-transcoding-route").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
     void shouldAbortUnconsumedGrpcRequest() {
         reconfigureProxyServer(sb -> {
             final DelegatingHttpJsonTranscodingService abortingTranscoder =
