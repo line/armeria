@@ -100,7 +100,17 @@ final class HttpJsonTranscoderBuilder {
             if (methodDesc == null) {
                 continue;
             }
-            methods.put(methodDesc.getFullName(), new HttpJsonGrpcMethod(methodDefinition, methodDesc));
+            methods.put(methodDesc.getFullName(),
+                        new HttpJsonGrpcMethod(methodDefinition, methodDesc));
+        }
+        return this;
+    }
+
+    HttpJsonTranscoderBuilder serviceDescriptors(
+            Iterable<io.grpc.ServiceDescriptor> serviceDescriptors) {
+        requireNonNull(serviceDescriptors, "serviceDescriptors");
+        for (io.grpc.ServiceDescriptor serviceDescriptor : serviceDescriptors) {
+            serviceDescriptor(serviceDescriptor);
         }
         return this;
     }
@@ -120,10 +130,25 @@ final class HttpJsonTranscoderBuilder {
         return null;
     }
 
+    private void serviceDescriptor(io.grpc.ServiceDescriptor serviceDescriptor) {
+        for (io.grpc.MethodDescriptor<?, ?> grpcMethodDescriptor : serviceDescriptor.getMethods()) {
+            final Descriptors.MethodDescriptor methodDesc = methodDescriptor(grpcMethodDescriptor);
+            if (methodDesc == null) {
+                continue;
+            }
+            methods.put(methodDesc.getFullName(), new HttpJsonGrpcMethod(null, methodDesc));
+        }
+    }
+
     @Nullable
     private static MethodDescriptor methodDescriptor(ServerMethodDefinition<?, ?> methodDefinition) {
+        return methodDescriptor(methodDefinition.getMethodDescriptor());
+    }
+
+    @Nullable
+    private static MethodDescriptor methodDescriptor(io.grpc.MethodDescriptor<?, ?> grpcMethodDescriptor) {
         @Nullable
-        final Object desc = methodDefinition.getMethodDescriptor().getSchemaDescriptor();
+        final Object desc = grpcMethodDescriptor.getSchemaDescriptor();
         if (desc instanceof ProtoMethodDescriptorSupplier) {
             return ((ProtoMethodDescriptorSupplier) desc).getMethodDescriptor();
         }
@@ -449,10 +474,11 @@ final class HttpJsonTranscoderBuilder {
 
     static final class HttpJsonGrpcMethod {
 
+        @Nullable
         final ServerMethodDefinition<?, ?> definition;
         final Descriptors.MethodDescriptor descriptor;
 
-        HttpJsonGrpcMethod(ServerMethodDefinition<?, ?> definition,
+        HttpJsonGrpcMethod(@Nullable ServerMethodDefinition<?, ?> definition,
                            Descriptors.MethodDescriptor descriptor) {
             this.definition = definition;
             this.descriptor = descriptor;
