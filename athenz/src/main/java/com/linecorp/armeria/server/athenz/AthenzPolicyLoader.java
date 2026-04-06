@@ -32,7 +32,11 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncLoader;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 
 final class AthenzPolicyLoader {
 
@@ -44,9 +48,12 @@ final class AthenzPolicyLoader {
     private final AthenzPolicyHandler policyHandler;
     private final AsyncLoader<AthenzAssertions> policyLoader;
     private final CompletableFuture<AthenzAssertions> initialPolicyData;
+    private final Counter successCounter;
+    private final Counter failureCounter;
 
     AthenzPolicyLoader(ZtsBaseClient baseClient, String targetDomain,
-                       AthenzPolicyConfig updaterConfig, PublicKeyStore publicKeyStore) {
+                       AthenzPolicyConfig updaterConfig, PublicKeyStore publicKeyStore,
+                       MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
         client = baseClient.webClient();
         this.targetDomain = targetDomain;
         this.updaterConfig = updaterConfig;
@@ -57,6 +64,14 @@ final class AthenzPolicyLoader {
         } else {
             jwsPolicyParams = null;
         }
+
+        final String dataType = updaterConfig.jwsPolicySupport() ? "jws" : "signed";
+        successCounter = meterRegistry.counter(meterIdPrefix.name("policy.loads"),
+                                               meterIdPrefix.tags("domain", targetDomain, "result", "success",
+                                                                  "type", dataType));
+        failureCounter = meterRegistry.counter(meterIdPrefix.name("policy.loads"),
+                                               meterIdPrefix.tags("domain", targetDomain, "result", "failure",
+                                                                  "type", dataType));
 
         policyHandler = new AthenzPolicyHandler(publicKeyStore);
         policyLoader = AsyncLoader.<AthenzAssertions>builder(unused -> loadPolicyData())
@@ -76,6 +91,19 @@ final class AthenzPolicyLoader {
     }
 
     private CompletableFuture<AthenzAssertions> loadPolicyData() {
+        final CompletableFuture<AthenzAssertions> future = loadPolicyData0();
+        future.handle((result, cause) -> {
+            if (cause != null) {
+                failureCounter.increment();
+            } else {
+                successCounter.increment();
+            }
+            return null;
+        });
+        return future;
+    }
+
+    private CompletableFuture<AthenzAssertions> loadPolicyData0() {
         if (updaterConfig.jwsPolicySupport()) {
             return loadJwsPolicyData();
         } else {

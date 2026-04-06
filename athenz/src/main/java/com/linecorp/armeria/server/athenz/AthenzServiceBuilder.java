@@ -132,10 +132,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     /**
      * Sets the {@link TokenType}s to be used for access checks.
      * If not set, all token types are checked by default.
-     *
-     * @deprecated Use {@link #tokenHeader(AthenzTokenHeader...)} instead.
      */
-    @Deprecated
     public AthenzServiceBuilder tokenType(TokenType... tokenTypes) {
         requireNonNull(tokenTypes, "tokenTypes");
         checkArgument(tokenTypes.length > 0, "tokenTypes must not be empty");
@@ -145,10 +142,7 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
     /**
      * Sets the {@link TokenType}s to be used for access checks.
      * If not set, all token types are checked by default.
-     *
-     * @deprecated Use {@link #tokenHeader(Iterable)} instead.
      */
-    @Deprecated
     public AthenzServiceBuilder tokenType(Iterable<TokenType> tokenTypes) {
         requireNonNull(tokenTypes, "tokenTypes");
         checkArgument(!Iterables.isEmpty(tokenTypes), "tokenTypes must not be empty");
@@ -205,6 +199,6 @@ public final class AthenzServiceBuilder extends AbstractAthenzServiceBuilder<Ath
         final AthenzAuthorizer authorizer = new AthenzAuthorizer(buildAuthZpeClient());
         return delegate -> new AthenzService(
                 delegate, authorizer, athenzResourceProvider,
-                athenzAction, tokenHeaders, meterIdPrefix(), resourceTagValue);
+                athenzAction, tokenHeaders, meterIdPrefix(), meterRegistry(), resourceTagValue);
     }
 }
