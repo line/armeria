@@ -62,7 +62,7 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
             OAuth2ResponseHandler<GrantedOAuth2AccessToken> responseHandler,
             @Nullable Predicate<? super GrantedOAuth2AccessToken> refreshIf,
             @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
-            @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
+            @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer, boolean preload) {
 
         oAuth2Endpoint = new OAuth2Endpoint<>(accessTokenEndpoint, accessTokenEndpointPath, responseHandler);
         this.requestSupplier = requestSupplier;
@@ -73,7 +73,8 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
                 AsyncLoader.builder(this::loadToken)
                            .name(name)
-                           .expireIf(token -> !isValidToken(token));
+                           .expireIf(token -> !isValidToken(token))
+                           .preload(preload);
         if (refreshIf != null) {
             loaderBuilder.refreshIf(refreshIf);
         }

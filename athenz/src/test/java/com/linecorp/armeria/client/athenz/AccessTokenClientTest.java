@@ -21,10 +21,12 @@ import static com.linecorp.armeria.server.athenz.AthenzDocker.CA_CERT_FILE;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.TEST_DOMAIN_NAME;
 import static com.linecorp.armeria.server.athenz.AthenzDocker.USER_ROLE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -60,7 +62,7 @@ class AccessTokenClientTest {
 
         final AccessTokenClient tokenClient = new AccessTokenClient(ztsBaseClient, TEST_DOMAIN_NAME,
                                                                     ImmutableList.of(USER_ROLE),
-                                                                    Duration.ofSeconds(10));
+                                                                    Duration.ofSeconds(10), false);
         final String token0 = tokenClient.getToken().join();
         assertThat(token0).isNotEmpty();
         final String token1 = tokenClient.getToken().join();
@@ -69,6 +71,47 @@ class AccessTokenClientTest {
         Thread.sleep(1000);
         final String token2 = tokenClient.getToken().join();
         assertThat(token2).isEqualTo(token1);
+    }
+
+    @Test
+    void shouldPreloadToken() throws Exception {
+        final URI ztsUri = athenzExtension.ztsUri();
+
+        final String serviceKeyFile = ATHENZ_CERTS + "foo-service/key.pem";
+        final String serviceCertFile = ATHENZ_CERTS + "foo-service/cert.pem";
+        final InputStream serviceKey = AccessTokenClientTest.class.getResourceAsStream(serviceKeyFile);
+        final InputStream serviceCert = AccessTokenClientTest.class.getResourceAsStream(serviceCertFile);
+        final InputStream caCert = AthenzExtension.class.getResourceAsStream(CA_CERT_FILE);
+        final AtomicReference<TlsKeyPair> keyPairRef = new AtomicReference<>();
+        keyPairRef.set(TlsKeyPair.of(serviceKey, serviceCert));
+        final AtomicInteger tokenRequestCount = new AtomicInteger();
+        final ZtsBaseClient ztsBaseClient =
+                ZtsBaseClient.builder(ztsUri)
+                             .keyPair(keyPairRef::get)
+                             .trustedCertificate(caCert)
+                             .configureWebClient(builder -> {
+                                 builder.decorator((delegate, ctx, req) -> {
+                                     if (req.path().contains("/oauth2/token")) {
+                                         tokenRequestCount.incrementAndGet();
+                                     }
+                                     return delegate.execute(ctx, req);
+                                 });
+                             })
+                             .build();
+
+        final AccessTokenClient tokenClient = new AccessTokenClient(ztsBaseClient, TEST_DOMAIN_NAME,
+                                                                    ImmutableList.of(USER_ROLE),
+                                                                    Duration.ofSeconds(10), true);
+        // The token request should be sent proactively during construction.
+        await().untilAsserted(() -> assertThat(tokenRequestCount).hasValueGreaterThanOrEqualTo(1));
+        final int requestCountBeforeGetToken = tokenRequestCount.get();
+
+        // getToken() should return the preloaded token without sending an additional request.
+        final String token0 = tokenClient.getToken().join();
+        assertThat(token0).isNotEmpty();
+        final String token1 = tokenClient.getToken().join();
+        assertThat(token1).isEqualTo(token0);
+        assertThat(tokenRequestCount).hasValue(requestCountBeforeGetToken);
     }
 
     @Test
@@ -90,7 +133,7 @@ class AccessTokenClientTest {
 
         final AccessTokenClient tokenClient = new AccessTokenClient(ztsBaseClient, TEST_DOMAIN_NAME,
                                                                     ImmutableList.of(USER_ROLE),
-                                                                    Duration.ofSeconds(10));
+                                                                    Duration.ofSeconds(10), false);
         final String token0 = tokenClient.getToken().join();
         assertThat(token0).isNotEmpty();
         final String token1 = tokenClient.getToken().join();
