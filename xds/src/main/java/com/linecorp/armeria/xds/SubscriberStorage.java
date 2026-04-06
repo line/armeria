@@ -36,7 +36,6 @@ final class SubscriberStorage implements SafeCloseable {
 
     private final Map<XdsType, Map<String, XdsStreamSubscriber<?>>> subscriberMap =
             new EnumMap<>(XdsType.class);
-    private final ResourceCache resourceCache = new ResourceCache();
 
     SubscriberStorage(EventExecutor eventLoop, long timeoutMillis) {
         this.eventLoop = eventLoop;
@@ -52,8 +51,7 @@ final class SubscriberStorage implements SafeCloseable {
                 type, key -> new HashMap<>()).get(resourceName);
         boolean updated = false;
         if (subscriber == null) {
-            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis,
-                                                   resourceCache);
+            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis);
             subscriberMap.get(type).put(resourceName, subscriber);
             updated = true;
         }
@@ -89,10 +87,6 @@ final class SubscriberStorage implements SafeCloseable {
 
     <T extends XdsResource> Map<String, XdsStreamSubscriber<T>> subscribers(XdsType type) {
         return unsafeCast(subscriberMap.getOrDefault(type, Collections.emptyMap()));
-    }
-
-    void updateCache(XdsType type, Map<String, Object> resources) {
-        resourceCache.updateResources(type, resources);
     }
 
     static <T> T unsafeCast(Object obj) {
