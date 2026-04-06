@@ -24,6 +24,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,8 +76,16 @@ final class AthenzPublicKeyProvider implements PublicKeyStore {
     }
 
     void init() {
-        ztsKeyLoader.load().join();
-        zmsKeyLoader.load().join();
+        try {
+            ztsKeyLoader.load().get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to load ZTS keys in 30 seconds", e);
+        }
+        try {
+            zmsKeyLoader.load().get(30, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("Failed to load ZMS keys in 30 seconds", e);
+        }
     }
 
     @Override
