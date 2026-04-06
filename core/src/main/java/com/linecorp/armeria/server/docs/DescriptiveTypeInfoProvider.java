@@ -26,6 +26,19 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin
  * Creates a new {@link DescriptiveTypeInfo} loaded dynamically via Java SPI (Service Provider Interface).
  * The loaded {@link DescriptiveTypeInfoProvider}s are used in the {@link DocServicePlugin}s to extract
  * a {@link DescriptiveTypeInfo} from the given {@code typeDescriptor}.
+ *
+ * <h2>Limitations</h2>
+ *
+ * <p>When used with {@code JacksonPolymorphismTypeInfoProvider}, only the
+ * following
+ * {@link com.fasterxml.jackson.annotation.JsonTypeInfo.As} inclusion modes are
+ * supported:
+ * {@link com.fasterxml.jackson.annotation.JsonTypeInfo.As#PROPERTY} and
+ * {@link com.fasterxml.jackson.annotation.JsonTypeInfo.As#EXISTING_PROPERTY}.
+ * Other modes such as {@code WRAPPER_OBJECT} or {@code WRAPPER_ARRAY} are not
+ * currently
+ * supported and may result in incomplete documentation.
+ * </p>
  */
 @UnstableApi
 @FunctionalInterface

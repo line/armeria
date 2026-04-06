@@ -98,7 +98,7 @@ class DynamicHealthCheckTest {
               .build(HealthCheckService.builder().checkers(server1Hc1).build());
             sb.route()
               .decorator((delegate, ctx, req) -> {
-                  server1Hc2CtxRef.set(ctx);
+                  server1Hc2CtxRef.compareAndSet(null, ctx);
                   return delegate.serve(ctx, req);
               })
               .path("/monitor/healthcheck2")

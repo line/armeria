@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.INT;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING;
+import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.INT;
+import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.STRING;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
