@@ -1,0 +1,148 @@
+dependencies {
+    implementation project(':junit5')
+    implementation libs.junit5.platform.launcher
+    implementation libs.kubernetes.client.api
+    implementation libs.kubernetes.client.impl
+    implementation libs.kubernetes.httpclient.okhttp
+    implementation libs.testcontainers.k3s
+    implementation libs.testcontainers.junit.jupiter
+
+    runtimeOnly libs.logback15
+
+}
+
+def kubeconfigEnvValue =
+        layout.buildDirectory.file('kubeconfig/kubeconfig.yaml').get().asFile.absolutePath
+def istioVersion = libs.versions.istio.get()
+def istioProfile = 'minimal'
+def istioWorkDir = layout.buildDirectory.dir('istio').get().asFile
+def istioOs = detectIstioOs()
+def istioArch = detectIstioArch()
+def istioSupported = istioOs != null && istioArch != null
+if (!istioSupported) {
+    def osDetector = requireOsDetector()
+    def osValue = osDetector.os
+    def archValue = osDetector.arch
+    logger.warn("Istio is not supported on ${osValue}/${archValue}; skipping :it:xds-istio tasks.")
+    tasks.configureEach {
+        enabled = false
+    }
+    return
+}
+def istioArchive = file("${istioWorkDir}/istio-${istioVersion}-${istioOs}-${istioArch}.tar.gz")
+def istioHomeDir = file("${istioWorkDir}/istio-${istioVersion}")
+def istioctlPath = new File(istioHomeDir, 'bin/istioctl').absolutePath
+def istioEnv = [
+        'KUBECONFIG_PATH': kubeconfigEnvValue,
+        'ISTIO_VERSION': istioVersion,
+        'ISTIO_PROFILE': istioProfile,
+        'ISTIOCTL_PATH': istioctlPath
+]
+
+tasks.register('downloadIstioctl') {
+    outputs.file istioArchive
+    inputs.property 'istioVersion', istioVersion
+    inputs.property 'istioOs', istioOs
+    inputs.property 'istioArch', istioArch
+    doLast {
+        istioArchive.parentFile.mkdirs()
+        def url = "https://github.com/istio/istio/releases/download/${istioVersion}/" +
+                  "istio-${istioVersion}-${istioOs}-${istioArch}.tar.gz"
+        ant.get(src: url, dest: istioArchive, skipexisting: true)
+    }
+}
+
+tasks.register('extractIstioctl', Copy) {
+    dependsOn tasks.named('downloadIstioctl')
+    from tarTree(istioArchive)
+    into istioWorkDir
+    outputs.dir istioHomeDir
+}
+
+tasks.register('prepareIstioctl') {
+    dependsOn tasks.named('extractIstioctl')
+    outputs.file istioctlPath
+    doLast {
+        def istioctlFile = file(istioctlPath)
+        if (!istioctlFile.exists()) {
+            throw new GradleException("istioctl was not found at ${istioctlPath}")
+        }
+        istioctlFile.setExecutable(true)
+    }
+}
+
+def testRuntimeDir = new File(istioWorkDir, 'test-runtime-jars')
+def dockerImagesDir = new File(istioWorkDir, 'docker-images')
+istioEnv['ISTIO_TEST_RUNTIME_DIR'] = testRuntimeDir.absolutePath
+istioEnv['ISTIO_DOCKER_IMAGES_DIR'] = dockerImagesDir.absolutePath
+
+tasks.register('prepareIstioWorkdir') {
+    outputs.dirs testRuntimeDir, dockerImagesDir
+    doLast {
+        testRuntimeDir.mkdirs()
+        dockerImagesDir.mkdirs()
+    }
+}
+
+tasks.register('copyTestRuntimeJars', Sync) {
+    dependsOn tasks.named('prepareIstioWorkdir')
+    from(sourceSets.test.runtimeClasspath)
+    into(testRuntimeDir)
+}
+
+tasks.withType(Test).configureEach {
+    dependsOn tasks.named('copyTestRuntimeJars')
+    dependsOn tasks.named('prepareIstioctl')
+    environment istioEnv
+    systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
+    maxParallelForks = 1
+    doFirst {
+        def allArgs = (jvmArgs ?: []).join(' ')
+        if (allArgs) {
+            environment 'ISTIO_POD_JVM_ARGS', allArgs
+        }
+    }
+}
+
+// For LocalDevClusterMain
+tasks.withType(JavaExec).configureEach {
+    dependsOn tasks.named('prepareIstioctl')
+    environment istioEnv
+}
+
+def detectIstioOs() {
+    def osDetector = requireOsDetector()
+    def os = osDetector.os
+    if (os == 'osx') {
+        return 'osx'
+    }
+    if (os == 'linux') {
+        return 'linux'
+    }
+    logger.warn("Unsupported OS for Istio: {}", os)
+    return null
+}
+
+def detectIstioArch() {
+    def osDetector = requireOsDetector()
+    def arch = String.valueOf(osDetector.arch).toLowerCase(Locale.ROOT)
+    if (arch == 'x86_64' || arch == 'amd64') {
+        return 'amd64'
+    }
+    if (arch == 'aarch64' || arch == 'arm64' || arch == 'aarch_64' || arch == 'arm_64') {
+        return 'arm64'
+    }
+    if (arch.startsWith('armv7') || arch == 'armv7' || arch == 'arm_32') {
+        return 'armv7'
+    }
+    logger.warn("Unsupported architecture for Istio: {}", arch)
+    return null
+}
+
+def requireOsDetector() {
+    def osDetector = rootProject.extensions.findByName('osdetector')
+    if (osDetector == null) {
+        throw new GradleException("osdetector extension is required for :it:xds-istio")
+    }
+    return osDetector
+}

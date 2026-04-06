@@ -261,6 +261,7 @@ includeWithFlags ':it:thrift0.9.1',                            'java', 'relocate
 includeWithFlags ':it:trace-context-leak',                     'java', 'relocate'
 includeWithFlags ':it:websocket',                              'java11', 'relocate'
 includeWithFlags ':it:xds-client',                             'java17'
+includeWithFlags ':it:xds-istio',                              'java17'
 includeWithFlags ':it:xds-no-validation',                      'java17'
 includeWithFlags ':jetty9.3',                                  'java', 'relocate'
 project(':jetty9.3').projectDir = file('jetty/jetty9.3')
