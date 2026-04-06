@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,7 +124,7 @@ final class IstioInstaller {
                 logger.info("[{}] {}", logPrefix, line);
             }
         }
-        final boolean finished = process.waitFor(DEFAULT_READY_TIMEOUT);
+        final boolean finished = process.waitFor(DEFAULT_READY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         if (!finished) {
             process.destroyForcibly();
             throw new IllegalStateException("Command timed out after " + DEFAULT_READY_TIMEOUT +
