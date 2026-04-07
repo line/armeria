@@ -58,9 +58,9 @@ date: 2026-04-07
   ```java
   AthenzTokenClient tokenClient =
       AthenzTokenClient.builder(ztsBaseClient)
-                        .domainName("my-domain")
-                        .roleNames("my-role")
-                        .build();
+                       .domainName("my-domain")
+                       .roleNames("my-role")
+                       .build();
   tokenClient.getToken().thenAccept(token -> { // 👈👈👈
       // Use the token with any HTTP client.
   });
