@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClientBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -84,9 +85,12 @@ public final class AthenzServiceDecoratorFactoryProvider {
         if (oauth2KeysPath != null) {
             factoryBuilder.oauth2KeysPath(oauth2KeysPath);
         }
-        return factoryBuilder
-                .policyConfig(athenzPolicyConfig)
-                .build();
+        if (meterRegistry != null) {
+            factoryBuilder.meterRegistry(meterRegistry);
+        }
+        return factoryBuilder.meterIdPrefix(new MeterIdPrefix(meterIdPrefix))
+                             .policyConfig(athenzPolicyConfig)
+                             .build();
     }
 
     private AthenzServiceDecoratorFactoryProvider() {}

@@ -17,12 +17,15 @@
 
 package com.linecorp.armeria.server.athenz.resource;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.core.JsonPointer;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -70,6 +73,15 @@ public interface AthenzResourceProvider {
      * @return a {@link CompletableFuture} that completes with the resource string
      */
     CompletableFuture<String> provide(ServiceRequestContext ctx, HttpRequest req);
+
+    /**
+     * Returns an {@link AthenzResourceProvider} that always provides the specified resource string.
+     */
+    static AthenzResourceProvider of(String resource) {
+        requireNonNull(resource, "resource");
+        final UnmodifiableFuture<String> resourceFuture = UnmodifiableFuture.completedFuture(resource);
+        return (ctx, req) -> resourceFuture;
+    }
 
     /**
      * Returns an {@link AthenzResourceProvider} that extracts the resource from the request path

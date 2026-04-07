@@ -25,7 +25,8 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * User provided options for customizing {@link HttpJsonTranscodingGrpcService}.
+ * User provided options for customizing {@link HttpJsonTranscodingGrpcService} and
+ * {@link DelegatingHttpJsonTranscodingService}.
  */
 @UnstableApi
 public interface HttpJsonTranscodingOptions {

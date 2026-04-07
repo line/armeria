@@ -48,6 +48,7 @@ public final class AsyncLoaderBuilder<T> {
     @Nullable
     private BiFunction<? super Throwable, ? super @Nullable T,
             ? extends @Nullable CompletableFuture<T>> exceptionHandler;
+    private boolean preload;
 
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
         requireNonNull(loader, "loader");
@@ -138,10 +139,20 @@ public final class AsyncLoaderBuilder<T> {
     }
 
     /**
+     * Preloads the value by calling the loader function immediately when {@link #build()} is called.
+     * This option is disabled by default, and the value is loaded lazily when {@link AsyncLoader#load()} is
+     * called for the first time.
+     */
+    public AsyncLoaderBuilder<T> preload(boolean preload) {
+        this.preload = preload;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
         return new DefaultAsyncLoader<>(loader, name, expireAfterLoad, expireIf, refreshAfterLoad, refreshIf,
-                                        exceptionHandler);
+                                        preload, exceptionHandler);
     }
 }

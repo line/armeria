@@ -68,4 +68,50 @@ class ServerPortTest {
         assertThat(new ServerPort(c, HTTPS)).isNotEqualTo(new ServerPort(c, HTTP));
         assertThat(new ServerPort(c, HTTPS)).isNotEqualTo(new ServerPort(a, HTTPS));
     }
+
+    @Test
+    void actualPortForEphemeralPort() {
+        final ServerPort port = new ServerPort(0, HTTP);
+        // Before binding, actualPort returns the configured port (0)
+        assertThat(port.actualPort()).isEqualTo(0);
+
+        // Simulate binding
+        port.setActualPort(12345);
+        assertThat(port.actualPort()).isEqualTo(12345);
+    }
+
+    @Test
+    void actualPortForFixedPort() {
+        final ServerPort port = new ServerPort(8080, HTTP);
+        // Fixed port should return the configured port
+        assertThat(port.actualPort()).isEqualTo(8080);
+    }
+
+    @Test
+    void setActualPortOnlyAllowedForEphemeralPort() {
+        final ServerPort port = new ServerPort(8080, HTTP);
+        assertThatThrownBy(() -> port.setActualPort(9090))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("non-ephemeral port");
+    }
+
+    @Test
+    void setActualPortOnlyAllowedOnce() {
+        final ServerPort port = new ServerPort(0, HTTP);
+        port.setActualPort(12345);
+        assertThatThrownBy(() -> port.setActualPort(54321))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("already set");
+    }
+
+    @Test
+    void setActualPortMustBePositive() {
+        final ServerPort port = new ServerPort(0, HTTP);
+        assertThatThrownBy(() -> port.setActualPort(0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: > 0");
+        assertThatThrownBy(() -> port.setActualPort(-1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: > 0");
+    }
 }

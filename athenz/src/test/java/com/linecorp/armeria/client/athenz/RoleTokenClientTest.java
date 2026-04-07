@@ -78,7 +78,7 @@ class RoleTokenClientTest {
     void shouldCacheTokenBeforeExpiry() throws Exception {
         final RoleTokenClient roleTokenClient = new RoleTokenClient(ztsBaseClient, "test",
                                                                     ImmutableList.of("role1", "role2"),
-                                                                    Duration.ofSeconds(10));
+                                                                    Duration.ofSeconds(10), false);
         final RoleToken roleToken = new RoleToken();
         roleToken.setToken("test-token");
         roleToken.setExpiryTime(Instant.now().plusSeconds(100).toEpochMilli());
@@ -94,6 +94,24 @@ class RoleTokenClientTest {
     }
 
     @Test
+    void shouldPreloadToken() {
+        final RoleToken roleToken = new RoleToken();
+        roleToken.setToken("preloaded-token");
+        roleToken.setExpiryTime(Instant.now().plusSeconds(100).toEpochMilli());
+        roleTokenRef.set(roleToken);
+
+        final RoleTokenClient roleTokenClient = new RoleTokenClient(ztsBaseClient, "test",
+                                                                    ImmutableList.of("role1", "role2"),
+                                                                    Duration.ofSeconds(10), true);
+        // The token should be preloaded during construction.
+        await().untilAtomic(requestCount, Matchers.is(1));
+        final String token = roleTokenClient.getToken().join();
+        assertThat(token).isEqualTo("preloaded-token");
+        // No additional request should be made.
+        assertThat(requestCount).hasValue(1);
+    }
+
+    @Test
     void shouldRefreshTokenBeforeExpiry() throws Exception {
         final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned();
         try (ZtsBaseClient ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
@@ -101,7 +119,7 @@ class RoleTokenClientTest {
                                                         .build()) {
             final RoleTokenClient roleTokenClient = new RoleTokenClient(ztsBaseClient, "test",
                                                                         ImmutableList.of("role1", "role2"),
-                                                                        Duration.ofSeconds(10));
+                                                                        Duration.ofSeconds(10), false);
             final RoleToken roleToken = new RoleToken();
             roleToken.setToken("test-token");
             roleToken.setExpiryTime(Instant.now().plusSeconds(5).getEpochSecond());
