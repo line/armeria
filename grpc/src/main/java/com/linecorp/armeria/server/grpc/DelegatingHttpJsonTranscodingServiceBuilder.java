@@ -89,8 +89,8 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
     public DelegatingHttpJsonTranscodingServiceBuilder transcodedGrpcSerializationFormat(
             SerializationFormat transcodedGrpcSerializationFormat) {
         requireNonNull(transcodedGrpcSerializationFormat, "transcodedGrpcSerializationFormat");
-        checkArgument(GrpcSerializationFormats.isJson(transcodedGrpcSerializationFormat) ||
-                      GrpcSerializationFormats.isProto(transcodedGrpcSerializationFormat),
+        checkArgument(transcodedGrpcSerializationFormat == GrpcSerializationFormats.JSON ||
+                      transcodedGrpcSerializationFormat == GrpcSerializationFormats.PROTO,
                       "transcodedGrpcSerializationFormat must be JSON or PROTO: %s",
                       transcodedGrpcSerializationFormat);
         this.transcodedGrpcSerializationFormat = transcodedGrpcSerializationFormat;
