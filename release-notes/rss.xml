@@ -4,16 +4,30 @@
         <title>Armeria Release Notes</title>
         <link>https://armeria.dev/release-notes</link>
         
-        <lastBuildDate>Tue, 10 Mar 2026 01:10:33 GMT</lastBuildDate>
+        <lastBuildDate>Tue, 07 Apr 2026 04:52:50 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <language>en</language>
         <copyright>© 2015-2026, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.38.0]]></title>
+            <link>https://armeria.dev/release-notes/1.38.0/</link>
+            <guid>https://armeria.dev/release-notes/1.38.0/</guid>
+            <pubDate>Tue, 07 Apr 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[HTTP/JSON to gRPC Proxy: You can now use DelegatingHttpJsonTranscodingService to accept HTTP/JSON traffic and forward it as gRPC to any HttpService delegate, without needing a local gRPC service imple...]]></description>
+        </item>
         <item>
             <title><![CDATA[v1.37.0]]></title>
             <link>https://armeria.dev/release-notes/1.37.0/</link>
             <guid>https://armeria.dev/release-notes/1.37.0/</guid>
             <pubDate>Tue, 10 Mar 2026 00:00:00 GMT</pubDate>
             <description><![CDATA[You can now bind outgoing connections to a specific local address. #6640 HttpRequest req = ...;RequestOptions options = RequestOptions.builder() .localBindAddress(addr) // 👈👈👈 .build();HttpResponse...]]></description>
+        </item>
+        <item>
+            <title><![CDATA[v1.30.5]]></title>
+            <link>https://armeria.dev/release-notes/1.30.5/</link>
+            <guid>https://armeria.dev/release-notes/1.30.5/</guid>
+            <pubDate>Tue, 10 Mar 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[Setting pingIntervalMillis to a value greater than 33 seconds no longer throws an exception. #6648 Linux keepalive socket options (SO_KEEPALIVE TCP_KEEPIDLE, TCP_KEEPINTVL) are no longer set by defaul...]]></description>
         </item>
         <item>
             <title><![CDATA[v1.36.0]]></title>
