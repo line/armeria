@@ -24,10 +24,10 @@ date: 2026-04-07
   ```java
   KubernetesEndpointGroup endpointGroup =
       KubernetesEndpointGroup.builder(kubernetesClient)
-                              .namespace("my-namespace")
-                              .serviceName("my-service")
-                              .mode(KubernetesEndpointMode.POD) // 👈👈👈
-                              .build();
+                             .namespace("my-namespace")
+                             .serviceName("my-service")
+                             .mode(KubernetesEndpointMode.POD) // 👈👈👈
+                             .build();
   ```
 - **Envoy gRPC HTTP/1.1 Bridge**: [GrpcService](type) now supports the [Envoy gRPC HTTP/1.1 bridge specification](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_http1_bridge_filter)
   via [GrpcServiceBuilder#enableEnvoyHttp1Bridge(boolean)](type). When enabled, unary
