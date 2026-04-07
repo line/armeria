@@ -75,6 +75,19 @@ class RequestContextExporterTest {
                 BuiltInProperty.REQ_ID.key,
                 BuiltInProperty.REQ_ROOT_ID.key,
                 BuiltInProperty.SCHEME.key,
+                BuiltInProperty.REQ_START_TIME_MILLIS.key,
+                BuiltInProperty.REQ_END_TIME_MILLIS.key,
+                BuiltInProperty.REQ_DURATION_NANOS.key,
+                BuiltInProperty.REQ_DURATION_MILLIS.key,
+                BuiltInProperty.RES_START_TIME_MILLIS.key,
+                BuiltInProperty.RES_END_TIME_MILLIS.key,
+                BuiltInProperty.RES_DURATION_NANOS.key,
+                BuiltInProperty.RES_DURATION_MILLIS.key,
+                BuiltInProperty.TOTAL_DURATION_NANOS.key,
+                BuiltInProperty.TOTAL_DURATION_MILLIS.key,
+                BuiltInProperty.SERIALIZATION_FORMAT.key,
+                BuiltInProperty.SESSION_PROTOCOL.key,
+                BuiltInProperty.HOST.key,
                 "attrs.attr1");
     }
 
@@ -223,6 +236,47 @@ class RequestContextExporterTest {
                 "armeria.attrs.attr1-1",
                 "armeria.attrs.attr1-2"
         );
+    }
+
+    @Test
+    void shouldExportNewBuiltInProperties() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+        final RequestContextExporter exporter =
+                RequestContextExporter.builder()
+                                      .builtIn(BuiltInProperty.SESSION_PROTOCOL)
+                                      .builtIn(BuiltInProperty.SERIALIZATION_FORMAT)
+                                      .builtIn(BuiltInProperty.HOST)
+                                      .builtIn(BuiltInProperty.TOTAL_DURATION_NANOS)
+                                      .builtIn(BuiltInProperty.ELAPSED_NANOS)
+                                      .build();
+
+        final Map<String, String> exported = exporter.export(ctx);
+        assertThat(exported).containsKey("session.protocol");
+        assertThat(exported).containsKey("serialization.format");
+        assertThat(exported).containsKey("host");
+        // total_duration_nanos and elapsed_nanos should have the same value.
+        assertThat(exported.get("total_duration_nanos"))
+                .isEqualTo(exported.get("elapsed_nanos"));
+    }
+
+    @Test
+    void shouldExportContentPreview() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.logBuilder().requestContentPreview("request-preview");
+        ctx.logBuilder().responseContentPreview("response-preview");
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+        final RequestContextExporter exporter =
+                RequestContextExporter.builder()
+                                      .builtIn(BuiltInProperty.REQ_CONTENT_PREVIEW)
+                                      .builtIn(BuiltInProperty.RES_CONTENT_PREVIEW)
+                                      .build();
+
+        final Map<String, String> exported = exporter.export(ctx);
+        assertThat(exported).containsEntry("req.content_preview", "request-preview")
+                            .containsEntry("res.content_preview", "response-preview");
     }
 
     static final class Foo {

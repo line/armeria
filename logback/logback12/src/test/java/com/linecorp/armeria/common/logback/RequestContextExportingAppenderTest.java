@@ -328,12 +328,15 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("scheme", "unknown+h2")
+                           .containsEntry("session.protocol", "h2")
+                           .containsEntry("host", "server.com:8080")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("req.id")
                            .containsKey("req.root_id")
-                           .hasSize(17);
+                           .containsKey("req.start_time_millis")
+                           .hasSize(20);
         }
     }
 
@@ -369,6 +372,9 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "name=alice")
                            .containsEntry("scheme", "none+h2")
+                           .containsEntry("serialization.format", "none")
+                           .containsEntry("session.protocol", "h2")
+                           .containsEntry("host", "server.com:8080")
                            .containsEntry("req.content_length", "0")
                            .containsEntry("res.status_code", "0")
                            .containsEntry("res.content_length", "0")
@@ -376,9 +382,19 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
+                           .containsKey("req.start_time_millis")
+                           .containsKey("req.end_time_millis")
+                           .containsKey("req.duration_nanos")
+                           .containsKey("req.duration_millis")
+                           .containsKey("res.start_time_millis")
+                           .containsKey("res.end_time_millis")
+                           .containsKey("res.duration_nanos")
+                           .containsKey("res.duration_millis")
+                           .containsKey("total_duration_nanos")
+                           .containsKey("total_duration_millis")
                            .containsKey("req.id")
                            .containsKey("req.root_id")
-                           .hasSize(24);
+                           .hasSize(37);
         }
     }
 
@@ -429,6 +445,9 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "bar=baz")
                            .containsEntry("scheme", "tbinary+h2")
+                           .containsEntry("serialization.format", "tbinary")
+                           .containsEntry("session.protocol", "h2")
+                           .containsEntry("host", "server.com:8080")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.content", "[world]")
                            .containsEntry("res.status_code", "200")
@@ -444,7 +463,17 @@ class RequestContextExportingAppenderTest {
                            .containsKey("req.id")
                            .containsKey("req.root_id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(30);
+                           .containsKey("req.start_time_millis")
+                           .containsKey("req.end_time_millis")
+                           .containsKey("req.duration_nanos")
+                           .containsKey("req.duration_millis")
+                           .containsKey("res.start_time_millis")
+                           .containsKey("res.end_time_millis")
+                           .containsKey("res.duration_nanos")
+                           .containsKey("res.duration_millis")
+                           .containsKey("total_duration_nanos")
+                           .containsKey("total_duration_millis")
+                           .hasSize(43);
         }
     }
 
@@ -513,11 +542,14 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "type=bar")
                            .containsEntry("scheme", "unknown+h2")
+                           .containsEntry("session.protocol", "h2")
+                           .containsEntry("host", "server.com:8080")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("req.id")
-                           .hasSize(16);
+                           .containsKey("req.start_time_millis")
+                           .hasSize(19);
         }
     }
 
@@ -565,6 +597,9 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/bar")
                            .containsEntry("scheme", "tbinary+h2")
+                           .containsEntry("serialization.format", "tbinary")
+                           .containsEntry("session.protocol", "h2")
+                           .containsEntry("host", "server.com:8080")
                            .containsEntry("req.name", "hello")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.name", "hello")
@@ -582,8 +617,18 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
+                           .containsKey("req.start_time_millis")
+                           .containsKey("req.end_time_millis")
+                           .containsKey("req.duration_nanos")
+                           .containsKey("req.duration_millis")
+                           .containsKey("res.start_time_millis")
+                           .containsKey("res.end_time_millis")
+                           .containsKey("res.duration_nanos")
+                           .containsKey("res.duration_millis")
+                           .containsKey("total_duration_nanos")
+                           .containsKey("total_duration_millis")
                            .containsEntry("authenticated.user", "auth_user")
-                           .hasSize(28);
+                           .hasSize(41);
         }
     }
 
@@ -605,6 +650,53 @@ class RequestContextExportingAppenderTest {
                            .contains("java.lang.Throwable: request");
             assertThat(mdc).extracting(key -> mdc.get("res.cause"), STRING)
                            .contains("java.lang.Throwable: response");
+        }
+    }
+
+    @Test
+    void testContentPreview() throws Exception {
+        final List<ILoggingEvent> events = prepare(a -> {
+            a.addBuiltIn(BuiltInProperty.REQ_CONTENT_PREVIEW);
+            a.addBuiltIn(BuiltInProperty.RES_CONTENT_PREVIEW);
+        });
+
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            ctx.logBuilder().requestContentPreview("request-preview");
+            ctx.logBuilder().responseContentPreview("response-preview");
+            ctx.logBuilder().endRequest();
+            ctx.logBuilder().endResponse();
+            final ILoggingEvent e = log(events);
+            final Map<String, String> mdc = e.getMDCPropertyMap();
+            assertThat(mdc).containsEntry("req.content_preview", "request-preview")
+                           .containsEntry("res.content_preview", "response-preview")
+                           .hasSize(2);
+        }
+    }
+
+    @Test
+    void testTimingValueConsistency() throws Exception {
+        final List<ILoggingEvent> events = prepare(a -> {
+            a.addBuiltIn(BuiltInProperty.ELAPSED_NANOS);
+            a.addBuiltIn(BuiltInProperty.TOTAL_DURATION_NANOS);
+            a.addBuiltIn(BuiltInProperty.TOTAL_DURATION_MILLIS);
+            a.addBuiltIn(BuiltInProperty.REQ_DURATION_NANOS);
+            a.addBuiltIn(BuiltInProperty.REQ_DURATION_MILLIS);
+        });
+
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            ctx.logBuilder().endRequest();
+            ctx.logBuilder().endResponse();
+            final ILoggingEvent e = log(events);
+            final Map<String, String> mdc = e.getMDCPropertyMap();
+            // total_duration_nanos and elapsed_nanos should have the same value.
+            assertThat(mdc.get("total_duration_nanos")).isEqualTo(mdc.get("elapsed_nanos"));
+            // duration values should be non-negative.
+            assertThat(Long.parseLong(mdc.get("total_duration_nanos"))).isNotNegative();
+            assertThat(Long.parseLong(mdc.get("total_duration_millis"))).isNotNegative();
+            assertThat(Long.parseLong(mdc.get("req.duration_nanos"))).isNotNegative();
+            assertThat(Long.parseLong(mdc.get("req.duration_millis"))).isNotNegative();
         }
     }
 
