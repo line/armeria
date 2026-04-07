@@ -113,7 +113,6 @@ public class ChannelUtilTest {
         final Map<ChannelOption<?>, Object> options = ImmutableMap.of(
                 ChannelOption.SO_LINGER, 1000);
 
-        // Long.MAX_VALUE should not cause overflow — should clamp to Integer.MAX_VALUE
         final Map<ChannelOption<?>, Object> newOptions =
                 ChannelUtil.applyDefaultChannelOptions(
                         true, transportType, options, Long.MAX_VALUE);

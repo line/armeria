@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.Flags;
@@ -233,10 +234,9 @@ public final class ChannelUtil {
         final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (idleTimeoutMillis > 0) {
-            final long safeSumMillis = Math.min(idleTimeoutMillis,
-                                                Long.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS)
-                                       + TCP_USER_TIMEOUT_BUFFER_MILLIS;
-            final int tcpUserTimeoutMillis = Ints.saturatedCast(safeSumMillis);
+            final int tcpUserTimeoutMillis =
+                    Ints.saturatedCast(LongMath.saturatedAdd(idleTimeoutMillis,
+                                                             TCP_USER_TIMEOUT_BUFFER_MILLIS));
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
                 assert epollTcpUserTimeout != null;
