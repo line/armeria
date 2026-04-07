@@ -159,33 +159,29 @@ public final class AthenzClient extends SimpleDecoratingHttpClient {
     }
 
     private final AthenzTokenHeader tokenHeader;
-    private final TokenClient tokenClient;
+    private final AthenzTokenClient tokenClient;
     private final Timer successTimer;
     private final Timer failureTimer;
 
-    AthenzClient(HttpClient delegate, ZtsBaseClient ztsBaseClient, String domainName,
-                 List<String> roleNames, AthenzTokenHeader tokenHeader, Duration refreshBefore,
-                 MeterIdPrefix meterIdPrefix, boolean preload) {
+    AthenzClient(HttpClient delegate, ZtsBaseClient ztsBaseClient, AthenzTokenClient tokenClient,
+                 AthenzTokenHeader tokenHeader, MeterIdPrefix meterIdPrefix) {
         super(delegate);
         this.tokenHeader = tokenHeader;
         final MeterRegistry meterRegistry = ztsBaseClient.clientFactory().meterRegistry();
         final String prefix = meterIdPrefix.name("token.fetch");
+        this.tokenClient = tokenClient;
+        final String domainName = tokenClient.domainName();
+        final String roleNames = String.join(",", tokenClient.roleNames());
         successTimer = MoreMeters.newTimer(meterRegistry, prefix,
                                            meterIdPrefix.tags("result", "success",
                                                               "domain", domainName,
-                                                              "roles", String.join(",", roleNames),
+                                                              "roles", roleNames,
                                                               "type", tokenHeader.name()));
         failureTimer = MoreMeters.newTimer(meterRegistry, prefix,
                                            meterIdPrefix.tags("result", "failure",
                                                               "domain", domainName,
-                                                              "roles", String.join(",", roleNames),
+                                                              "roles", roleNames,
                                                               "type", tokenHeader.name()));
-
-        if (tokenHeader.isRoleToken()) {
-            tokenClient = new RoleTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore, preload);
-        } else {
-            tokenClient = new AccessTokenClient(ztsBaseClient, domainName, roleNames, refreshBefore, preload);
-        }
     }
 
     @Override
