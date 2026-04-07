@@ -41,7 +41,7 @@ public final class RouterFilterFactory implements HttpFilterFactory {
     private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter = new RouterFilter<>();
     private static final RouterFilter<HttpRequest, HttpResponse> httpFilter = new RouterFilter<>();
 
-    private final XdsHttpFilter routerFilter = new XdsHttpFilter() {
+    private static final XdsHttpFilter ROUTER_FILTER = new XdsHttpFilter() {
         @Override
         public HttpPreprocessor httpPreprocessor() {
             return httpFilter::execute;
@@ -60,6 +60,6 @@ public final class RouterFilterFactory implements HttpFilterFactory {
 
     @Override
     public XdsHttpFilter create(HttpFilter filter, Any config) {
-        return routerFilter;
+        return ROUTER_FILTER;
     }
 }

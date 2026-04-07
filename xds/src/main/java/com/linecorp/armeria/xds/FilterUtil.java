@@ -59,7 +59,7 @@ final class FilterUtil {
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
             final HttpFilter httpFilter = httpFilters.get(i);
             final XdsHttpFilter instance = resolveInstance(httpFilter, null);
-            if (instance == null || instance.disabled()) {
+            if (instance == null) {
                 continue;
             }
             builder.add(instance.httpPreprocessor());
@@ -76,7 +76,7 @@ final class FilterUtil {
             final HttpFilter httpFilter = httpFilters.get(i);
             final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
             final XdsHttpFilter instance = resolveInstance(httpFilter, perRouteConfig);
-            if (instance == null || instance.disabled()) {
+            if (instance == null) {
                 continue;
             }
             builder.add(instance.httpDecorator());

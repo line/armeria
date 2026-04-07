@@ -27,17 +27,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Represents a resolved HTTP filter returned by {@link HttpFilterFactory#create}.
- * The framework skips this filter if {@link #disabled()} returns {@code true}.
  */
 @UnstableApi
 public interface XdsHttpFilter {
-
-    /**
-     * Returns {@code true} if this filter instance should be skipped.
-     */
-    default boolean disabled() {
-        return false;
-    }
 
     /**
      * Returns the {@link HttpPreprocessor} for downstream filter usage.
