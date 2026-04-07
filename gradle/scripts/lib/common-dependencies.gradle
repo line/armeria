@@ -4,7 +4,12 @@ import org.yaml.snakeyaml.Yaml
 
 buildscript {
     repositories {
-        mavenCentral()
+        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        if (mavenCentralMirror) {
+            maven { url = mavenCentralMirror }
+        } else {
+            mavenCentral()
+        }
         gradlePluginPortal()
     }
 
@@ -36,7 +41,12 @@ configure(dependencyManagementProject) {
         google()
         // Since we manage plugin versions here too.
         gradlePluginPortal()
-        mavenCentral()
+        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        if (mavenCentralMirror) {
+            maven { url = mavenCentralMirror }
+        } else {
+            mavenCentral()
+        }
     }
 
     javaPlatform {
