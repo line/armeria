@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import com.google.protobuf.Any;
+
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.HttpRequest;
@@ -24,46 +26,40 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A {@link HttpFilterFactory} implementation of the {@link Router} filter.
  */
 @UnstableApi
-public final class RouterFilterFactory implements HttpFilterFactory<Router> {
+public final class RouterFilterFactory implements HttpFilterFactory {
 
     private static final String NAME = "envoy.filters.http.router";
     private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter = new RouterFilter<>();
     private static final RouterFilter<HttpRequest, HttpResponse> httpFilter = new RouterFilter<>();
 
-    /**
-     * Creates an instance of a {@link HttpFilterFactory} for {@link Router}.
-     */
-    public RouterFilterFactory() {}
+    private final XdsHttpFilter routerFilter = new XdsHttpFilter() {
+        @Override
+        public HttpPreprocessor httpPreprocessor() {
+            return httpFilter::execute;
+        }
 
-    @Override
-    public RpcPreprocessor rpcPreprocessor(Router config) {
-        return rpcFilter::execute;
-    }
-
-    @Override
-    public HttpPreprocessor httpPreprocessor(Router config) {
-        return httpFilter::execute;
-    }
-
-    @Override
-    public Class<Router> configClass() {
-        return Router.class;
-    }
-
-    @Override
-    public Router defaultConfig() {
-        return Router.getDefaultInstance();
-    }
+        @Override
+        public RpcPreprocessor rpcPreprocessor() {
+            return rpcFilter::execute;
+        }
+    };
 
     @Override
     public String filterName() {
         return NAME;
+    }
+
+    @Override
+    public XdsHttpFilter create(HttpFilter filter, Any config) {
+        return routerFilter;
     }
 }

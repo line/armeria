@@ -35,31 +35,38 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
     private final ConfigSource configSource;
     private final String resourceName;
     private final SubscriptionContext context;
+    @Nullable
+    private final ListenerXdsResource listenerResource;
 
-    RouteStream(SubscriptionContext context, RouteConfiguration routeConfiguration) {
+    RouteStream(SubscriptionContext context, RouteConfiguration routeConfiguration,
+                @Nullable ListenerXdsResource listenerResource) {
         this.context = context;
         this.routeConfiguration = routeConfiguration;
         resourceName = routeConfiguration.getName();
         configSource = null;
+        this.listenerResource = listenerResource;
     }
 
-    RouteStream(ConfigSource configSource, String resourceName, SubscriptionContext context) {
+    RouteStream(ConfigSource configSource, String resourceName, SubscriptionContext context,
+                @Nullable ListenerXdsResource listenerResource) {
         this.configSource = configSource;
         this.resourceName = resourceName;
         this.context = context;
         routeConfiguration = null;
+        this.listenerResource = listenerResource;
     }
 
     @Override
     protected Subscription onStart(SnapshotWatcher<RouteSnapshot> watcher) {
         if (routeConfiguration != null) {
-            return new RouteSnapshotStream(new RouteXdsResource(routeConfiguration), context)
+            return new RouteSnapshotStream(new RouteXdsResource(routeConfiguration), context, listenerResource)
                     .subscribe(watcher);
         }
         assert configSource != null;
-        final SnapshotStream<RouteSnapshot> snapshotStream = new ResourceNodeAdapter<RouteXdsResource>(
-                configSource, context, resourceName, ROUTE)
-                .switchMap(routeResource -> new RouteSnapshotStream(routeResource, context));
+        final SnapshotStream<RouteSnapshot> snapshotStream =
+                new ResourceNodeAdapter<RouteXdsResource>(configSource, context, resourceName, ROUTE)
+                        .switchMap(routeResource -> new RouteSnapshotStream(routeResource, context,
+                                                                            listenerResource));
         return snapshotStream.subscribe(watcher);
     }
 
@@ -67,10 +74,14 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
 
         private final RouteXdsResource routeResource;
         private final SubscriptionContext context;
+        @Nullable
+        private final ListenerXdsResource listenerResource;
 
-        RouteSnapshotStream(RouteXdsResource routeResource, SubscriptionContext context) {
+        RouteSnapshotStream(RouteXdsResource routeResource, SubscriptionContext context,
+                            @Nullable ListenerXdsResource listenerResource) {
             this.routeResource = routeResource;
             this.context = context;
+            this.listenerResource = listenerResource;
         }
 
         @Override
@@ -82,7 +93,8 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
                 final VirtualHostXdsResource vhostResource =
                         new VirtualHostXdsResource(virtualHost, routeResource.version(),
                                                    routeResource.revision());
-                nodesBuilder.add(new VirtualHostStream(i, vhostResource, context));
+                nodesBuilder.add(new VirtualHostStream(i, vhostResource, context,
+                                                       listenerResource, routeResource));
             }
             final SnapshotStream<RouteSnapshot> routeSnapshotStream =
                     SnapshotStream.combineNLatest(nodesBuilder.build())
@@ -96,11 +108,18 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         private final int index;
         private final VirtualHostXdsResource resource;
         private final SubscriptionContext context;
+        @Nullable
+        private final ListenerXdsResource listenerResource;
+        private final RouteXdsResource routeResource;
 
-        VirtualHostStream(int index, VirtualHostXdsResource resource, SubscriptionContext context) {
+        VirtualHostStream(int index, VirtualHostXdsResource resource, SubscriptionContext context,
+                          @Nullable ListenerXdsResource listenerResource,
+                          RouteXdsResource routeResource) {
             this.index = index;
             this.resource = resource;
             this.context = context;
+            this.listenerResource = listenerResource;
+            this.routeResource = routeResource;
         }
 
         @Override
@@ -109,13 +128,12 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final ImmutableList.Builder<RouteEntryStream> routeEntryNodesBuilder = ImmutableList.builder();
             for (int i = 0; i < virtualHost.getRoutesList().size(); i++) {
                 final Route route = virtualHost.getRoutesList().get(i);
-                routeEntryNodesBuilder.add(new RouteEntryStream(i, route, context));
+                routeEntryNodesBuilder.add(new RouteEntryStream(i, route, context,
+                                                                listenerResource, routeResource, resource));
             }
             final SnapshotStream<VirtualHostSnapshot> vHostStream =
                     SnapshotStream.combineNLatest(routeEntryNodesBuilder.build())
-                                  .map(list -> {
-                                      return new VirtualHostSnapshot(resource, list, index);
-                                  });
+                                  .map(list -> new VirtualHostSnapshot(resource, list, index));
             return vHostStream.subscribe(watcher);
         }
     }
@@ -126,26 +144,37 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         private final Route route;
         private final SubscriptionContext context;
         private final String clusterName;
+        @Nullable
+        private final ListenerXdsResource listenerResource;
+        private final RouteXdsResource routeResource;
+        private final VirtualHostXdsResource vhostResource;
 
-        RouteEntryStream(int index, Route route, SubscriptionContext context) {
+        RouteEntryStream(int index, Route route, SubscriptionContext context,
+                         @Nullable ListenerXdsResource listenerResource,
+                         RouteXdsResource routeResource, VirtualHostXdsResource vhostResource) {
             this.index = index;
             this.route = route;
             this.context = context;
             clusterName = route.getRoute().getCluster();
+            this.listenerResource = listenerResource;
+            this.routeResource = routeResource;
+            this.vhostResource = vhostResource;
         }
 
         @Override
         protected Subscription onStart(SnapshotWatcher<RouteEntry> watcher) {
             if (!route.getRoute().hasCluster()) {
-                watcher.onUpdate(new RouteEntry(route, null, index), null);
-                return () -> {};
+                return SnapshotStream.just(new RouteEntry(route, null, index,
+                                                          listenerResource, routeResource, vhostResource))
+                                     .subscribe(watcher);
             }
             final SnapshotWatcher<ClusterSnapshot> mapped = (snapshot, t) -> {
                 if (snapshot == null) {
                     watcher.onUpdate(null, t);
                     return;
                 }
-                watcher.onUpdate(new RouteEntry(route, snapshot, index), null);
+                watcher.onUpdate(new RouteEntry(route, snapshot, index,
+                                                listenerResource, routeResource, vhostResource), null);
             };
             return context.clusterManager().register(clusterName, context, mapped);
         }

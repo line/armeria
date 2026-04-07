@@ -32,10 +32,10 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 @UnstableApi
 public final class HttpFilterFactoryRegistry {
 
-    private static final Map<String, HttpFilterFactory<?>> factories;
+    private static final Map<String, HttpFilterFactory> factories;
 
     static {
-        final ImmutableMap.Builder<String, HttpFilterFactory<?>> factoriesBuilder = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, HttpFilterFactory> factoriesBuilder = ImmutableMap.builder();
         ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
             factoriesBuilder.put(factory.filterName(), factory);
         });
@@ -48,7 +48,7 @@ public final class HttpFilterFactoryRegistry {
      * @param name the name of the filter represented by {@link HttpFilter#getName()}
      */
     @Nullable
-    public static HttpFilterFactory<?> filterFactory(String name) {
+    public static HttpFilterFactory filterFactory(String name) {
         return factories.get(name);
     }
 
