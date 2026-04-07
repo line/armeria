@@ -233,8 +233,10 @@ public final class ChannelUtil {
         final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (idleTimeoutMillis > 0) {
-            final int tcpUserTimeoutMillis =
-                    Ints.saturatedCast(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+            final long safeSumMillis = Math.min(idleTimeoutMillis,
+                                                Long.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS)
+                                       + TCP_USER_TIMEOUT_BUFFER_MILLIS;
+            final int tcpUserTimeoutMillis = Ints.saturatedCast(safeSumMillis);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
                 assert epollTcpUserTimeout != null;

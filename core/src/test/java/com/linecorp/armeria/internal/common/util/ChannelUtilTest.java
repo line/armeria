@@ -116,7 +116,7 @@ public class ChannelUtilTest {
         // Long.MAX_VALUE should not cause overflow — should clamp to Integer.MAX_VALUE
         final Map<ChannelOption<?>, Object> newOptions =
                 ChannelUtil.applyDefaultChannelOptions(
-                        true, transportType, options, Long.MAX_VALUE, 0);
+                        true, transportType, options, Long.MAX_VALUE);
         assertThat(newOptions).containsEntry(option, Integer.MAX_VALUE);
     }
 
