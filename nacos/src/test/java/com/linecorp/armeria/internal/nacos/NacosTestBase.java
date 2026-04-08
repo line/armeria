@@ -26,7 +26,9 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -63,7 +65,12 @@ public abstract class NacosTestBase {
                     .withEnv("NACOS_AUTH_ENABLE", "true")
                     .withEnv("NACOS_AUTH_TOKEN", NACOS_AUTH_TOKEN)
                     .withEnv("NACOS_AUTH_IDENTITY_KEY", NACOS_AUTH_SECRET)
-                    .withEnv("NACOS_AUTH_IDENTITY_VALUE", NACOS_AUTH_SECRET);
+                    .withEnv("NACOS_AUTH_IDENTITY_VALUE", NACOS_AUTH_SECRET)
+                    .withLogConsumer(new Slf4jLogConsumer(
+                            LoggerFactory.getLogger("nacos-container")))
+                    // Workaround for JDK-8287073: JDK 8u372 NPE in CgroupV2Subsystem
+                    // on cgroup v2 environments (e.g., Ubuntu 24.04).
+                    .withEnv("JAVA_OPT", "-XX:-UseContainerSupport");
     @Nullable
     private static URI nacosUri;
 
