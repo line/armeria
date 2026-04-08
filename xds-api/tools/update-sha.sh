@@ -5,7 +5,7 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-set -o xtrace
+#set -o xtrace
 
 # Optional: set GITHUB_TOKEN to avoid API rate limits
 # e.g. GITHUB_TOKEN=ghp_xxx ./update-sha.sh v1.36.4
