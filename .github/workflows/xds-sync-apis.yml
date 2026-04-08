@@ -21,3 +21,4 @@ jobs:
     uses: ./.github/workflows/xds-apply-updates.yml
     with:
       target_version: ${{ needs.envoy-versions.outputs.target_version }}
+    secrets: inherit
