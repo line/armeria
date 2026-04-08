@@ -59,6 +59,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     private final CompletableFuture<HttpResponse> resFuture;
     private final ServiceRequestContext ctx;
     private final UnaryMessageDeframer requestDeframer;
+    private final boolean enableEnvoyHttp1Bridge;
 
     // Only set once.
     @Nullable
@@ -74,7 +75,8 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     InternalGrpcExceptionHandler exceptionHandler,
                     @Nullable Executor blockingExecutor,
                     boolean autoCompress,
-                    boolean useMethodMarshaller) {
+                    boolean useMethodMarshaller,
+                    boolean enableEnvoyHttp1Bridge) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
               defaultHeaders, exceptionHandler, blockingExecutor, autoCompress, useMethodMarshaller);
@@ -88,6 +90,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                 .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         this.req = req;
         this.resFuture = requireNonNull(resFuture, "resFuture");
+        this.enableEnvoyHttp1Bridge = enableEnvoyHttp1Bridge;
     }
 
     @Override
@@ -159,6 +162,13 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     final HttpData httpData =
                             aggregateData(responseBody, (HttpData) responseTrailers, ctx.alloc());
                     response = HttpResponse.of(responseHeaders, httpData);
+                } else if (enableEnvoyHttp1Bridge && !ctx.sessionProtocol().isMultiplex()) {
+                    // Envoy gRPC HTTP/1 bridge: merge trailers into response headers so that
+                    // legacy proxies that cannot handle chunked trailers receive a plain HTTP/1.1 response.
+                    final ResponseHeaders merged = responseHeaders.toBuilder()
+                                                                  .add((HttpHeaders) responseTrailers)
+                                                                  .build();
+                    response = HttpResponse.of(merged, responseBody);
                 } else {
                     response = HttpResponse.of(responseHeaders, responseBody, (HttpHeaders) responseTrailers);
                 }

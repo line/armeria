@@ -337,7 +337,8 @@ class UnaryServerCallTest {
                         exceptionHandler,
                         /* blockingExecutor */ null,
                         /* autoCompress */ false,
-                        /* useMethodMarshaller */ false);
+                        /* useMethodMarshaller */ false,
+                        /* enableEnvoyHttp1Bridge */ false);
 
         final AtomicReference<SimpleRequest> requestCaptor = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -383,6 +384,7 @@ class UnaryServerCallTest {
                 exceptionHandler,
                 /* blockingExecutor */ null,
                 /* autoCompress */ false,
-                /* useMethodMarshaller */ false);
+                /* useMethodMarshaller */ false,
+                /* enableEnvoyHttp1Bridge */ false);
     }
 }
