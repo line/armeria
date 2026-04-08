@@ -163,7 +163,7 @@ public final class OAuth2AuthorizationGrantBuilder {
 
     /**
      * Sets whether to acquire an access token proactively when the {@link OAuth2AuthorizationGrant} is built.
-     * This options is disabled by default and the client will acquire an access token lazily when the first
+     * This option is disabled by default and the client will acquire an access token lazily when the first
      * request is made with the {@link OAuth2AuthorizationGrant}.
      */
     public OAuth2AuthorizationGrantBuilder preload(boolean preload) {

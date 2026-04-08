@@ -76,6 +76,7 @@ import com.linecorp.armeria.server.docs.ParamInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
 import io.grpc.ServerMethodDefinition;
@@ -83,7 +84,8 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 
 /**
- * {@link DocServicePlugin} implementation that supports {@link GrpcService}s.
+ * {@link DocServicePlugin} implementation that supports {@link GrpcService}s and
+ * {@link DelegatingHttpJsonTranscodingService}.
  */
 public final class GrpcDocServicePlugin implements DocServicePlugin {
 
@@ -106,7 +108,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
-        return ImmutableSet.of(GrpcService.class);
+        return ImmutableSet.of(GrpcService.class, DelegatingHttpJsonTranscodingService.class);
     }
 
     @Override
@@ -121,8 +123,22 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
         final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
-            final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
-            assert grpcService != null;
+            final Service<?, ?> service = serviceConfig.service();
+            final GrpcService grpcService = service.as(GrpcService.class);
+            if (grpcService == null) {
+                final HttpEndpointSupport transcoder = service.as(HttpEndpointSupport.class);
+                if (transcoder == null) {
+                    continue;
+                }
+                final HttpEndpointSpecification spec =
+                        transcoder.httpEndpointSpecification(serviceConfig.mappedRoute());
+                if (spec != null && filter.test(NAME, spec.serviceName(), spec.methodName())) {
+                    httpEndpoints.add(new HttpEndpoint(serviceConfig,
+                                                       // Use route which has the full path.
+                                                       spec.withRoute(serviceConfig.route())));
+                }
+                continue;
+            }
 
             if (addedService.add(grpcService)) {
                 addServiceDescriptor(serviceInfosBuilder, grpcService);
@@ -130,8 +146,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
             final HttpEndpointSupport httpEndpointSupport = grpcService.as(HttpEndpointSupport.class);
             if (httpEndpointSupport != null) {
-                // grpcService can be unwrapped into HttpJsonTranscodingService.
-                // There are two routes for a method in HttpJsonTranscodingService:
+                // grpcService can be unwrapped into HttpJsonTranscodingGrpcService.
+                // There are two routes for a method in HttpJsonTranscodingGrpcService:
                 // - The HTTP route is added below using the spec.
                 // - The auto generated route(e.g. /package.name/MethodName) is added using EndpointInfo.
                 final HttpEndpointSpecification spec =
@@ -380,7 +396,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
         for (ServiceConfig c : serviceConfigs) {
             final GrpcService grpcService = c.service().as(GrpcService.class);
-            assert grpcService != null;
+            if (grpcService == null) {
+                // can be a DelegatingHttpJsonTranscodingService
+                continue;
+            }
             for (ServerServiceDefinition service : grpcService.services()) {
                 allServices.add(service);
                 classLoaders.add(service.getClass().getClassLoader());
