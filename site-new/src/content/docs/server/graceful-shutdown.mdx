@@ -22,9 +22,10 @@ The timeout must be greater than or equal to the quiet period.
 
 ## Basic configuration
 
-Use [ServerBuilder](type) to configure graceful shutdown:
+Use [ServerBuilder](type://ServerBuilder) to configure graceful shutdown:
 
 ```java
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -47,6 +48,7 @@ configure it to enable.
 For more control, use [GracefulShutdown.builder()](type://GracefulShutdown#builder()):
 
 ```java
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.GracefulShutdown;
 import com.linecorp.armeria.server.Server;
 
@@ -101,7 +103,7 @@ Server server =
           .build();
 ```
 
-The `toExceptionFunction` receives a [ServiceRequestContext](type) and an [HttpRequest](type),
+The `toExceptionFunction` receives a [ServiceRequestContext](type://ServiceRequestContext) and an [HttpRequest](type://HttpRequest),
 so you can return different exceptions depending on the request path, headers, or other attributes.
 
 :::tip
