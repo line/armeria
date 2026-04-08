@@ -7,6 +7,27 @@ set -o pipefail
 set -o nounset
 set -o xtrace
 
+# Optional: set GITHUB_TOKEN to avoid API rate limits
+# e.g. GITHUB_TOKEN=ghp_xxx ./update-sha.sh v1.36.4
+CURL_AUTH=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  CURL_AUTH=(-H "Authorization: token $GITHUB_TOKEN")
+fi
+
+function github_curl() {
+  local HTTP_CODE BODY TMPFILE
+  TMPFILE=$(mktemp)
+  HTTP_CODE=$(curl -s -o "$TMPFILE" -w '%{http_code}' "${CURL_AUTH[@]+"${CURL_AUTH[@]}"}" "$@")
+  BODY=$(cat "$TMPFILE")
+  rm -f "$TMPFILE"
+  if [[ "$HTTP_CODE" -lt 200 || "$HTTP_CODE" -ge 300 ]]; then
+    echo "error: HTTP $HTTP_CODE from $*" >&2
+    echo "$BODY" >&2
+    return 1
+  fi
+  echo "$BODY"
+}
+
 function find_sha() {
   local CONTENT=$1
   local DEPENDENCY=$2
@@ -21,13 +42,17 @@ function find_date() {
 
 function find_envoy_sha_from_tag() {
   local TAG=$1
-  curl -s https://api.github.com/repos/envoyproxy/envoy/tags | grep "$TAG" -A 4 | grep sha | awk '{print $2}' | tr -d '"' | tr -d ","
+  github_curl https://api.github.com/repos/envoyproxy/envoy/tags | grep "$TAG" -A 4 | grep sha | awk '{print $2}' | tr -d '"' | tr -d ","
 }
 
 CURRENT_ENVOY_RELEASE=$(cat envoy_release)
 ENVOY_VERSION=$(find_envoy_sha_from_tag "$1")
+if [[ -z "$ENVOY_VERSION" ]]; then
+  echo "error: could not resolve SHA for tag '$1' (tag not found or API rate-limited)" >&2
+  exit 1
+fi
 
-CURL_OUTPUT=$(curl -s "https://raw.githubusercontent.com/envoyproxy/envoy/$ENVOY_VERSION/api/bazel/repository_locations.bzl")
+CURL_OUTPUT=$(github_curl "https://raw.githubusercontent.com/envoyproxy/envoy/$ENVOY_VERSION/api/bazel/repository_locations.bzl")
 
 GOOGLEAPIS_SHA=$(find_sha "$CURL_OUTPUT" com_google_googleapis)
 GOOGLEAPIS_DATE=$(find_date "$CURL_OUTPUT" com_google_googleapis)
