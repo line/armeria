@@ -19,19 +19,34 @@ package com.linecorp.armeria.xds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
 
+import com.linecorp.armeria.common.file.DirectoryWatchService;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class XdsExtensionRegistryTest {
 
-    private static final XdsResourceValidator VALIDATOR = new XdsResourceValidator();
-
     private static XdsExtensionRegistry createRegistry() {
-        return XdsExtensionRegistry.of(VALIDATOR);
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        return XdsExtensionRegistry.of(new XdsResourceValidator(),
+                                       watchService,
+                                       meterRegistry,
+                                       new MeterIdPrefix("test"));
+    }
+
+    private static final DirectoryWatchService watchService = new DirectoryWatchService();
+
+    @AfterAll
+    static void tearDown() {
+        watchService.close();
     }
 
     @Test

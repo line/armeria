@@ -249,6 +249,14 @@ message ConfigSource {
     // is provided via ADS and the specified data can also be obtained via ADS.]
     option (armeria.xds.supported.oneof_field) = 5;
     SelfConfigSource self = 5;
+
+    // Armeria extension: a custom config source implementation resolved via
+    // the extension registry by the Any's type URL. This allows plugging in
+    // non-standard config sources (e.g. CentralDogma, etcd, Consul) without
+    // modifying the upstream proto definition.
+    // The large field number avoids conflicts with future upstream additions.
+    option (armeria.xds.supported.oneof_field) = 1000;
+    google.protobuf.Any custom_config_source = 1000;
   }
 
   // When this timeout is specified, Envoy will wait no longer than the specified time for first

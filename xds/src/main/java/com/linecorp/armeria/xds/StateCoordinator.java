@@ -16,12 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.time.Instant;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.netty.util.concurrent.EventExecutor;
 
 final class StateCoordinator implements SafeCloseable {
@@ -29,6 +35,11 @@ final class StateCoordinator implements SafeCloseable {
     private final SubscriberStorage subscriberStorage;
     private final ResourceStateStore stateStore;
     private final XdsExtensionRegistry extensionRegistry;
+
+    StateCoordinator(EventExecutor eventLoop, ConfigSource configSource,
+                     boolean delta, XdsExtensionRegistry extensionRegistry) {
+        this(eventLoop, initialFetchTimeoutMillis(configSource), delta, extensionRegistry);
+    }
 
     StateCoordinator(EventExecutor eventLoop, long timeoutMillis, boolean delta,
                      XdsExtensionRegistry extensionRegistry) {
@@ -39,6 +50,19 @@ final class StateCoordinator implements SafeCloseable {
 
     XdsExtensionRegistry extensionRegistry() {
         return extensionRegistry;
+    }
+
+    private static long initialFetchTimeoutMillis(ConfigSource configSource) {
+        if (!configSource.hasInitialFetchTimeout()) {
+            return 15_000;
+        }
+        final Duration timeoutDuration = configSource.getInitialFetchTimeout();
+        final Instant instant = Instant.ofEpochSecond(timeoutDuration.getSeconds(),
+                                                      timeoutDuration.getNanos());
+        final long epochMilli = instant.toEpochMilli();
+        checkArgument(epochMilli >= 0, "Invalid initialFetchTimeout received: %s (expected >= 0)",
+                      timeoutDuration);
+        return epochMilli;
     }
 
     <T extends XdsResource> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
