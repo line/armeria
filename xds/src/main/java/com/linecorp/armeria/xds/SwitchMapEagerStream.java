@@ -20,7 +20,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class SwitchMapStream<I, O> extends RefCountedStream<O> {
+final class SwitchMapEagerStream<I, O> extends RefCountedStream<O> {
 
     private final SnapshotStream<I> upstream;
     private final Function<? super I, ? extends SnapshotStream<? extends O>> mapper;
@@ -30,9 +30,10 @@ final class SwitchMapStream<I, O> extends RefCountedStream<O> {
     @Nullable
     private Subscription innerSub;
     private long epoch;
+    private long innerEpoch;
 
-    SwitchMapStream(SnapshotStream<I> upstream,
-                    Function<? super I, ? extends SnapshotStream<? extends O>> mapper) {
+    SwitchMapEagerStream(SnapshotStream<I> upstream,
+                         Function<? super I, ? extends SnapshotStream<? extends O>> mapper) {
         this.upstream = upstream;
         this.mapper = mapper;
     }
@@ -47,20 +48,29 @@ final class SwitchMapStream<I, O> extends RefCountedStream<O> {
                 return;
             }
 
-            if (innerSub != null) {
-                innerSub.close();
-                innerSub = null;
-            }
+            final Subscription prevInnerSub = innerSub;
 
+            final long mappedEpoch = ++innerEpoch;
             final SnapshotStream<? extends O> innerStream;
             try {
                 innerStream = mapper.apply(snapshot);
             } catch (Throwable t) {
+                innerEpoch--;
                 emit(null, t);
                 return;
             }
 
-            innerSub = innerStream.subscribe(this::emit);
+            innerSub = innerStream.subscribe((value, error) -> {
+                if (mappedEpoch != innerEpoch) {
+                    return;
+                }
+                emit(value, error);
+            });
+
+            if (prevInnerSub != null) {
+                prevInnerSub.close();
+            }
+
             // If stopped during subscription, close immediately
             if (subscriptionEpoch != epoch) {
                 innerSub.close();

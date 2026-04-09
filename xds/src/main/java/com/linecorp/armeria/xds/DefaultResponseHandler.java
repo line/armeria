@@ -46,14 +46,6 @@ final class DefaultResponseHandler implements XdsResponseHandler {
         final String errorDetails;
         if (holder.errors().isEmpty()) {
             sender.ackResponse(resourceParser.type(), response.getVersionInfo(), response.getNonce());
-            // The version was updated, so we always update the cache in case a late watcher subscribed.
-            // 1) A subscriber is added, and a stream is created.
-            // 2) Immediately, the subscriber is removed but a response later updates the version.
-            //    At this step, subscribers cannot be notified as there are no watchers
-            //    and the value isn't cached.
-            // 3) Afterward, a new subscriber is added - this subscriber doesn't see any cached values so the
-            //    subscriber is in an indefinite waiting state until the version is incremented.
-            storage.updateCache(resourceParser.type(), holder.parsedResources());
         } else {
             errorDetails = errorMessageJoiner.join(holder.errors());
             sender.nackResponse(resourceParser.type(), response.getNonce(), errorDetails);
