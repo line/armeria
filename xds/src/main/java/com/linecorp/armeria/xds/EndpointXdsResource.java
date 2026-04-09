@@ -34,7 +34,6 @@ public final class EndpointXdsResource extends AbstractXdsResource {
 
     private EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(clusterLoadAssignment);
         this.clusterLoadAssignment = clusterLoadAssignment;
     }
 

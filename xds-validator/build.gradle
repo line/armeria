@@ -1,3 +1,7 @@
+dependencies {
+    implementation libs.protobuf.java
+}
+
 tasks.withType(Test).configureEach {
     failOnNoDiscoveredTests = false
 }

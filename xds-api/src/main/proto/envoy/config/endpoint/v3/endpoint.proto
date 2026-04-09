@@ -8,6 +8,7 @@ import "envoy/type/v3/percent.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 
+import "armeria/xds/supported.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
@@ -99,7 +100,7 @@ message ClusterLoadAssignment {
     //
     // Read more at :ref:`priority levels <arch_overview_load_balancing_priority_levels>` and
     // :ref:`localities <arch_overview_load_balancing_locality_weighted_lb>`.
-    google.protobuf.UInt32Value overprovisioning_factor = 3 [(validate.rules).uint32 = {gt: 0}];
+    google.protobuf.UInt32Value overprovisioning_factor = 3 [(validate.rules).uint32 = {gt: 0}, (armeria.xds.supported) = true];
 
     // The max time until which the endpoints from this assignment can be used.
     // If no new assignments are received before this time expires the endpoints
@@ -116,22 +117,22 @@ message ClusterLoadAssignment {
     // .. note::
     //   This is not currently implemented for
     //   :ref:`locality weighted load balancing <arch_overview_load_balancing_locality_weighted_lb>`.
-    bool weighted_priority_health = 6;
+    bool weighted_priority_health = 6 [(armeria.xds.supported) = true];
   }
 
   // Name of the cluster. This will be the :ref:`service_name
   // <envoy_v3_api_field_config.cluster.v3.Cluster.EdsClusterConfig.service_name>` value if specified
   // in the cluster :ref:`EdsClusterConfig
   // <envoy_v3_api_msg_config.cluster.v3.Cluster.EdsClusterConfig>`.
-  string cluster_name = 1 [(validate.rules).string = {min_len: 1}];
+  string cluster_name = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   // List of endpoints to load balance to.
-  repeated LocalityLbEndpoints endpoints = 2;
+  repeated LocalityLbEndpoints endpoints = 2 [(armeria.xds.supported) = true];
 
   // Map of named endpoints that can be referenced in LocalityLbEndpoints.
   // [#not-implemented-hide:]
   map<string, Endpoint> named_endpoints = 5;
 
   // Load balancing policy settings.
-  Policy policy = 4;
+  Policy policy = 4 [(armeria.xds.supported) = true];
 }

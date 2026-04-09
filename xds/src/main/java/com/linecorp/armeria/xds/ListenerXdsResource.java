@@ -16,19 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.List;
 
-import com.google.protobuf.Any;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory.RouterXdsHttpFilter;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link Listener}.
@@ -36,42 +35,37 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 @UnstableApi
 public final class ListenerXdsResource extends AbstractXdsResource {
 
-    private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
-            "type.googleapis.com/" +
-            "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager";
-    private static final String ROUTER_TYPE_URL =
-            "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
-
     private final Listener listener;
     @Nullable
     private final HttpConnectionManager connectionManager;
+    private final List<XdsHttpFilter> downstreamFilters;
     @Nullable
     private final Router router;
 
-    ListenerXdsResource(Listener listener) {
-        this(listener, "");
+    ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager) {
+        this(listener, connectionManager, ImmutableList.of(), "", 0);
     }
 
-    ListenerXdsResource(Listener listener, String version) {
-        this(listener, version, 0);
-    }
-
-    private ListenerXdsResource(Listener listener, String version, long revision) {
+    ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
+                        List<XdsHttpFilter> downstreamFilters,
+                        String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(listener);
         this.listener = listener;
+        this.connectionManager = connectionManager;
+        this.downstreamFilters = downstreamFilters;
+        this.router = findRouter(downstreamFilters);
+    }
 
-        if (listener.getApiListener().hasApiListener()) {
-            final Any apiListener = listener.getApiListener().getApiListener();
-            if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
-                connectionManager = XdsValidatorIndexRegistry.unpack(apiListener, HttpConnectionManager.class);
-            } else {
-                throw new IllegalArgumentException("Unsupported api listener: " + apiListener);
-            }
-        } else {
-            connectionManager = null;
+    @Nullable
+    private static Router findRouter(List<XdsHttpFilter> filters) {
+        if (filters.isEmpty()) {
+            return null;
         }
-        router = router(connectionManager);
+        final XdsHttpFilter last = filters.get(filters.size() - 1);
+        if (last instanceof RouterXdsHttpFilter) {
+            return ((RouterXdsHttpFilter) last).router();
+        }
+        return null;
     }
 
     @Override
@@ -102,7 +96,8 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         if (revision == revision()) {
             return this;
         }
-        return new ListenerXdsResource(listener, version(), revision);
+        return new ListenerXdsResource(listener, connectionManager, downstreamFilters,
+                                       version(), revision);
     }
 
     /**
@@ -113,21 +108,10 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         return router;
     }
 
-    @Nullable
-    private static Router router(@Nullable HttpConnectionManager connectionManager) {
-        if (connectionManager == null) {
-            return null;
-        }
-        final List<HttpFilter> httpFilters = connectionManager.getHttpFiltersList();
-        if (httpFilters.isEmpty()) {
-            return null;
-        }
-        final HttpFilter lastHttpFilter = httpFilters.get(httpFilters.size() - 1);
-        if (!ROUTER_TYPE_URL.equals(lastHttpFilter.getTypedConfig().getTypeUrl())) {
-            // the router should be the last/terminal filter
-            return null;
-        }
-        checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
-        return XdsValidatorIndexRegistry.unpack(lastHttpFilter.getTypedConfig(), Router.class);
+    /**
+     * The pre-resolved downstream {@link XdsHttpFilter} instances.
+     */
+    List<XdsHttpFilter> downstreamFilters() {
+        return downstreamFilters;
     }
 }

@@ -16,6 +16,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.transport_sockets.tls.v3";
 option java_outer_classname = "CommonProto";
 option java_multiple_files = true;
@@ -217,14 +219,14 @@ message TlsCertificate {
   // parent directory for any file moves to support rotation. This currently
   // only applies to dynamic secrets, when the ``TlsCertificate`` is delivered via
   // SDS.
-  config.core.v3.DataSource certificate_chain = 1;
+  config.core.v3.DataSource certificate_chain = 1 [(armeria.xds.supported) = true];
 
   // The TLS private key.
   //
   // If ``private_key`` is a filesystem path, a watch will be added to the parent
   // directory for any file moves to support rotation. This currently only
   // applies to dynamic secrets, when the ``TlsCertificate`` is delivered via SDS.
-  config.core.v3.DataSource private_key = 2 [(udpa.annotations.sensitive) = true];
+  config.core.v3.DataSource private_key = 2 [(udpa.annotations.sensitive) = true, (armeria.xds.supported) = true];
 
   // ``Pkcs12`` data containing TLS certificate, chain, and private key.
   //
@@ -251,7 +253,7 @@ message TlsCertificate {
   // specified. This only applies when a ``TlsCertificate`` is delivered by SDS
   // with references to filesystem paths. See the :ref:`SDS key rotation
   // <sds_key_rotation>` documentation for further details.
-  config.core.v3.WatchedDirectory watched_directory = 7;
+  config.core.v3.WatchedDirectory watched_directory = 7 [(armeria.xds.supported) = true];
 
   // BoringSSL private key method provider. This is an alternative to :ref:`private_key
   // <envoy_v3_api_field_extensions.transport_sockets.tls.v3.TlsCertificate.private_key>` field.
@@ -265,7 +267,7 @@ message TlsCertificate {
 
   // The password to decrypt the TLS private key. If this field is not set, it is assumed that the
   // TLS private key is not password encrypted.
-  config.core.v3.DataSource password = 3 [(udpa.annotations.sensitive) = true];
+  config.core.v3.DataSource password = 3 [(udpa.annotations.sensitive) = true, (armeria.xds.supported) = true];
 
   // The OCSP response to be stapled with this certificate during the handshake.
   // The response must be DER-encoded and may only be  provided via ``filename`` or
@@ -333,15 +335,15 @@ message SubjectAltNameMatcher {
   // against.
   enum SanType {
     SAN_TYPE_UNSPECIFIED = 0;
-    EMAIL = 1;
-    DNS = 2;
-    URI = 3;
-    IP_ADDRESS = 4;
+    EMAIL = 1 [(armeria.xds.supported_value) = true];
+    DNS = 2 [(armeria.xds.supported_value) = true];
+    URI = 3 [(armeria.xds.supported_value) = true];
+    IP_ADDRESS = 4 [(armeria.xds.supported_value) = true];
     OTHER_NAME = 5;
   }
 
   // Specification of type of SAN. Note that the default enum value is an invalid choice.
-  SanType san_type = 1 [(validate.rules).enum = {defined_only: true not_in: 0}];
+  SanType san_type = 1 [(validate.rules).enum = {defined_only: true not_in: 0}, (armeria.xds.supported) = true];
 
   // Matcher for SAN value.
   //
@@ -359,7 +361,7 @@ message SubjectAltNameMatcher {
   //          * INTEGER/ENUMERATED: Validated against a string containing the integer value
   //          * NULL: Validated against an empty string
   //          * Other types: Validated directly against the string value
-  type.matcher.v3.StringMatcher matcher = 2 [(validate.rules).message = {required: true}];
+  type.matcher.v3.StringMatcher matcher = 2 [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
   // OID Value which is required if OTHER_NAME SAN type is used.
   // For example, UPN OID is 1.3.6.1.4.1.311.20.2.3
@@ -429,7 +431,7 @@ message CertificateValidationContext {
   //
   // If ``ca_certificate_provider_instance`` is set, it takes precedence over ``trusted_ca``.
   config.core.v3.DataSource trusted_ca = 1
-      [(udpa.annotations.field_migrate).oneof_promotion = "ca_cert_source"];
+      [(udpa.annotations.field_migrate).oneof_promotion = "ca_cert_source", (armeria.xds.supported) = true];
 
   // Certificate provider instance for fetching TLS certificates.
   //
@@ -442,7 +444,7 @@ message CertificateValidationContext {
   // If present, system root certs are used only if neither of the ``trusted_ca``
   // or ``ca_certificate_provider_instance`` fields are set.
   // [#not-implemented-hide:]
-  SystemRootCerts system_root_certs = 17;
+  SystemRootCerts system_root_certs = 17 [(armeria.xds.supported) = true];
 
   // If specified, updates of a file-based ``trusted_ca`` source will be triggered
   // by this watch. This allows explicit control over the path watched, by
@@ -451,7 +453,7 @@ message CertificateValidationContext {
   // ``CertificateValidationContext`` is delivered by SDS with references to
   // filesystem paths. See the :ref:`SDS key rotation <sds_key_rotation>`
   // documentation for further details.
-  config.core.v3.WatchedDirectory watched_directory = 11;
+  config.core.v3.WatchedDirectory watched_directory = 11 [(armeria.xds.supported) = true];
 
   // An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will verify that the
   // SHA-256 of the DER-encoded Subject Public Key Information (SPKI) of the presented certificate
@@ -484,7 +486,7 @@ message CertificateValidationContext {
   //   because SPKI is tied to a private key, so it doesn't change when the certificate
   //   is renewed using the same private key.
   repeated string verify_certificate_spki = 3
-      [(validate.rules).repeated = {items {string {min_len: 44 max_bytes: 44}}}];
+      [(validate.rules).repeated = {items {string {min_len: 44 max_bytes: 44}}}, (armeria.xds.supported) = true];
 
   // An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will verify that
   // the SHA-256 of the DER-encoded presented certificate matches one of the specified values.
@@ -513,7 +515,7 @@ message CertificateValidationContext {
   // <envoy_v3_api_field_extensions.transport_sockets.tls.v3.CertificateValidationContext.verify_certificate_spki>` are specified,
   // a hash matching value from either of the lists will result in the certificate being accepted.
   repeated string verify_certificate_hash = 2
-      [(validate.rules).repeated = {items {string {min_len: 64 max_bytes: 95}}}];
+      [(validate.rules).repeated = {items {string {min_len: 64 max_bytes: 95}}}, (armeria.xds.supported) = true];
 
   // An optional list of Subject Alternative name matchers. If specified, Envoy will verify that the
   // Subject Alternative Name of the presented certificate matches one of the specified matchers.
@@ -537,7 +539,7 @@ message CertificateValidationContext {
   //   Subject Alternative Names are easily spoofable and verifying only them is insecure,
   //   therefore this option must be used together with :ref:`trusted_ca
   //   <envoy_v3_api_field_extensions.transport_sockets.tls.v3.CertificateValidationContext.trusted_ca>`.
-  repeated SubjectAltNameMatcher match_typed_subject_alt_names = 15;
+  repeated SubjectAltNameMatcher match_typed_subject_alt_names = 15 [(armeria.xds.supported) = true];
 
   // This field is deprecated in favor of
   // :ref:`match_typed_subject_alt_names
@@ -546,7 +548,8 @@ message CertificateValidationContext {
   // <envoy_v3_api_field_extensions.transport_sockets.tls.v3.CertificateValidationContext.match_typed_subject_alt_names>`
   // are specified, the former (deprecated field) is ignored.
   repeated type.matcher.v3.StringMatcher match_subject_alt_names = 9
-      [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0"];
+      [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0",
+       (armeria.xds.supported) = true];
 
   // [#not-implemented-hide:] Must present signed certificate time-stamp.
   google.protobuf.BoolValue require_signed_certificate_timestamp = 6;

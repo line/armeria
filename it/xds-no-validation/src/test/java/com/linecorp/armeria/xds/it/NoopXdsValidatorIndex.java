@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.xds.it;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
 
 public class NoopXdsValidatorIndex implements XdsValidatorIndex {
+
     @Override
-    public void assertValid(Object message) {
+    public void assertValid(Message message) {
     }
 
     @Override

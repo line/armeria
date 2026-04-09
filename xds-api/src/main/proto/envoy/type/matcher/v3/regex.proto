@@ -4,6 +4,7 @@ package envoy.type.matcher.v3;
 
 import "google/protobuf/wrappers.proto";
 
+import "armeria/xds/supported.proto";
 import "envoy/annotations/deprecation.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
@@ -63,7 +64,7 @@ message RegexMatcher {
 
   // The regex match string. The string must be supported by the configured engine. The regex is matched
   // against the full string, not as a partial match.
-  string regex = 2 [(validate.rules).string = {min_len: 1}];
+  string regex = 2 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 }
 
 // Describes how to match a string and then produce a new string using a regular

@@ -20,6 +20,8 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.XdsExtensionFactory;
+import com.linecorp.armeria.xds.XdsResourceValidator;
 
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
@@ -33,12 +35,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
  * Returning {@code null} from {@link #create} causes the filter to be silently skipped.
  */
 @UnstableApi
-public interface HttpFilterFactory {
-
-    /**
-     * The filter name that should be equivalent to {@link HttpFilter#getName()}.
-     */
-    String filterName();
+public interface HttpFilterFactory extends XdsExtensionFactory {
 
     /**
      * Creates an {@link XdsHttpFilter} for the given filter and its raw typed config.
@@ -54,7 +51,8 @@ public interface HttpFilterFactory {
      * @param httpFilter the filter descriptor from {@link HttpConnectionManager#getHttpFiltersList()}
      * @param config     the raw typed config {@link Any}; may be {@link Any#getDefaultInstance()}
      *                   if no config was provided
+     * @param validator  the {@link XdsResourceValidator} for validating and unpacking {@link Any} protos
      */
     @Nullable
-    XdsHttpFilter create(HttpFilter httpFilter, Any config);
+    XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator);
 }

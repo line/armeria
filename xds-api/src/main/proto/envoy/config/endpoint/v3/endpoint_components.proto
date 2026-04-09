@@ -11,6 +11,7 @@ import "google/protobuf/wrappers.proto";
 
 import "xds/core/v3/collection_entry.proto";
 
+import "armeria/xds/supported.proto";
 import "envoy/annotations/deprecation.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
@@ -39,25 +40,25 @@ message Endpoint {
     // as the host's serving address port. This provides an alternative health
     // check port. Setting this with a non-zero value allows an upstream host
     // to have different health check address port.
-    uint32 port_value = 1 [(validate.rules).uint32 = {lte: 65535}];
+    uint32 port_value = 1 [(validate.rules).uint32 = {lte: 65535}, (armeria.xds.supported) = true];
 
     // By default, the host header for L7 health checks is controlled by cluster level configuration
     // (see: :ref:`host <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.host>` and
     // :ref:`authority <envoy_v3_api_field_config.core.v3.HealthCheck.GrpcHealthCheck.authority>`). Setting this
     // to a non-empty value allows overriding the cluster level configuration for a specific
     // endpoint.
-    string hostname = 2;
+    string hostname = 2 [(armeria.xds.supported) = true];
 
     // Optional alternative health check host address.
     //
     // .. attention::
     //
     //   The form of the health check host address is expected to be a direct IP address.
-    core.v3.Address address = 3;
+    core.v3.Address address = 3 [(armeria.xds.supported) = true];
 
     // Optional flag to control if perform active health check for this endpoint.
     // Active health check is enabled by default if there is a health checker.
-    bool disable_active_health_check = 4;
+    bool disable_active_health_check = 4 [(armeria.xds.supported) = true];
   }
 
   message AdditionalAddress {
@@ -74,7 +75,7 @@ message Endpoint {
   //   specified :ref:`resolver <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>`
   //   in the Address). For LOGICAL or STRICT DNS, it is expected to be hostname,
   //   and will be resolved via DNS.
-  core.v3.Address address = 1;
+  core.v3.Address address = 1 [(armeria.xds.supported) = true];
 
   // The optional health check configuration is used as configuration for the
   // health checker to contact the health checked host.
@@ -83,13 +84,13 @@ message Endpoint {
   //
   //   This takes into effect only for upstream clusters with
   //   :ref:`active health checking <arch_overview_health_checking>` enabled.
-  HealthCheckConfig health_check_config = 2;
+  HealthCheckConfig health_check_config = 2 [(armeria.xds.supported) = true];
 
   // The hostname associated with this endpoint. This hostname is not used for routing or address
   // resolution. If provided, it will be associated with the endpoint, and can be used for features
   // that require a hostname, like
   // :ref:`auto_host_rewrite <envoy_v3_api_field_config.route.v3.RouteAction.auto_host_rewrite>`.
-  string hostname = 3;
+  string hostname = 3 [(armeria.xds.supported) = true];
 
   // An ordered list of addresses that together with ``address`` comprise the
   // list of addresses for an endpoint. The address given in the ``address`` is
@@ -106,14 +107,14 @@ message LbEndpoint {
 
   // Upstream host identifier or a named reference.
   oneof host_identifier {
-    Endpoint endpoint = 1;
+    Endpoint endpoint = 1 [(armeria.xds.supported) = true];
 
     // [#not-implemented-hide:]
     string endpoint_name = 5;
   }
 
   // Optional health status when known and supplied by EDS server.
-  core.v3.HealthStatus health_status = 2;
+  core.v3.HealthStatus health_status = 2 [(armeria.xds.supported) = true];
 
   // The endpoint metadata specifies values that may be used by the load
   // balancer to select endpoints in a cluster for a given request. The filter
@@ -122,7 +123,7 @@ message LbEndpoint {
   // This may be matched against in a route's
   // :ref:`RouteAction <envoy_v3_api_msg_config.route.v3.RouteAction>` metadata_match field
   // to subset the endpoints considered in cluster load balancing.
-  core.v3.Metadata metadata = 3;
+  core.v3.Metadata metadata = 3 [(armeria.xds.supported) = true];
 
   // The optional load balancing weight of the upstream host; at least 1.
   // Envoy uses the load balancing weight in some of the built in load
@@ -133,7 +134,7 @@ message LbEndpoint {
   // LocalityLbEndpoints. If unspecified, will be treated as 1. The sum
   // of the weights of all endpoints in the endpoint's locality must not
   // exceed uint32_t maximal value (4294967295).
-  google.protobuf.UInt32Value load_balancing_weight = 4 [(validate.rules).uint32 = {gte: 1}];
+  google.protobuf.UInt32Value load_balancing_weight = 4 [(validate.rules).uint32 = {gte: 1}, (armeria.xds.supported) = true];
 }
 
 // LbEndpoint list collection. Entries are `LbEndpoint` resources or references.
@@ -172,15 +173,15 @@ message LocalityLbEndpoints {
   }
 
   // Identifies location of where the upstream hosts run.
-  core.v3.Locality locality = 1;
+  core.v3.Locality locality = 1 [(armeria.xds.supported) = true];
 
   // Metadata to provide additional information about the locality endpoints in aggregate.
-  core.v3.Metadata metadata = 9;
+  core.v3.Metadata metadata = 9 [(armeria.xds.supported) = true];
 
   // The group of endpoints belonging to the locality specified.
   // This is ignored if :ref:`leds_cluster_locality_config
   // <envoy_v3_api_field_config.endpoint.v3.LocalityLbEndpoints.leds_cluster_locality_config>` is set.
-  repeated LbEndpoint lb_endpoints = 2;
+  repeated LbEndpoint lb_endpoints = 2 [(armeria.xds.supported) = true];
 
   oneof lb_config {
     // [#not-implemented-hide:]
@@ -206,7 +207,7 @@ message LocalityLbEndpoints {
   // configured. These weights are ignored otherwise. If no weights are
   // specified when locality weighted load balancing is enabled, the locality is
   // assigned no load.
-  google.protobuf.UInt32Value load_balancing_weight = 3 [(validate.rules).uint32 = {gte: 1}];
+  google.protobuf.UInt32Value load_balancing_weight = 3 [(validate.rules).uint32 = {gte: 1}, (armeria.xds.supported) = true];
 
   // Optional: the priority for this LocalityLbEndpoints. If unspecified this will
   // default to the highest priority (0).
@@ -217,7 +218,7 @@ message LocalityLbEndpoints {
   // next highest priority group. Read more at :ref:`priority levels <arch_overview_load_balancing_priority_levels>`.
   //
   // Priorities should range from 0 (highest) to N (lowest) without skipping.
-  uint32 priority = 5 [(validate.rules).uint32 = {lte: 128}];
+  uint32 priority = 5 [(validate.rules).uint32 = {lte: 128}, (armeria.xds.supported) = true];
 
   // Optional: Per locality proximity value which indicates how close this
   // locality is from the source locality. This value only provides ordering

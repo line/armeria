@@ -20,6 +20,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "HealthCheckProto";
 option java_multiple_files = true;
@@ -37,24 +39,24 @@ enum HealthStatus {
   UNKNOWN = 0;
 
   // Healthy.
-  HEALTHY = 1;
+  HEALTHY = 1 [(armeria.xds.supported_value) = true];
 
   // Unhealthy.
-  UNHEALTHY = 2;
+  UNHEALTHY = 2 [(armeria.xds.supported_value) = true];
 
   // Connection draining in progress. E.g.,
   // `<https://aws.amazon.com/blogs/aws/elb-connection-draining-remove-instances-from-service-with-care/>`_
   // or
   // `<https://cloud.google.com/compute/docs/load-balancing/enabling-connection-draining>`_.
   // This is interpreted by Envoy as ``UNHEALTHY``.
-  DRAINING = 3;
+  DRAINING = 3 [(armeria.xds.supported_value) = true];
 
   // Health check timed out. This is part of HDS and is interpreted by Envoy as
   // ``UNHEALTHY``.
   TIMEOUT = 4;
 
   // Degraded.
-  DEGRADED = 5;
+  DEGRADED = 5 [(armeria.xds.supported_value) = true];
 }
 
 message HealthStatusSet {
@@ -96,11 +98,11 @@ message HealthCheck {
     // left empty (default value), the name of the cluster this health check is associated
     // with will be used. The host header can be customized for a specific endpoint by setting the
     // :ref:`hostname <envoy_v3_api_field_config.endpoint.v3.Endpoint.HealthCheckConfig.hostname>` field.
-    string host = 1 [(validate.rules).string = {well_known_regex: HTTP_HEADER_VALUE}];
+    string host = 1 [(validate.rules).string = {well_known_regex: HTTP_HEADER_VALUE}, (armeria.xds.supported) = true];
 
     // Specifies the HTTP path that will be requested during health checking. For example
     // ``/healthcheck``.
-    string path = 2 [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_VALUE}];
+    string path = 2 [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_VALUE}, (armeria.xds.supported) = true];
 
     // HTTP specific payload to be sent as the request body during health checking.
     // If specified, the method should support a request body (POST, PUT, PATCH, etc.).
@@ -166,7 +168,7 @@ message HealthCheck {
     // Request body payloads are supported for POST, PUT, PATCH, and OPTIONS methods only.
     // CONNECT method is disallowed because it is not appropriate for health check request.
     // If a non-200 response is expected by the method, it needs to be set in :ref:`expected_statuses <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.expected_statuses>`.
-    RequestMethod method = 13 [(validate.rules).enum = {defined_only: true not_in: 6}];
+    RequestMethod method = 13 [(validate.rules).enum = {defined_only: true not_in: 6}, (armeria.xds.supported) = true];
   }
 
   message TcpHealthCheck {
@@ -271,13 +273,13 @@ message HealthCheck {
   google.protobuf.Duration timeout = 1 [(validate.rules).duration = {
     required: true
     gt {}
-  }];
+  }, (armeria.xds.supported) = true];
 
   // The interval between health checks.
   google.protobuf.Duration interval = 2 [(validate.rules).duration = {
     required: true
     gt {}
-  }];
+  }, (armeria.xds.supported) = true];
 
   // An optional jitter amount in milliseconds. If specified, Envoy will start health
   // checking after for a random time in ms between 0 and initial_jitter. This only
@@ -301,12 +303,12 @@ message HealthCheck {
   // :ref:`expected_statuses <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.expected_statuses>`
   // or :ref:`retriable_statuses <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.retriable_statuses>`,
   // this threshold is ignored and the host is considered immediately unhealthy.
-  google.protobuf.UInt32Value unhealthy_threshold = 4 [(validate.rules).message = {required: true}];
+  google.protobuf.UInt32Value unhealthy_threshold = 4 [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
   // The number of healthy health checks required before a host is marked
   // healthy. Note that during startup, only a single successful health check is
   // required to mark a host healthy.
-  google.protobuf.UInt32Value healthy_threshold = 5 [(validate.rules).message = {required: true}];
+  google.protobuf.UInt32Value healthy_threshold = 5 [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
   // [#not-implemented-hide:] Non-serving port for health checking.
   google.protobuf.UInt32Value alt_port = 6;
@@ -318,7 +320,7 @@ message HealthCheck {
     option (validate.required) = true;
 
     // HTTP health check.
-    HttpHealthCheck http_health_check = 8;
+    HttpHealthCheck http_health_check = 8 [(armeria.xds.supported) = true];
 
     // TCP health check.
     TcpHealthCheck tcp_health_check = 9;

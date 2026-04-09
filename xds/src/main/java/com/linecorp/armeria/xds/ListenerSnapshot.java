@@ -43,7 +43,7 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     ListenerSnapshot(ListenerXdsResource listenerXdsResource, @Nullable RouteSnapshot routeSnapshot) {
         this.listenerXdsResource = listenerXdsResource;
         this.routeSnapshot = routeSnapshot;
-        downstreamFilter = FilterUtil.buildDownstreamFilter(listenerXdsResource.connectionManager());
+        downstreamFilter = FilterUtil.buildDownstreamFilter(listenerXdsResource.downstreamFilters());
     }
 
     @Override

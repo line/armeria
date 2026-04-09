@@ -60,7 +60,7 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
     @Override
     public void onError(XdsType type, String resourceName, Throwable t) {
         resourceNodeMeterBinder.onError(type, resourceName, t);
-        emit(null, new XdsResourceException(type, resourceName, t));
+        emit(null, XdsResourceException.maybeWrap(type, resourceName, t));
     }
 
     @Override

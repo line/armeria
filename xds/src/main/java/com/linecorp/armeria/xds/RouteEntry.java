@@ -56,7 +56,7 @@ public final class RouteEntry {
 
     RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
                @Nullable ListenerXdsResource listenerResource, RouteXdsResource routeResource,
-               VirtualHostXdsResource vhostResource) {
+               VirtualHostXdsResource vhostResource, XdsExtensionRegistry extensionRegistry) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
         this.index = index;
@@ -86,7 +86,7 @@ public final class RouteEntry {
         final RetryPolicy effectiveRetryPolicy =
                 retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
         final ClientDecoration clientDecoration = FilterUtil.buildUpstreamFilter(
-                upstreamFilters, filterConfigs, effectiveRetryPolicy);
+                extensionRegistry, upstreamFilters, filterConfigs, effectiveRetryPolicy);
         httpClient = clientDecoration.decorate(DelegatingHttpClient.of());
         rpcClient = clientDecoration.rpcDecorate(DelegatingRpcClient.of());
     }
