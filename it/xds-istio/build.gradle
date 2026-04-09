@@ -1,14 +1,9 @@
 dependencies {
     implementation project(':junit5')
+    implementation project(':kubernetes')
     implementation libs.junit5.platform.launcher
-    implementation libs.kubernetes.client.api
-    implementation libs.kubernetes.client.impl
-    implementation libs.kubernetes.httpclient.okhttp
     implementation libs.testcontainers.k3s
     implementation libs.testcontainers.junit.jupiter
-
-    runtimeOnly libs.logback15
-
 }
 
 def kubeconfigEnvValue =
