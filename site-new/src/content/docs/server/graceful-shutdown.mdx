@@ -8,9 +8,11 @@ before fully stopping.
 
 Graceful shutdown consists of two phases:
 
-1. **Quiet period** - The server waits until there are no pending responses and no active
-   blocking tasks. Once this idle state persists for the configured quiet period duration,
-   the server proceeds to shut down.
+1. **Quiet period** - When shutdown begins, the server stops passing health checks and enters
+   a quiet period. During this period, existing requests and blocking tasks are allowed to
+   complete, and clients can observe that the server is no longer healthy. After the configured
+   quiet period has passed since the last running request completed, the server proceeds with
+   shutdown.
 2. **Timeout** - Regardless of the quiet period, the server will forcefully shut down after
    this duration. This acts as a safety net for stuck requests.
 
@@ -105,14 +107,6 @@ Server server =
 
 The `toExceptionFunction` receives a [ServiceRequestContext](type://ServiceRequestContext) and an [HttpRequest](type://HttpRequest),
 so you can return different exceptions depending on the request path, headers, or other attributes.
-
-:::tip
-
-Even if `toExceptionFunction` throws an unexpected exception, the server will fall back to the
-default `503 Service Unavailable` response. This ensures that a bug in your custom function
-never breaks the shutdown process.
-
-:::
 
 ## Spring Boot integration
 
