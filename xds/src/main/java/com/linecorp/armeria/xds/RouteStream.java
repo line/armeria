@@ -63,10 +63,9 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
                     .subscribe(watcher);
         }
         assert configSource != null;
-        final SnapshotStream<RouteSnapshot> snapshotStream =
-                new ResourceNodeAdapter<RouteXdsResource>(configSource, context, resourceName, ROUTE)
-                        .switchMap(routeResource -> new RouteSnapshotStream(routeResource, context,
-                                                                            listenerResource));
+        final SnapshotStream<RouteSnapshot> snapshotStream = new ResourceNodeAdapter<RouteXdsResource>(
+                configSource, context, resourceName, ROUTE)
+                .switchMapEager(routeResource -> new RouteSnapshotStream(routeResource, context, listenerResource));
         return snapshotStream.subscribe(watcher);
     }
 

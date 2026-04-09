@@ -1,12 +1,12 @@
 dependencies {
     implementation project(':prometheus1')
     implementation project(':resilience4j2')
-    implementation project(':spring:boot2-starter')
-    runtimeOnly project(':spring:boot2-actuator-starter')
-    implementation libs.resilience4j.springboot2
-    implementation libs.spring.boot2.starter.web
+    implementation project(':spring:boot4-starter')
+    runtimeOnly project(':spring:boot4-actuator-starter')
+    implementation libs.resilience4j.springboot4
+    implementation libs.spring.boot4.starter.webmvc
     implementation libs.micrometer.prometheus
     implementation libs.resilience4j.micrometer
 
-    testImplementation libs.spring.boot2.starter.test
+    testImplementation libs.spring.boot4.starter.test
 }

@@ -58,7 +58,7 @@ final class ListenerStream extends RefCountedStream<ListenerSnapshot> {
                                  .subscribe(watcher);
         }
         return new ResourceNodeAdapter<ListenerXdsResource>(configSource, context, resourceName, LISTENER)
-                .switchMap(resource -> resource2snapshot(resource, configSource))
+                .switchMapEager(resource -> resource2snapshot(resource, configSource))
                 .subscribe(watcher);
     }
 

@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -87,61 +86,14 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.PathVariable.ValueDef
 import com.linecorp.armeria.server.grpc.HttpJsonTranscoderBuilder.HttpJsonGrpcMethod;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
+import com.linecorp.armeria.server.grpc.UnframedGrpcSupport.ResponseHandler;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.grpc.Status;
 import io.netty.util.AttributeKey;
 
 final class HttpJsonTranscoder implements HttpEndpointSupport {
     private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscoder.class);
-
-    @Nullable
-    private static Function<AggregatedHttpResponse, AggregatedHttpResponse> generateResponseConverter(
-            TranscodingSpec spec) {
-        // Ignore the spec if the method is HttpBody. The response body is already in the correct format.
-        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
-            return httpResponse -> {
-                final HttpData data = httpResponse.content();
-                final JsonNode jsonNode = extractHttpBody(data);
-
-                // Failed to parse the JSON body, return the original response.
-                if (jsonNode == null) {
-                    return httpResponse;
-                }
-
-                PooledObjects.close(data);
-
-                // The data field is base64 encoded.
-                // https://protobuf.dev/programming-guides/proto3/#json
-                final String httpBody = jsonNode.get("data").asText();
-                final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
-
-                final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
-                    final JsonNode contentType = jsonNode.get("contentType");
-
-                    if (contentType != null && contentType.isTextual()) {
-                        builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
-                    } else {
-                        builder.remove(HttpHeaderNames.CONTENT_TYPE);
-                    }
-                });
-
-                return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
-            };
-        }
-
-        @Nullable
-        final String responseBody = spec.responseBody;
-        if (responseBody == null) {
-            return null;
-        }
-
-        return httpResponse -> {
-            try (HttpData data = httpResponse.content()) {
-                final HttpData convertedData = convertHttpDataForResponseBody(responseBody, data);
-                return AggregatedHttpResponse.of(httpResponse.headers(), convertedData);
-            }
-        };
-    }
 
     @Nullable
     private static JsonNode extractHttpBody(HttpData data) {
@@ -279,7 +231,8 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
                     responseFuture.completeExceptionally(t);
                 } else {
                     try {
-                        ctx.setAttr(HTTP_JSON_GRPC_METHOD_INFO, spec.method);
+                        final HttpJsonGrpcMethod method = spec.method;
+                        ctx.setAttr(HTTP_JSON_GRPC_METHOD_INFO, method);
                         final HttpData requestContent;
 
                         // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
@@ -291,9 +244,10 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
                             requestContent = convertToJson(ctx, clientRequest, spec);
                         }
 
+                        final ResponseHandler responseHandler =
+                                new HttpJsonResponseHandler(ctx, responseFuture, spec);
                         UnframedGrpcSupport.frameAndServe(
-                                delegate, ctx, grpcHeaders.build(), requestContent,
-                                responseFuture, options.errorHandler(), generateResponseConverter(spec));
+                                delegate, ctx, grpcHeaders.build(), requestContent, responseHandler);
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -305,6 +259,49 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
             return null;
         });
         return HttpResponse.of(responseFuture);
+    }
+
+    private AggregatedHttpResponse convertResponse(TranscodingSpec spec, AggregatedHttpResponse httpResponse) {
+        // Ignore the spec if the method is HttpBody. The response body is already in the correct format.
+        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
+            final HttpData data = httpResponse.content();
+            final JsonNode jsonNode = extractHttpBody(data);
+
+            // Failed to parse the JSON body, return the original response.
+            if (jsonNode == null) {
+                return httpResponse;
+            }
+
+            PooledObjects.close(data);
+
+            // The data field is base64 encoded.
+            // https://protobuf.dev/programming-guides/proto3/#json
+            final String httpBody = jsonNode.get("data").asText();
+            final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
+
+            final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
+                final JsonNode contentType = jsonNode.get("contentType");
+
+                if (contentType != null && contentType.isTextual()) {
+                    builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
+                } else {
+                    builder.remove(HttpHeaderNames.CONTENT_TYPE);
+                }
+            });
+
+            return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
+        }
+
+        @Nullable
+        final String responseBody = spec.responseBody;
+        if (responseBody == null) {
+            return httpResponse;
+        }
+
+        try (HttpData data = httpResponse.content()) {
+            final HttpData convertedData = convertHttpDataForResponseBody(responseBody, data);
+            return AggregatedHttpResponse.of(httpResponse.headers(), convertedData);
+        }
     }
 
     private static HttpData convertToHttpBody(AggregatedHttpRequest request) throws IOException {
@@ -754,6 +751,45 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
                  * the {@code value}.
                  */
                 REFERENCE
+            }
+        }
+    }
+
+    private class HttpJsonResponseHandler implements ResponseHandler {
+        private final ServiceRequestContext ctx;
+        private final CompletableFuture<HttpResponse> responseFuture;
+        private final TranscodingSpec spec;
+
+        HttpJsonResponseHandler(ServiceRequestContext ctx,
+                                CompletableFuture<HttpResponse> responseFuture,
+                                TranscodingSpec spec) {
+            this.ctx = ctx;
+            this.responseFuture = responseFuture;
+            this.spec = spec;
+        }
+
+        @Override
+        public void handle(@Nullable AggregatedHttpResponse aggregatedResponse,
+                           @Nullable Status status, @Nullable Throwable cause) {
+            try {
+                // set the deferred logs if not set from the delegate
+                ctx.logBuilder().requestContent(null, null);
+                ctx.logBuilder().responseContent(null, null);
+                if (cause != null) {
+                    responseFuture.completeExceptionally(cause);
+                    return;
+                }
+                if (status != null) {
+                    assert aggregatedResponse != null;
+                    final HttpResponse errRes = options.errorHandler().handle(ctx, status, aggregatedResponse);
+                    responseFuture.complete(errRes);
+                    return;
+                }
+                assert aggregatedResponse != null;
+                final AggregatedHttpResponse convertedResponse = convertResponse(spec, aggregatedResponse);
+                responseFuture.complete(convertedResponse.toHttpResponse());
+            } catch (Exception e) {
+                responseFuture.completeExceptionally(e);
             }
         }
     }

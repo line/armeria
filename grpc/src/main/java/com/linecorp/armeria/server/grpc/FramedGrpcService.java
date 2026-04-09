@@ -142,6 +142,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private int maxRequestMessageLength;
     private final boolean lookupMethodFromAttribute;
     private final boolean autoCompression;
+    private final boolean enableEnvoyHttp1Bridge;
 
     FramedGrpcService(HandlerRegistry registry,
                       DecompressorRegistry decompressorRegistry,
@@ -155,7 +156,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
-                      boolean autoCompression, boolean useMethodMarshaller) {
+                      boolean autoCompression, boolean useMethodMarshaller,
+                      boolean enableEnvoyHttp1Bridge) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
@@ -175,6 +177,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         this.autoCompression = autoCompression;
         this.useMethodMarshaller = useMethodMarshaller;
+        this.enableEnvoyHttp1Bridge = enableEnvoyHttp1Bridge;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -372,7 +375,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     exceptionHandler,
                     blockingExecutor,
                     autoCompression,
-                    useMethodMarshaller);
+                    useMethodMarshaller,
+                    enableEnvoyHttp1Bridge);
         } else {
             return new StreamingServerCall<>(
                     req,
@@ -425,21 +429,33 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        ServerMethodDefinition<?, ?> methodDef = null;
         if (lookupMethodFromAttribute) {
-            final ServerMethodDefinition<?, ?> methodDef = attrMethodDefinition(ctx);
-            if (methodDef != null) {
-                return methodDef;
-            }
+            methodDef = attrMethodDefinition(ctx);
         }
-        return GrpcService.super.methodDefinition(ctx);
+        if (methodDef != null) {
+            return methodDef;
+        }
+        methodDef = GrpcService.super.methodDefinition(ctx);
+        if (methodDef != null) {
+            return methodDef;
+        }
+        if (!lookupMethodFromAttribute) {
+            // framed grpc may be used as a delegate of DelegatingHttpJsonTranscodingService
+            methodDef = attrMethodDefinition(ctx);
+        }
+        return methodDef;
     }
 
     @Nullable
-    private static ServerMethodDefinition<?, ?> attrMethodDefinition(ServiceRequestContext ctx) {
+    private ServerMethodDefinition<?, ?> attrMethodDefinition(ServiceRequestContext ctx) {
         final HttpJsonGrpcMethod httpJsonGrpcMethod = ctx.attr(
                 HttpJsonTranscoder.HTTP_JSON_GRPC_METHOD_INFO);
         if (httpJsonGrpcMethod != null) {
-            return httpJsonGrpcMethod.definition;
+            if (httpJsonGrpcMethod.definition != null) {
+                return httpJsonGrpcMethod.definition;
+            }
+            return registry.lookupMethod(httpJsonGrpcMethod.descriptor);
         }
         return null;
     }

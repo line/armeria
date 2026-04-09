@@ -73,7 +73,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
             return Subscription.noop();
         }
         return new ResourceNodeAdapter<ClusterXdsResource>(configSource, context, resourceName, CLUSTER)
-                .switchMap(resource -> resource2snapshot(resource, configSource))
+                .switchMapEager(resource -> resource2snapshot(resource, configSource))
                 .subscribe(watcher);
     }
 
@@ -94,7 +94,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         final SnapshotStream<Optional<XdsLoadBalancer>> lbStream =
                 SnapshotStream.combineLatest(endpointSnapshotStream, transportSocket, socketMatchesStream,
                                              LoadBalancerInput::new)
-                              .switchMap(input -> {
+                              .switchMapEager(input -> {
                                   if (!input.endpointSnapshot.isPresent()) {
                                       return SnapshotStream.empty();
                                   }
@@ -102,7 +102,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
                                   if (context.clusterManager().hasLocalCluster() &&
                                       !resourceName.equals(context.clusterManager().localClusterName())) {
                                       return new LocalClusterStream(context.clusterManager())
-                                              .switchMap(localCluster -> {
+                                              .switchMapEager(localCluster -> {
                                                   return new LoadBalancerStream(
                                                           resource, endpointSnapshot,
                                                           input.transportSocket,

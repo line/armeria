@@ -121,7 +121,7 @@ class DeferredListenerTest {
                                      GrpcSerializationFormats.PROTO, null, false,
                                      ResponseHeaders.of(200),
                                      new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of()),
-                                     blockingTaskExecutor, false, false);
+                                     blockingTaskExecutor, false, false, false);
     }
 
     private static class TestListener extends ServerCall.Listener<SimpleRequest> {
