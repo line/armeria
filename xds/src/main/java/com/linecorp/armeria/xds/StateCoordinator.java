@@ -69,6 +69,10 @@ final class StateCoordinator implements SafeCloseable {
         return subscriberStorage.hasNoSubscribers();
     }
 
+    ImmutableSet<String> activeResources(XdsType type) {
+        return stateStore.activeResources(type);
+    }
+
     ImmutableMap<String, String> resourceVersions(XdsType type) {
         return stateStore.resourceVersions(type);
     }

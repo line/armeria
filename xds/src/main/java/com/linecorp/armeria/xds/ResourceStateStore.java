@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -36,6 +37,20 @@ final class ResourceStateStore {
             return null;
         }
         return perType.get(resourceName);
+    }
+
+    ImmutableSet<String> activeResources(XdsType type) {
+        final Map<String, ResourceState> perType = states.get(type);
+        if (perType == null) {
+            return ImmutableSet.of();
+        }
+        final ImmutableSet.Builder<String> names = ImmutableSet.builder();
+        for (Map.Entry<String, ResourceState> entry : perType.entrySet()) {
+            if (entry.getValue().status != ResourceStatus.ABSENT) {
+                names.add(entry.getKey());
+            }
+        }
+        return names.build();
     }
 
     ImmutableMap<String, String> resourceVersions(XdsType type) {

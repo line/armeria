@@ -74,6 +74,9 @@ final class ConfigSourceClient implements SafeCloseable {
         builder.maxResponseLength(0);
 
         final ApiType apiType = apiConfigSource.getApiType();
+        checkArgument(apiType == ApiType.GRPC || apiType == ApiType.DELTA_GRPC ||
+                      apiType == ApiType.AGGREGATED_GRPC || apiType == ApiType.AGGREGATED_DELTA_GRPC,
+                      "Unsupported api_type: %s", apiType);
         final Function<String, DefaultConfigSourceLifecycleObserver> metersFunction =
                 xdsType -> new DefaultConfigSourceLifecycleObserver(
                         meterRegistry, meterIdPrefix, configSource.getConfigSourceSpecifierCase(),

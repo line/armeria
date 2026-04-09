@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -116,6 +117,11 @@ class XdsControlPlaneErrorHandlingTest {
     @RegisterExtension
     @Order(1)
     static final EventLoopExtension eventLoop = new EventLoopExtension();
+
+    @BeforeEach
+    void setUp() {
+        nackTracker.reset();
+    }
 
     static Stream<Arguments> nackRecoveryCases() {
         return PROTOCOLS.stream().flatMap(proto ->
@@ -597,6 +603,10 @@ class XdsControlPlaneErrorHandlingTest {
 
         int nackCount() {
             return nackCount.get();
+        }
+
+        void reset() {
+            nackCount.set(0);
         }
     }
 

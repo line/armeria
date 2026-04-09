@@ -160,7 +160,7 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
             subscribe = current;
             unsubscribe = ImmutableSet.of();
         } else {
-            final Set<String> previous = stateCoordinator.resourceVersions(type).keySet();
+            final Set<String> previous = stateCoordinator.activeResources(type);
             subscribe = new HashSet<>(current);
             subscribe.removeAll(previous);
             unsubscribe = new HashSet<>(previous);
