@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
@@ -62,10 +61,8 @@ import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
 import com.google.protobuf.Value;
 
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.Field;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscoder.TranscodingSpec;
@@ -82,7 +79,7 @@ final class HttpJsonTranscoderBuilder {
 
     private final Map<String, HttpJsonGrpcMethod> methods = new HashMap<>();
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
-    private SerializationFormat transcodedGrpcSerializationFormat = GrpcSerializationFormats.JSON;
+    private boolean protoSerialization = true;
 
     HttpJsonTranscoderBuilder serviceDefinitions(
             Iterable<ServerServiceDefinition> serviceDefinitions) {
@@ -129,14 +126,8 @@ final class HttpJsonTranscoderBuilder {
         return this;
     }
 
-    HttpJsonTranscoderBuilder transcodedGrpcSerializationFormat(
-            SerializationFormat transcodedGrpcSerializationFormat) {
-        requireNonNull(transcodedGrpcSerializationFormat, "transcodedGrpcSerializationFormat");
-        checkArgument(transcodedGrpcSerializationFormat == GrpcSerializationFormats.JSON ||
-                      transcodedGrpcSerializationFormat == GrpcSerializationFormats.PROTO,
-                      "transcodedGrpcSerializationFormat must be JSON or PROTO: %s",
-                      transcodedGrpcSerializationFormat);
-        this.transcodedGrpcSerializationFormat = transcodedGrpcSerializationFormat;
+    HttpJsonTranscoderBuilder protoSerialization(boolean protoSerialization) {
+        this.protoSerialization = protoSerialization;
         return this;
     }
 
@@ -382,7 +373,7 @@ final class HttpJsonTranscoderBuilder {
             return null;
         }
         final Map<Route, TranscodingSpec> routeAndSpecs = buildRouteAndSpecs(httpRules);
-        return new HttpJsonTranscoder(routeAndSpecs, options, transcodedGrpcSerializationFormat);
+        return new HttpJsonTranscoder(routeAndSpecs, options, protoSerialization);
     }
 
     private Map<Descriptors.MethodDescriptor, HttpRule> buildHttpRules() {

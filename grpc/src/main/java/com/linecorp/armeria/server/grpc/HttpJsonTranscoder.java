@@ -150,16 +150,15 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
             AttributeKey.valueOf(FramedGrpcService.class, "HTTP_JSON_GRPC_METHOD_INFO");
 
     private final HttpJsonTranscodingOptions options;
-    private final SerializationFormat transcodedGrpcSerializationFormat;
+    private final boolean protoSerialization;
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
 
     HttpJsonTranscoder(Map<Route, TranscodingSpec> routeAndSpecs,
                        HttpJsonTranscodingOptions httpJsonTranscodingOptions,
-                       SerializationFormat transcodedGrpcSerializationFormat) {
+                       boolean protoSerialization) {
         options = requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
-        this.transcodedGrpcSerializationFormat =
-                requireNonNull(transcodedGrpcSerializationFormat, "transcodedGrpcSerializationFormat");
+        this.protoSerialization = protoSerialization;
         this.routeAndSpecs = routeAndSpecs;
 
         final LinkedHashSet<Route> linkedHashSet = new LinkedHashSet<>(routeAndSpecs.size());
@@ -222,7 +221,7 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
                                    "gRPC encoding is not supported for non-framed requests.");
         }
 
-        final boolean useProto = GrpcSerializationFormats.isProto(transcodedGrpcSerializationFormat);
+        final boolean useProto = protoSerialization;
         grpcHeaders.method(HttpMethod.POST)
                    .contentType(useProto ? GrpcSerializationFormats.PROTO.mediaType()
                                          : GrpcSerializationFormats.JSON.mediaType());
@@ -281,7 +280,7 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
         return HttpResponse.of(responseFuture);
     }
 
-    private AggregatedHttpResponse convertResponse(
+    private static AggregatedHttpResponse convertResponse(
             TranscodingSpec spec, boolean useProto, AggregatedHttpResponse httpResponse,
             @Nullable JsonProtoMarshaller jsonProtoMarshaller) throws Exception {
         final AggregatedHttpResponse jsonResponse =
@@ -334,8 +333,8 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
         }
     }
 
-    private HttpData convertToProto(HttpData requestContent,
-                                    @Nullable JsonProtoMarshaller jsonProtoMarshaller)
+    private static  HttpData convertToProto(HttpData requestContent,
+                                            @Nullable JsonProtoMarshaller jsonProtoMarshaller)
             throws IOException {
         final byte[] jsonBuf = requestContent.array();
         assert jsonProtoMarshaller != null;
@@ -343,7 +342,7 @@ final class HttpJsonTranscoder implements HttpEndpointSupport {
         return HttpData.wrap(protoBuf);
     }
 
-    private AggregatedHttpResponse convertProtoResponseToJson(
+    private static AggregatedHttpResponse convertProtoResponseToJson(
             AggregatedHttpResponse httpResponse,
             @Nullable JsonProtoMarshaller jsonProtoMarshaller) throws Exception {
         final HttpData data = httpResponse.content();

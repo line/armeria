@@ -33,7 +33,6 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -64,16 +63,14 @@ class DelegatingHttpJsonTranscodingDocServiceTest {
                                                         .serviceDescriptors(
                                                                 HttpJsonTranscodingTestServiceGrpc
                                                                         .getServiceDescriptor())
-                                                        .transcodedGrpcSerializationFormat(
-                                                                GrpcSerializationFormats.PROTO)
+                                                        .protoSerialization(true)
                                                         .build();
             final DelegatingHttpJsonTranscodingService prefixedTranscoder =
                     DelegatingHttpJsonTranscodingService.builder(grpcService)
                                                         .serviceDescriptors(
                                                                 HttpJsonTranscodingTestServiceGrpc
                                                                         .getServiceDescriptor())
-                                                        .transcodedGrpcSerializationFormat(
-                                                                GrpcSerializationFormats.PROTO)
+                                                        .protoSerialization(true)
                                                         .build();
             sb.service(transcoder)
               .serviceUnder("/prefix", prefixedTranscoder)
