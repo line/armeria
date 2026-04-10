@@ -989,6 +989,8 @@ public final class GrpcServiceBuilder {
 
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
+        checkState(asyncExceptionHandler == null,
+                   "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
 
         exceptionMappingsBuilder().on(exceptionType, statusFunction);
         return this;
