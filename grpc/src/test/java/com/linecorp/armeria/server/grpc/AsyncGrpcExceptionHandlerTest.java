@@ -21,10 +21,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -46,12 +48,20 @@ import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class AsyncGrpcExceptionHandlerTest {
 
-    private static final Executor ASYNC_EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final ExecutorService ASYNC_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private static final Metadata.Key<String> ERROR_MESSAGE_KEY =
             Metadata.Key.of("error-message", Metadata.ASCII_STRING_MARSHALLER);
 
     private static final AtomicInteger streamingHandlerInvocations = new AtomicInteger();
+
+    @AfterAll
+    static void shutdownAsyncExecutor() throws InterruptedException {
+        ASYNC_EXECUTOR.shutdown();
+        if (!ASYNC_EXECUTOR.awaitTermination(5, TimeUnit.SECONDS)) {
+            ASYNC_EXECUTOR.shutdownNow();
+        }
+    }
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
