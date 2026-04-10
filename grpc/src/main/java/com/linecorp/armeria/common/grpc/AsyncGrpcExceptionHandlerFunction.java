@@ -51,7 +51,7 @@ import io.grpc.Status;
  *
  * GrpcService.builder()
  *            .addService(myService)
- *            .exceptionHandler(handler)
+ *            .asyncExceptionHandler(handler)
  *            .build();
  * }</pre>
  *
