@@ -250,10 +250,20 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     if (exceptionHandler.isAsync()) {
                         return HttpResponse.of(
                                 exceptionHandler.handleAsync(ctx, status, e, metadata)
-                                                .thenApply(newStatus -> HttpResponse.of(
-                                                        (ResponseHeaders) AbstractServerCall.statusToTrailers(
-                                                                ctx, defaultHeaders.toBuilder(),
-                                                                newStatus, metadata))));
+                                                .handleAsync((newStatus, ex) -> {
+                                                    if (ex != null) {
+                                                        // Fall back to the sync handler when the
+                                                        // async handler fails.
+                                                        newStatus = exceptionHandler.handle(
+                                                                ctx, status, e, metadata);
+                                                    }
+                                                    return HttpResponse.of(
+                                                            (ResponseHeaders) AbstractServerCall
+                                                                    .statusToTrailers(
+                                                                            ctx,
+                                                                            defaultHeaders.toBuilder(),
+                                                                            newStatus, metadata));
+                                                }, ctx.eventLoop()));
                     }
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
@@ -344,9 +354,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
             if (call.exceptionHandler().isAsync()) {
                 call.exceptionHandler().handleAsync(ctx, cancellationCause)
-                    .thenAcceptAsync(statusAndMetadata -> {
+                    .handleAsync((statusAndMetadata, ex) -> {
+                        if (ex != null) {
+                            // When the async handler fails, fall back to the sync handler
+                            // so the response is not silently dropped.
+                            statusAndMetadata =
+                                    call.exceptionHandler().handle(ctx, cancellationCause);
+                        }
                         call.close(new ServerStatusAndMetadata(
                                 statusAndMetadata.status(), statusAndMetadata.metadata(), true));
+                        return null;
                     }, ctx.eventLoop());
             } else {
                 final StatusAndMetadata statusAndMetadata =

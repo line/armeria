@@ -246,8 +246,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             exceptionHandler.handleAsync(ctx, exception)
                             .handleAsync((statusAndMetadata, ex) -> {
                                 if (ex != null) {
-                                    statusAndMetadata = new StatusAndMetadata(
-                                            Status.INTERNAL.withCause(exception), new Metadata());
+                                    // When the async handler fails, fall back to the sync handler
+                                    // which preserves the original status via Status.fromThrowable().
+                                    statusAndMetadata = exceptionHandler.handle(ctx, exception);
                                 }
                                 close(new ServerStatusAndMetadata(
                                         statusAndMetadata.status(), statusAndMetadata.metadata(),
