@@ -1142,6 +1142,7 @@ public final class GrpcServiceBuilder {
             final HttpJsonTranscoder transcoder =
                     new HttpJsonTranscoderBuilder()
                             .options(httpJsonTranscodingOptions)
+                            .protoSerialization(false)
                             .serviceDefinitions(grpcService.services())
                             .build();
             if (transcoder != null) {
