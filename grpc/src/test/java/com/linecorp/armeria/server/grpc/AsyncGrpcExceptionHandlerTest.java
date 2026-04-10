@@ -19,9 +19,11 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,6 +39,8 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.Messages.StreamingOutputCallResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
@@ -46,6 +50,8 @@ class AsyncGrpcExceptionHandlerTest {
 
     private static final Metadata.Key<String> ERROR_MESSAGE_KEY =
             Metadata.Key.of("error-message", Metadata.ASCII_STRING_MARSHALLER);
+
+    private static final AtomicInteger streamingHandlerInvocations = new AtomicInteger();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -130,6 +136,26 @@ class AsyncGrpcExceptionHandlerTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension streamingServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(5000)
+              .service(GrpcService.builder()
+                                  .addService(new StreamingErrorService())
+                                  .asyncExceptionHandler(
+                                          (ctx, status, cause, metadata) -> {
+                                      streamingHandlerInvocations.incrementAndGet();
+                                      return CompletableFuture.supplyAsync(
+                                              () -> Status.INTERNAL
+                                                      .withDescription("streaming-async-handled")
+                                                      .withCause(cause),
+                                              ASYNC_EXECUTOR);
+                                  })
+                                  .build());
+        }
+    };
+
     @Test
     void asyncHandlerReturnsCustomStatus() {
         final TestServiceBlockingStub client =
@@ -198,9 +224,31 @@ class AsyncGrpcExceptionHandlerTest {
                                       TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
-                    // When the async handler fails, the original status should be preserved.
-                    assertThat(e.getStatus().getCode()).isNotNull();
+                    // When the async handler fails exceptionally, the original status
+                    // (Status.UNKNOWN from RuntimeException) should be preserved.
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.UNKNOWN);
                 });
+    }
+
+    @Test
+    void asyncHandlerWorksForServerStreamingCall() {
+        streamingHandlerInvocations.set(0);
+
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(streamingServer.httpUri(), TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> {
+            final Iterator<StreamingOutputCallResponse> it =
+                    client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance());
+            while (it.hasNext()) {
+                it.next();
+            }
+        }).isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+            assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.INTERNAL);
+            assertThat(e.getStatus().getDescription()).isEqualTo("streaming-async-handled");
+        });
+
+        // The async handler should be invoked exactly once per call on the streaming path.
+        assertThat(streamingHandlerInvocations).hasValue(1);
     }
 
     private static class ErrorThrowingService extends TestServiceImplBase {
@@ -210,6 +258,14 @@ class AsyncGrpcExceptionHandlerTest {
                 throw new IllegalArgumentException("invalid argument error");
             }
             throw new RuntimeException("test error");
+        }
+    }
+
+    private static class StreamingErrorService extends TestServiceImplBase {
+        @Override
+        public void streamingOutputCall(StreamingOutputCallRequest request,
+                                        StreamObserver<StreamingOutputCallResponse> responseObserver) {
+            responseObserver.onError(new RuntimeException("streaming error"));
         }
     }
 }
