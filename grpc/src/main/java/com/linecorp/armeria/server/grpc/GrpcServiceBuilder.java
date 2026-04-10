@@ -144,6 +144,8 @@ public final class GrpcServiceBuilder {
 
     private boolean enableUnframedRequests;
 
+    private boolean enableEnvoyHttp1Bridge;
+
     private boolean enableHttpJsonTranscoding;
 
     private boolean useBlockingTaskExecutor;
@@ -643,6 +645,23 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the service uses the Envoy gRPC HTTP/1.1 bridge for framed gRPC requests
+     * received over HTTP/1.1. When enabled, gRPC trailers are merged into response headers so that
+     * legacy proxies that cannot handle chunked trailers can still forward gRPC traffic correctly.
+     *
+     * <p><b>Limitations:</b>
+     * <ul>
+     *     <li>Only unary methods are supported; streaming methods fall back to the default behavior.</li>
+     *     <li>Applies only to HTTP/1.1 connections; HTTP/2 connections are unaffected.</li>
+     * </ul>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder enableEnvoyHttp1Bridge(boolean enableEnvoyHttp1Bridge) {
+        this.enableEnvoyHttp1Bridge = enableEnvoyHttp1Bridge;
+        return this;
+    }
+
+    /**
      * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
      * service.
      * @param unframedGrpcErrorHandler The function which maps the error response to an {@link HttpResponse}.
@@ -1096,7 +1115,8 @@ public final class GrpcServiceBuilder {
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService,
                 autoCompression,
-                useMethodMarshaller);
+                useMethodMarshaller,
+                enableEnvoyHttp1Bridge);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
@@ -1116,6 +1136,7 @@ public final class GrpcServiceBuilder {
             final HttpJsonTranscoder transcoder =
                     new HttpJsonTranscoderBuilder()
                             .options(httpJsonTranscodingOptions)
+                            .protoSerialization(false)
                             .serviceDefinitions(grpcService.services())
                             .build();
             if (transcoder != null) {

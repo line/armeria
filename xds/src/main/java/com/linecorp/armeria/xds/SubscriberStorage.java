@@ -22,9 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -36,7 +33,6 @@ final class SubscriberStorage implements SafeCloseable {
 
     private final Map<XdsType, Map<String, XdsStreamSubscriber<?>>> subscriberMap =
             new EnumMap<>(XdsType.class);
-    private final ResourceCache resourceCache = new ResourceCache();
 
     SubscriberStorage(EventExecutor eventLoop, long timeoutMillis) {
         this.eventLoop = eventLoop;
@@ -52,8 +48,7 @@ final class SubscriberStorage implements SafeCloseable {
                 type, key -> new HashMap<>()).get(resourceName);
         boolean updated = false;
         if (subscriber == null) {
-            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis,
-                                                   resourceCache);
+            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis);
             subscriberMap.get(type).put(resourceName, subscriber);
             updated = true;
         }
@@ -91,10 +86,6 @@ final class SubscriberStorage implements SafeCloseable {
         return unsafeCast(subscriberMap.getOrDefault(type, Collections.emptyMap()));
     }
 
-    void updateCache(XdsType type, Map<String, Object> resources) {
-        resourceCache.updateResources(type, resources);
-    }
-
     static <T> T unsafeCast(Object obj) {
         //noinspection unchecked
         return (T) obj;
@@ -114,20 +105,5 @@ final class SubscriberStorage implements SafeCloseable {
             subscribers.values().forEach(XdsStreamSubscriber::close);
         });
         subscriberMap.clear();
-    }
-
-    static class ResourceCache {
-
-        private final Map<XdsType, Map<String, Object>> type2resources = new HashMap<>();
-
-        void updateResources(XdsType type, Map<String, Object> resources) {
-            type2resources.put(type, resources);
-        }
-
-        @Nullable
-        Object find(XdsType type, String resourceName) {
-            return type2resources.getOrDefault(type, ImmutableMap.of())
-                                 .get(resourceName);
-        }
     }
 }

@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -301,5 +302,18 @@ public final class ServiceSpecification {
      */
     public void setDocServiceExtraInfo(Map<String, String> docServiceExtraInfo) {
         this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo,"docServiceExtraInfo");
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("services", services)
+                          .add("enums", enums)
+                          .add("structs", structs)
+                          .add("exceptions", exceptions)
+                          .add("exampleHeaders", exampleHeaders)
+                          .add("docStrings", docStrings.keySet())
+                          .add("docServiceRoute", docServiceRoute)
+                          .toString();
     }
 }

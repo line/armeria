@@ -42,11 +42,7 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
 
     ListenerSnapshot(ListenerXdsResource listenerXdsResource, @Nullable RouteSnapshot routeSnapshot) {
         this.listenerXdsResource = listenerXdsResource;
-        if (listenerXdsResource.router() != null && routeSnapshot != null) {
-            this.routeSnapshot = routeSnapshot.withRouter(listenerXdsResource.router());
-        } else {
-            this.routeSnapshot = routeSnapshot;
-        }
+        this.routeSnapshot = routeSnapshot;
         downstreamFilter = FilterUtil.buildDownstreamFilter(listenerXdsResource.connectionManager());
     }
 

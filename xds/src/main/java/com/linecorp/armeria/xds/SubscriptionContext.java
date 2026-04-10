@@ -41,4 +41,6 @@ interface SubscriptionContext {
     DirectoryWatchService watchService();
 
     BootstrapSecrets bootstrapSecrets();
+
+    ResourceNodeMeterBinderFactory meterBinderFactory();
 }

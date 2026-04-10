@@ -112,36 +112,47 @@ public final class GrpcMessageMarshaller<I, O> {
     }
 
     public I deserializeRequest(DeframedMessage message, boolean grpcWebText) throws IOException {
-        InputStream messageStream = message.stream();
+        final InputStream messageStream = message.stream();
         final ByteBuf buf = message.buf();
         if (buf != null) {
-            try {
-                switch (requestType) {
-                    case PROTOBUF:
-                        final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
-                        // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
-                        @SuppressWarnings("unchecked")
-                        final I msg = (I) deserializeProto(marshaller, buf);
-                        return msg;
-                    default:
-                        // Fallback to using the method's stream marshaller.
-                        messageStream = new ByteBufInputStream(buf.retain(), true);
-                        break;
-                }
-            } finally {
-                if (!unsafeWrapDeserializedBuffer || grpcWebText) {
-                    buf.release();
-                }
-            }
+            return deserializeRequest(buf, grpcWebText);
         }
 
         assert messageStream != null;
-        try (InputStream msg = messageStream) {
+        return deserializeRequest(messageStream);
+    }
+
+    public I deserializeRequest(InputStream message) throws IOException {
+        requireNonNull(message, "message");
+        try (InputStream msg = message) {
             if (isProto) {
                 return method.parseRequest(msg);
             } else {
                 assert jsonMarshaller != null;
                 return jsonMarshaller.deserializeMessage(requestMarshaller, msg);
+            }
+        }
+    }
+
+    public I deserializeRequest(ByteBuf buf, boolean grpcWebText) throws IOException {
+        requireNonNull(buf, "buf");
+        try {
+            switch (requestType) {
+                case PROTOBUF:
+                    final PrototypeMarshaller<I> marshaller = (PrototypeMarshaller<I>) requestMarshaller;
+                    // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
+                    @SuppressWarnings("unchecked")
+                    final I msg = (I) deserializeProto(marshaller, buf);
+                    return msg;
+                default:
+                    // Fallback to using the method's stream marshaller.
+                    try (InputStream messageStream = new ByteBufInputStream(buf.retain(), true)) {
+                        return deserializeRequest(messageStream);
+                    }
+            }
+        } finally {
+            if (!unsafeWrapDeserializedBuffer || grpcWebText) {
+                buf.release();
             }
         }
     }
@@ -170,37 +181,48 @@ public final class GrpcMessageMarshaller<I, O> {
     }
 
     public O deserializeResponse(DeframedMessage message, boolean grpcWebText) throws IOException {
-        InputStream messageStream = message.stream();
+        final InputStream messageStream = message.stream();
         final ByteBuf buf = message.buf();
         if (buf != null) {
-            try {
-                switch (responseType) {
-                    case PROTOBUF:
-                        final PrototypeMarshaller<O> marshaller =
-                                (PrototypeMarshaller<O>) method.getResponseMarshaller();
-                        // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
-                        @SuppressWarnings("unchecked")
-                        final O msg = (O) deserializeProto(marshaller, buf);
-                        return msg;
-                    default:
-                        // Fallback to using the method's stream marshaller.
-                        messageStream = new ByteBufInputStream(buf.retain(), true);
-                        break;
-                }
-            } finally {
-                if (!unsafeWrapDeserializedBuffer || grpcWebText) {
-                    buf.release();
-                }
-            }
+            return deserializeResponse(buf, grpcWebText);
         }
 
         assert messageStream != null;
-        try (InputStream msg = messageStream) {
+        return deserializeResponse(messageStream);
+    }
+
+    public O deserializeResponse(InputStream message) throws IOException {
+        requireNonNull(message, "message");
+        try (InputStream msg = message) {
             if (isProto) {
                 return method.parseResponse(msg);
             } else {
                 assert jsonMarshaller != null;
                 return jsonMarshaller.deserializeMessage(responseMarshaller, msg);
+            }
+        }
+    }
+
+    public O deserializeResponse(ByteBuf buf, boolean grpcWebText) throws IOException {
+        requireNonNull(buf, "buf");
+        try {
+            switch (responseType) {
+                case PROTOBUF:
+                    final PrototypeMarshaller<O> marshaller =
+                            (PrototypeMarshaller<O>) method.getResponseMarshaller();
+                    // PrototypeMarshaller<I>.getMessagePrototype will always parse to I
+                    @SuppressWarnings("unchecked")
+                    final O msg = (O) deserializeProto(marshaller, buf);
+                    return msg;
+                default:
+                    // Fallback to using the method's stream marshaller.
+                    try (InputStream messageStream = new ByteBufInputStream(buf.retain(), true)) {
+                        return deserializeResponse(messageStream);
+                    }
+            }
+        } finally {
+            if (!unsafeWrapDeserializedBuffer || grpcWebText) {
+                buf.release();
             }
         }
     }

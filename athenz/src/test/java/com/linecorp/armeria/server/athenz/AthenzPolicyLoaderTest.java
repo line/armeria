@@ -37,6 +37,9 @@ import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 import com.yahoo.rdl.Struct;
 
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @EnabledIfDockerAvailable
 class AthenzPolicyLoaderTest {
@@ -55,8 +58,11 @@ class AthenzPolicyLoaderTest {
                                                                            ImmutableMap.of(), jwsPolicySupport,
                                                                            Duration.ofSeconds(10));
 
+            final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+            final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("athenz.test");
             final AthenzPolicyLoader policyLoader = new AthenzPolicyLoader(baseClient, TEST_DOMAIN_NAME,
-                                                                           policyConfig, publicKeyStore);
+                                                                           policyConfig, publicKeyStore,
+                                                                           meterRegistry, meterIdPrefix);
 
             assertThatThrownBy(policyLoader::getNow)
                     .isInstanceOf(IllegalStateException.class)
@@ -67,6 +73,17 @@ class AthenzPolicyLoaderTest {
             assertThat(adminPolicy).satisfiesOnlyOnce(struct -> {
                 assertThat(struct.get("polname")).isEqualTo(TEST_DOMAIN_NAME + ":policy." + ADMIN_POLICY);
             });
+
+            // Verify that the policy load success counter was incremented.
+            final String dataType = jwsPolicySupport ? "jws" : "signed";
+            assertThat(meterRegistry.counter("athenz.test.policy.loads",
+                                             "domain", TEST_DOMAIN_NAME,
+                                             "result", "success",
+                                             "type", dataType).count()).isEqualTo(1);
+            assertThat(meterRegistry.counter("athenz.test.policy.loads",
+                                             "domain", TEST_DOMAIN_NAME,
+                                             "result", "failure",
+                                             "type", dataType).count()).isZero();
         }
     }
 }

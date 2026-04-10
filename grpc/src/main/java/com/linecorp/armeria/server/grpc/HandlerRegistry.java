@@ -67,6 +67,7 @@ import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Descriptors;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -83,6 +84,7 @@ import com.linecorp.armeria.server.annotation.Blocking;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.protobuf.ProtoMethodDescriptorSupplier;
 
 /**
  * A registry of the implementation methods bound to a {@link GrpcService}. Used for method dispatch and
@@ -97,6 +99,7 @@ final class HandlerRegistry {
     private final List<ServerServiceDefinition> services;
     private final Map<String, ServerMethodDefinition<?, ?>> methods;
     private final Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute;
+    private final Map<Descriptors.MethodDescriptor, ServerMethodDefinition<?, ?>> methodsByProtoDescriptor;
     private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
     private final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators;
     private final Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
@@ -109,6 +112,8 @@ final class HandlerRegistry {
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
                             Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute,
+                            Map<Descriptors.MethodDescriptor, ServerMethodDefinition<?, ?>>
+                                    methodsByProtoDescriptor,
                             Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
                             Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators,
                             Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
@@ -121,6 +126,8 @@ final class HandlerRegistry {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
+        this.methodsByProtoDescriptor = requireNonNull(methodsByProtoDescriptor,
+                                                       "methodsByProtoDescriptor");
         this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
         this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
@@ -143,6 +150,11 @@ final class HandlerRegistry {
     @Nullable
     ServerMethodDefinition<?, ?> lookupMethod(String methodName) {
         return methods.get(methodName);
+    }
+
+    @Nullable
+    ServerMethodDefinition<?, ?> lookupMethod(Descriptors.MethodDescriptor methodDescriptor) {
+        return methodsByProtoDescriptor.get(methodDescriptor);
     }
 
     String simpleMethodName(MethodDescriptor<?, ?> methodDescriptor) {
@@ -317,6 +329,8 @@ final class HandlerRegistry {
             final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> methods = ImmutableMap.builder();
             final ImmutableMap.Builder<Route, ServerMethodDefinition<?, ?>> methodsByRoute =
                     ImmutableMap.builder();
+            final ImmutableMap.Builder<Descriptors.MethodDescriptor, ServerMethodDefinition<?, ?>>
+                    methodsByProtoDescriptor = ImmutableMap.builder();
             final ImmutableMap.Builder<MethodDescriptor<?, ?>, String> bareMethodNames = ImmutableMap.builder();
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>>
                     annotationDecorators = ImmutableMap.builder();
@@ -356,6 +370,8 @@ final class HandlerRegistry {
                         methods.put(pathWithMethod, methodDefinition);
                         methodsByRoute.put(Route.builder().exact('/' + pathWithMethod).build(),
                                            methodDefinition);
+                        addProtoMethodDescriptor(methodDescriptor0, methodDefinition,
+                                                 methodsByProtoDescriptor);
                         bareMethodNames.put(methodDescriptor0, bareMethodName);
                         if (!additionalDecorators.isEmpty()) {
                             additionalDecoratorsBuilder.put(methodDefinition, additionalDecorators);
@@ -390,6 +406,8 @@ final class HandlerRegistry {
                     final MethodDescriptor<?, ?> methodDescriptor0 = methodDefinition.getMethodDescriptor();
                     final String bareMethodName = methodDescriptor0.getBareMethodName();
                     assert bareMethodName != null;
+                    addProtoMethodDescriptor(methodDescriptor0, methodDefinition,
+                                             methodsByProtoDescriptor);
                     bareMethodNames.put(methodDescriptor0, bareMethodName);
                     final Class<?> type = entry.type();
                     if (type != null) {
@@ -421,6 +439,7 @@ final class HandlerRegistry {
             return new HandlerRegistry(ImmutableList.copyOf(services0.values()),
                                        methods.build(),
                                        methodsByRoute.build(),
+                                       methodsByProtoDescriptor.buildKeepingLast(),
                                        bareMethodNames.buildKeepingLast(),
                                        annotationDecorators.build(),
                                        additionalDecoratorsBuilder.build(),
@@ -428,6 +447,20 @@ final class HandlerRegistry {
                                        grpcExceptionHandlersBuilder.build(),
                                        defaultExceptionHandler,
                                        defaultAsyncExceptionHandler);
+        }
+
+        private static void addProtoMethodDescriptor(
+                MethodDescriptor<?, ?> methodDescriptor,
+                ServerMethodDefinition<?, ?> methodDefinition,
+                ImmutableMap.Builder<Descriptors.MethodDescriptor, ServerMethodDefinition<?, ?>>
+                        methodsByProtoDescriptor) {
+            @Nullable
+            final Object schema = methodDescriptor.getSchemaDescriptor();
+            if (schema instanceof ProtoMethodDescriptorSupplier) {
+                methodsByProtoDescriptor.put(
+                        ((ProtoMethodDescriptorSupplier) schema).getMethodDescriptor(),
+                        methodDefinition);
+            }
         }
     }
 

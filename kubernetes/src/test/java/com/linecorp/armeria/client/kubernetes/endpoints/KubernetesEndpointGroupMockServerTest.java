@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LabelSelectorBuilder;
@@ -50,6 +51,8 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodSpecBuilder;
+import io.fabric8.kubernetes.api.model.PodStatus;
+import io.fabric8.kubernetes.api.model.PodStatusBuilder;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.PodTemplateSpecBuilder;
 import io.fabric8.kubernetes.api.model.Service;
@@ -375,6 +378,193 @@ class KubernetesEndpointGroupMockServerTest {
                         Endpoint.of("10.0.0.3", nodePort));
             });
         }
+    }
+
+    @Test
+    void podModeBasic() {
+        // In POD mode, endpoints are podIP:containerPort (no nodes needed).
+        final Deployment deployment = newDeployment();
+        final Service service = newService(null, "nginx", false);
+        // Set ClusterIP type since NodePort is not required in POD mode.
+        service.getSpec().setType("ClusterIP");
+
+        final Pod pod1 = newPodWithIp(deployment.getSpec().getTemplate(), "pod-1", "10.0.0.1");
+        final Pod pod2 = newPodWithIp(deployment.getSpec().getTemplate(), "pod-2", "10.0.0.2");
+
+        client.pods().resource(pod1).create();
+        client.pods().resource(pod2).create();
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .mode(KubernetesEndpointMode.POD)
+                                            .build()) {
+            endpointGroup.whenReady().join();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.1", 8080),
+                        Endpoint.of("10.0.0.2", 8080));
+            });
+
+            // Add a new pod
+            final Pod pod3 = newPodWithIp(deployment.getSpec().getTemplate(), "pod-3", "10.0.0.3");
+            client.pods().resource(pod3).create();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.1", 8080),
+                        Endpoint.of("10.0.0.2", 8080),
+                        Endpoint.of("10.0.0.3", 8080));
+            });
+
+            // Remove a pod
+            client.pods().resource(pod1).delete();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.2", 8080),
+                        Endpoint.of("10.0.0.3", 8080));
+            });
+        }
+    }
+
+    @Test
+    void podModeWithPortName() {
+        // In POD mode, portName matches ContainerPort.name.
+        final PodTemplateSpec template = newPodTemplateWithNamedPorts("nginx");
+        final Deployment deployment = newDeployment();
+        // Replace the template with one that has named ports.
+        deployment.getSpec().setTemplate(template);
+
+        final Service service = newService(null, "nginx", false);
+        service.getSpec().setType("ClusterIP");
+
+        final Pod pod1 = newPodWithIpAndNamedPorts("pod-1", "10.0.0.1", "nginx");
+        client.pods().resource(pod1).create();
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        // Select the "https" port
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .mode(KubernetesEndpointMode.POD)
+                                            .portName("https")
+                                            .build()) {
+            endpointGroup.whenReady().join();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.1", 8443));
+            });
+        }
+
+        // Select the "http" port
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .mode(KubernetesEndpointMode.POD)
+                                            .portName("http")
+                                            .build()) {
+            endpointGroup.whenReady().join();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.1", 8080));
+            });
+        }
+    }
+
+    @Test
+    void podModeSkipsPodWithNullPodIp() {
+        // A pending pod without a podIP should be excluded.
+        final Deployment deployment = newDeployment();
+        final Service service = newService(null, "nginx", false);
+        service.getSpec().setType("ClusterIP");
+
+        final Pod podWithIp = newPodWithIp(deployment.getSpec().getTemplate(), "pod-ready", "10.0.0.1");
+        // Pod without podIP (pending state)
+        final Pod podWithoutIp = newPod(deployment.getSpec().getTemplate(), "node-1");
+
+        client.pods().resource(podWithIp).create();
+        client.pods().resource(podWithoutIp).create();
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .mode(KubernetesEndpointMode.POD)
+                                            .build()) {
+            endpointGroup.whenReady().join();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("10.0.0.1", 8080));
+            });
+        }
+    }
+
+    private static Pod newPodWithIp(PodTemplateSpec template, String podName, String podIp) {
+        final PodSpec spec = template.getSpec()
+                                     .toBuilder()
+                                     .withNodeName("dummy-node")
+                                     .build();
+        final ObjectMeta metadata = template.getMetadata()
+                                            .toBuilder()
+                                            .withName(podName)
+                                            .build();
+        final PodStatus status = new PodStatusBuilder()
+                .withPodIP(podIp)
+                .build();
+        return new PodBuilder()
+                .withMetadata(metadata)
+                .withSpec(spec)
+                .withStatus(status)
+                .build();
+    }
+
+    private static PodTemplateSpec newPodTemplateWithNamedPorts(String selectorName) {
+        final ObjectMeta metadata = new ObjectMetaBuilder()
+                .withLabels(ImmutableMap.of("app", selectorName))
+                .build();
+        final ContainerPort httpPort = new ContainerPortBuilder()
+                .withName("http")
+                .withContainerPort(8080)
+                .build();
+        final ContainerPort httpsPort = new ContainerPortBuilder()
+                .withName("https")
+                .withContainerPort(8443)
+                .build();
+        final Container container = new ContainerBuilder()
+                .withName("nginx")
+                .withImage("nginx:1.14.2")
+                .withPorts(httpPort, httpsPort)
+                .build();
+        final PodSpec spec = new PodSpecBuilder()
+                .withContainers(container)
+                .build();
+        return new PodTemplateSpecBuilder()
+                .withMetadata(metadata)
+                .withSpec(spec)
+                .build();
+    }
+
+    private static Pod newPodWithIpAndNamedPorts(String podName, String podIp, String selectorName) {
+        final PodTemplateSpec template = newPodTemplateWithNamedPorts(selectorName);
+        final PodSpec spec = template.getSpec()
+                                     .toBuilder()
+                                     .withNodeName("dummy-node")
+                                     .build();
+        final ObjectMeta metadata = template.getMetadata()
+                                            .toBuilder()
+                                            .withName(podName)
+                                            .build();
+        final PodStatus status = new PodStatusBuilder()
+                .withPodIP(podIp)
+                .build();
+        return new PodBuilder()
+                .withMetadata(metadata)
+                .withSpec(spec)
+                .withStatus(status)
+                .build();
     }
 
     private static Node newNode(String ip, String type) {

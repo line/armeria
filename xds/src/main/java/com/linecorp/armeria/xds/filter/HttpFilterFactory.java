@@ -16,73 +16,45 @@
 
 package com.linecorp.armeria.xds.filter;
 
-import com.google.protobuf.Message;
+import com.google.protobuf.Any;
 
-import com.linecorp.armeria.client.DecoratingHttpClientFunction;
-import com.linecorp.armeria.client.DecoratingRpcClientFunction;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreprocessor;
-import com.linecorp.armeria.client.PreClient;
-import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreprocessor;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
- * An {@link HttpFilterFactory} is a factory for creating a decorator implementation equivalent to
- * an {@link HttpFilter}.
+ * A factory that creates an {@link XdsHttpFilter} for a given {@link HttpFilter}.
+ *
+ * <p>Implementations are discovered via the Java {@link java.util.ServiceLoader} mechanism.
+ * The raw {@link Any} typed config is passed as-is from xDS — factories are responsible for
+ * all config parsing, including unwrapping {@code FilterConfig} envelopes for per-route overrides.
+ * Returning {@code null} from {@link #create} causes the filter to be silently skipped.
  */
 @UnstableApi
-public interface HttpFilterFactory<T extends Message> {
-
-    /**
-     * Generates a {@link RpcPreprocessor} which acts as a downstream {@link HttpFilter} when
-     * registered in {@link HttpConnectionManager#getHttpFiltersList()}.
-     */
-    default RpcPreprocessor rpcPreprocessor(T config) {
-        return PreClient::execute;
-    }
-
-    /**
-     * Generates a {@link HttpPreprocessor} which acts as a downstream {@link HttpFilter} when
-     * registered in {@link HttpConnectionManager#getHttpFiltersList()}.
-     */
-    default HttpPreprocessor httpPreprocessor(T config) {
-        return PreClient::execute;
-    }
-
-    /**
-     * Generates a {@link DecoratingHttpClientFunction} which acts as an upstream {@link HttpFilter} when
-     * registered in {@link Router#getUpstreamHttpFiltersList()}.
-     * Unlike decorators added to clients, this decorator will not be invoked for RPC clients.
-     */
-    default DecoratingHttpClientFunction httpDecorator(T config) {
-        return HttpClient::execute;
-    }
-
-    /**
-     * Generates a {@link DecoratingRpcClientFunction} which acts as an upstream {@link HttpFilter} when
-     * registered in {@link Router#getUpstreamHttpFiltersList()}.
-     */
-    default DecoratingRpcClientFunction rpcDecorator(T config) {
-        return RpcClient::execute;
-    }
-
-    /**
-     * The class type of the filter configuration represented by {@link HttpFilter#getTypedConfig()}.
-     */
-    Class<T> configClass();
-
-    /**
-     * The default configuration to be used if an appropriate configuration cannot be found.
-     */
-    T defaultConfig();
+public interface HttpFilterFactory {
 
     /**
      * The filter name that should be equivalent to {@link HttpFilter#getName()}.
      */
     String filterName();
+
+    /**
+     * Creates an {@link XdsHttpFilter} for the given filter and its raw typed config.
+     *
+     * <p>For filter-level configs, {@code config} is {@link HttpFilter#getTypedConfig()}.
+     * For per-route override configs, {@code config} is the raw {@link Any} from
+     * {@code typed_per_filter_config}, which may be a {@code FilterConfig} envelope.
+     *
+     * <p>Returns {@code null} to skip this filter entirely. The {@link HttpFilter} argument
+     * is provided so factories can inspect fields such as {@link HttpFilter#getDisabled()} or
+     * {@link HttpFilter#getIsOptional()}.
+     *
+     * @param httpFilter the filter descriptor from {@link HttpConnectionManager#getHttpFiltersList()}
+     * @param config     the raw typed config {@link Any}; may be {@link Any#getDefaultInstance()}
+     *                   if no config was provided
+     */
+    @Nullable
+    XdsHttpFilter create(HttpFilter httpFilter, Any config);
 }

@@ -36,6 +36,6 @@ public final class AthenzServiceDecoratorFactoryBuilder
      */
     public AthenzServiceDecoratorFactory build() {
         final AthenzAuthorizer authorizer = new AthenzAuthorizer(buildAuthZpeClient());
-        return new AthenzServiceDecoratorFactory(authorizer, meterIdPrefix());
+        return new AthenzServiceDecoratorFactory(authorizer, meterIdPrefix(), meterRegistry());
     }
 }
