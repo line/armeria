@@ -19,18 +19,18 @@ jobs:
           distribution: 'zulu'
           java-version: '25'
 
-      - uses: gradle/develocity-build-validation-scripts/.github/actions/gradle/download@actions-stable
+      - uses: gradle/develocity-build-validation-scripts/.github/actions/gradle/download@94c54bdb1e6a57347930c62e9254d2c3e55fd5a5 # actions-stable
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: gradle/develocity-build-validation-scripts/.github/actions/gradle/experiment-1@actions-stable
+      - uses: gradle/develocity-build-validation-scripts/.github/actions/gradle/experiment-1@94c54bdb1e6a57347930c62e9254d2c3e55fd5a5 # actions-stable
         with:
           gitRepo: https://github.com/line/armeria.git
           gitBranch: main
           tasks: build
           args: --parallel -Pretry=true -PfailOnPassedAfterRetry=false
 
-      - uses: gradle/develocity-build-validation-scripts/.github/actions/gradle/experiment-3@actions-stable
+      - uses: gradle/develocity-build-validation-scripts/.github/actions/gradle/experiment-3@94c54bdb1e6a57347930c62e9254d2c3e55fd5a5 # actions-stable
         with:
           gitRepo: https://github.com/line/armeria.git
           gitBranch: main
