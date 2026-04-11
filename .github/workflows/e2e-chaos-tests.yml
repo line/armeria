@@ -35,7 +35,7 @@ jobs:
 
       - name: Setup Minikube
         id: minikube
-        uses: medyagh/setup-minikube@latest
+        uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
 
       - name: Install Chaos Mesh
         run: |
