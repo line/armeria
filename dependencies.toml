@@ -49,6 +49,8 @@ hamcrest = "3.0"
 hbase = "1.2.6"
 hibernate-validator6 = "6.2.5.Final"
 hibernate-validator8 = "8.0.3.Final"
+# used by :it:xds-istio
+istio = "1.29.1"
 j2objc = "3.1"
 jackson = "2.21.2"
 jakarta-inject = "2.0.1"
@@ -1409,6 +1411,8 @@ version.ref = "spring-boot4"
 module = "org.testcontainers:testcontainers"
 [libraries.testcontainers-consul]
 module = "org.testcontainers:testcontainers-consul"
+[libraries.testcontainers-k3s]
+module = "org.testcontainers:testcontainers-k3s"
 [libraries.testcontainers-junit-jupiter]
 module = "org.testcontainers:testcontainers-junit-jupiter"
 
