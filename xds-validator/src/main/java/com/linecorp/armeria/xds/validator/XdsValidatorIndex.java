@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * Validates an xDS resource. Validators are loaded using Java SPI (Service Provider Interface).
  */
+@FunctionalInterface
 @UnstableApi
 public interface XdsValidatorIndex {
 
