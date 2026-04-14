@@ -62,14 +62,14 @@ final class ListenerStream extends RefCountedStream<ListenerSnapshot> {
                 .subscribe(watcher);
     }
 
-    private SnapshotStream<ListenerSnapshot> resource2snapshot(ListenerXdsResource resource,
-                                                               @Nullable ConfigSource parentConfigSource) {
+    private SnapshotStream<ListenerSnapshot> resource2snapshot(
+            ListenerXdsResource resource, @Nullable ConfigSource parentConfigSource) {
         SnapshotStream<ListenerSnapshot> node = null;
         final HttpConnectionManager connectionManager = resource.connectionManager();
         if (connectionManager != null) {
             if (connectionManager.hasRouteConfig()) {
                 final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
-                node = new RouteStream(context, routeConfig)
+                node = new RouteStream(context, routeConfig, resource)
                         .map(routeSnapshot -> new ListenerSnapshot(resource, routeSnapshot));
             } else if (connectionManager.hasRds()) {
                 final Rds rds = connectionManager.getRds();
@@ -81,7 +81,7 @@ final class ListenerStream extends RefCountedStream<ListenerSnapshot> {
                     return SnapshotStream.error(new XdsResourceException(LISTENER, resourceName,
                                                                          "config source not found"));
                 }
-                node = new RouteStream(configSource, routeName, context)
+                node = new RouteStream(configSource, routeName, context, resource)
                         .map(routeSnapshot -> new ListenerSnapshot(resource, routeSnapshot));
             }
         }

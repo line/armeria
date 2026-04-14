@@ -63,12 +63,14 @@ class DelegatingHttpJsonTranscodingDocServiceTest {
                                                         .serviceDescriptors(
                                                                 HttpJsonTranscodingTestServiceGrpc
                                                                         .getServiceDescriptor())
+                                                        .protoSerialization(true)
                                                         .build();
             final DelegatingHttpJsonTranscodingService prefixedTranscoder =
                     DelegatingHttpJsonTranscodingService.builder(grpcService)
                                                         .serviceDescriptors(
                                                                 HttpJsonTranscodingTestServiceGrpc
                                                                         .getServiceDescriptor())
+                                                        .protoSerialization(true)
                                                         .build();
             sb.service(transcoder)
               .serviceUnder("/prefix", prefixedTranscoder)

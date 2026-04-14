@@ -139,7 +139,7 @@ class DelegatingHttpJsonTranscodingServiceTest {
     void shouldProxyHttpJsonRequest() throws Exception {
         reconfigureProxyServer(sb -> {
             final HttpService jsonDelegate = prefixedProxy(upstreamClient(), "/json");
-            sb.service(transcoderBuilder(jsonDelegate).build());
+            sb.service(transcoderBuilder(jsonDelegate).protoSerialization(false).build());
         });
         final WebClient client = WebClient.of(proxyServer.httpUri());
         final AggregatedHttpResponse response = client.get("/v1/messages/1").aggregate().join();
@@ -154,10 +154,28 @@ class DelegatingHttpJsonTranscodingServiceTest {
     void shouldProxyHttpJsonRequestWithPrefix() throws Exception {
         reconfigureProxyServer(sb -> {
             final HttpService jsonDelegate = prefixedProxy(upstreamClient(), "/json");
-            sb.serviceUnder("/proxy", transcoderBuilder(jsonDelegate).build());
+            sb.serviceUnder("/proxy", transcoderBuilder(jsonDelegate).protoSerialization(false).build());
         });
         final WebClient client = WebClient.of(proxyServer.httpUri());
         final AggregatedHttpResponse response = client.get("/proxy/v1/messages/1").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("text").asText()).isEqualTo("messages/1");
+    }
+
+    @Test
+    void shouldProxyHttpJsonRequestWithProtoUpstream() throws Exception {
+        reconfigureProxyServer(sb -> {
+            final HttpService protoDelegate = prefixedProxy(upstreamClient(), "/proto");
+            sb.serviceUnder("/proto",
+                            transcoderBuilder(protoDelegate)
+                                    .protoSerialization(true)
+                                    .build());
+        });
+        final WebClient client = WebClient.of(proxyServer.httpUri());
+        final AggregatedHttpResponse response = client.get("/proto/v1/messages/1").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
 
@@ -313,7 +331,7 @@ class DelegatingHttpJsonTranscodingServiceTest {
     void shouldCompleteRequestLogAfterTranscoding() throws Exception {
         reconfigureProxyServer(sb -> {
             final HttpService jsonDelegate = prefixedProxy(upstreamClient(), "/json");
-            sb.service(transcoderBuilder(jsonDelegate).build());
+            sb.service(transcoderBuilder(jsonDelegate).protoSerialization(false).build());
         });
         final WebClient client = WebClient.of(proxyServer.httpUri());
         final AggregatedHttpResponse response = client.get("/v1/messages/1").aggregate().join();
@@ -334,7 +352,8 @@ class DelegatingHttpJsonTranscodingServiceTest {
                                .supportedSerializationFormats(GrpcSerializationFormats.JSON)
                                .build();
             sb.serviceUnder("/inproc-enabled",
-                            transcoderBuilder(grpcServiceWithTranscodingEnabled).build());
+                            transcoderBuilder(grpcServiceWithTranscodingEnabled)
+                                    .protoSerialization(false).build());
         });
         final WebClient client = WebClient.of(proxyServer.httpUri());
         final AggregatedHttpResponse response =

@@ -51,6 +51,7 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
 
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
     private HttpService fallback = DEFAULT_FALLBACK;
+    private boolean protoSerialization = true;
 
     /**
      * Creates a new builder for the specified delegate.
@@ -74,6 +75,15 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
      */
     public DelegatingHttpJsonTranscodingServiceBuilder options(HttpJsonTranscodingOptions options) {
         this.options = requireNonNull(options, "options");
+        return this;
+    }
+
+    /**
+     * Sets whether to use Protocol Buffers serialization for transcoded gRPC requests sent to the delegate.
+     * If {@code false}, JSON serialization is used instead. Defaults to {@code true}.
+     */
+    public DelegatingHttpJsonTranscodingServiceBuilder protoSerialization(boolean protoSerialization) {
+        this.protoSerialization = protoSerialization;
         return this;
     }
 
@@ -110,6 +120,7 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
         final HttpJsonTranscoder transcoder =
                 new HttpJsonTranscoderBuilder()
                         .options(options)
+                        .protoSerialization(protoSerialization)
                         .serviceDescriptors(serviceDescriptors)
                         .build();
         if (transcoder == null) {
