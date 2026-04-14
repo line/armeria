@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -122,56 +123,40 @@ public final class SupportedFieldValidator {
             }
 
             // Field is supported — check enum values and recurse into nested messages.
-            if (fd.getJavaType() == FieldDescriptor.JavaType.ENUM) {
-                if (unsupportedPackage(fd.getEnumType().getFile().getPackage())) {
-                    continue;
-                }
-                validateEnumValue(fd, value, descriptorName, fieldPath);
-            } else if (fd.getJavaType() == FieldDescriptor.JavaType.MESSAGE) {
-                if (fd.isMapField()) {
-                    final FieldDescriptor valueField = fd.getMessageType().findFieldByNumber(2);
-                    if (valueField != null &&
-                        valueField.getJavaType() == FieldDescriptor.JavaType.MESSAGE) {
-                        int i = 0;
-                        for (Message mapEntry : (Iterable<Message>) value) {
-                            final Object mapValue = mapEntry.getField(valueField);
-                            if (mapValue instanceof Message) {
-                                doValidate((Message) mapValue, descriptorName,
-                                           fieldPath + '[' + i + "].value");
-                            }
-                            i++;
-                        }
+            if (fd.isMapField()) {
+                final FieldDescriptor valueField = fd.getMessageType().findFieldByNumber(2);
+                if (valueField != null) {
+                    final List<Message> mapEntries = (List<Message>) value;
+                    for (int i = 0; i < mapEntries.size(); i++) {
+                        validateFieldValue(valueField, mapEntries.get(i).getField(valueField),
+                                           descriptorName, fieldPath + '[' + i + "].value");
                     }
-                    continue;
                 }
-                if (fd.isRepeated()) {
-                    int i = 0;
-                    for (Message element : (Iterable<Message>) value) {
-                        doValidate(element, descriptorName, fieldPath + '[' + i + ']');
-                        i++;
-                    }
-                } else {
-                    doValidate((Message) value, descriptorName, fieldPath);
+            } else if (fd.isRepeated()) {
+                final List<?> elements = (List<?>) value;
+                for (int i = 0; i < elements.size(); i++) {
+                    validateFieldValue(fd, elements.get(i), descriptorName,
+                                       fieldPath + '[' + i + ']');
                 }
+            } else {
+                validateFieldValue(fd, value, descriptorName, fieldPath);
             }
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void validateEnumValue(FieldDescriptor fd, Object value,
-                                   String descriptorName, String fieldPath) {
-        if (fd.isRepeated()) {
-            int i = 0;
-            for (EnumValueDescriptor ev : (Iterable<EnumValueDescriptor>) value) {
-                if (unsupportedEnumValue(ev)) {
-                    handler.handle(descriptorName, fieldPath + '[' + i + ']', ev);
-                }
-                i++;
+    private void validateFieldValue(FieldDescriptor fd, Object value,
+                                    String descriptorName, String fieldPath) {
+        if (fd.getJavaType() == FieldDescriptor.JavaType.MESSAGE) {
+            if (value instanceof Message) {
+                doValidate((Message) value, descriptorName, fieldPath);
             }
-        } else {
-            final EnumValueDescriptor ev = (EnumValueDescriptor) value;
-            if (unsupportedEnumValue(ev)) {
-                handler.handle(descriptorName, fieldPath, ev);
+        } else if (fd.getJavaType() == FieldDescriptor.JavaType.ENUM) {
+            if (!unsupportedPackage(fd.getEnumType().getFile().getPackage()) &&
+                value instanceof EnumValueDescriptor) {
+                final EnumValueDescriptor ev = (EnumValueDescriptor) value;
+                if (unsupportedEnumValue(ev)) {
+                    handler.handle(descriptorName, fieldPath, ev);
+                }
             }
         }
     }

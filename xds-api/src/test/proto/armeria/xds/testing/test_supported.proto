@@ -18,6 +18,7 @@ message TestCluster {
   google.protobuf.Any typed_config = 6 [(armeria.xds.supported) = true];
   google.protobuf.UInt32Value max_requests = 7 [(armeria.xds.supported) = true];
   google.protobuf.Duration timeout = 8 [(armeria.xds.supported) = true];
+  map<string, TestDiscoveryType> type_map = 9 [(armeria.xds.supported) = true];
 }
 
 enum TestDiscoveryType {

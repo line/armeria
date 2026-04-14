@@ -239,6 +239,42 @@ class SupportedFieldValidatorTest {
     }
 
     @Test
+    void unsupportedEnumValueInMapField() {
+        final List<String> violations = new ArrayList<>();
+        final List<Object> values = new ArrayList<>();
+        final SupportedFieldValidator validator =
+                SupportedFieldValidator.of((descriptor, path, value) -> {
+                    violations.add(path);
+                    values.add(value);
+                });
+
+        final TestCluster cluster = TestCluster.newBuilder()
+                                               .setName("test")
+                                               .putTypeMap("a", TestDiscoveryType.STATIC)
+                                               .putTypeMap("b", TestDiscoveryType.LOGICAL_DNS)
+                                               .build();
+        validator.validate(cluster);
+        assertThat(violations).hasSize(1);
+        assertThat(violations.get(0)).endsWith(".value");
+        assertThat(((EnumValueDescriptor) values.get(0)).getName()).isEqualTo("LOGICAL_DNS");
+    }
+
+    @Test
+    void supportedEnumValueInMapField() {
+        final List<String> violations = new ArrayList<>();
+        final SupportedFieldValidator validator =
+                SupportedFieldValidator.of((descriptor, path, value) -> violations.add(path));
+
+        final TestCluster cluster = TestCluster.newBuilder()
+                                               .setName("test")
+                                               .putTypeMap("a", TestDiscoveryType.STATIC)
+                                               .putTypeMap("b", TestDiscoveryType.EDS)
+                                               .build();
+        validator.validate(cluster);
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
     void externalTypesDoNotProduceFalsePositives() {
         final List<String> violations = new ArrayList<>();
         final SupportedFieldValidator validator =
