@@ -26,3 +26,22 @@ tasks.withType(JavaCompile).configureEach {
 tasks.withType(Javadoc).configureEach {
     enabled = false
 }
+
+tasks.named('generateProto').configure {
+    doLast {
+        // Workaround for pgv bugs in generated Java validators:
+        // Bug 1: \\\xHH -> \\xHH
+        // Bug 2: \\" -> \"
+        def pgvDir = file("${project.buildDir}/generated/sources/proto/main/javapgv")
+        if (pgvDir.exists()) {
+            fileTree(pgvDir).include('**/*.java').each { f ->
+                def content = f.text
+                def fixed = content.replace("\\" * 3 + "x", "\\" * 2 + "x")
+                        .replace("\\" * 2 + '"', "\\" + '"')
+                if (fixed != content) {
+                    f.text = fixed
+                }
+            }
+        }
+    }
+}

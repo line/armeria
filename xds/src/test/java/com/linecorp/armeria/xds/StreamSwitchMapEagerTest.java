@@ -33,14 +33,14 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.SnapshotStream.Subscription;
 
 @SuppressWarnings("CheckReturnValue")
-class StreamSwitchMapTest {
+class StreamSwitchMapEagerTest {
 
     @Test
-    void switchMapBasicFlow() {
+    void switchMapEagerBasicFlow() {
         final TestStream<String> upstream = new TestStream<>();
         final List<String> received = new ArrayList<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(
+        final SnapshotStream<String> switched = upstream.switchMapEager(
                 value -> SnapshotStream.just(value + "-mapped"));
 
         switched.subscribe((snapshot, error) -> {
@@ -56,13 +56,13 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapSwitchesToNewInnerStream() {
+    void switchMapEagerSwitchesToNewInnerStream() {
         final TestStream<String> upstream = new TestStream<>();
         final TestStream<String> inner1 = new TestStream<>();
         final TestStream<String> inner2 = new TestStream<>();
         final List<String> received = new ArrayList<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(value -> {
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> {
             if ("key1".equals(value)) {
                 return inner1;
             } else {
@@ -92,12 +92,12 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapUnsubscribesFromPreviousInnerStream() {
+    void switchMapEagerUnsubscribesFromPreviousInnerStream() {
         final TestStream<String> upstream = new TestStream<>();
         final TestStream<String> inner1 = new TestStream<>();
         final TestStream<String> inner2 = new TestStream<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(value -> {
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> {
             if ("key1".equals(value)) {
                 return inner1;
             } else {
@@ -116,11 +116,11 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapPropagatesUpstreamError() {
+    void switchMapEagerPropagatesUpstreamError() {
         final TestStream<String> upstream = new TestStream<>();
         final List<Throwable> errors = new ArrayList<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(SnapshotStream::just);
+        final SnapshotStream<String> switched = upstream.switchMapEager(SnapshotStream::just);
 
         switched.subscribe((snapshot, error) -> {
             if (error != null) {
@@ -135,12 +135,12 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapPropagatesInnerError() {
+    void switchMapEagerPropagatesInnerError() {
         final TestStream<String> upstream = new TestStream<>();
         final TestStream<String> inner = new TestStream<>();
         final List<Throwable> errors = new ArrayList<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(value -> inner);
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> inner);
 
         switched.subscribe((snapshot, error) -> {
             if (error != null) {
@@ -157,12 +157,12 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapPropagatesMapperException() {
+    void switchMapEagerPropagatesMapperException() {
         final TestStream<String> upstream = new TestStream<>();
         final List<Throwable> errors = new ArrayList<>();
 
         final RuntimeException testError = new RuntimeException("mapper error");
-        final SnapshotStream<String> switched = upstream.switchMap(value -> {
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> {
             throw testError;
         });
 
@@ -178,11 +178,11 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapUnsubscribeClosesAllStreams() {
+    void switchMapEagerUnsubscribeClosesAllStreams() {
         final TestStream<String> upstream = new TestStream<>();
         final TestStream<String> inner = new TestStream<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(value -> inner);
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> inner);
 
         final Subscription subscription = switched.subscribe((snapshot, error) -> {});
 
@@ -198,13 +198,13 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapMultipleSubscribers() {
+    void switchMapEagerMultipleSubscribers() {
         final TestStream<String> upstream = new TestStream<>();
         final List<String> received1 = new ArrayList<>();
         final List<String> received2 = new ArrayList<>();
 
         final SnapshotStream<String> switched =
-                upstream.switchMap(value -> SnapshotStream.just(value + "-mapped"));
+                upstream.switchMapEager(value -> SnapshotStream.just(value + "-mapped"));
 
         switched.subscribe((snapshot, error) -> {
             if (snapshot != null) {
@@ -224,12 +224,12 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapNewSubscriberReceivesLatestValue() {
+    void switchMapEagerNewSubscriberReceivesLatestValue() {
         final TestStream<String> upstream = new TestStream<>();
         final List<String> received = new ArrayList<>();
 
         final SnapshotStream<String> switched =
-                upstream.switchMap(value -> SnapshotStream.just(value + "-mapped"));
+                upstream.switchMapEager(value -> SnapshotStream.just(value + "-mapped"));
 
         switched.subscribe((snapshot, error) -> {});
 
@@ -250,7 +250,7 @@ class StreamSwitchMapTest {
 
         final Deque<TestStream<String>> q = new ArrayDeque<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(value -> {
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> {
             final TestStream<String> testStream = new TestStream<>();
             q.push(testStream);
             for (TestStream<String> stream : q) {
@@ -280,14 +280,14 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapOnlyStartsUpstreamOnceWithMultipleSubscribers() {
+    void switchMapEagerOnlyStartsUpstreamOnceWithMultipleSubscribers() {
         final AtomicInteger upstreamStartCount = new AtomicInteger(0);
         final TestStream<String> upstream = new TestStream<>(() -> {
             upstreamStartCount.incrementAndGet();
             return Subscription.noop();
         });
 
-        final SnapshotStream<String> switched = upstream.switchMap(SnapshotStream::just);
+        final SnapshotStream<String> switched = upstream.switchMapEager(SnapshotStream::just);
 
         switched.subscribe((snapshot, error) -> {});
         switched.subscribe((snapshot, error) -> {});
@@ -296,12 +296,12 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapHandlesStaticStreams() {
+    void switchMapEagerHandlesStaticStreams() {
         final List<String> received = new ArrayList<>();
 
         final SnapshotStream<String> stream = SnapshotStream.just("static-value");
         final SnapshotStream<String> switched =
-                stream.switchMap(value -> SnapshotStream.just(value + "-mapped"));
+                stream.switchMapEager(value -> SnapshotStream.just(value + "-mapped"));
 
         switched.subscribe((snapshot, error) -> {
             if (snapshot != null) {
@@ -313,11 +313,11 @@ class StreamSwitchMapTest {
     }
 
     @Test
-    void switchMapClosesInnerStreamOnUnsubscribe() {
+    void switchMapEagerClosesInnerStreamOnUnsubscribe() {
         final TestStream<String> upstream = new TestStream<>();
         final TestStream<String> inner = new TestStream<>();
 
-        final SnapshotStream<String> switched = upstream.switchMap(value -> inner);
+        final SnapshotStream<String> switched = upstream.switchMapEager(value -> inner);
 
         final Subscription sub1 = switched.subscribe((snapshot, error) -> {});
         final Subscription sub2 = switched.subscribe((snapshot, error) -> {});
@@ -337,7 +337,7 @@ class StreamSwitchMapTest {
 
         final Deque<TestStream<Consumer<Integer>>> q = new ArrayDeque<>();
 
-        final SnapshotStream<Consumer<Integer>> switched = upstream.switchMap(value -> {
+        final SnapshotStream<Consumer<Integer>> switched = upstream.switchMapEager(value -> {
             final TestStream<Consumer<Integer>> testStream = new TestStream<>();
             q.push(testStream);
             for (TestStream<Consumer<Integer>> stream : q) {

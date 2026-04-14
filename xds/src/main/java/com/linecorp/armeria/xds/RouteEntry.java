@@ -16,20 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.FilterUtil.toParsedFilterConfigs;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
@@ -50,56 +48,47 @@ public final class RouteEntry {
     private final Route route;
     @Nullable
     private final ClusterSnapshot clusterSnapshot;
-    private final Map<String, ParsedFilterConfig> filterConfigs;
+    private final Map<String, Any> filterConfigs;
     private final int index;
-    @Nullable
-    private final Function<? super HttpClient, RetryingClient> retryingDecorator;
-    private final ClientDecoration upstreamFilter;
-    private final RouteEntryMatcher matcher;
-    @Nullable
     private final HttpClient httpClient;
-    @Nullable
     private final RpcClient rpcClient;
+    private final RouteEntryMatcher matcher;
 
-    RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index) {
+    RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
+               @Nullable ListenerXdsResource listenerResource, RouteXdsResource routeResource,
+               VirtualHostXdsResource vhostResource) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
-        filterConfigs = toParsedFilterConfigs(route.getTypedPerFilterConfigMap());
         this.index = index;
-        upstreamFilter = ClientDecoration.of();
-        if (route.getRoute().getRetryPolicy() != RetryPolicy.getDefaultInstance()) {
-            retryingDecorator = new RetryStateFactory(route.getRoute().getRetryPolicy()).retryingDecorator();
-        } else {
-            retryingDecorator = null;
-        }
         matcher = new RouteEntryMatcher(route.getMatch());
 
-        httpClient = upstreamFilter.decorate(DelegatingHttpClient.of());
-        rpcClient = upstreamFilter.rpcDecorate(DelegatingRpcClient.of());
-    }
+        // Merge per_filter_config: route-config level < vhost level < route level
+        final Map<String, Any> routeConfigFilterConfigs =
+                routeResource.resource().getTypedPerFilterConfigMap();
+        final Map<String, Any> vhostFilterConfigs =
+                vhostResource.resource().getTypedPerFilterConfigMap();
+        final Map<String, Any> routeFilterConfigs =
+                route.getTypedPerFilterConfigMap();
+        filterConfigs = FilterUtil.mergeFilterConfigs(
+                FilterUtil.mergeFilterConfigs(routeConfigFilterConfigs, vhostFilterConfigs),
+                routeFilterConfigs);
 
-    private RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
-                       Map<String, ParsedFilterConfig> filterConfigs, List<HttpFilter> upstreamFilters,
-                       @Nullable Function<? super HttpClient, RetryingClient> retryingDecorator,
-                       RouteEntryMatcher matcher) {
-        this.route = route;
-        this.clusterSnapshot = clusterSnapshot;
-        this.filterConfigs = filterConfigs;
-        this.index = index;
-        upstreamFilter = FilterUtil.buildUpstreamFilter(upstreamFilters, filterConfigs, retryingDecorator);
-        this.retryingDecorator = retryingDecorator;
-        this.matcher = matcher;
+        // Extract upstream HTTP filters from the Router (last filter in HCM filter chain)
+        final List<HttpFilter> upstreamFilters;
+        if (listenerResource != null && listenerResource.router() != null) {
+            upstreamFilters = listenerResource.router().getUpstreamHttpFiltersList();
+        } else {
+            upstreamFilters = ImmutableList.of();
+        }
 
-        httpClient = upstreamFilter.decorate(DelegatingHttpClient.of());
-        rpcClient = upstreamFilter.rpcDecorate(DelegatingRpcClient.of());
-    }
-
-    RouteEntry withFilterConfigs(Map<String, ParsedFilterConfig> parentFilterConfigs,
-                                 List<HttpFilter> upstreamFilters) {
-        final Map<String, ParsedFilterConfig> mergedFilterConfigs =
-                FilterUtil.mergeFilterConfigs(parentFilterConfigs, filterConfigs);
-        return new RouteEntry(route, clusterSnapshot, index, mergedFilterConfigs, upstreamFilters,
-                              retryingDecorator, matcher);
+        // Determine retry policy
+        final RetryPolicy retryPolicy = route.getRoute().getRetryPolicy();
+        final RetryPolicy effectiveRetryPolicy =
+                retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
+        final ClientDecoration clientDecoration = FilterUtil.buildUpstreamFilter(
+                upstreamFilters, filterConfigs, effectiveRetryPolicy);
+        httpClient = clientDecoration.decorate(DelegatingHttpClient.of());
+        rpcClient = clientDecoration.rpcDecorate(DelegatingRpcClient.of());
     }
 
     /**
@@ -119,12 +108,13 @@ public final class RouteEntry {
     }
 
     /**
-     * Returns the parsed {@link Route#getTypedPerFilterConfigMap()}.
+     * Returns the raw per-route filter config {@link Any} from
+     * {@link Route#getTypedPerFilterConfigMap()}, or {@code null} if not present.
      *
      * @param filterName the filter name represented by {@link HttpFilter#getName()}
      */
     @Nullable
-    public ParsedFilterConfig filterConfig(String filterName) {
+    public Any filterConfig(String filterName) {
         return filterConfigs.get(filterName);
     }
 
@@ -144,18 +134,14 @@ public final class RouteEntry {
         if (ctxExt == null) {
             return;
         }
-        if (httpClient != null) {
-            ctxExt.httpClientCustomizer(actualClient -> {
-                DelegatingHttpClient.setDelegate(ctx, actualClient);
-                return httpClient;
-            });
-        }
-        if (rpcClient != null) {
-            ctxExt.rpcClientCustomizer(actualClient -> {
-                DelegatingRpcClient.setDelegate(ctx, actualClient);
-                return rpcClient;
-            });
-        }
+        ctxExt.httpClientCustomizer(actualClient -> {
+            DelegatingHttpClient.setDelegate(ctx, actualClient);
+            return httpClient;
+        });
+        ctxExt.rpcClientCustomizer(actualClient -> {
+            DelegatingRpcClient.setDelegate(ctx, actualClient);
+            return rpcClient;
+        });
     }
 
     /**

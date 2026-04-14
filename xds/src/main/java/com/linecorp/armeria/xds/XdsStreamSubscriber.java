@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.SubscriberStorage.ResourceCache;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -38,7 +37,6 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
     private final XdsType type;
     private final String resource;
     private final long timeoutMillis;
-    private final ResourceCache resourceCache;
     private final EventExecutor eventLoop;
 
     @Nullable
@@ -48,13 +46,11 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
     private ScheduledFuture<?> initialAbsentFuture;
     private final Set<ResourceWatcher<T>> resourceWatchers = new HashSet<>();
 
-    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis,
-                        ResourceCache resourceCache) {
+    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis) {
         this.type = type;
         this.resource = resource;
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
-        this.resourceCache = resourceCache;
 
         restartTimer();
     }
@@ -134,12 +130,11 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
         return resourceWatchers.isEmpty();
     }
 
-    @SuppressWarnings("unchecked")
     void registerWatcher(ResourceWatcher<T> watcher) {
         resourceWatchers.add(watcher);
-        final Object cached = resourceCache.find(type, resource);
+        final T cached = data;
         if (cached != null) {
-            watcher.onChanged((T) cached);
+            watcher.onChanged(cached);
         } else if (absent) {
             watcher.onResourceDoesNotExist(type, resource);
         }

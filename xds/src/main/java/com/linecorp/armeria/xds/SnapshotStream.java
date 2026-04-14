@@ -46,9 +46,9 @@ interface SnapshotStream<T> {
         return new MapStream<>(this, mapper);
     }
 
-    default <R, O extends SnapshotStream<? extends R>> SnapshotStream<R> switchMap(
+    default <R, O extends SnapshotStream<? extends R>> SnapshotStream<R> switchMapEager(
             Function<? super T, ? extends O> mapper) {
-        return new SwitchMapStream<>(this, mapper);
+        return new SwitchMapEagerStream<>(this, mapper);
     }
 
     static <S extends SnapshotStream<I>, I> SnapshotStream<List<I>> combineNLatest(List<S> stream) {

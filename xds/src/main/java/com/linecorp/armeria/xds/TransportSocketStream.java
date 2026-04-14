@@ -65,20 +65,20 @@ final class TransportSocketStream extends RefCountedStream<TransportSocketSnapsh
                                         .build();
             final SecretStream secretStream = new SecretStream(secret, context);
             validationStream = secretStream
-                    .switchMap(resource -> new CertificateValidationContextStream(context, resource))
+                    .switchMapEager(resource -> new CertificateValidationContextStream(context, resource))
                     .map(Optional::of);
         } else if (commonTlsContext.hasValidationContextSdsSecretConfig()) {
             final SdsSecretConfig sdsConfig = commonTlsContext.getValidationContextSdsSecretConfig();
             final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
             validationStream = secretStream
-                    .switchMap(resource -> new CertificateValidationContextStream(context, resource))
+                    .switchMapEager(resource -> new CertificateValidationContextStream(context, resource))
                     .map(Optional::of);
         } else if (commonTlsContext.hasCombinedValidationContext()) {
             final CombinedCertificateValidationContext combined =
                     commonTlsContext.getCombinedValidationContext();
             final SdsSecretConfig sdsConfig = combined.getValidationContextSdsSecretConfig();
             final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
-            validationStream = secretStream.switchMap(resource -> new CertificateValidationContextStream(
+            validationStream = secretStream.switchMapEager(resource -> new CertificateValidationContextStream(
                                                    context, resource, combined.getDefaultValidationContext()))
                                            .map(Optional::of);
         } else {
@@ -90,13 +90,13 @@ final class TransportSocketStream extends RefCountedStream<TransportSocketSnapsh
             final TlsCertificate tlsCertificate = commonTlsContext.getTlsCertificatesList().get(0);
             final Secret secret = Secret.newBuilder().setTlsCertificate(tlsCertificate).build();
             final SecretStream secretStream = new SecretStream(secret, context);
-            tlsCertStream = secretStream.switchMap(resource -> new TlsCertificateStream(context, resource))
+            tlsCertStream = secretStream.switchMapEager(resource -> new TlsCertificateStream(context, resource))
                                         .map(Optional::of);
         } else if (!commonTlsContext.getTlsCertificateSdsSecretConfigsList().isEmpty()) {
             final SdsSecretConfig sdsConfig =
                     commonTlsContext.getTlsCertificateSdsSecretConfigsList().get(0);
             final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
-            tlsCertStream = secretStream.switchMap(resource -> new TlsCertificateStream(context, resource))
+            tlsCertStream = secretStream.switchMapEager(resource -> new TlsCertificateStream(context, resource))
                                         .map(Optional::of);
         } else {
             // static

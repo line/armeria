@@ -24,7 +24,7 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
     private final SubscriptionContext context;
     private final String name;
     private final XdsType type;
-    private final ResourceNodeMeterBinder resourceNodeMeterBinder;
+    private final ResourceNodeMeterBinderFactory.ResourceNodeMeterBinder resourceNodeMeterBinder;
 
     ResourceNodeAdapter(ConfigSource configSource,
                         SubscriptionContext context,
@@ -33,9 +33,7 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
         this.context = context;
         this.name = name;
         this.type = type;
-        resourceNodeMeterBinder = new ResourceNodeMeterBinder(context.meterRegistry(),
-                                                              context.meterIdPrefix(),
-                                                              type, name);
+        resourceNodeMeterBinder = context.meterBinderFactory().acquire(type, name);
     }
 
     @Override
