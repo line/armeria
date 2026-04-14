@@ -91,7 +91,7 @@ jobs:
         shell: bash
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
 
       # Build the shaded JARs first so that shading process doesn't incur memory pressure
       # on other Gradle tasks such as tests.
@@ -234,7 +234,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
 
       - name: Run the linters
         run: |
@@ -260,7 +260,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
 
       - name: Build the site
         run: |
@@ -289,7 +289,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
 
       - name: Run flaky tests
         run: |
