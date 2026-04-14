@@ -247,29 +247,13 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     final Status status = Status.INVALID_ARGUMENT.withCause(e);
                     final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
                     assert defaultHeaders != null;
-                    if (exceptionHandler.isAsync()) {
-                        return HttpResponse.of(
-                                exceptionHandler.handleAsync(ctx, status, e, metadata)
-                                                .handleAsync((newStatus, ex) -> {
-                                                    if (ex != null) {
-                                                        // Fall back to the sync handler when the
-                                                        // async handler fails.
-                                                        newStatus = exceptionHandler.handle(
-                                                                ctx, status, e, metadata);
-                                                    }
-                                                    return HttpResponse.of(
-                                                            (ResponseHeaders) AbstractServerCall
-                                                                    .statusToTrailers(
-                                                                            ctx,
-                                                                            defaultHeaders.toBuilder(),
-                                                                            newStatus, metadata));
-                                                }, ctx.eventLoop()));
-                    }
                     return HttpResponse.of(
-                            (ResponseHeaders) AbstractServerCall.statusToTrailers(
-                                    ctx, defaultHeaders.toBuilder(),
-                                    exceptionHandler.handle(ctx, status, e, metadata),
-                                    metadata));
+                            exceptionHandler.handleAsync(ctx, status, e, metadata)
+                                            .thenApply(newStatus -> HttpResponse.of(
+                                                    (ResponseHeaders) AbstractServerCall
+                                                            .statusToTrailers(
+                                                                    ctx, defaultHeaders.toBuilder(),
+                                                                    newStatus, metadata))));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
@@ -352,25 +336,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            if (call.exceptionHandler().isAsync()) {
-                call.exceptionHandler().handleAsync(ctx, cancellationCause)
-                    .handleAsync((statusAndMetadata, ex) -> {
-                        if (ex != null) {
-                            // When the async handler fails, fall back to the sync handler
-                            // so the response is not silently dropped.
-                            statusAndMetadata =
-                                    call.exceptionHandler().handle(ctx, cancellationCause);
-                        }
-                        call.close(new ServerStatusAndMetadata(
-                                statusAndMetadata.status(), statusAndMetadata.metadata(), true));
-                        return null;
-                    }, ctx.eventLoop());
-            } else {
-                final StatusAndMetadata statusAndMetadata =
-                        call.exceptionHandler().handle(ctx, cancellationCause);
-                call.close(new ServerStatusAndMetadata(
-                        statusAndMetadata.status(), statusAndMetadata.metadata(), true));
-            }
+            call.exceptionHandler().handleAsync(ctx, cancellationCause)
+                .handle((statusAndMetadata, ex) -> {
+                    call.close(new ServerStatusAndMetadata(
+                            statusAndMetadata.status(), statusAndMetadata.metadata(), true));
+                    return null;
+                });
             return null;
         });
     }

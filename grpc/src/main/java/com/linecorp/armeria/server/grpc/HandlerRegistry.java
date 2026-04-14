@@ -121,8 +121,7 @@ final class HandlerRegistry {
                             Set<ServerMethodDefinition<?, ?>> blockingMethods,
                             Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                                     grpcExceptionHandlers,
-                            GrpcExceptionHandlerFunction defaultExceptionHandler,
-                            @Nullable AsyncGrpcExceptionHandlerFunction defaultAsyncExceptionHandler) {
+                            AsyncGrpcExceptionHandlerFunction defaultExceptionHandler) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -137,14 +136,9 @@ final class HandlerRegistry {
                 grpcExceptionHandlers.entrySet()
                                      .stream()
                                      .collect(toImmutableMap(Map.Entry::getKey,
-                                                             e -> new InternalGrpcExceptionHandler(
+                                                             e -> InternalGrpcExceptionHandler.of(
                                                                      e.getValue())));
-        if (defaultAsyncExceptionHandler != null) {
-            this.defaultExceptionHandler = new InternalGrpcExceptionHandler(
-                    defaultAsyncExceptionHandler, defaultExceptionHandler);
-        } else {
-            this.defaultExceptionHandler = new InternalGrpcExceptionHandler(defaultExceptionHandler);
-        }
+        this.defaultExceptionHandler = new InternalGrpcExceptionHandler(defaultExceptionHandler);
     }
 
     @Nullable
@@ -229,10 +223,10 @@ final class HandlerRegistry {
         private final List<Entry> entries = new ArrayList<>();
 
         @Nullable
-        private GrpcExceptionHandlerFunction defaultExceptionHandler;
+        private AsyncGrpcExceptionHandlerFunction defaultExceptionHandler;
 
         @Nullable
-        private AsyncGrpcExceptionHandlerFunction defaultAsyncExceptionHandler;
+        private GrpcExceptionHandlerFunction syncFallbackExceptionHandler;
 
         Builder addService(ServerServiceDefinition service, @Nullable Class<?> type,
                            List<? extends Function<? super HttpService,
@@ -257,15 +251,15 @@ final class HandlerRegistry {
             return this;
         }
 
-        Builder setDefaultExceptionHandler(GrpcExceptionHandlerFunction defaultExceptionHandler) {
+        Builder setDefaultExceptionHandler(AsyncGrpcExceptionHandlerFunction defaultExceptionHandler) {
             requireNonNull(defaultExceptionHandler, "defaultExceptionHandler");
             this.defaultExceptionHandler = defaultExceptionHandler;
             return this;
         }
 
-        Builder setDefaultAsyncExceptionHandler(AsyncGrpcExceptionHandlerFunction asyncExceptionHandler) {
-            requireNonNull(asyncExceptionHandler, "asyncExceptionHandler");
-            this.defaultAsyncExceptionHandler = asyncExceptionHandler;
+        Builder setSyncFallbackExceptionHandler(GrpcExceptionHandlerFunction syncFallback) {
+            requireNonNull(syncFallback, "syncFallback");
+            this.syncFallbackExceptionHandler = syncFallback;
             return this;
         }
 
@@ -301,7 +295,7 @@ final class HandlerRegistry {
                 ServerMethodDefinition<?, ?> methodDefinition,
                 final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                         grpcExceptionHandlersBuilder,
-                GrpcExceptionHandlerFunction defaultExceptionHandler) {
+                GrpcExceptionHandlerFunction syncFallbackExceptionHandler) {
             final List<GrpcExceptionHandlerFunction> exceptionHandlers =
                     AnnotationUtil.getAnnotatedInstances(method, clazz,
                                                          GrpcExceptionHandler.class,
@@ -311,7 +305,7 @@ final class HandlerRegistry {
                     exceptionHandlers.stream().reduce(GrpcExceptionHandlerFunction::orElse);
 
             grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                exceptionHandler = exceptionHandler.orElse(defaultExceptionHandler);
+                exceptionHandler = exceptionHandler.orElse(syncFallbackExceptionHandler);
                 grpcExceptionHandlersBuilder.put(methodDefinition, exceptionHandler);
             });
         }
@@ -390,7 +384,7 @@ final class HandlerRegistry {
                             }
                             putGrpcExceptionHandlerIfPresent(type, method, dependencyInjector,
                                                              methodDefinition, grpcExceptionHandlersBuilder,
-                                                             defaultExceptionHandler);
+                                                             syncFallbackExceptionHandler);
                         }
                     }
                 } else {
@@ -430,7 +424,7 @@ final class HandlerRegistry {
                             }
                             putGrpcExceptionHandlerIfPresent(type, method0, dependencyInjector,
                                                              methodDefinition, grpcExceptionHandlersBuilder,
-                                                             defaultExceptionHandler);
+                                                             syncFallbackExceptionHandler);
                         }
                     }
                 }
@@ -445,8 +439,7 @@ final class HandlerRegistry {
                                        additionalDecoratorsBuilder.build(),
                                        blockingMethods.build(),
                                        grpcExceptionHandlersBuilder.build(),
-                                       defaultExceptionHandler,
-                                       defaultAsyncExceptionHandler);
+                                       defaultExceptionHandler);
         }
 
         private static void addProtoMethodDescriptor(

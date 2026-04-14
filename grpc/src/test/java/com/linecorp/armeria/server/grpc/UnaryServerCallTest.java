@@ -84,7 +84,7 @@ class UnaryServerCallTest {
                                                                 Metadata.ASCII_STRING_MARSHALLER);
 
     private static final InternalGrpcExceptionHandler exceptionHandler =
-            new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of());
+            InternalGrpcExceptionHandler.of(GrpcExceptionHandlerFunction.of());
 
     private HttpResponse res;
 

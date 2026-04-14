@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
@@ -1073,18 +1074,36 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        final GrpcExceptionHandlerFunction grpcExceptionHandler;
+        // Build the sync exception handler chain.
+        final GrpcExceptionHandlerFunction syncExceptionHandler;
         if (exceptionMappingsBuilder != null) {
-            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
+            syncExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
         } else if (exceptionHandler != null) {
-            grpcExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
+            syncExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
         } else {
-            grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
+            syncExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
-        registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
+
+        // Wrap into a single async handler. If an async handler is set, it runs first
+        // and falls back to the sync handler. Otherwise, the sync handler is wrapped directly.
+        final AsyncGrpcExceptionHandlerFunction asyncHandler;
         if (asyncExceptionHandler != null) {
-            registryBuilder.setDefaultAsyncExceptionHandler(asyncExceptionHandler);
+            final GrpcExceptionHandlerFunction finalSyncHandler = syncExceptionHandler;
+            asyncHandler = (ctx, status, cause, metadata) ->
+                    asyncExceptionHandler.apply(ctx, status, cause, metadata)
+                                         .thenApply(s -> {
+                                             if (s == null) {
+                                                 return finalSyncHandler.apply(ctx, status, cause, metadata);
+                                             }
+                                             return s;
+                                         });
+        } else {
+            asyncHandler = (ctx, status, cause, metadata) ->
+                    UnmodifiableFuture.completedFuture(
+                            syncExceptionHandler.apply(ctx, status, cause, metadata));
         }
+        registryBuilder.setDefaultExceptionHandler(asyncHandler);
+        registryBuilder.setSyncFallbackExceptionHandler(syncExceptionHandler);
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -1096,12 +1115,8 @@ public final class GrpcServiceBuilder {
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
                                               entry.additionalDecorators());
             }
-            if (grpcExceptionHandler != null) {
-                newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
-            }
-            if (asyncExceptionHandler != null) {
-                newRegistryBuilder.setDefaultAsyncExceptionHandler(asyncExceptionHandler);
-            }
+            newRegistryBuilder.setDefaultExceptionHandler(asyncHandler);
+            newRegistryBuilder.setSyncFallbackExceptionHandler(syncExceptionHandler);
             handlerRegistry = newRegistryBuilder.build();
         } else {
             handlerRegistry = registryBuilder.build();

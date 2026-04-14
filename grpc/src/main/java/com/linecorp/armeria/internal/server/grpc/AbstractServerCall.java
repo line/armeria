@@ -216,25 +216,14 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
 
-        if (exceptionHandler.isAsync()) {
-            exceptionHandler.handleAsync(ctx, status, cause, metadata)
-                            .handleAsync((newStatus, ex) -> {
-                                if (ex != null) {
-                                    newStatus = status;
-                                }
-                                if (status.getDescription() != null) {
-                                    newStatus = newStatus.withDescription(status.getDescription());
-                                }
-                                close(new ServerStatusAndMetadata(newStatus, metadata), cause);
-                                return null;
-                            }, ctx.eventLoop());
-        } else {
-            Status newStatus = exceptionHandler.handle(ctx, status, cause, metadata);
-            if (status.getDescription() != null) {
-                newStatus = newStatus.withDescription(status.getDescription());
-            }
-            close(new ServerStatusAndMetadata(newStatus, metadata), cause);
-        }
+        exceptionHandler.handleAsync(ctx, status, cause, metadata)
+                        .handle((newStatus, ex) -> {
+                            if (status.getDescription() != null) {
+                                newStatus = newStatus.withDescription(status.getDescription());
+                            }
+                            close(new ServerStatusAndMetadata(newStatus, metadata), cause);
+                            return null;
+                        });
     }
 
     public final void close(Throwable exception) {
@@ -242,24 +231,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void close(Throwable exception, boolean cancelled) {
-        if (exceptionHandler.isAsync()) {
-            exceptionHandler.handleAsync(ctx, exception)
-                            .handleAsync((statusAndMetadata, ex) -> {
-                                if (ex != null) {
-                                    // When the async handler fails, fall back to the sync handler
-                                    // which preserves the original status via Status.fromThrowable().
-                                    statusAndMetadata = exceptionHandler.handle(ctx, exception);
-                                }
-                                close(new ServerStatusAndMetadata(
-                                        statusAndMetadata.status(), statusAndMetadata.metadata(),
-                                        cancelled), exception);
-                                return null;
-                            }, ctx.eventLoop());
-        } else {
-            final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, exception);
-            close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
-                                              cancelled), exception);
-        }
+        exceptionHandler.handleAsync(ctx, exception)
+                        .handle((statusAndMetadata, ex) -> {
+                            close(new ServerStatusAndMetadata(
+                                    statusAndMetadata.status(), statusAndMetadata.metadata(),
+                                    cancelled), exception);
+                            return null;
+                        });
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {
