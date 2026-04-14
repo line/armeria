@@ -16,18 +16,10 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.Optional;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CommonTlsContext;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CommonTlsContext.CombinedCertificateValidationContext;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.TlsCertificate;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 final class TransportSocketStream extends RefCountedStream<TransportSocketSnapshot> {
 
@@ -45,68 +37,18 @@ final class TransportSocketStream extends RefCountedStream<TransportSocketSnapsh
 
     @Override
     protected Subscription onStart(SnapshotWatcher<TransportSocketSnapshot> watcher) {
-        if (!"envoy.transport_sockets.tls".equals(transportSocket.getName())) {
+        if (transportSocket.equals(TransportSocket.getDefaultInstance())) {
             return SnapshotStream.just(new TransportSocketSnapshot(transportSocket))
                                  .subscribe(watcher);
         }
-        if (!transportSocket.hasTypedConfig()) {
-            return SnapshotStream.just(new TransportSocketSnapshot(TransportSocket.getDefaultInstance()))
-                                 .subscribe(watcher);
+        final TransportSocketFactory factory = context.extensionRegistry().query(
+                transportSocket.getTypedConfig(), transportSocket.getName(),
+                TransportSocketFactory.class);
+        if (factory == null) {
+            throw new IllegalArgumentException(
+                    "No TransportSocketFactory registered for transport socket: " +
+                    transportSocket.getName());
         }
-        final UpstreamTlsContext tlsContext = XdsValidatorIndexRegistry.unpack(transportSocket.getTypedConfig(),
-                                                                               UpstreamTlsContext.class);
-        final CommonTlsContext commonTlsContext = tlsContext.getCommonTlsContext();
-
-        final SnapshotStream<Optional<CertificateValidationContextSnapshot>> validationStream;
-
-        if (commonTlsContext.hasValidationContext()) {
-            final Secret secret = Secret.newBuilder()
-                                        .setValidationContext(commonTlsContext.getValidationContext())
-                                        .build();
-            final SecretStream secretStream = new SecretStream(secret, context);
-            validationStream = secretStream
-                    .switchMapEager(resource -> new CertificateValidationContextStream(context, resource))
-                    .map(Optional::of);
-        } else if (commonTlsContext.hasValidationContextSdsSecretConfig()) {
-            final SdsSecretConfig sdsConfig = commonTlsContext.getValidationContextSdsSecretConfig();
-            final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
-            validationStream = secretStream
-                    .switchMapEager(resource -> new CertificateValidationContextStream(context, resource))
-                    .map(Optional::of);
-        } else if (commonTlsContext.hasCombinedValidationContext()) {
-            final CombinedCertificateValidationContext combined =
-                    commonTlsContext.getCombinedValidationContext();
-            final SdsSecretConfig sdsConfig = combined.getValidationContextSdsSecretConfig();
-            final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
-            validationStream = secretStream.switchMapEager(resource -> new CertificateValidationContextStream(
-                                                   context, resource, combined.getDefaultValidationContext()))
-                                           .map(Optional::of);
-        } else {
-            validationStream = SnapshotStream.empty();
-        }
-
-        final SnapshotStream<Optional<TlsCertificateSnapshot>> tlsCertStream;
-        if (!commonTlsContext.getTlsCertificatesList().isEmpty()) {
-            final TlsCertificate tlsCertificate = commonTlsContext.getTlsCertificatesList().get(0);
-            final Secret secret = Secret.newBuilder().setTlsCertificate(tlsCertificate).build();
-            final SecretStream secretStream = new SecretStream(secret, context);
-            tlsCertStream = secretStream.switchMapEager(resource -> new TlsCertificateStream(context, resource))
-                                        .map(Optional::of);
-        } else if (!commonTlsContext.getTlsCertificateSdsSecretConfigsList().isEmpty()) {
-            final SdsSecretConfig sdsConfig =
-                    commonTlsContext.getTlsCertificateSdsSecretConfigsList().get(0);
-            final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
-            tlsCertStream = secretStream.switchMapEager(resource -> new TlsCertificateStream(context, resource))
-                                        .map(Optional::of);
-        } else {
-            // static
-            tlsCertStream = SnapshotStream.empty();
-        }
-
-        final SnapshotStream<TransportSocketSnapshot> stream =
-                SnapshotStream.combineLatest(tlsCertStream, validationStream, (cert, validation) -> {
-                    return new TransportSocketSnapshot(transportSocket, cert, validation);
-                });
-        return stream.subscribe(watcher);
+        return factory.create(context, configSource, transportSocket).subscribe(watcher);
     }
 }

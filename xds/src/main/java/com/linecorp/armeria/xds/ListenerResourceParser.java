@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.List;
+
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
 final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsResource> {
 
@@ -27,16 +30,12 @@ final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsR
     private ListenerResourceParser() {}
 
     @Override
-    ListenerXdsResource parse(Listener message, String version) {
-        final ListenerXdsResource resource = new ListenerXdsResource(message, version);
-        final HttpConnectionManager connectionManager = resource.connectionManager();
-        if (connectionManager != null) {
-            if (connectionManager.hasRds()) {
-                final Rds rds = connectionManager.getRds();
-                XdsConverterUtil.validateConfigSource(rds.getConfigSource());
-            }
-        }
-        return resource;
+    ListenerXdsResource parse(Listener message, XdsExtensionRegistry registry, String version) {
+        final HttpConnectionManager connectionManager =
+                XdsUnpackUtil.unpackConnectionManager(message, registry);
+        final List<XdsHttpFilter> downstreamFilters =
+                XdsUnpackUtil.resolveDownstreamFilters(connectionManager, registry);
+        return new ListenerXdsResource(message, connectionManager, downstreamFilters, version);
     }
 
     @Override

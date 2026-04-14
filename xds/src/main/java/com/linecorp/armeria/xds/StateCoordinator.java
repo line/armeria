@@ -28,10 +28,17 @@ final class StateCoordinator implements SafeCloseable {
 
     private final SubscriberStorage subscriberStorage;
     private final ResourceStateStore stateStore;
+    private final XdsExtensionRegistry extensionRegistry;
 
-    StateCoordinator(EventExecutor eventLoop, long timeoutMillis, boolean delta) {
+    StateCoordinator(EventExecutor eventLoop, long timeoutMillis, boolean delta,
+                     XdsExtensionRegistry extensionRegistry) {
         subscriberStorage = new SubscriberStorage(eventLoop, timeoutMillis, delta);
         stateStore = new ResourceStateStore();
+        this.extensionRegistry = extensionRegistry;
+    }
+
+    XdsExtensionRegistry extensionRegistry() {
+        return extensionRegistry;
     }
 
     <T extends XdsResource> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
