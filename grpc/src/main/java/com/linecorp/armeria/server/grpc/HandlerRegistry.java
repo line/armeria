@@ -71,7 +71,6 @@ import com.google.protobuf.Descriptors;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
@@ -121,7 +120,7 @@ final class HandlerRegistry {
                             Set<ServerMethodDefinition<?, ?>> blockingMethods,
                             Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                                     grpcExceptionHandlers,
-                            AsyncGrpcExceptionHandlerFunction defaultExceptionHandler) {
+                            GrpcExceptionHandlerFunction defaultExceptionHandler) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -223,7 +222,7 @@ final class HandlerRegistry {
         private final List<Entry> entries = new ArrayList<>();
 
         @Nullable
-        private AsyncGrpcExceptionHandlerFunction defaultExceptionHandler;
+        private GrpcExceptionHandlerFunction defaultExceptionHandler;
 
         @Nullable
         private GrpcExceptionHandlerFunction syncFallbackExceptionHandler;
@@ -251,7 +250,7 @@ final class HandlerRegistry {
             return this;
         }
 
-        Builder setDefaultExceptionHandler(AsyncGrpcExceptionHandlerFunction defaultExceptionHandler) {
+        Builder setDefaultExceptionHandler(GrpcExceptionHandlerFunction defaultExceptionHandler) {
             requireNonNull(defaultExceptionHandler, "defaultExceptionHandler");
             this.defaultExceptionHandler = defaultExceptionHandler;
             return this;

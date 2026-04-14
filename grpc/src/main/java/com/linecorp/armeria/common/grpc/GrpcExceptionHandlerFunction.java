@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -48,14 +50,60 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
-     * Maps the specified {@link Throwable} to a gRPC {@link Status} and mutates the specified {@link Metadata}.
+     * Maps the specified {@link Throwable} to a gRPC {@link Status} synchronously
+     * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
      *
      * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable)}.
      * You can return the {@link Status} or any other {@link Status} as needed.
+     *
+     * @deprecated Override {@link #applyAsync(RequestContext, Status, Throwable, Metadata)} instead.
      */
+    @Deprecated
     @Nullable
     Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata);
+
+    /**
+     * Maps the specified {@link Throwable} to a gRPC {@link Status} asynchronously
+     * and mutates the specified {@link Metadata}.
+     * If the returned {@link CompletableFuture} completes with {@code null},
+     * the next handler in the chain or the default {@link GrpcExceptionHandlerFunction} will be used.
+     *
+     * <p>The default implementation delegates to {@link #apply(RequestContext, Status, Throwable, Metadata)}.
+     *
+     * <p>Override this method when your exception handling logic requires asynchronous operations
+     * such as I/O-bound message lookups (e.g., i18n translation from a remote store).
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * GrpcExceptionHandlerFunction handler = new GrpcExceptionHandlerFunction() {
+     *     @Override
+     *     public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+     *         throw new UnsupportedOperationException();
+     *     }
+     *
+     *     @Override
+     *     public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+     *                                                 Throwable cause, Metadata metadata) {
+     *         return i18nService.translateAsync(cause, locale)
+     *                           .thenApply(message -> {
+     *                               metadata.put(ERROR_MESSAGE_KEY, message);
+     *                               return status;
+     *                           });
+     *     }
+     * };
+     *
+     * GrpcService.builder()
+     *            .addService(myService)
+     *            .exceptionHandler(handler)
+     *            .build();
+     * }</pre>
+     */
+    @UnstableApi
+    default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
+                                                           Throwable cause, Metadata metadata) {
+        return CompletableFuture.completedFuture(apply(ctx, status, cause, metadata));
+    }
 
     /**
      * Returns a {@link GrpcExceptionHandlerFunction} that returns the result of this function
@@ -68,12 +116,28 @@ public interface GrpcExceptionHandlerFunction {
         if (this == next) {
             return this;
         }
-        return (ctx, status, cause, metadata) -> {
-            final Status newStatus = apply(ctx, status, cause, metadata);
-            if (newStatus != null) {
-                return newStatus;
+        return new GrpcExceptionHandlerFunction() {
+
+            @Override
+            public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                          Metadata metadata) {
+                return GrpcExceptionHandlerFunction.this.apply(ctx, status, cause, metadata);
             }
-            return next.apply(ctx, status, cause, metadata);
+
+            @Override
+            public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
+                                                                   Throwable cause,
+                                                                   Metadata metadata) {
+                return GrpcExceptionHandlerFunction.this.applyAsync(ctx, status, cause, metadata)
+                                                        .thenCompose(newStatus -> {
+                                                            if (newStatus != null) {
+                                                                return CompletableFuture.completedFuture(
+                                                                        newStatus);
+                                                            }
+                                                            return next.applyAsync(ctx, status, cause,
+                                                                                   metadata);
+                                                        });
+            }
         };
     }
 }

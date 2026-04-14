@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
@@ -35,22 +34,17 @@ import io.grpc.StatusRuntimeException;
 
 public final class InternalGrpcExceptionHandler {
 
-    private final AsyncGrpcExceptionHandlerFunction delegate;
+    private final GrpcExceptionHandlerFunction delegate;
 
-    public InternalGrpcExceptionHandler(AsyncGrpcExceptionHandlerFunction delegate) {
+    public InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
     /**
-     * Creates a new instance that wraps the specified sync {@link GrpcExceptionHandlerFunction}
-     * into an async handler using {@link UnmodifiableFuture#completedFuture(Object)}.
+     * Creates a new instance that wraps the specified {@link GrpcExceptionHandlerFunction}.
      */
-    public static InternalGrpcExceptionHandler of(GrpcExceptionHandlerFunction syncDelegate) {
-        requireNonNull(syncDelegate, "syncDelegate");
-        return new InternalGrpcExceptionHandler(
-                (ctx, status, cause, metadata) ->
-                        UnmodifiableFuture.completedFuture(
-                                syncDelegate.apply(ctx, status, cause, metadata)));
+    public static InternalGrpcExceptionHandler of(GrpcExceptionHandlerFunction delegate) {
+        return new InternalGrpcExceptionHandler(delegate);
     }
 
     /**
@@ -81,7 +75,7 @@ public final class InternalGrpcExceptionHandler {
         }
         final Status status = restoreStatus(Status.fromThrowable(peeled), peeled);
         final Metadata finalMetadata = metadata;
-        return delegate.apply(ctx, status, peeled, metadata)
+        return delegate.applyAsync(ctx, status, peeled, metadata)
                        .handle((s, ex) -> {
                            if (ex != null || s == null) {
                                s = GrpcExceptionHandlerFunction.of()
@@ -99,7 +93,7 @@ public final class InternalGrpcExceptionHandler {
                                                  Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
         final Status restoredStatus = restoreStatus(status, peeled);
-        return delegate.apply(ctx, restoredStatus, peeled, metadata)
+        return delegate.applyAsync(ctx, restoredStatus, peeled, metadata)
                        .handle((s, ex) -> {
                            if (ex != null || s == null) {
                                s = GrpcExceptionHandlerFunction.of()

@@ -43,14 +43,13 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
+
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
@@ -119,9 +118,6 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private GrpcExceptionHandlerFunction exceptionHandler;
-
-    @Nullable
-    private AsyncGrpcExceptionHandlerFunction asyncExceptionHandler;
 
     @Nullable
     private ImmutableList.Builder<ServerInterceptor> interceptors;
@@ -892,9 +888,6 @@ public final class GrpcServiceBuilder {
      * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
      * to a gRPC {@link Status}.
      *
-     * <p>If an {@link AsyncGrpcExceptionHandlerFunction} is also set, the async handler is tried first.
-     * When the async handler returns {@code null}, this sync handler is used as a fallback.
-     *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
     @UnstableApi
@@ -907,30 +900,6 @@ public final class GrpcServiceBuilder {
             this.exceptionHandler = exceptionHandler;
         } else {
             this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
-        }
-        return this;
-    }
-
-    /**
-     * Sets the specified {@link AsyncGrpcExceptionHandlerFunction} that asynchronously maps
-     * a {@link Throwable} to a gRPC {@link Status}.
-     *
-     * <p>The async handler is tried first. If it returns {@code null}, the sync
-     * {@link GrpcExceptionHandlerFunction} set via {@link #exceptionHandler(GrpcExceptionHandlerFunction)}
-     * is used as a fallback. If no sync handler is set, the default handler is used.
-     *
-     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
-     */
-    @UnstableApi
-    public GrpcServiceBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {
-        requireNonNull(exceptionHandler, "exceptionHandler");
-        checkState(exceptionMappingsBuilder == null,
-                   "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
-
-        if (asyncExceptionHandler == null) {
-            asyncExceptionHandler = exceptionHandler;
-        } else {
-            asyncExceptionHandler = asyncExceptionHandler.orElse(exceptionHandler);
         }
         return this;
     }
@@ -965,8 +934,6 @@ public final class GrpcServiceBuilder {
         requireNonNull(status, "status");
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
-        checkState(asyncExceptionHandler == null,
-                   "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
 
         exceptionMappingsBuilder().on(exceptionType, status);
         return this;
@@ -990,8 +957,6 @@ public final class GrpcServiceBuilder {
 
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
-        checkState(asyncExceptionHandler == null,
-                   "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
 
         exceptionMappingsBuilder().on(exceptionType, statusFunction);
         return this;
@@ -1015,8 +980,6 @@ public final class GrpcServiceBuilder {
 
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
-        checkState(asyncExceptionHandler == null,
-                   "addExceptionMapping() and asyncExceptionHandler() are mutually exclusive.");
 
         exceptionMappingsBuilder().on(exceptionType,
                                       (ctx, status, throwable, metadata) ->
@@ -1084,25 +1047,9 @@ public final class GrpcServiceBuilder {
             syncExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
 
-        // Wrap into a single async handler. If an async handler is set, it runs first
-        // and falls back to the sync handler. Otherwise, the sync handler is wrapped directly.
-        final AsyncGrpcExceptionHandlerFunction asyncHandler;
-        if (asyncExceptionHandler != null) {
-            final GrpcExceptionHandlerFunction finalSyncHandler = syncExceptionHandler;
-            asyncHandler = (ctx, status, cause, metadata) ->
-                    asyncExceptionHandler.apply(ctx, status, cause, metadata)
-                                         .thenApply(s -> {
-                                             if (s == null) {
-                                                 return finalSyncHandler.apply(ctx, status, cause, metadata);
-                                             }
-                                             return s;
-                                         });
-        } else {
-            asyncHandler = (ctx, status, cause, metadata) ->
-                    UnmodifiableFuture.completedFuture(
-                            syncExceptionHandler.apply(ctx, status, cause, metadata));
-        }
-        registryBuilder.setDefaultExceptionHandler(asyncHandler);
+        // The internal call path uses applyAsync() consistently.
+        // For sync handlers, applyAsync() delegates to apply() via CompletableFuture.completedFuture().
+        registryBuilder.setDefaultExceptionHandler(syncExceptionHandler);
         registryBuilder.setSyncFallbackExceptionHandler(syncExceptionHandler);
 
         if (interceptors != null) {
@@ -1115,7 +1062,7 @@ public final class GrpcServiceBuilder {
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
                                               entry.additionalDecorators());
             }
-            newRegistryBuilder.setDefaultExceptionHandler(asyncHandler);
+            newRegistryBuilder.setDefaultExceptionHandler(syncExceptionHandler);
             newRegistryBuilder.setSyncFallbackExceptionHandler(syncExceptionHandler);
             handlerRegistry = newRegistryBuilder.build();
         } else {
