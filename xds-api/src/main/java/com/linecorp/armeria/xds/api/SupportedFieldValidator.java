@@ -25,6 +25,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
@@ -45,6 +48,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class SupportedFieldValidator {
 
+    static final Logger unsupportedLogger = LoggerFactory.getLogger("com.linecorp.armeria.xds.unsupported");
     private static final SupportedFieldValidator DEFAULT = new SupportedFieldValidator(
             UnsupportedFieldHandler.warn());
     private static final SupportedFieldValidator NOOP = new SupportedFieldValidator(

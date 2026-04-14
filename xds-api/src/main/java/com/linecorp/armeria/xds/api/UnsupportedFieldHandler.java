@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.xds.api;
 
+import static com.linecorp.armeria.xds.api.SupportedFieldValidator.unsupportedLogger;
 import static java.util.Objects.requireNonNull;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -30,8 +28,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 @FunctionalInterface
 public interface UnsupportedFieldHandler {
-
-    Logger logger = LoggerFactory.getLogger(UnsupportedFieldHandler.class);
 
     /**
      * Called when an unsupported field is detected.
@@ -59,7 +55,7 @@ public interface UnsupportedFieldHandler {
      */
     static UnsupportedFieldHandler warn() {
         return (descriptorName, fieldPath, value) ->
-                logger.warn("Unsupported xDS field detected in {}: {}", descriptorName, fieldPath);
+                unsupportedLogger.warn("Unsupported xDS field detected in {}: {}", descriptorName, fieldPath);
     }
 
     /**

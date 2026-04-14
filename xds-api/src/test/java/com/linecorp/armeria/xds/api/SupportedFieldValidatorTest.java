@@ -258,5 +258,4 @@ class SupportedFieldValidatorTest {
         // so their internal fields (type_url, value, seconds, nanos) must not appear.
         assertThat(violations).isEmpty();
     }
-
 }
