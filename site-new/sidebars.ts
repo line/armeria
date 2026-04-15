@@ -84,10 +84,10 @@ const sidebars: SidebarsConfig = {
             title: 'xDS',
           },
           items: [
+            'advanced/xds/introduction',
             'advanced/xds/getting-started',
-            'advanced/xds/error-handling',
+            'advanced/xds/concepts',
             'advanced/xds/metrics',
-            'advanced/xds/internals',
             'advanced/xds/extensions',
             'advanced/xds/supported-features',
             'advanced/xds/comparison',
