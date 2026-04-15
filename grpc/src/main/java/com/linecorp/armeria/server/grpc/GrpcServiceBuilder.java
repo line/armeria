@@ -1036,19 +1036,15 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        // Build the sync exception handler chain.
-        final GrpcExceptionHandlerFunction syncExceptionHandler;
+        final GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
-            syncExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
+            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
         } else if (exceptionHandler != null) {
-            syncExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
+            grpcExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
         } else {
-            syncExceptionHandler = GrpcExceptionHandlerFunction.of();
+            grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
-
-        // The internal call path uses applyAsync() consistently.
-        // For sync handlers, applyAsync() delegates to apply() via CompletableFuture.completedFuture().
-        registryBuilder.setDefaultExceptionHandler(syncExceptionHandler);
+        registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -1060,7 +1056,7 @@ public final class GrpcServiceBuilder {
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
                                               entry.additionalDecorators());
             }
-            newRegistryBuilder.setDefaultExceptionHandler(syncExceptionHandler);
+            newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
             handlerRegistry = newRegistryBuilder.build();
         } else {
             handlerRegistry = registryBuilder.build();

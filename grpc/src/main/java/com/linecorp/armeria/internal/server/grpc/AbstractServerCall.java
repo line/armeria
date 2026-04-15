@@ -238,11 +238,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     protected final void close(Throwable exception, boolean cancelled) {
         exceptionHandler.handleAsync(ctx, exception)
                         .handle((statusAndMetadata, ex) -> {
-                            // If the async handler itself fails, fall back to INTERNAL status
+                            // If the async handler itself fails, fall back to Status.fromThrowable()
                             // so the response is not silently dropped.
                             if (ex != null || statusAndMetadata == null) {
                                 statusAndMetadata = new StatusAndMetadata(
-                                        Status.INTERNAL.withCause(exception), new Metadata());
+                                        Status.fromThrowable(exception), new Metadata());
                             }
                             close(new ServerStatusAndMetadata(
                                     statusAndMetadata.status(), statusAndMetadata.metadata(),

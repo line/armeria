@@ -249,11 +249,18 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     assert defaultHeaders != null;
                     return HttpResponse.of(
                             exceptionHandler.handleAsync(ctx, status, e, metadata)
-                                            .thenApply(newStatus -> HttpResponse.of(
-                                                    (ResponseHeaders) AbstractServerCall
-                                                            .statusToTrailers(
-                                                                    ctx, defaultHeaders.toBuilder(),
-                                                                    newStatus, metadata))));
+                                            .handle((newStatus, ex) -> {
+                                                // If the async handler itself fails, fall back to
+                                                // the original status so the response is not dropped.
+                                                if (ex != null || newStatus == null) {
+                                                    newStatus = status;
+                                                }
+                                                return HttpResponse.of(
+                                                        (ResponseHeaders) AbstractServerCall
+                                                                .statusToTrailers(
+                                                                        ctx, defaultHeaders.toBuilder(),
+                                                                        newStatus, metadata));
+                                            }));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
@@ -338,11 +345,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
             call.exceptionHandler().handleAsync(ctx, cancellationCause)
                 .handle((statusAndMetadata, ex) -> {
-                    // If the async handler itself fails, fall back to a synthetic status
+                    // If the async handler itself fails, fall back to Status.fromThrowable()
                     // so the response is not silently dropped.
                     if (ex != null || statusAndMetadata == null) {
                         statusAndMetadata = new StatusAndMetadata(
-                                Status.INTERNAL.withCause(cancellationCause), new Metadata());
+                                Status.fromThrowable(cancellationCause), new Metadata());
                     }
                     call.close(new ServerStatusAndMetadata(
                             statusAndMetadata.status(), statusAndMetadata.metadata(), true));
