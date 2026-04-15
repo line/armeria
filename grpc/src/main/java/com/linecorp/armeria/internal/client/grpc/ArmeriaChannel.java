@@ -130,7 +130,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         compressor = options.get(GrpcClientOptions.COMPRESSOR);
         decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
         credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
-        exceptionHandler = InternalGrpcExceptionHandler.of(options.get(GrpcClientOptions.EXCEPTION_HANDLER));
+        exceptionHandler = new InternalGrpcExceptionHandler(options.get(GrpcClientOptions.EXCEPTION_HANDLER));
     }
 
     @Override

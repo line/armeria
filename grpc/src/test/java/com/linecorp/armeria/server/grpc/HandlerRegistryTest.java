@@ -36,8 +36,7 @@ class HandlerRegistryTest {
     @ParameterizedTest
     void normalizePath(String path1, String path2, String expected1, String expected2) {
         final HandlerRegistry.Builder builder = new HandlerRegistry.Builder()
-                .setDefaultExceptionHandler(GrpcExceptionHandlerFunction.of())
-                .setSyncFallbackExceptionHandler(GrpcExceptionHandlerFunction.of());
+                .setDefaultExceptionHandler(GrpcExceptionHandlerFunction.of());
         final TestServiceImplBase testService = new TestServiceImplBase() {};
         final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService(),
                                                                    null, null, ImmutableList.of())

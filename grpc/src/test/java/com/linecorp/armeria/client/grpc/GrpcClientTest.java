@@ -242,7 +242,7 @@ class GrpcClientTest {
     };
 
     private final InternalGrpcExceptionHandler grpcExceptionHandler =
-            InternalGrpcExceptionHandler.of(GrpcExceptionHandlerFunction.of());
+            new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of());
     private final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
     private TestServiceBlockingStub blockingStub;
     private TestServiceStub asyncStub;

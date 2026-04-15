@@ -135,7 +135,7 @@ final class HandlerRegistry {
                 grpcExceptionHandlers.entrySet()
                                      .stream()
                                      .collect(toImmutableMap(Map.Entry::getKey,
-                                                             e -> InternalGrpcExceptionHandler.of(
+                                                             e -> new InternalGrpcExceptionHandler(
                                                                      e.getValue())));
         this.defaultExceptionHandler = new InternalGrpcExceptionHandler(defaultExceptionHandler);
     }
@@ -224,9 +224,6 @@ final class HandlerRegistry {
         @Nullable
         private GrpcExceptionHandlerFunction defaultExceptionHandler;
 
-        @Nullable
-        private GrpcExceptionHandlerFunction syncFallbackExceptionHandler;
-
         Builder addService(ServerServiceDefinition service, @Nullable Class<?> type,
                            List<? extends Function<? super HttpService,
                                    ? extends HttpService>> additionalDecorators) {
@@ -253,12 +250,6 @@ final class HandlerRegistry {
         Builder setDefaultExceptionHandler(GrpcExceptionHandlerFunction defaultExceptionHandler) {
             requireNonNull(defaultExceptionHandler, "defaultExceptionHandler");
             this.defaultExceptionHandler = defaultExceptionHandler;
-            return this;
-        }
-
-        Builder setSyncFallbackExceptionHandler(GrpcExceptionHandlerFunction syncFallback) {
-            requireNonNull(syncFallback, "syncFallback");
-            this.syncFallbackExceptionHandler = syncFallback;
             return this;
         }
 
@@ -294,7 +285,7 @@ final class HandlerRegistry {
                 ServerMethodDefinition<?, ?> methodDefinition,
                 final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                         grpcExceptionHandlersBuilder,
-                GrpcExceptionHandlerFunction syncFallbackExceptionHandler) {
+                GrpcExceptionHandlerFunction defaultExceptionHandler) {
             final List<GrpcExceptionHandlerFunction> exceptionHandlers =
                     AnnotationUtil.getAnnotatedInstances(method, clazz,
                                                          GrpcExceptionHandler.class,
@@ -304,7 +295,7 @@ final class HandlerRegistry {
                     exceptionHandlers.stream().reduce(GrpcExceptionHandlerFunction::orElse);
 
             grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                exceptionHandler = exceptionHandler.orElse(syncFallbackExceptionHandler);
+                exceptionHandler = exceptionHandler.orElse(defaultExceptionHandler);
                 grpcExceptionHandlersBuilder.put(methodDefinition, exceptionHandler);
             });
         }
@@ -383,7 +374,7 @@ final class HandlerRegistry {
                             }
                             putGrpcExceptionHandlerIfPresent(type, method, dependencyInjector,
                                                              methodDefinition, grpcExceptionHandlersBuilder,
-                                                             syncFallbackExceptionHandler);
+                                                             defaultExceptionHandler);
                         }
                     }
                 } else {
@@ -423,7 +414,7 @@ final class HandlerRegistry {
                             }
                             putGrpcExceptionHandlerIfPresent(type, method0, dependencyInjector,
                                                              methodDefinition, grpcExceptionHandlersBuilder,
-                                                             syncFallbackExceptionHandler);
+                                                             defaultExceptionHandler);
                         }
                     }
                 }

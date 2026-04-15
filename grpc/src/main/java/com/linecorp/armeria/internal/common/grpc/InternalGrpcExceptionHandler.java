@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -38,13 +37,6 @@ public final class InternalGrpcExceptionHandler {
 
     public InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
-    }
-
-    /**
-     * Creates a new instance that wraps the specified {@link GrpcExceptionHandlerFunction}.
-     */
-    public static InternalGrpcExceptionHandler of(GrpcExceptionHandlerFunction delegate) {
-        return new InternalGrpcExceptionHandler(delegate);
     }
 
     /**

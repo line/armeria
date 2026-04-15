@@ -91,7 +91,7 @@ class StreamingServerCallTest {
                                                                 Metadata.ASCII_STRING_MARSHALLER);
 
     private static final InternalGrpcExceptionHandler exceptionHandler =
-            InternalGrpcExceptionHandler.of(GrpcExceptionHandlerFunction.of());
+            new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of());
 
     @Mock
     private HttpResponseWriter res;

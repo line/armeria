@@ -1050,7 +1050,6 @@ public final class GrpcServiceBuilder {
         // The internal call path uses applyAsync() consistently.
         // For sync handlers, applyAsync() delegates to apply() via CompletableFuture.completedFuture().
         registryBuilder.setDefaultExceptionHandler(syncExceptionHandler);
-        registryBuilder.setSyncFallbackExceptionHandler(syncExceptionHandler);
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -1063,7 +1062,6 @@ public final class GrpcServiceBuilder {
                                               entry.additionalDecorators());
             }
             newRegistryBuilder.setDefaultExceptionHandler(syncExceptionHandler);
-            newRegistryBuilder.setSyncFallbackExceptionHandler(syncExceptionHandler);
             handlerRegistry = newRegistryBuilder.build();
         } else {
             handlerRegistry = registryBuilder.build();

@@ -120,7 +120,7 @@ class DeferredListenerTest {
                                      HttpResponse.streaming(), new CompletableFuture<>(), 0, 0, ctx,
                                      GrpcSerializationFormats.PROTO, null, false,
                                      ResponseHeaders.of(200),
-                                     InternalGrpcExceptionHandler.of(GrpcExceptionHandlerFunction.of()),
+                                     new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of()),
                                      blockingTaskExecutor, false, false, false);
     }
 
