@@ -144,6 +144,21 @@ class AsyncGrpcExceptionHandlerTest {
     };
 
     @RegisterExtension
+    static final ServerExtension serverWithThrowingHandler = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(5000)
+              .service(GrpcService.builder()
+                                  .addService(new ErrorThrowingService())
+                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
+                                          (ctx, status, cause, metadata) -> {
+                                              throw new RuntimeException("handler threw");
+                                          }))
+                                  .build());
+        }
+    };
+
+    @RegisterExtension
     static final ServerExtension streamingServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
@@ -227,6 +242,17 @@ class AsyncGrpcExceptionHandlerTest {
     void failingAsyncHandlerFallsBackToOriginalStatus() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(serverWithFailingHandler.httpUri(),
+                                      TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.UNKNOWN);
+                });
+    }
+
+    @Test
+    void throwingAsyncHandlerFallsBackToOriginalStatus() {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(serverWithThrowingHandler.httpUri(),
                                       TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {

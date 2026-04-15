@@ -79,7 +79,7 @@ public final class InternalGrpcExceptionHandler {
             // The delegate is an async-only handler (e.g., created via ofAsync).
             // Fall back to the default handler on this synchronous path.
         }
-        return GrpcExceptionHandlerFunction.of().apply(ctx, status, cause, metadata);
+        return applyDefaultHandler(ctx, status, cause, metadata);
     }
 
     /**
@@ -95,11 +95,10 @@ public final class InternalGrpcExceptionHandler {
         }
         final Status status = restoreStatus(Status.fromThrowable(peeled), peeled);
         final Metadata finalMetadata = metadata;
-        return delegate.applyAsync(ctx, status, peeled, metadata)
+        return applyAsyncSafely(ctx, status, peeled, metadata)
                        .handle((s, ex) -> {
                            if (ex != null || s == null) {
-                               s = GrpcExceptionHandlerFunction.of()
-                                       .apply(ctx, status, peeled, finalMetadata);
+                               s = applyDefaultHandler(ctx, status, peeled, finalMetadata);
                            }
                            return new StatusAndMetadata(s, finalMetadata);
                        });
@@ -114,14 +113,32 @@ public final class InternalGrpcExceptionHandler {
                                                  Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
         final Status restoredStatus = restoreStatus(status, peeled);
-        return delegate.applyAsync(ctx, restoredStatus, peeled, metadata)
+        return applyAsyncSafely(ctx, restoredStatus, peeled, metadata)
                        .handle((s, ex) -> {
                            if (ex != null || s == null) {
-                               s = GrpcExceptionHandlerFunction.of()
-                                       .apply(ctx, restoredStatus, peeled, metadata);
+                               s = applyDefaultHandler(ctx, restoredStatus, peeled, metadata);
                            }
                            return s;
                        });
+    }
+
+    private CompletableFuture<Status> applyAsyncSafely(RequestContext ctx, Status status,
+                                                       Throwable cause, Metadata metadata) {
+        try {
+            return requireNonNull(delegate.applyAsync(ctx, status, cause, metadata),
+                                  "delegate.applyAsync(...)");
+        } catch (Throwable t) {
+            final CompletableFuture<Status> future = new CompletableFuture<>();
+            future.completeExceptionally(t);
+            return future;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static Status applyDefaultHandler(RequestContext ctx, Status status, Throwable cause,
+                                             Metadata metadata) {
+        return requireNonNull(GrpcExceptionHandlerFunction.of().apply(ctx, status, cause, metadata),
+                              "default grpc exception handler");
     }
 
     private static Status restoreStatus(Status status, Throwable cause) {

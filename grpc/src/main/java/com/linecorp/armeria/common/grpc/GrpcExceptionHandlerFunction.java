@@ -51,9 +51,13 @@ public interface GrpcExceptionHandlerFunction {
 
     /**
      * Returns a new {@link GrpcExceptionHandlerFunction} that only supports asynchronous
-     * exception handling. The returned handler's {@link #apply} method throws an
-     * {@link UnsupportedOperationException}; only {@link #applyAsync} is used by the
-     * internal call paths.
+     * exception handling.
+     *
+     * <p>The returned handler's synchronous {@link #apply} method always returns {@code null}
+     * so synchronous call paths can continue to the next handler in the chain or fall back to
+     * the default handler. Server-side call paths use {@link #applyAsync}; client-side exception
+     * handling remains synchronous and therefore requires a synchronous fallback if you need
+     * custom client-side status mapping.
      *
      * <p>Use this factory when your exception handling logic is inherently asynchronous
      * (e.g., i18n translation from a remote store) and you don't need a synchronous variant.
@@ -79,15 +83,20 @@ public interface GrpcExceptionHandlerFunction {
             @Override
             public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
                                           Metadata metadata) {
-                throw new UnsupportedOperationException(
-                        "This handler only supports async exception handling; " +
-                        "use applyAsync() instead.");
+                return null;
             }
 
             @Override
             public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                                    Throwable cause, Metadata metadata) {
-                return asyncHandler.apply(ctx, status, cause, metadata);
+                try {
+                    return requireNonNull(asyncHandler.apply(ctx, status, cause, metadata),
+                                          "asyncHandler.apply(...)");
+                } catch (Throwable t) {
+                    final CompletableFuture<@Nullable Status> future = new CompletableFuture<>();
+                    future.completeExceptionally(t);
+                    return future;
+                }
             }
         };
     }
@@ -132,6 +141,9 @@ public interface GrpcExceptionHandlerFunction {
      * <p>Override this method when your exception handling logic requires asynchronous operations
      * such as I/O-bound message lookups (e.g., i18n translation from a remote store).
      * For async-only handlers, consider using {@link #ofAsync(AsyncHandler)} instead.
+     *
+     * <p>Note that client-side exception handling remains synchronous. Async-only handlers are
+     * skipped on those paths unless chained with a synchronous fallback using {@link #orElse}.
      */
     @UnstableApi
     @SuppressWarnings("deprecation")
@@ -144,7 +156,6 @@ public interface GrpcExceptionHandlerFunction {
             future.completeExceptionally(t);
             return future;
         }
-    }
     }
 
     /**

@@ -21,8 +21,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Deque;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
@@ -123,5 +125,48 @@ class GrpcClientExceptionHandlerTest {
         await().untilAtomic(statusRef, Matchers.notNullValue());
         assertThat(statusRef.get().getCode()).isEqualTo(Code.DATA_LOSS);
         assertThat(stringDeque).containsExactly("1", "2", "3");
+    }
+
+    @Test
+    void asyncOnlyHandlerFallsBackToLaterSyncHandlerOnClientPath() {
+        final AtomicInteger asyncInvocations = new AtomicInteger();
+        final RuntimeException exception = new RuntimeException();
+        final TestServiceBlockingStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
+                                   (ctx, status, cause, metadata) -> {
+                                       asyncInvocations.incrementAndGet();
+                                       return CompletableFuture.completedFuture(
+                                               Status.INTERNAL.withDescription("async"));
+                                   }))
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
+                               if (cause == exception) {
+                                   return Status.DATA_LOSS;
+                               }
+                               return null;
+                           })
+                           .build(TestServiceBlockingStub.class);
+        final ClientCall<SimpleRequest, SimpleResponse> clientCall =
+                stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
+
+        final AtomicReference<Status> statusRef = new AtomicReference<>();
+        clientCall.start(new Listener<SimpleResponse>() {
+            @Override
+            public void onHeaders(Metadata headers) {
+                throw exception;
+            }
+
+            @Override
+            public void onClose(Status status, Metadata trailers) {
+                statusRef.set(status);
+            }
+        }, new Metadata());
+
+        clientCall.sendMessage(SimpleRequest.getDefaultInstance());
+        clientCall.halfClose();
+        clientCall.request(Integer.MAX_VALUE);
+        await().untilAtomic(statusRef, Matchers.notNullValue());
+        assertThat(statusRef.get().getCode()).isEqualTo(Code.DATA_LOSS);
+        assertThat(asyncInvocations).hasValue(0);
     }
 }
