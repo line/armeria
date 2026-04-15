@@ -1,0 +1,87 @@
+---
+sidebar_position: 6
+title: Running with Istio
+---
+
+# Running with Istio
+
+Armeria can connect directly to Istio's control plane (Istiod) using the xDS protocol,
+allowing your application to participate in an Istio service mesh without relying on a
+sidecar proxy for outbound traffic.
+
+## Prerequisites
+
+This guide assumes your pod has Istio sidecar injection enabled. When sidecar mode is
+active, Istio injects an Envoy bootstrap configuration at `/etc/istio/proxy/envoy-rev.json`
+containing the control plane address, node identity, and TLS certificates needed to
+communicate with Istiod.
+
+Armeria can load this bootstrap directly and use it to subscribe to xDS resources —
+the same resources that would normally be consumed by the Envoy sidecar.
+
+## Loading the Istio bootstrap
+
+```java
+import com.linecorp.armeria.xds.XdsResourceReader;
+import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+
+// Load the bootstrap injected by Istio
+Bootstrap bootstrap = XdsResourceReader.fromJson(
+        Files.readString(Path.of("/etc/istio/proxy/envoy-rev.json")),
+        Bootstrap.class);
+
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+```
+
+## Making requests
+
+Once you know the listener name, create a preprocessor and use it like any other
+Armeria client:
+
+```java
+import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+import com.linecorp.armeria.client.WebClient;
+
+// Resolve the listener name for the target service
+String listenerName = serviceClusterIp + "_8080";
+
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+XdsHttpPreprocessor preprocessor =
+        XdsHttpPreprocessor.ofListener(listenerName, xdsBootstrap);
+
+WebClient client = WebClient.of(preprocessor);
+AggregatedHttpResponse response = client.get("/hello").aggregate().join();
+```
+
+Armeria fetches the full listener configuration from Istiod — including routes,
+clusters, and endpoints — exactly as the Envoy sidecar would.
+
+## What you get
+
+By connecting to Istio's control plane directly, Armeria receives the same
+configuration that Envoy sidecars use:
+
+- **Endpoint discovery** — service endpoints are resolved dynamically via EDS
+- **Load balancing** — cluster-level load balancing policies are applied
+- **mTLS** — certificates provisioned by Istio are used for secure communication
+- **Route matching** — Istio's VirtualService and DestinationRule configurations
+  are reflected in the xDS routes and clusters
+
+## Istio-specific filters
+
+Istio's xDS configuration may include HTTP filters that are specific to Istio
+(e.g. `envoy.filters.http.wasm`, `istio.stats`). Armeria does not ship built-in
+support for these filters, so you may need to register custom
+[HttpFilterFactory](/docs/advanced/xds/extensions) implementations that handle
+or skip them.
+
+:::note
+
+Armeria's Istio integration is under active development. Not all Istio features
+are supported yet — see [Supported features](/docs/advanced/xds/supported-features)
+for the current coverage.
+
+:::

@@ -1,5 +1,11 @@
 # Client-side load balancing and service discovery
 
+:::tip
+
+If you are using a service mesh with xDS (e.g., Istio or Envoy), see the [xDS section](/docs/advanced/xds/getting-started) for xDS-based service discovery and load balancing.
+
+:::
+
 You can configure an Armeria client to distribute its requests to more than one server autonomously, unlike
 traditional server-side load balancing where the requests go through a dedicated load balancer such as
 [L4 and L7 switches](https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch).

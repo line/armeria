@@ -1,0 +1,139 @@
+---
+sidebar_position: 4
+---
+
+# Extensions
+
+:::note
+
+The extensions API is not yet finalized and may change in future releases.
+
+:::
+
+Envoy's architecture is built around extensions — pluggable components that handle
+specific concerns like HTTP filtering, transport sockets, and config sources. Each
+extension is identified by a **name** (e.g. `envoy.filters.http.router`) and/or a
+**type URL** (e.g. `type.googleapis.com/envoy.extensions.filters.http.router.v3.Router`).
+
+Armeria follows the same model. Extensions are resolved from a registry by type URL
+(primary) or name (fallback). Built-in extensions cover the core xDS functionality,
+and custom extensions can be added via the Java `ServiceLoader` mechanism.
+
+## HTTP filter extensions
+
+HTTP filters are the most common extension point. They intercept requests as they
+pass through the filter chain (see [Concepts — How the preprocessor works](/docs/advanced/xds/concepts#how-the-preprocessor-works)).
+
+To create a custom HTTP filter, implement
+[HttpFilterFactory](type:com.linecorp.armeria.xds.filter.HttpFilterFactory) and
+[XdsHttpFilter](type:com.linecorp.armeria.xds.filter.XdsHttpFilter).
+
+### HttpFilterFactory
+
+A factory that creates an `XdsHttpFilter` from an xDS `HttpFilter` config. Factories
+are responsible for all config parsing, including unwrapping per-route overrides.
+
+```java
+import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+
+public class MyFilterFactory implements HttpFilterFactory {
+
+    @Override
+    public String name() {
+        return "my.custom.filter";
+    }
+
+    @Override
+    public List<String> typeUrls() {
+        return List.of("type.googleapis.com/my.custom.filter.v1.Config");
+    }
+
+    @Override
+    @Nullable
+    public XdsHttpFilter create(HttpFilter httpFilter, Any config,
+                                XdsResourceValidator validator) {
+        // Parse config and return an XdsHttpFilter, or null to skip
+        MyConfig myConfig = validator.unpack(config, MyConfig.class);
+        return new MyFilter(myConfig);
+    }
+}
+```
+
+### XdsHttpFilter
+
+The resolved filter returned by the factory. It can act as a downstream filter
+(preprocessor), an upstream filter (decorator), or both:
+
+```java
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+
+public class MyFilter implements XdsHttpFilter {
+
+    @Override
+    public HttpPreprocessor httpPreprocessor() {
+        // Runs as a downstream filter (before routing)
+        return (delegate, ctx, req) -> {
+            // custom logic
+            return delegate.execute(ctx, req);
+        };
+    }
+
+    @Override
+    public DecoratingHttpClientFunction httpDecorator() {
+        // Runs as an upstream filter (after routing)
+        return (delegate, ctx, req) -> {
+            // custom logic
+            return delegate.execute(ctx, req);
+        };
+    }
+}
+```
+
+### Registration
+
+Register your factory using Java's `ServiceLoader`. Create the file:
+
+```
+META-INF/services/com.linecorp.armeria.xds.filter.HttpFilterFactory
+```
+
+With the fully qualified class name of your factory:
+
+```
+com.example.MyFilterFactory
+```
+
+The factory will be discovered automatically when `XdsBootstrap` is created.
+
+### Usage in bootstrap YAML
+
+Once registered, reference your filter by name and type URL in the Listener's
+`http_filters` list:
+
+```yaml
+listeners:
+  - name: my-listener
+    api_listener:
+      api_listener:
+        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        http_filters:
+          - name: my.custom.filter
+            typed_config:
+              "@type": type.googleapis.com/my.custom.filter.v1.Config
+              some_field: some_value
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        route_config:
+          name: route
+          virtual_hosts:
+            - name: my-vhost
+              domains: ["*"]
+              routes:
+                - match: { prefix: "/" }
+                  route: { cluster: my-cluster }
+```
+
+Filters are executed in the order they are declared. The `envoy.filters.http.router`
+filter must always be the last filter in the chain.

@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 class PreprocessorErrorTest {

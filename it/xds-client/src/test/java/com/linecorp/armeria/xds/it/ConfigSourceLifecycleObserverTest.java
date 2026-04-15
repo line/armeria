@@ -40,6 +40,7 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 import com.linecorp.armeria.xds.XdsType;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;

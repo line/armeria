@@ -76,6 +76,23 @@ const sidebars: SidebarsConfig = {
         title: 'Advanced',
       },
       items: [
+        {
+          type: 'category',
+          label: 'xDS',
+          link: {
+            type: 'generated-index',
+            title: 'xDS',
+          },
+          items: [
+            'advanced/xds/getting-started',
+            'advanced/xds/error-handling',
+            'advanced/xds/metrics',
+            'advanced/xds/internals',
+            'advanced/xds/extensions',
+            'advanced/xds/supported-features',
+            'advanced/xds/comparison',
+          ],
+        },
         'advanced/logging',
         'advanced/structured-logging',
         'advanced/request-context',

@@ -41,6 +41,7 @@ import com.linecorp.armeria.xds.CertificateValidationContextSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;

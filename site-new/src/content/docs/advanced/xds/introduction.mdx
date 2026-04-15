@@ -1,0 +1,39 @@
+---
+sidebar_position: 0
+---
+
+# Introduction
+
+xDS is the protocol that service meshes use to push configuration — routing rules,
+endpoints, load balancing policies, TLS certificates — from a control plane to the
+data plane. It was originally designed for Envoy but has become a
+[standard](https://github.com/cncf/xds) adopted by multiple projects.
+
+Armeria implements the xDS protocol directly in your application. Instead of routing
+traffic through a sidecar proxy, Armeria speaks xDS to a control plane and applies
+the configuration in-process — endpoint discovery, routing, load balancing, retries,
+timeouts, and mTLS all happen without an extra network hop.
+
+## Current status
+
+**Outbound (client)** — available now. Armeria clients can discover endpoints, match
+routes, apply retry and timeout policies, and establish mTLS connections, all driven
+by xDS configuration from a control plane or static bootstrap.
+
+**Inbound (server)** — coming soon. Server-side xDS will handle incoming request
+routing, authentication, rate limiting, and other policies.
+
+## Documentation guide
+
+- [Getting started](/docs/advanced/xds/getting-started) — dependencies, bootstrap
+  setup, creating a client, and making your first xDS-powered request
+- [Concepts](/docs/advanced/xds/concepts) — how Armeria replaces the sidecar proxy,
+  the preprocessor pipeline, snapshots, and the threading model
+- [Metrics](/docs/advanced/xds/metrics) — control plane, resource, and load balancer
+  metrics exposed by the xDS module
+- [Extensions](/docs/advanced/xds/extensions) — adding custom HTTP filter extensions
+  via the `HttpFilterFactory` SPI
+- [Supported features](/docs/advanced/xds/supported-features) — which xDS fields
+  Armeria recognizes and how unsupported fields are handled
+- [Running with Istio](/docs/advanced/xds/comparison) — connecting to Istio's control
+  plane using the sidecar-injected bootstrap

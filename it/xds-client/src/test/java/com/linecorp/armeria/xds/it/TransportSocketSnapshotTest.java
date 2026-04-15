@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds.it;
 
-import static com.linecorp.armeria.xds.it.XdsResourceReader.escapeMultiLine;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -48,10 +47,16 @@ import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.TlsCertificateSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 
 class TransportSocketSnapshotTest {
+
+    private static String escapeMultiLine(String str) {
+        return str.replace("\\", "\\\\").replace("\"", "\\\"")
+                  .replace("\n", "\\n").replace("\r", "\\r");
+    }
 
     @RegisterExtension
     static SelfSignedCertificateExtension certificate = new SelfSignedCertificateExtension();
