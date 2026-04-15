@@ -247,8 +247,6 @@ client's `responseTimeout` is used as-is.
 ```java
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryingClient;
 
 WebClient client =
         WebClient.builder(preprocessor)
