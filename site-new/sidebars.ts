@@ -90,7 +90,7 @@ const sidebars: SidebarsConfig = {
             'advanced/xds/metrics',
             'advanced/xds/extensions',
             'advanced/xds/supported-features',
-            'advanced/xds/comparison',
+            'advanced/xds/running-with-istio',
           ],
         },
         'advanced/logging',

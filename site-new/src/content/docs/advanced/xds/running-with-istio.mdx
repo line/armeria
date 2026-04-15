@@ -45,10 +45,9 @@ Armeria client:
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 
-// Resolve the listener name for the target service
+// Resolve the listener name for the outbound listener. This may be different based on your configuration.
 String listenerName = serviceClusterIp + "_8080";
 
-XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
 XdsHttpPreprocessor preprocessor =
         XdsHttpPreprocessor.ofListener(listenerName, xdsBootstrap);
 

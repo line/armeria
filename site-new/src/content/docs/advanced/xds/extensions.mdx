@@ -52,7 +52,7 @@ public class MyFilterFactory implements HttpFilterFactory {
     @Override
     @Nullable
     public XdsHttpFilter create(HttpFilter httpFilter, Any config,
-                                XdsResourceValidator validator) {
+                                XdsResourceValidator validator) { // for validating and unpacking Any protos
         // Parse config and return an XdsHttpFilter, or null to skip
         MyConfig myConfig = validator.unpack(config, MyConfig.class);
         return new MyFilter(myConfig);
