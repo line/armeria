@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -63,31 +61,6 @@ final class AdsXdsStream implements XdsStream {
         this.stateCoordinator = requireNonNull(stateCoordinator, "stateCoordinator");
         this.lifecycleObserver = requireNonNull(lifecycleObserver, "lifecycleObserver");
         this.targetTypes = requireNonNull(targetTypes, "targetTypes");
-    }
-
-    @VisibleForTesting
-    static AdsXdsStream of(ActualStreamFactory factory, Backoff backoff, EventExecutor eventLoop,
-                           StateCoordinator stateCoordinator,
-                           ConfigSourceLifecycleObserver lifecycleObserver,
-                           Set<XdsType> targetTypes) {
-        return new AdsXdsStream(factory, backoff, eventLoop, stateCoordinator, lifecycleObserver,
-                                targetTypes);
-    }
-
-    @VisibleForTesting
-    @Nullable
-    ActualStream actualStream() {
-        return actualStream;
-    }
-
-    @VisibleForTesting
-    void start() {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(this::start);
-            return;
-        }
-        stopped = false;
-        reset();
     }
 
     void stop() {

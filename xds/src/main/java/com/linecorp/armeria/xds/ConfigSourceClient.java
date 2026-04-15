@@ -106,26 +106,28 @@ final class ConfigSourceClient implements SafeCloseable {
                         backoff, eventLoop, stateCoordinator, lifecycleObserver,
                         XdsType.discoverableTypes());
             }
-        } else if (isDelta) {
-            stream = new CompositeXdsStream(type -> {
-                final DeltaDiscoveryStub stub = DeltaDiscoveryStub.basic(type, builder);
-                final ConfigSourceLifecycleObserver lifecycleObserver =
-                        metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
-                return new AdsXdsStream(
-                        owner -> new DeltaActualStream(stub, owner, stateCoordinator, eventLoop,
-                                                       lifecycleObserver, node),
-                        backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
-            });
         } else {
-            stream = new CompositeXdsStream(type -> {
-                final SotwDiscoveryStub stub = SotwDiscoveryStub.basic(type, builder);
-                final ConfigSourceLifecycleObserver lifecycleObserver =
-                        metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
-                return new AdsXdsStream(
-                        owner -> new SotwActualStream(stub, owner, stateCoordinator, eventLoop,
-                                                      lifecycleObserver, node),
-                        backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
-            });
+            if (isDelta) {
+                stream = new CompositeXdsStream(type -> {
+                    final DeltaDiscoveryStub stub = DeltaDiscoveryStub.basic(type, builder);
+                    final ConfigSourceLifecycleObserver lifecycleObserver =
+                            metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
+                    return new AdsXdsStream(
+                            owner -> new DeltaActualStream(stub, owner, stateCoordinator, eventLoop,
+                                                           lifecycleObserver, node),
+                            backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
+                });
+            } else {
+                stream = new CompositeXdsStream(type -> {
+                    final SotwDiscoveryStub stub = SotwDiscoveryStub.basic(type, builder);
+                    final ConfigSourceLifecycleObserver lifecycleObserver =
+                            metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
+                    return new AdsXdsStream(
+                            owner -> new SotwActualStream(stub, owner, stateCoordinator, eventLoop,
+                                                          lifecycleObserver, node),
+                            backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
+                });
+            }
         }
     }
 

@@ -157,12 +157,17 @@ final class ResourceStateStore {
             return resource;
         }
 
+        private static final ResourceState WAITING =
+                new ResourceState(ResourceStatus.WAITING_FOR_SERVER, null, 0);
+        private static final ResourceState ABSENT =
+                new ResourceState(ResourceStatus.ABSENT, null, 0);
+
         private static ResourceState waiting() {
-            return new ResourceState(ResourceStatus.WAITING_FOR_SERVER, null, 0);
+            return WAITING;
         }
 
         private static ResourceState absent() {
-            return new ResourceState(ResourceStatus.ABSENT, null, 0);
+            return ABSENT;
         }
     }
 }

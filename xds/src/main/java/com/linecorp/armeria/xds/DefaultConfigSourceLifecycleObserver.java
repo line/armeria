@@ -168,6 +168,8 @@ final class DefaultConfigSourceLifecycleObserver implements ConfigSourceLifecycl
                                 Map<String, Object> updatedResources) {
         if (!updatedResources.isEmpty()) {
             logger.debug("{} Updating resources: {}", loggingIdentifier, updatedResources);
+        } else {
+            logger.trace("{} No resources updated.", loggingIdentifier);
         }
         resourceParseSuccessCounter.increment(updatedResources.size());
     }
@@ -177,6 +179,8 @@ final class DefaultConfigSourceLifecycleObserver implements ConfigSourceLifecycl
                                 Map<String, Object> updatedResources) {
         if (!updatedResources.isEmpty()) {
             logger.debug("{} Updating resources: {}", loggingIdentifier, updatedResources);
+        } else {
+            logger.trace("{} No resources updated.", loggingIdentifier);
         }
         resourceParseSuccessCounter.increment(updatedResources.size());
     }
@@ -186,6 +190,8 @@ final class DefaultConfigSourceLifecycleObserver implements ConfigSourceLifecycl
                                  Map<String, Throwable> rejectedResources) {
         if (!rejectedResources.isEmpty()) {
             logger.warn("{} Rejected resources: {}", loggingIdentifier, rejectedResources);
+        } else {
+            logger.trace("{} No resources rejected.", loggingIdentifier);
         }
         resourceParseRejectedCounter.increment(rejectedResources.size());
     }
@@ -195,6 +201,8 @@ final class DefaultConfigSourceLifecycleObserver implements ConfigSourceLifecycl
                                  Map<String, Throwable> rejectedResources) {
         if (!rejectedResources.isEmpty()) {
             logger.warn("{} Rejected resources: {}", loggingIdentifier, rejectedResources);
+        } else {
+            logger.trace("{} No resources rejected.", loggingIdentifier);
         }
         resourceParseRejectedCounter.increment(rejectedResources.size());
     }
