@@ -137,7 +137,14 @@ public interface GrpcExceptionHandlerFunction {
     @SuppressWarnings("deprecation")
     default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                            Throwable cause, Metadata metadata) {
-        return CompletableFuture.completedFuture(apply(ctx, status, cause, metadata));
+        try {
+            return CompletableFuture.completedFuture(apply(ctx, status, cause, metadata));
+        } catch (Throwable t) {
+            final CompletableFuture<@Nullable Status> future = new CompletableFuture<>();
+            future.completeExceptionally(t);
+            return future;
+        }
+    }
     }
 
     /**
