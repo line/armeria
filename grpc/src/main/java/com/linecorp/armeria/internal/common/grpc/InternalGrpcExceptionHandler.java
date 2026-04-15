@@ -59,6 +59,7 @@ public final class InternalGrpcExceptionHandler {
      * Asynchronously handles the specified {@link Throwable} and returns a {@link CompletableFuture}
      * of {@link StatusAndMetadata}.
      */
+    @SuppressWarnings("deprecation")
     public CompletableFuture<StatusAndMetadata> handleAsync(RequestContext ctx, Throwable t) {
         final Throwable peeled = peelAndUnwrap(t);
         Metadata metadata = Status.trailersFromThrowable(peeled);
@@ -81,6 +82,7 @@ public final class InternalGrpcExceptionHandler {
      * Asynchronously handles the specified {@link Throwable} with a pre-extracted {@link Status}
      * and returns a {@link CompletableFuture} of {@link Status}.
      */
+    @SuppressWarnings("deprecation")
     public CompletableFuture<Status> handleAsync(RequestContext ctx, Status status,
                                                  Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
@@ -97,6 +99,8 @@ public final class InternalGrpcExceptionHandler {
 
     private static Status restoreStatus(Status status, Throwable cause) {
         if (status.getCode() == Code.UNKNOWN) {
+            // If ArmeriaStatusException is thrown, it is converted to UNKNOWN and passed through close(Status).
+            // So try to restore the original status.
             Status newStatus = null;
             if (cause instanceof StatusRuntimeException) {
                 newStatus = ((StatusRuntimeException) cause).getStatus();

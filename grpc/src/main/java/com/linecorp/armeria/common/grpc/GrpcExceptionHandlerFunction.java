@@ -100,6 +100,7 @@ public interface GrpcExceptionHandlerFunction {
      * }</pre>
      */
     @UnstableApi
+    @SuppressWarnings("deprecation")
     default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                            Throwable cause, Metadata metadata) {
         return CompletableFuture.completedFuture(apply(ctx, status, cause, metadata));
@@ -119,9 +120,15 @@ public interface GrpcExceptionHandlerFunction {
         return new GrpcExceptionHandlerFunction() {
 
             @Override
+            @SuppressWarnings("deprecation")
             public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
                                           Metadata metadata) {
-                return GrpcExceptionHandlerFunction.this.apply(ctx, status, cause, metadata);
+                final Status newStatus =
+                        GrpcExceptionHandlerFunction.this.apply(ctx, status, cause, metadata);
+                if (newStatus != null) {
+                    return newStatus;
+                }
+                return next.apply(ctx, status, cause, metadata);
             }
 
             @Override
