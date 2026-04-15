@@ -50,6 +50,64 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
+     * Returns a new {@link GrpcExceptionHandlerFunction} that only supports asynchronous
+     * exception handling. The returned handler's {@link #apply} method throws an
+     * {@link UnsupportedOperationException}; only {@link #applyAsync} is used by the
+     * internal call paths.
+     *
+     * <p>Use this factory when your exception handling logic is inherently asynchronous
+     * (e.g., i18n translation from a remote store) and you don't need a synchronous variant.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(myService)
+     *            .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
+     *                    (ctx, status, cause, metadata) ->
+     *                            i18nService.translateAsync(cause, locale)
+     *                                       .thenApply(message -> {
+     *                                           metadata.put(ERROR_MESSAGE_KEY, message);
+     *                                           return status;
+     *                                       })))
+     *            .build();
+     * }</pre>
+     */
+    @UnstableApi
+    static GrpcExceptionHandlerFunction ofAsync(AsyncHandler asyncHandler) {
+        requireNonNull(asyncHandler, "asyncHandler");
+        return new GrpcExceptionHandlerFunction() {
+            @Override
+            public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                          Metadata metadata) {
+                throw new UnsupportedOperationException(
+                        "This handler only supports async exception handling; " +
+                        "use applyAsync() instead.");
+            }
+
+            @Override
+            public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
+                                                                   Throwable cause, Metadata metadata) {
+                return asyncHandler.apply(ctx, status, cause, metadata);
+            }
+        };
+    }
+
+    /**
+     * A functional interface used by {@link #ofAsync(AsyncHandler)} for creating
+     * async-only exception handlers with lambda syntax.
+     */
+    @UnstableApi
+    @FunctionalInterface
+    interface AsyncHandler {
+        /**
+         * Asynchronously maps the specified {@link Throwable} to a gRPC {@link Status}
+         * and mutates the specified {@link Metadata}.
+         */
+        CompletableFuture<@Nullable Status> apply(RequestContext ctx, Status status,
+                                                  Throwable cause, Metadata metadata);
+    }
+
+    /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status} synchronously
      * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
@@ -73,31 +131,7 @@ public interface GrpcExceptionHandlerFunction {
      *
      * <p>Override this method when your exception handling logic requires asynchronous operations
      * such as I/O-bound message lookups (e.g., i18n translation from a remote store).
-     *
-     * <p>Example usage:
-     * <pre>{@code
-     * GrpcExceptionHandlerFunction handler = new GrpcExceptionHandlerFunction() {
-     *     @Override
-     *     public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
-     *         throw new UnsupportedOperationException();
-     *     }
-     *
-     *     @Override
-     *     public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
-     *                                                 Throwable cause, Metadata metadata) {
-     *         return i18nService.translateAsync(cause, locale)
-     *                           .thenApply(message -> {
-     *                               metadata.put(ERROR_MESSAGE_KEY, message);
-     *                               return status;
-     *                           });
-     *     }
-     * };
-     *
-     * GrpcService.builder()
-     *            .addService(myService)
-     *            .exceptionHandler(handler)
-     *            .build();
-     * }</pre>
+     * For async-only handlers, consider using {@link #ofAsync(AsyncHandler)} instead.
      */
     @UnstableApi
     @SuppressWarnings("deprecation")

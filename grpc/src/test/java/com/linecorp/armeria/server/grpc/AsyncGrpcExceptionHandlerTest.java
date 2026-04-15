@@ -31,8 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -65,29 +63,6 @@ class AsyncGrpcExceptionHandlerTest {
         }
     }
 
-    private static GrpcExceptionHandlerFunction asyncHandler(
-            AsyncApplyFunction asyncApply) {
-        return new GrpcExceptionHandlerFunction() {
-            @Override
-            public @Nullable Status apply(RequestContext ctx, Status status,
-                                          Throwable cause, Metadata metadata) {
-                throw new UnsupportedOperationException("Use applyAsync()");
-            }
-
-            @Override
-            public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
-                                                                   Throwable cause, Metadata metadata) {
-                return asyncApply.apply(ctx, status, cause, metadata);
-            }
-        };
-    }
-
-    @FunctionalInterface
-    interface AsyncApplyFunction {
-        CompletableFuture<@Nullable Status> apply(RequestContext ctx, Status status,
-                                                  Throwable cause, Metadata metadata);
-    }
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -95,7 +70,7 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(asyncHandler(
+                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
                                           (ctx, status, cause, metadata) -> {
                                       return CompletableFuture.supplyAsync(() -> {
                                           metadata.put(ERROR_MESSAGE_KEY,
@@ -116,7 +91,7 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(asyncHandler(
+                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
                                           (ctx, status, cause, metadata) ->
                                       CompletableFuture.completedFuture(null)))
                                   .build());
@@ -127,7 +102,7 @@ class AsyncGrpcExceptionHandlerTest {
     static final ServerExtension serverWithOrElse = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcExceptionHandlerFunction first = asyncHandler(
+            final GrpcExceptionHandlerFunction first = GrpcExceptionHandlerFunction.ofAsync(
                     (ctx, status, cause, metadata) -> {
                         if (cause instanceof IllegalArgumentException) {
                             return CompletableFuture.completedFuture(
@@ -136,7 +111,7 @@ class AsyncGrpcExceptionHandlerTest {
                         }
                         return CompletableFuture.completedFuture(null);
                     });
-            final GrpcExceptionHandlerFunction second = asyncHandler(
+            final GrpcExceptionHandlerFunction second = GrpcExceptionHandlerFunction.ofAsync(
                     (ctx, status, cause, metadata) ->
                             CompletableFuture.completedFuture(
                                     Status.INTERNAL.withDescription("second-handler")
@@ -157,7 +132,7 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(asyncHandler(
+                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
                                           (ctx, status, cause, metadata) -> {
                                       final CompletableFuture<Status> future = new CompletableFuture<>();
                                       future.completeExceptionally(
@@ -175,7 +150,7 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new StreamingErrorService())
-                                  .exceptionHandler(asyncHandler(
+                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
                                           (ctx, status, cause, metadata) -> {
                                       streamingHandlerInvocations.incrementAndGet();
                                       return CompletableFuture.supplyAsync(
