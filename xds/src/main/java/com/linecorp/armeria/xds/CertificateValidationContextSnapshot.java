@@ -68,11 +68,14 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
             parsedSanMatchers.add(new SanMatcher(sanType,
                                                  new StringMatcherImpl(matcher.getMatcher())));
         }
-        // Also handle the legacy match_subject_alt_names field (used by older Istio versions).
-        // SPIFFE IDs are URIs, so each legacy StringMatcher is treated as a URI SAN matcher.
-        for (StringMatcher matcher : resource.getMatchSubjectAltNamesList()) {
-            parsedSanMatchers.add(new SanMatcher(SubjectAltNameMatcher.SanType.URI,
-                                                 new StringMatcherImpl(matcher)));
+        // Handle the legacy match_subject_alt_names field only when match_typed_subject_alt_names
+        // is not present, matching Envoy behavior where the deprecated field is ignored if both
+        // are specified.
+        if (parsedSanMatchers.isEmpty()) {
+            for (StringMatcher matcher : resource.getMatchSubjectAltNamesList()) {
+                parsedSanMatchers.add(new SanMatcher(SubjectAltNameMatcher.SanType.URI,
+                                                     new StringMatcherImpl(matcher)));
+            }
         }
         typedSanMatchers = ImmutableList.copyOf(parsedSanMatchers);
     }
