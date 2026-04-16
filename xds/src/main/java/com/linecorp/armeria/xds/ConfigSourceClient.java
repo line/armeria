@@ -19,7 +19,9 @@ package com.linecorp.armeria.xds;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Function;
 
 import com.google.protobuf.Duration;
@@ -31,6 +33,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
+import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
@@ -40,7 +43,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ConfigSourceClient implements SafeCloseable {
 
-    private final SubscriberStorage subscriberStorage;
+    private final StateCoordinator stateCoordinator;
     private final XdsStream stream;
 
     ConfigSourceClient(ConfigSource configSource,
@@ -57,10 +60,6 @@ final class ConfigSourceClient implements SafeCloseable {
             throw new IllegalArgumentException("Unsupported config source: " + configSource);
         }
 
-        final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
-        subscriberStorage = new SubscriberStorage(eventLoop, fetchTimeoutMillis);
-        final XdsResponseHandler handler = new DefaultResponseHandler(subscriberStorage);
-
         final List<GrpcService> grpcServices = apiConfigSource.getGrpcServicesList();
         checkArgument(!grpcServices.isEmpty(),
                       "At least one GrpcService should be specified for '%s'", configSource);
@@ -74,20 +73,61 @@ final class ConfigSourceClient implements SafeCloseable {
         builder.responseTimeoutMillis(Long.MAX_VALUE);
         builder.maxResponseLength(0);
 
+        final ApiType apiType = apiConfigSource.getApiType();
+        checkArgument(apiType == ApiType.GRPC || apiType == ApiType.DELTA_GRPC ||
+                      apiType == ApiType.AGGREGATED_GRPC || apiType == ApiType.AGGREGATED_DELTA_GRPC,
+                      "Unsupported api_type: %s", apiType);
         final Function<String, DefaultConfigSourceLifecycleObserver> metersFunction =
                 xdsType -> new DefaultConfigSourceLifecycleObserver(
                         meterRegistry, meterIdPrefix, configSource.getConfigSourceSpecifierCase(),
-                        envoyGrpc.getClusterName(), xdsType);
+                        envoyGrpc.getClusterName(), xdsType, apiType);
 
-        final boolean ads = configSource.hasAds();
-        if (ads) {
-            final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
-            stream = new SotwXdsStream(stub, node, Backoff.ofDefault(),
-                                       eventLoop, handler, subscriberStorage, metersFunction.apply("ads"));
+        final boolean isDelta = apiType == ApiType.AGGREGATED_DELTA_GRPC || apiType == ApiType.DELTA_GRPC;
+        final boolean isAds = configSource.hasAds() || apiType == ApiType.AGGREGATED_GRPC ||
+                              apiType == ApiType.AGGREGATED_DELTA_GRPC;
+
+        final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
+        stateCoordinator = new StateCoordinator(eventLoop, fetchTimeoutMillis, isDelta);
+        final Backoff backoff = Backoff.ofDefault();
+        if (isAds) {
+            final ConfigSourceLifecycleObserver lifecycleObserver = metersFunction.apply("ads");
+            if (isDelta) {
+                final DeltaDiscoveryStub stub = DeltaDiscoveryStub.ads(builder);
+                stream = new AdsXdsStream(
+                        owner -> new DeltaActualStream(stub, owner, stateCoordinator, eventLoop,
+                                                       lifecycleObserver, node),
+                        backoff, eventLoop, stateCoordinator, lifecycleObserver,
+                        XdsType.discoverableTypes());
+            } else {
+                final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
+                stream = new AdsXdsStream(
+                        owner -> new SotwActualStream(stub, owner, stateCoordinator, eventLoop,
+                                                      lifecycleObserver, node),
+                        backoff, eventLoop, stateCoordinator, lifecycleObserver,
+                        XdsType.discoverableTypes());
+            }
         } else {
-            stream = new CompositeXdsStream(builder, node, Backoff.ofDefault(),
-                                            eventLoop, handler, subscriberStorage,
-                                            metersFunction);
+            if (isDelta) {
+                stream = new CompositeXdsStream(type -> {
+                    final DeltaDiscoveryStub stub = DeltaDiscoveryStub.basic(type, builder);
+                    final ConfigSourceLifecycleObserver lifecycleObserver =
+                            metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
+                    return new AdsXdsStream(
+                            owner -> new DeltaActualStream(stub, owner, stateCoordinator, eventLoop,
+                                                           lifecycleObserver, node),
+                            backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
+                });
+            } else {
+                stream = new CompositeXdsStream(type -> {
+                    final SotwDiscoveryStub stub = SotwDiscoveryStub.basic(type, builder);
+                    final ConfigSourceLifecycleObserver lifecycleObserver =
+                            metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
+                    return new AdsXdsStream(
+                            owner -> new SotwActualStream(stub, owner, stateCoordinator, eventLoop,
+                                                          lifecycleObserver, node),
+                            backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
+                });
+            }
         }
     }
 
@@ -97,23 +137,23 @@ final class ConfigSourceClient implements SafeCloseable {
 
     void addSubscriber(XdsType type, String resourceName,
                        ResourceWatcher<?> watcher) {
-        if (subscriberStorage.register(type, resourceName, watcher)) {
+        if (stateCoordinator.register(type, resourceName, watcher)) {
             updateResources(type);
         }
     }
 
     boolean removeSubscriber(XdsType type, String resourceName,
                              ResourceWatcher<?> watcher) {
-        if (subscriberStorage.unregister(type, resourceName, watcher)) {
+        if (stateCoordinator.unregister(type, resourceName, watcher)) {
             updateResources(type);
         }
-        return subscriberStorage.allSubscribers().isEmpty();
+        return stateCoordinator.hasNoSubscribers();
     }
 
     @Override
     public void close() {
         stream.close();
-        subscriberStorage.close();
+        stateCoordinator.close();
     }
 
     private static long initialFetchTimeoutMillis(ConfigSource configSource) {

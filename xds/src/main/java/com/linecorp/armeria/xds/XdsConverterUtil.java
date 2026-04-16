@@ -38,8 +38,10 @@ final class XdsConverterUtil {
         if (configSource.hasApiConfigSource()) {
             final ApiConfigSource apiConfigSource = configSource.getApiConfigSource();
             final ApiType apiType = apiConfigSource.getApiType();
-            checkArgument(apiType == ApiType.GRPC || apiType == ApiType.AGGREGATED_GRPC,
-                          "Unsupported apiType %s. Only GRPC and AGGREGATED_GRPC are supported.", configSource);
+            checkArgument(apiType == ApiType.GRPC || apiType == ApiType.DELTA_GRPC ||
+                          apiType == ApiType.AGGREGATED_GRPC || apiType == ApiType.AGGREGATED_DELTA_GRPC,
+                          "Unsupported apiType %s. Only GRPC, DELTA_GRPC, AGGREGATED_GRPC and " +
+                          "AGGREGATED_DELTA_GRPC are supported.", apiType);
             checkArgument(apiConfigSource.getGrpcServicesCount() > 0,
                           "At least once GrpcService is required for ApiConfigSource for %s", configSource);
             apiConfigSource.getGrpcServicesList().forEach(

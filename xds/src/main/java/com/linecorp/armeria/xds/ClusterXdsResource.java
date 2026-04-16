@@ -35,10 +35,14 @@ public final class ClusterXdsResource extends AbstractXdsResource {
     UpstreamTlsContext upstreamTlsContext;
 
     ClusterXdsResource(Cluster cluster) {
-        this(cluster, "", 0);
+        this(cluster, "");
     }
 
-    ClusterXdsResource(Cluster cluster, String version, long revision) {
+    ClusterXdsResource(Cluster cluster, String version) {
+        this(cluster, version, 0);
+    }
+
+    private ClusterXdsResource(Cluster cluster, String version, long revision) {
         super(version, revision);
         XdsValidatorIndexRegistry.assertValid(cluster);
         this.cluster = cluster;
@@ -82,5 +86,13 @@ public final class ClusterXdsResource extends AbstractXdsResource {
     @Override
     public String name() {
         return cluster.getName();
+    }
+
+    @Override
+    ClusterXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new ClusterXdsResource(cluster, version(), revision);
     }
 }

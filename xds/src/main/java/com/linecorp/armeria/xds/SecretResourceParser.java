@@ -35,8 +35,8 @@ final class SecretResourceParser extends ResourceParser<Secret, SecretXdsResourc
     }
 
     @Override
-    SecretXdsResource parse(Secret message, String version, long revision) {
-        return new SecretXdsResource(message, version, revision);
+    SecretXdsResource parse(Secret message, String version) {
+        return new SecretXdsResource(message, version);
     }
 
     @Override

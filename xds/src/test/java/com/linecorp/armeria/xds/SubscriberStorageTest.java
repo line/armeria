@@ -17,6 +17,9 @@
 package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -25,31 +28,59 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class SubscriberStorageTest {
 
+    private static final String CLUSTER_NAME = "cluster1";
+    private static final String ROUTE_NAME = "route1";
+
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
     void registerAndUnregister() throws Exception {
         final DummyResourceWatcher watcher = new DummyResourceWatcher();
-        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000);
-        storage.register(XdsType.CLUSTER, "cluster1", watcher);
-        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-        storage.unregister(XdsType.CLUSTER, "cluster1", watcher);
-        assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
-        assertThat(storage.allSubscribers()).isEmpty();
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000, false);
+        storage.register(XdsType.CLUSTER, CLUSTER_NAME, watcher);
+        assertThat(storage.resources(XdsType.CLUSTER)).hasSize(1);
+        storage.unregister(XdsType.CLUSTER, CLUSTER_NAME, watcher);
+        assertThat(storage.resources(XdsType.CLUSTER)).isEmpty();
+        assertThat(storage.hasNoSubscribers()).isTrue();
     }
 
     @Test
     void identityBasedUnregister() {
         final DummyResourceWatcher watcher1 = new DummyResourceWatcher();
-        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000);
-        storage.register(XdsType.CLUSTER, "cluster1", watcher1);
-        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-        storage.register(XdsType.CLUSTER, "cluster1", watcher1);
-        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000, false);
+        storage.register(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
+        assertThat(storage.resources(XdsType.CLUSTER)).hasSize(1);
+        storage.register(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
+        assertThat(storage.resources(XdsType.CLUSTER)).hasSize(1);
 
-        storage.unregister(XdsType.CLUSTER, "cluster1", watcher1);
-        assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
-        assertThat(storage.allSubscribers()).isEmpty();
+        storage.unregister(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
+        assertThat(storage.resources(XdsType.CLUSTER)).isEmpty();
+        assertThat(storage.hasNoSubscribers()).isTrue();
+    }
+
+    @Test
+    void nonClusterListenerTimeout() {
+        final CapturingWatcher watcher = new CapturingWatcher();
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 50, false);
+        storage.register(XdsType.ROUTE, ROUTE_NAME, watcher);
+
+        await().atMost(1, TimeUnit.SECONDS)
+               .untilAsserted(() -> assertThat(watcher.missingType).isEqualTo(XdsType.ROUTE));
+        assertThat(watcher.missingName).isEqualTo(ROUTE_NAME);
+    }
+
+    private static final class CapturingWatcher implements ResourceWatcher<XdsResource> {
+        private XdsType missingType;
+        private String missingName;
+
+        @Override
+        public void onChanged(XdsResource update) {}
+
+        @Override
+        public void onResourceDoesNotExist(XdsType type, String resourceName) {
+            missingType = type;
+            missingName = resourceName;
+        }
     }
 }

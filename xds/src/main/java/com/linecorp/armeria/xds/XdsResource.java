@@ -45,8 +45,9 @@ public interface XdsResource {
     String name();
 
     /**
-     * The version of this resource.
-     * An empty string is returned if this resource is not associated with a version.
+     * The version assigned by the control plane for this resource.
+     * For SotW, this is the response version_info. For delta, this is the per-resource version.
+     * An empty string is returned if the control plane does not assign a version.
      */
     String version();
 

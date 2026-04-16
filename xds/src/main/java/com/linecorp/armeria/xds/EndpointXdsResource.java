@@ -28,14 +28,18 @@ public final class EndpointXdsResource extends AbstractXdsResource {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
 
-    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, String version, long revision) {
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, String version) {
+        this(clusterLoadAssignment, version, 0);
+    }
+
+    private EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, String version, long revision) {
         super(version, revision);
         XdsValidatorIndexRegistry.assertValid(clusterLoadAssignment);
         this.clusterLoadAssignment = clusterLoadAssignment;
     }
 
     EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
-        this(clusterLoadAssignment, "", 0);
+        this(clusterLoadAssignment, "");
     }
 
     @Override
@@ -51,5 +55,13 @@ public final class EndpointXdsResource extends AbstractXdsResource {
     @Override
     public String name() {
         return clusterLoadAssignment.getClusterName();
+    }
+
+    @Override
+    EndpointXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new EndpointXdsResource(clusterLoadAssignment, version(), revision);
     }
 }
