@@ -146,7 +146,7 @@ Coming soon.
 ```
 
 ```java
-Bootstrap bootstrap = XdsResourceReader.fromYaml(Paths.get("bootstrap.yaml"));
+Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
 XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
 XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
 WebClient client = WebClient.of(preprocessor);

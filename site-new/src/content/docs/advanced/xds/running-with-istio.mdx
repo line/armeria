@@ -29,9 +29,7 @@ import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 
 // Load the bootstrap injected by Istio
-Bootstrap bootstrap = XdsResourceReader.fromJson(
-        Files.readString(Path.of("/etc/istio/proxy/envoy-rev.json")),
-        Bootstrap.class);
+Bootstrap bootstrap = XdsResourceReader.fromJsonFile("/etc/istio/proxy/envoy-rev.json");
 
 XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
 ```

@@ -23,6 +23,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -53,7 +54,7 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
  *
  * <p>Example usage:
  * <pre>{@code
- * Bootstrap bootstrap = XdsResourceReader.fromYaml(Paths.get("bootstrap.yaml"));
+ * Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
  * }</pre>
  */
 @UnstableApi
@@ -102,9 +103,17 @@ public final class XdsResourceReader {
     /**
      * Reads a {@link Bootstrap} from the YAML file at the given path.
      */
-    public static Bootstrap fromYaml(Path path) {
+    public static Bootstrap fromYamlFile(Path path) {
         requireNonNull(path, "path");
         return fromYaml(readFile(path));
+    }
+
+    /**
+     * Reads a {@link Bootstrap} from the YAML file at the given path.
+     */
+    public static Bootstrap fromYamlFile(String path) {
+        requireNonNull(path, "path");
+        return fromYamlFile(Paths.get(path));
     }
 
     /**
@@ -128,9 +137,17 @@ public final class XdsResourceReader {
     /**
      * Reads a {@link Bootstrap} from the JSON file at the given path.
      */
-    public static Bootstrap fromJson(Path path) {
+    public static Bootstrap fromJsonFile(Path path) {
         requireNonNull(path, "path");
         return fromJson(readFile(path));
+    }
+
+    /**
+     * Reads a {@link Bootstrap} from the JSON file at the given path.
+     */
+    public static Bootstrap fromJsonFile(String path) {
+        requireNonNull(path, "path");
+        return fromJsonFile(Paths.get(path));
     }
 
     /**

@@ -73,7 +73,7 @@ Then load it in Java:
 import com.linecorp.armeria.xds.XdsResourceReader;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 
-Bootstrap bootstrap = XdsResourceReader.fromYaml(Paths.get("bootstrap.yaml"));
+Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
 ```
 
 #### Dynamic resources (control plane)
@@ -108,7 +108,7 @@ dynamic_resources:
 ```
 
 ```java
-Bootstrap bootstrap = XdsResourceReader.fromYaml(Paths.get("bootstrap.yaml"));
+Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
 ```
 
 ### Creating the XdsBootstrap
