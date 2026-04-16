@@ -5,7 +5,10 @@ dependencies {
     implementation libs.testcontainers.k3s
     implementation libs.testcontainers.junit.jupiter
 
-    testImplementation project(':xds')
+    testImplementation(project(':xds')) {
+        // Exclude the unshaded pgv-java-stub since it should be shaded via xds-pgv-shaded
+        exclude group: 'build.buf.protoc-gen-validate', module: 'pgv-java-stub'
+    }
 }
 
 def kubeconfigEnvValue =
