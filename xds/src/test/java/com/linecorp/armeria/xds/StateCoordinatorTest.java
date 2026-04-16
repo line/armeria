@@ -50,7 +50,7 @@ class StateCoordinatorTest {
     }
 
     @Test
-    void missingResourceCachedAsAbsent() {
+    void missingResourceNotCachedAfterRemoval() {
         final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false);
         final CapturingWatcher watcher1 = new CapturingWatcher();
         coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
@@ -58,16 +58,18 @@ class StateCoordinatorTest {
         coordinator.onResourceMissing(XdsType.CLUSTER, CLUSTER_NAME);
         coordinator.unregister(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
 
+        // After missing + unregister, the state is removed from stateStore.
+        // A new watcher should not get a replay — it waits for the server.
         final CapturingWatcher watcher2 = new CapturingWatcher();
         coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher2);
 
         assertThat(watcher2.changed).isNull();
-        assertThat(watcher2.missingType).isEqualTo(XdsType.CLUSTER);
-        assertThat(watcher2.missingName).isEqualTo(CLUSTER_NAME);
+        assertThat(watcher2.missingType).isNull();
+        assertThat(watcher2.missingName).isNull();
     }
 
     @Test
-    void nonFullStateDroppedOnLastUnsubscribe() {
+    void stateRetainedAfterUnsubscribe() {
         final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false);
         final RouteXdsResource resource =
                 new RouteXdsResource(RouteConfiguration.newBuilder().setName(ROUTE_NAME).build(), "1")
@@ -78,14 +80,14 @@ class StateCoordinatorTest {
         coordinator.register(XdsType.ROUTE, ROUTE_NAME, watcher1);
         assertThat(watcher1.changed).isSameAs(resource);
 
+        // Unregister does not touch stateStore, so the cached resource remains.
         coordinator.unregister(XdsType.ROUTE, ROUTE_NAME, watcher1);
 
         final CapturingWatcher watcher2 = new CapturingWatcher();
         coordinator.register(XdsType.ROUTE, ROUTE_NAME, watcher2);
 
-        assertThat(watcher2.changed).isNull();
+        assertThat(watcher2.changed).isSameAs(resource);
         assertThat(watcher2.missingType).isNull();
-        assertThat(watcher2.missingName).isNull();
     }
 
     private static Cluster createCluster(String name) {

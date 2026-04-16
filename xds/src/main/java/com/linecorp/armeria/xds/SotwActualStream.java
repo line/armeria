@@ -195,19 +195,16 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
         });
 
         final boolean fullStateOfTheWorld = resourceParser.isFullStateOfTheWorld();
-        if (fullStateOfTheWorld &&
-            (resourceParser.type() == XdsType.LISTENER || resourceParser.type() == XdsType.CLUSTER)) {
-            final Set<String> currentSubscribers =
-                    stateCoordinator.interestedResources(resourceParser.type());
-            if (!holder.parsedResources().isEmpty() || !currentSubscribers.isEmpty()) {
-                for (String name : currentSubscribers) {
-                    if (holder.parsedResources().containsKey(name) ||
-                        holder.invalidResources().containsKey(name)) {
-                        continue;
-                    }
-                    stateCoordinator.onResourceMissing(resourceParser.type(), name);
+        if (fullStateOfTheWorld) {
+            final Set<String> activeResources = stateCoordinator.activeResources(resourceParser.type());
+            for (String name : activeResources) {
+                if (holder.parsedResources().containsKey(name)) {
+                    continue;
                 }
+                stateCoordinator.onResourceMissing(resourceParser.type(), name);
             }
+        } else {
+            // A limitation of sotw - we can't know if resources should be removed.
         }
         lifecycleObserver.resourceUpdated(resourceParser.type(), response, holder.parsedResources());
         // send the ack

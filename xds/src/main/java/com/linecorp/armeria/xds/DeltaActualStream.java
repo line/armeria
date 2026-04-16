@@ -160,6 +160,8 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
             subscribe = current;
             unsubscribe = ImmutableSet.of();
         } else {
+            // activeResources may include entries retained after unsubscribing, which can cause
+            // spurious unsubscribe requests. However, subsequent requests will converge to a stable state.
             final Set<String> previous = stateCoordinator.activeResources(type);
             subscribe = new HashSet<>(current);
             subscribe.removeAll(previous);

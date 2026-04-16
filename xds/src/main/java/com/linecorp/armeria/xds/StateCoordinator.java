@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.EnumSet;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -29,14 +26,10 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class StateCoordinator implements SafeCloseable {
 
-    private static final Set<XdsType> FULL_SOTW_TYPES = EnumSet.of(XdsType.LISTENER, XdsType.CLUSTER);
-
     private final SubscriberStorage subscriberStorage;
     private final ResourceStateStore stateStore;
-    private final boolean delta;
 
     StateCoordinator(EventExecutor eventLoop, long timeoutMillis, boolean delta) {
-        this.delta = delta;
         subscriberStorage = new SubscriberStorage(eventLoop, timeoutMillis, delta);
         stateStore = new ResourceStateStore();
     }
@@ -48,17 +41,7 @@ final class StateCoordinator implements SafeCloseable {
     }
 
     <T extends XdsResource> boolean unregister(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
-        final boolean removed = subscriberStorage.unregister(type, resourceName, watcher);
-        if (removed) {
-            if (!delta && !FULL_SOTW_TYPES.contains(type)) {
-                // For sotw, we don't receive missing signals for non-sotw types,
-                // so removal is done when no subscribers are left.
-                stateStore.remove(type, resourceName);
-            } else {
-                stateStore.removeIfWaiting(type, resourceName);
-            }
-        }
-        return removed;
+        return subscriberStorage.unregister(type, resourceName, watcher);
     }
 
     ImmutableSet<String> interestedResources(XdsType type) {
@@ -78,7 +61,7 @@ final class StateCoordinator implements SafeCloseable {
     }
 
     void onResourceUpdated(XdsType type, String resourceName, XdsResource resource) {
-        final XdsResource revised = stateStore.putVersioned(type, resourceName, resource);
+        final XdsResource revised = stateStore.put(type, resourceName, resource);
         if (revised == null) {
             return;
         }
@@ -89,7 +72,7 @@ final class StateCoordinator implements SafeCloseable {
     }
 
     void onResourceMissing(XdsType type, String resourceName) {
-        if (!stateStore.putAbsent(type, resourceName)) {
+        if (!stateStore.remove(type, resourceName)) {
             return;
         }
         final XdsStreamSubscriber<?> subscriber = subscriber(type, resourceName);
@@ -112,22 +95,10 @@ final class StateCoordinator implements SafeCloseable {
 
     private <T extends XdsResource> void replayToWatcher(XdsType type, String resourceName,
                                                          ResourceWatcher<T> watcher) {
-        final ResourceStateStore.ResourceState state = stateStore.state(type, resourceName);
-        if (state == null) {
-            stateStore.putWaiting(type, resourceName);
-            return;
-        }
-        switch (state.status()) {
-            case VERSIONED:
-                assert state.resource() != null;
-                //noinspection unchecked
-                watcher.onChanged((T) state.resource());
-                break;
-            case ABSENT:
-                watcher.onResourceDoesNotExist(type, resourceName);
-                break;
-            case WAITING_FOR_SERVER:
-                break;
+        final XdsResource resource = stateStore.resource(type, resourceName);
+        if (resource != null) {
+            //noinspection unchecked
+            watcher.onChanged((T) resource);
         }
     }
 
