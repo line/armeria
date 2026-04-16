@@ -105,7 +105,7 @@ final class TransportSocketStream extends RefCountedStream<TransportSocketSnapsh
 
         final SnapshotStream<TransportSocketSnapshot> stream =
                 SnapshotStream.combineLatest(tlsCertStream, validationStream, (cert, validation) -> {
-                    return new TransportSocketSnapshot(transportSocket, cert, validation);
+                    return new TransportSocketSnapshot(transportSocket, tlsContext, cert, validation);
                 });
         return stream.subscribe(watcher);
     }

@@ -31,6 +31,15 @@ public final class IstioPodCustomizer implements PodCustomizer {
     public void customizePod(PodBuilder podBuilder) {
         podBuilder.editMetadata()
                   .addToAnnotations("sidecar.istio.io/inject", "true")
+                  // Disable Delta xDS, forcing SotW instead. Istio treats CDS/LDS as wildcard
+                  // types, which causes a hot loop with Delta xDS:
+                  //   1) Armeria subscribes to cluster "A"
+                  //   2) Istiod ignores the subscription and sends all clusters "A", "B", "C"
+                  //   3) Armeria unsubscribes from "B" and "C" to match its interest set
+                  //   4) Istiod responds with all clusters again → back to step 3
+                  // SotW doesn't have per-resource subscriptions, so this doesn't occur.
+                  .addToAnnotations("proxy.istio.io/config",
+                                    "{\"proxyMetadata\":{\"ISTIO_DELTA_XDS\":\"false\"}}")
                   .endMetadata()
                   .editSpec()
                   .editMatchingContainer(c -> "test".equals(c.getName()))

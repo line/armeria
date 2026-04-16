@@ -177,4 +177,15 @@ public final class RouteEntry {
                           .add("clusterSnapshot", clusterSnapshot)
                           .toString();
     }
+
+    String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("index", index)
+                          .add("route", route)
+                          .add("clusterSnapshot",
+                               SnapshotUtil.debugString(clusterSnapshot,
+                                                        ClusterSnapshot::toDebugString))
+                          .toString();
+    }
 }

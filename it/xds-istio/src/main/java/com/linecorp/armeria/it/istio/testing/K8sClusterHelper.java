@@ -27,6 +27,12 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.k3s.K3sContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.kubernetes.ArmeriaHttpClientFactory;
+import com.linecorp.armeria.client.retry.RetryConfig;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
+
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeCondition;
 import io.fabric8.kubernetes.client.Config;
@@ -79,10 +85,17 @@ final class K8sClusterHelper {
 
     private static KubernetesClient createClient(String kubeconfig) {
         final Config config = Config.fromKubeconfig(kubeconfig);
-        config.setConnectionTimeout(3_000);
-        config.setRequestTimeout(3_000);
-        config.setRequestRetryBackoffLimit(0);
-        return new KubernetesClientBuilder().withConfig(config).build();
+        return new KubernetesClientBuilder()
+                .withHttpClientFactory(new ArmeriaHttpClientFactory() {
+                    @Override
+                    protected void additionalConfig(WebClientBuilder builder) {
+                        builder.maxResponseLength(Long.MAX_VALUE);
+                        builder.decorator(RetryingClient.newDecorator(RetryConfig.builder(RetryRule.failsafe())
+                                                                                 .maxTotalAttempts(3)
+                                                                                 .build()));
+                    }
+                })
+                .withConfig(config).build();
     }
 
     static boolean poll(Duration timeout, Duration interval, BooleanSupplier condition) {

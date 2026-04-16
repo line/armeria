@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 /**
  * A snapshot of a {@link TransportSocket} resource with its associated TLS configuration.
@@ -45,6 +47,7 @@ import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 public final class TransportSocketSnapshot implements Snapshot<TransportSocket> {
 
     private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
+    private static final String istioPeerExchange = "istio-peer-exchange";
     private static boolean warnedNoVerify;
 
     private final TransportSocket transportSocket;
@@ -63,12 +66,13 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
+                            @Nullable UpstreamTlsContext upstreamTlsContext,
                             Optional<TlsCertificateSnapshot> tlsCertificate,
                             Optional<CertificateValidationContextSnapshot> validationContext) {
         this.transportSocket = transportSocket;
         this.tlsCertificate = tlsCertificate.orElse(null);
         this.validationContext = validationContext.orElse(null);
-        clientTlsSpec = buildClientTlsSpec(this.tlsCertificate, this.validationContext);
+        clientTlsSpec = buildClientTlsSpec(upstreamTlsContext, this.tlsCertificate, this.validationContext);
     }
 
     @Override
@@ -101,9 +105,19 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     }
 
     private static ClientTlsSpec buildClientTlsSpec(
+            @Nullable UpstreamTlsContext upstreamTlsContext,
             @Nullable TlsCertificateSnapshot tlsCertificate,
             @Nullable CertificateValidationContextSnapshot validationContext) {
-        final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder();
+        final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder()
+                                                              .endpointIdentificationAlgorithm("");
+        if (upstreamTlsContext != null) {
+            // Armeria doesn't implement "istio-peer-exchange" for now.
+            final List<String> alpn = upstreamTlsContext.getCommonTlsContext().getAlpnProtocolsList();
+            final List<String> filteredAlpn = alpn.stream()
+                                                  .filter(a -> !istioPeerExchange.equals(a))
+                                                  .collect(Collectors.toList());
+            specBuilder.alpnProtocols(filteredAlpn);
+        }
         final ImmutableList.Builder<TlsPeerVerifierFactory> verifiersBuilder = ImmutableList.builder();
         if (validationContext != null) {
             final boolean systemRootCerts = validationContext.xdsResource().hasSystemRootCerts();
@@ -112,7 +126,8 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
             if (trustedCa != null) {
                 specBuilder.trustedCertificates(trustedCa);
             } else if (systemRootCerts) {
-                // use java default root CAs
+                // use java default root CAs, also enable JSSE
+                specBuilder.endpointIdentificationAlgorithm("HTTPS");
             } else {
                 warnNoVerifyOnce();
                 verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
@@ -173,9 +188,22 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
-                          .add("transportSocket", transportSocket)
                           .add("tlsCertificate", tlsCertificate)
                           .add("validationContext", validationContext)
+                          .toString();
+    }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("transportSocket", transportSocket)
+                          .add("tlsCertificate",
+                               SnapshotUtil.debugString(tlsCertificate,
+                                                        TlsCertificateSnapshot::toDebugString))
+                          .add("validationContext",
+                               SnapshotUtil.debugString(validationContext,
+                                                        CertificateValidationContextSnapshot::toDebugString))
                           .toString();
     }
 }
