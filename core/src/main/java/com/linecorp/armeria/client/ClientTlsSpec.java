@@ -23,6 +23,10 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.AbstractTlsSpec;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsPeerVerifierFactory;
@@ -54,14 +58,78 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
         return new ClientTlsSpecBuilder();
     }
 
+    private final Set<String> overrideAlpnProtocols;
+    private final String endpointIdentificationAlgorithm;
+
     ClientTlsSpec(Set<String> tlsVersions, Set<String> alpnProtocols, Set<String> ciphers,
                   @Nullable TlsKeyPair tlsKeyPair,
                   List<X509Certificate> trustedCertificates,
                   List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                   Consumer<? super SslContextBuilder> tlsCustomizer,
-                  @Nullable KeyManagerFactory keyManagerFactory) {
-        super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories,
-              engineType, tlsCustomizer, keyManagerFactory);
+                  @Nullable KeyManagerFactory keyManagerFactory,
+                  Set<String> overrideAlpnProtocols, String endpointIdentificationAlgorithm) {
+        super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair,
+              trustedCertificates, verifierFactories, engineType, tlsCustomizer, keyManagerFactory);
+        this.overrideAlpnProtocols = ImmutableSet.copyOf(overrideAlpnProtocols);
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+    }
+
+    @Override
+    public Set<String> alpnProtocols() {
+        if (!overrideAlpnProtocols.isEmpty()) {
+            return overrideAlpnProtocols;
+        }
+        return super.alpnProtocols();
+    }
+
+    Set<String> baseAlpnProtocols() {
+        return super.alpnProtocols();
+    }
+
+    Set<String> overrideAlpnProtocols() {
+        return overrideAlpnProtocols;
+    }
+
+    /**
+     * Returns the endpoint identification algorithm used for JSSE hostname verification.
+     * An empty string {@code ""} disables JSSE hostname verification.
+     */
+    public String endpointIdentificationAlgorithm() {
+        return endpointIdentificationAlgorithm;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        final ClientTlsSpec that = (ClientTlsSpec) o;
+        return Objects.equal(overrideAlpnProtocols, that.overrideAlpnProtocols) &&
+               Objects.equal(endpointIdentificationAlgorithm, that.endpointIdentificationAlgorithm);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(super.hashCode(), overrideAlpnProtocols, endpointIdentificationAlgorithm);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("tlsVersions", tlsVersions())
+                          .add("alpnProtocols", alpnProtocols())
+                          .add("ciphers", ciphers())
+                          .add("tlsKeyPair", tlsKeyPair())
+                          .add("trustedCertificates", trustedCertificates())
+                          .add("verifierFactories", verifierFactories())
+                          .add("engineType", engineType())
+                          .add("tlsCustomizer", tlsCustomizer())
+                          .add("keyManagerFactory", keyManagerFactory())
+                          .add("endpointIdentificationAlgorithm", endpointIdentificationAlgorithm())
+                          .toString();
     }
 
     /**

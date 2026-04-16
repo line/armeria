@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CertificateValidationContext;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SubjectAltNameMatcher;
+import io.envoyproxy.envoy.type.matcher.v3.StringMatcher;
 
 /**
  * A snapshot of a {@link CertificateValidationContext} resource with its trusted CA certificates.
@@ -66,6 +67,12 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
             }
             parsedSanMatchers.add(new SanMatcher(sanType,
                                                  new StringMatcherImpl(matcher.getMatcher())));
+        }
+        // Also handle the legacy match_subject_alt_names field (used by older Istio versions).
+        // SPIFFE IDs are URIs, so each legacy StringMatcher is treated as a URI SAN matcher.
+        for (StringMatcher matcher : resource.getMatchSubjectAltNamesList()) {
+            parsedSanMatchers.add(new SanMatcher(SubjectAltNameMatcher.SanType.URI,
+                                                 new StringMatcherImpl(matcher)));
         }
         typedSanMatchers = ImmutableList.copyOf(parsedSanMatchers);
     }
@@ -149,8 +156,6 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("resource", resource)
                           .toString();
     }
 }

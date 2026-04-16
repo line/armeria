@@ -75,8 +75,6 @@ public final class TlsCertificateSnapshot implements Snapshot<TlsCertificate> {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("resource", resource)
                           .toString();
     }
 }

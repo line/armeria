@@ -25,6 +25,8 @@ import com.google.protobuf.Any;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.envoyproxy.envoy.config.listener.v3.Filter;
+import io.envoyproxy.envoy.config.listener.v3.FilterChain;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
@@ -39,6 +41,8 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
             "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager";
+    private static final String HTTP_CONNECTION_MANAGER_FILTER_NAME =
+            "envoy.filters.network.http_connection_manager";
     private static final String ROUTER_TYPE_URL =
             "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
 
@@ -69,7 +73,7 @@ public final class ListenerXdsResource extends AbstractXdsResource {
                 throw new IllegalArgumentException("Unsupported api listener: " + apiListener);
             }
         } else {
-            connectionManager = null;
+            connectionManager = extractHcmFromFilterChains(listener);
         }
         router = router(connectionManager);
     }
@@ -129,5 +133,21 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         }
         checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
         return XdsValidatorIndexRegistry.unpack(lastHttpFilter.getTypedConfig(), Router.class);
+    }
+
+    @Nullable
+    private static HttpConnectionManager extractHcmFromFilterChains(Listener listener) {
+        for (FilterChain fc : listener.getFilterChainsList()) {
+            for (Filter filter : fc.getFiltersList()) {
+                if (HTTP_CONNECTION_MANAGER_FILTER_NAME.equals(filter.getName()) &&
+                    filter.hasTypedConfig() &&
+                    HTTP_CONNECTION_MANAGER_TYPE_URL.equals(
+                            filter.getTypedConfig().getTypeUrl())) {
+                    return XdsValidatorIndexRegistry.unpack(
+                            filter.getTypedConfig(), HttpConnectionManager.class);
+                }
+            }
+        }
+        return null;
     }
 }

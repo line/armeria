@@ -4,6 +4,8 @@ dependencies {
     implementation libs.junit5.platform.launcher
     implementation libs.testcontainers.k3s
     implementation libs.testcontainers.junit.jupiter
+
+    testImplementation project(':xds')
 }
 
 def kubeconfigEnvValue =

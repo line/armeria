@@ -18,10 +18,13 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AbstractTlsSpecBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -37,27 +40,42 @@ import io.netty.handler.ssl.SslContextBuilder;
 @UnstableApi
 public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTlsSpecBuilder, ClientTlsSpec> {
 
-    private Set<String> alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
+    private Set<String> baseAlpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
+    private Set<String> overrideAlpnProtocols = ImmutableSet.of();
     private Consumer<? super SslContextBuilder> tlsCustomizer = SslContextUtil.DEFAULT_NOOP_CUSTOMIZER;
     @Nullable
     private KeyManagerFactory keyManagerFactory;
+    private String endpointIdentificationAlgorithm = "HTTPS";
 
     ClientTlsSpecBuilder() {}
 
     ClientTlsSpecBuilder(ClientTlsSpec clientTlsSpec) {
         super(clientTlsSpec.ciphers(), clientTlsSpec.tlsKeyPair(), clientTlsSpec.trustedCertificates(),
               clientTlsSpec.verifierFactories(), clientTlsSpec.engineType());
-        alpnProtocols = clientTlsSpec.alpnProtocols();
+        baseAlpnProtocols = clientTlsSpec.baseAlpnProtocols();
+        overrideAlpnProtocols = clientTlsSpec.overrideAlpnProtocols();
         keyManagerFactory = clientTlsSpec.keyManagerFactory();
         tlsCustomizer = clientTlsSpec.tlsCustomizer();
+        endpointIdentificationAlgorithm = clientTlsSpec.endpointIdentificationAlgorithm();
     }
 
     ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
         if (sessionProtocol.isExplicitHttp1()) {
-            alpnProtocols = SslContextUtil.DEFAULT_HTTP1_ALPN_PROTOCOLS;
+            baseAlpnProtocols = SslContextUtil.DEFAULT_HTTP1_ALPN_PROTOCOLS;
         } else {
-            alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
+            baseAlpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
         }
+        return this;
+    }
+
+    /**
+     * Sets the ALPN protocol names that take precedence over the protocols
+     * derived from the {@link SessionProtocol}. If not empty, these are returned
+     * by {@link ClientTlsSpec#alpnProtocols()} instead of the default.
+     */
+    public ClientTlsSpecBuilder alpnProtocols(Collection<String> alpnProtocols) {
+        requireNonNull(alpnProtocols, "alpnProtocols");
+        overrideAlpnProtocols = ImmutableSet.copyOf(alpnProtocols);
         return this;
     }
 
@@ -72,12 +90,26 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
     }
 
     /**
+     * Sets the endpoint identification algorithm for JSSE hostname verification.
+     * Use {@code "HTTPS"} (the default) for standard hostname verification, or {@code ""}
+     * to disable JSSE hostname verification (e.g. when peer identity is verified by a
+     * custom {@link com.linecorp.armeria.common.TlsPeerVerifierFactory}).
+     */
+    public ClientTlsSpecBuilder endpointIdentificationAlgorithm(String algorithm) {
+        requireNonNull(algorithm, "algorithm");
+        endpointIdentificationAlgorithm = algorithm;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link ClientTlsSpec} with the properties set so far.
      */
     @Override
     public ClientTlsSpec build() {
         return new ClientTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
-                                 alpnProtocols, ciphers(), tlsKeyPair(), trustedCertificates(),
-                                 verifierFactories(), engineType(), tlsCustomizer, keyManagerFactory);
+                                 baseAlpnProtocols, ciphers(), tlsKeyPair(),
+                                 trustedCertificates(), verifierFactories(), engineType(), tlsCustomizer,
+                                 keyManagerFactory, overrideAlpnProtocols,
+                                 endpointIdentificationAlgorithm);
     }
 }

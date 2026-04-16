@@ -4,5 +4,4 @@ dependencies {
     api libs.protobuf.java.util
     api libs.controlplane.server
     api libs.controlplane.cache
-    api libs.protoc.pgv.java.stub
 }
