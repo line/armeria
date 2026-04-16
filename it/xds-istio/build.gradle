@@ -5,10 +5,7 @@ dependencies {
     implementation libs.testcontainers.k3s
     implementation libs.testcontainers.junit.jupiter
 
-    testImplementation(project(':xds')) {
-        // Exclude the unshaded pgv-java-stub since it should be shaded via xds-pgv-shaded
-        exclude group: 'build.buf.protoc-gen-validate', module: 'pgv-java-stub'
-    }
+    testImplementation project(':xds')
 }
 
 def kubeconfigEnvValue =
@@ -86,7 +83,9 @@ tasks.register('prepareIstioWorkdir') {
 
 tasks.register('copyTestRuntimeJars', Sync) {
     dependsOn tasks.named('prepareIstioWorkdir')
-    from(sourceSets.test.runtimeClasspath)
+    from(configurations.shadedJarTestRuntime)
+    from(sourceSets.main.output)
+    from(sourceSets.test.output)
     into(testRuntimeDir)
 }
 
