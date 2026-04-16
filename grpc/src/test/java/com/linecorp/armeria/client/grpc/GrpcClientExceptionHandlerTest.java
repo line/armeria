@@ -128,7 +128,7 @@ class GrpcClientExceptionHandlerTest {
     }
 
     @Test
-    void asyncOnlyHandlerFallsBackToLaterSyncHandlerOnClientPath() {
+    void asyncHandlerIsUsedOnClientPath() {
         final AtomicInteger asyncInvocations = new AtomicInteger();
         final RuntimeException exception = new RuntimeException();
         final TestServiceBlockingStub stub =
@@ -139,12 +139,6 @@ class GrpcClientExceptionHandlerTest {
                                        return CompletableFuture.completedFuture(
                                                Status.INTERNAL.withDescription("async"));
                                    }))
-                           .exceptionHandler((ctx, status, cause, metadata) -> {
-                               if (cause == exception) {
-                                   return Status.DATA_LOSS;
-                               }
-                               return null;
-                           })
                            .build(TestServiceBlockingStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> clientCall =
                 stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
@@ -166,7 +160,9 @@ class GrpcClientExceptionHandlerTest {
         clientCall.halfClose();
         clientCall.request(Integer.MAX_VALUE);
         await().untilAtomic(statusRef, Matchers.notNullValue());
-        assertThat(statusRef.get().getCode()).isEqualTo(Code.DATA_LOSS);
-        assertThat(asyncInvocations).hasValue(0);
+        // With async migration, the async handler is now fully used on client paths too.
+        assertThat(statusRef.get().getCode()).isEqualTo(Code.INTERNAL);
+        assertThat(statusRef.get().getDescription()).isEqualTo("async");
+        assertThat(asyncInvocations).hasValue(1);
     }
 }

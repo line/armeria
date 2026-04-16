@@ -186,19 +186,24 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
             resFuture.complete(response);
-        } catch (Exception ex) {
-            final StatusAndMetadata statusAndMetadata0 = exceptionHandler().handle(ctx, ex);
-            final Status status = statusAndMetadata0.status();
-            final Metadata metadata = statusAndMetadata0.metadata();
-            assert metadata != null;
-            statusAndMetadata = new ServerStatusAndMetadata(status, metadata, true);
-
-            final ResponseHeadersBuilder trailersBuilder = defaultResponseHeaders().toBuilder();
-            final HttpResponse response = HttpResponse.of(
-                    (ResponseHeaders) statusToTrailers(ctx, trailersBuilder, status, metadata));
-            resFuture.complete(response);
-        } finally {
             closeListener(statusAndMetadata);
+        } catch (Exception ex) {
+            exceptionHandler().handleAsync(ctx, ex)
+                    .thenAccept(errorStatusAndMetadata -> {
+                        final Status status = errorStatusAndMetadata.status();
+                        final Metadata metadata = errorStatusAndMetadata.metadata();
+                        assert metadata != null;
+                        final ServerStatusAndMetadata errorSsm =
+                                new ServerStatusAndMetadata(status, metadata, true);
+
+                        final ResponseHeadersBuilder trailersBuilder =
+                                defaultResponseHeaders().toBuilder();
+                        final HttpResponse response = HttpResponse.of(
+                                (ResponseHeaders) statusToTrailers(ctx, trailersBuilder,
+                                                                   status, metadata));
+                        resFuture.complete(response);
+                        closeListener(errorSsm);
+                    });
         }
     }
 

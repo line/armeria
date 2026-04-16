@@ -173,14 +173,15 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         }
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> {
-                    final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, cause);
-                    Status status = statusAndMetadata.status();
-                    if (status.getDescription() == null) {
-                        status = status.withDescription(cause.getMessage());
-                    }
-                    return HttpResponse.ofFailure(status.asRuntimeException());
-                };
+                (unused, cause) -> HttpResponse.of(
+                        exceptionHandler.handleAsync(ctx, cause)
+                                        .thenApply(statusAndMetadata -> {
+                                            Status s = statusAndMetadata.status();
+                                            if (s.getDescription() == null) {
+                                                s = s.withDescription(cause.getMessage());
+                                            }
+                                            return HttpResponse.ofFailure(s.asRuntimeException());
+                                        }));
         final HttpPreClient preClient =
                 options().clientPreprocessors()
                          .decorate(TailPreClient.of(client, HttpResponse::of, errorResponseFactory));

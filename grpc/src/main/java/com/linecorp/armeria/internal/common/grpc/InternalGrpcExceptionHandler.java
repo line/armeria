@@ -40,49 +40,6 @@ public final class InternalGrpcExceptionHandler {
     }
 
     /**
-     * Synchronously handles the specified {@link Throwable}. Used by client-side code paths
-     * that run on the event loop and must not block.
-     *
-     * <p>This method calls {@link GrpcExceptionHandlerFunction#apply} directly. If the delegate
-     * is an async-only handler (e.g., created via {@link GrpcExceptionHandlerFunction#ofAsync}),
-     * it will throw {@link UnsupportedOperationException}, which is caught and falls back to
-     * the default handler.
-     */
-    public StatusAndMetadata handle(RequestContext ctx, Throwable t) {
-        final Throwable peeled = peelAndUnwrap(t);
-        Metadata metadata = Status.trailersFromThrowable(peeled);
-        if (metadata == null) {
-            metadata = new Metadata();
-        }
-        final Status status = restoreStatus(Status.fromThrowable(peeled), peeled);
-        return new StatusAndMetadata(applySyncSafely(ctx, status, peeled, metadata), metadata);
-    }
-
-    /**
-     * Synchronously handles the specified {@link Throwable} with a pre-extracted {@link Status}.
-     * See {@link #handle(RequestContext, Throwable)} for behavior details.
-     */
-    public Status handle(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
-        final Throwable peeled = peelAndUnwrap(cause);
-        final Status restoredStatus = restoreStatus(status, peeled);
-        return applySyncSafely(ctx, restoredStatus, peeled, metadata);
-    }
-
-    @SuppressWarnings("deprecation")
-    private Status applySyncSafely(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
-        try {
-            final Status result = delegate.apply(ctx, status, cause, metadata);
-            if (result != null) {
-                return result;
-            }
-        } catch (UnsupportedOperationException ignored) {
-            // The delegate is an async-only handler (e.g., created via ofAsync).
-            // Fall back to the default handler on this synchronous path.
-        }
-        return applyDefaultHandler(ctx, status, cause, metadata);
-    }
-
-    /**
      * Asynchronously handles the specified {@link Throwable} and returns a {@link CompletableFuture}
      * of {@link StatusAndMetadata}.
      */

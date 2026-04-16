@@ -217,17 +217,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
 
         exceptionHandler.handleAsync(ctx, status, cause, metadata)
-                        .handle((newStatus, ex) -> {
-                            // If the async handler itself fails, fall back to the original status
-                            // so the response is not silently dropped.
-                            if (ex != null || newStatus == null) {
-                                newStatus = status;
-                            }
+                        .thenAccept(newStatus -> {
                             if (status.getDescription() != null) {
                                 newStatus = newStatus.withDescription(status.getDescription());
                             }
                             close(new ServerStatusAndMetadata(newStatus, metadata), cause);
-                            return null;
                         });
     }
 
@@ -237,17 +231,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void close(Throwable exception, boolean cancelled) {
         exceptionHandler.handleAsync(ctx, exception)
-                        .handle((statusAndMetadata, ex) -> {
-                            // If the async handler itself fails, fall back to Status.fromThrowable()
-                            // so the response is not silently dropped.
-                            if (ex != null || statusAndMetadata == null) {
-                                statusAndMetadata = new StatusAndMetadata(
-                                        Status.fromThrowable(exception), new Metadata());
-                            }
+                        .thenAccept(statusAndMetadata -> {
                             close(new ServerStatusAndMetadata(
                                     statusAndMetadata.status(), statusAndMetadata.metadata(),
                                     cancelled), exception);
-                            return null;
                         });
     }
 
