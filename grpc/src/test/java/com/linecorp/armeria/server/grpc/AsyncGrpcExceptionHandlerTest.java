@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -93,7 +94,7 @@ class AsyncGrpcExceptionHandlerTest {
                                   .addService(new ErrorThrowingService())
                                   .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
                                           (ctx, status, cause, metadata) ->
-                                      CompletableFuture.completedFuture(null)))
+                                                  UnmodifiableFuture.completedFuture(null)))
                                   .build());
         }
     };
@@ -105,15 +106,15 @@ class AsyncGrpcExceptionHandlerTest {
             final GrpcExceptionHandlerFunction first = GrpcExceptionHandlerFunction.ofAsync(
                     (ctx, status, cause, metadata) -> {
                         if (cause instanceof IllegalArgumentException) {
-                            return CompletableFuture.completedFuture(
+                            return UnmodifiableFuture.completedFuture(
                                     Status.INVALID_ARGUMENT.withDescription("first-handler")
                                                            .withCause(cause));
                         }
-                        return CompletableFuture.completedFuture(null);
+                        return UnmodifiableFuture.completedFuture(null);
                     });
             final GrpcExceptionHandlerFunction second = GrpcExceptionHandlerFunction.ofAsync(
                     (ctx, status, cause, metadata) ->
-                            CompletableFuture.completedFuture(
+                            UnmodifiableFuture.completedFuture(
                                     Status.INTERNAL.withDescription("second-handler")
                                                    .withCause(cause)));
 

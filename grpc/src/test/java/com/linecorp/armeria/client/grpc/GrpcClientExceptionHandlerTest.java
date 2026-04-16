@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Deque;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -136,7 +136,7 @@ class GrpcClientExceptionHandlerTest {
                            .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
                                    (ctx, status, cause, metadata) -> {
                                        asyncInvocations.incrementAndGet();
-                                       return CompletableFuture.completedFuture(
+                                       return UnmodifiableFuture.completedFuture(
                                                Status.INTERNAL.withDescription("async"));
                                    }))
                            .build(TestServiceBlockingStub.class);

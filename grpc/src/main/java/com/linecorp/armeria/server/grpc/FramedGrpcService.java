@@ -61,7 +61,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;

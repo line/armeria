@@ -55,7 +55,6 @@ import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.TailPreClient;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;

@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;

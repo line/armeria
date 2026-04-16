@@ -63,7 +63,6 @@ import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;

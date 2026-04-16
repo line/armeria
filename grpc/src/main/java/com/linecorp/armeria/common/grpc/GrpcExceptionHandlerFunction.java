@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -150,7 +151,7 @@ public interface GrpcExceptionHandlerFunction {
     default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                            Throwable cause, Metadata metadata) {
         try {
-            return CompletableFuture.completedFuture(apply(ctx, status, cause, metadata));
+            return UnmodifiableFuture.completedFuture(apply(ctx, status, cause, metadata));
         } catch (Throwable t) {
             final CompletableFuture<@Nullable Status> future = new CompletableFuture<>();
             future.completeExceptionally(t);
@@ -190,7 +191,7 @@ public interface GrpcExceptionHandlerFunction {
                 return GrpcExceptionHandlerFunction.this.applyAsync(ctx, status, cause, metadata)
                                                         .thenCompose(newStatus -> {
                                                             if (newStatus != null) {
-                                                                return CompletableFuture.completedFuture(
+                                                                return UnmodifiableFuture.completedFuture(
                                                                         newStatus);
                                                             }
                                                             return next.applyAsync(ctx, status, cause,

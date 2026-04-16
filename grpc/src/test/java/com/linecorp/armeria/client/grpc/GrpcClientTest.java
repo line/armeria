@@ -772,7 +772,8 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(grpcExceptionHandler.handleAsync(null, responseObserver.getError()).join().status().getCode())
+        assertThat(grpcExceptionHandler.handleAsync(null, responseObserver.getError())
+                                       .join().status().getCode())
                 .isEqualTo(Code.CANCELLED);
 
         final RequestLog log = requestLogQueue.take();
