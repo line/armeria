@@ -6,7 +6,9 @@ dependencies {
     implementation libs.testcontainers.junit.jupiter
 
     testImplementation project(':xds')
-    testImplementation libs.json.path
+    testImplementation(libs.json.path) {
+        exclude group: 'org.slf4j'
+    }
 }
 
 def kubeconfigEnvValue =
