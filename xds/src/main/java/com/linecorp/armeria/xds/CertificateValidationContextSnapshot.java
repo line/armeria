@@ -161,4 +161,11 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
         return MoreObjects.toStringHelper(this)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("validationContext", resource)
+                          .toString();
+    }
 }

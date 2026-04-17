@@ -192,4 +192,18 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
                           .add("validationContext", validationContext)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("transportSocket", transportSocket)
+                          .add("tlsCertificate",
+                               SnapshotUtil.debugString(tlsCertificate,
+                                                        TlsCertificateSnapshot::toDebugString))
+                          .add("validationContext",
+                               SnapshotUtil.debugString(validationContext,
+                                                        CertificateValidationContextSnapshot::toDebugString))
+                          .toString();
+    }
 }

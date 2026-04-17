@@ -6,6 +6,7 @@ dependencies {
     implementation libs.testcontainers.junit.jupiter
 
     testImplementation project(':xds')
+    testImplementation libs.json.path
 }
 
 def kubeconfigEnvValue =

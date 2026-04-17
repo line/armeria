@@ -129,4 +129,17 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .add("transportSocketMatches", transportSocketMatches)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("cluster", clusterXdsResource.resource())
+                          .add("endpointSnapshot",
+                               SnapshotUtil.debugString(endpointSnapshot,
+                                                        EndpointSnapshot::toDebugString))
+                          .add("transportSocket", transportSocket.toDebugString())
+                          .add("transportSocketMatches", transportSocketMatches)
+                          .toString();
+    }
 }

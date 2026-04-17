@@ -25,6 +25,8 @@ import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.JsonFormat.Parser;
 import com.google.protobuf.util.JsonFormat.TypeRegistry;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.extensions.access_loggers.file.v3.FileAccessLog;
@@ -109,8 +111,32 @@ public final class XdsResourceReader {
                                                             .addEscape('\r', "\\r")
                                                             .build();
 
-    static String escapeMultiLine(String str) {
-        return multiLineEscaper.escape(str);
+    /**
+     * Rewrites the {@code xds-grpc} cluster's load assignment to connect directly to
+     * Istiod's plaintext gRPC port (15010) instead of pilot-agent's UDS proxy.
+     * This is due to the restriction that pilot-agent only allows a single active connection.
+     */
+    static String rewriteXdsGrpcBootstrap(String bootstrapJson) {
+        return JsonPath.parse(bootstrapJson)
+                       .set("$.static_resources.clusters[?(@.name=='xds-grpc')].load_assignment",
+                            Configuration.defaultConfiguration().jsonProvider().parse("""
+                                {
+                                  "cluster_name": "xds-grpc",
+                                  "endpoints": [{
+                                    "lb_endpoints": [{
+                                      "endpoint": {
+                                        "address": {
+                                          "socket_address": {
+                                            "address": "istiod.istio-system.svc",
+                                            "port_value": 15010
+                                          }
+                                        }
+                                      }
+                                    }]
+                                  }]
+                                }
+                                """))
+                       .jsonString();
     }
 
     private XdsResourceReader() {}

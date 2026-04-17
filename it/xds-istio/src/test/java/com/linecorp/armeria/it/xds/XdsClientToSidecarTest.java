@@ -203,9 +203,9 @@ class XdsClientToSidecarTest {
         final String listenerName = serviceIp + '_' + server.port();
         logger.info("Istio outbound listener name resolved: {}", listenerName);
 
-        final Bootstrap bootstrap = loadParsedBootstrap();
+        final Bootstrap parsedBootstrap = loadParsedBootstrap();
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(parsedBootstrap);
              ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName)) {
             final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
             final AtomicReference<Throwable> errorRef = new AtomicReference<>();
@@ -231,6 +231,7 @@ class XdsClientToSidecarTest {
                         .contains(server.serviceName());
             });
             logger.info("Outbound listener snapshot loaded: {}", snapshotRef.get());
+            Thread.sleep(10_000);
         }
     }
 
@@ -306,16 +307,11 @@ class XdsClientToSidecarTest {
     }
 
     private static Bootstrap loadParsedBootstrap() throws Exception {
-        final Path dir = Paths.get("/etc/istio/proxy");
-        final Path bootstrapPath = dir.resolve("envoy-rev.json");
+        final Path bootstrapPath = Paths.get("/etc/istio/proxy/envoy-rev.json");
         assertThat(bootstrapPath).exists();
         logger.info("Using Istio bootstrap file: {}", bootstrapPath);
         final String bootstrapJson = Files.readString(bootstrapPath);
-        try {
-            return XdsResourceReader.fromJson(bootstrapJson, Bootstrap.class);
-        } catch (RuntimeException e) {
-            logger.warn("Failed to parse Istio bootstrap from {}", bootstrapPath, e);
-            throw e;
-        }
+        final String rewritten = XdsResourceReader.rewriteXdsGrpcBootstrap(bootstrapJson);
+        return XdsResourceReader.fromJson(rewritten, Bootstrap.class);
     }
 }
