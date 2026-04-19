@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Map;
 
 import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,11 +33,13 @@ import org.junit.jupiter.api.Test;
 import org.junitpioneer.jupiter.ClearSystemProperty;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.micrometer.core.instrument.Metrics;
+import io.netty.channel.ChannelOption;
 
 @SetSystemProperty(
         key = "com.linecorp.armeria.requestContextStorageProvider",
@@ -45,11 +48,13 @@ import io.micrometer.core.instrument.Metrics;
 class FlagsProviderTest {
 
     private Class<?> flags;
+    private Class<?> clientFactoryClass;
 
     @BeforeEach
     void reloadFlags() throws ClassNotFoundException {
         final FlagsClassLoader classLoader = new FlagsClassLoader();
         flags = classLoader.loadClass(Flags.class.getCanonicalName());
+        clientFactoryClass = classLoader.loadClass(ClientFactory.class.getName());
     }
 
     @Test
@@ -159,9 +164,53 @@ class FlagsProviderTest {
                 .isEqualTo(DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG);
     }
 
+    @Test
+    void defaultClientFactoryConfiguratorIsAppliedToDefaultClientFactory() throws Throwable {
+        try {
+            assertClientFactoryConnectTimeoutMillis("ofDefault").isEqualTo(4242);
+        } finally {
+            closeDefaultClientFactories();
+        }
+    }
+
+    @Test
+    void defaultClientFactoryConfiguratorIsAppliedToInsecureClientFactory() throws Throwable {
+        try {
+            assertClientFactoryConnectTimeoutMillis("insecure").isEqualTo(4242);
+        } finally {
+            closeDefaultClientFactories();
+        }
+    }
+
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
         final Method method = flags.getDeclaredMethod(flagsMethod);
         return assertThat(method.invoke(null));
+    }
+
+    private ObjectAssert<Object> assertClientFactoryConnectTimeoutMillis(String factoryMethod)
+            throws Throwable {
+        final Object options = clientFactoryOptions(factoryMethod);
+        final Method channelOptionsMethod = options.getClass().getDeclaredMethod("channelOptions");
+        @SuppressWarnings("unchecked")
+        final Map<ChannelOption<?>, Object> channelOptions =
+                (Map<ChannelOption<?>, Object>) channelOptionsMethod.invoke(options);
+        return assertThat(channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS));
+    }
+
+    private Object clientFactoryOptions(String factoryMethod) throws Throwable {
+        final Object clientFactory = clientFactory(factoryMethod);
+        final Method optionsMethod = clientFactoryClass.getDeclaredMethod("options");
+        return optionsMethod.invoke(clientFactory);
+    }
+
+    private Object clientFactory(String factoryMethod) throws Throwable {
+        final Method factoryGetter = clientFactoryClass.getDeclaredMethod(factoryMethod);
+        return factoryGetter.invoke(null);
+    }
+
+    private void closeDefaultClientFactories() throws Throwable {
+        final Method closeDefaultMethod = clientFactoryClass.getDeclaredMethod("closeDefault");
+        closeDefaultMethod.invoke(null);
     }
 
     private static class FlagsClassLoader extends ClassLoader {

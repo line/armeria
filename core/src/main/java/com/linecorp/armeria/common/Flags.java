@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientFactoryConfigurator;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.Endpoint;
@@ -1632,6 +1633,22 @@ public final class Flags {
     @UnstableApi
     public static MeterRegistry meterRegistry() {
         return METER_REGISTRY;
+    }
+
+    /**
+     * Returns the {@link ClientFactoryConfigurator} that customizes the built-in default
+     * {@link com.linecorp.armeria.client.ClientFactory}s.
+     *
+     * <p>This value is consulted while initializing the built-in default client factories.
+     *
+     * @see ClientFactoryConfigurator
+     */
+    @UnstableApi
+    public static ClientFactoryConfigurator defaultClientFactoryConfigurator() {
+        final ClientFactoryConfigurator configurator =
+                getValue(FlagsProvider::defaultClientFactoryConfigurator,
+                         "defaultClientFactoryConfigurator");
+        return configurator != null ? configurator : ClientFactoryConfigurator.noop();
     }
 
     /**

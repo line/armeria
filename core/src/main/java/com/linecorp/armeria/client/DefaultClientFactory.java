@@ -36,6 +36,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsProvider;
@@ -70,11 +71,14 @@ final class DefaultClientFactory implements ClientFactory {
 
     private static volatile boolean shutdownHookDisabled;
 
+    private static final ClientFactoryConfigurator DEFAULT_CLIENT_FACTORY_CONFIGURATOR =
+            Flags.defaultClientFactoryConfigurator();
+
     static final DefaultClientFactory DEFAULT =
-            (DefaultClientFactory) ClientFactory.builder().build();
+            newDefaultClientFactory(false, DEFAULT_CLIENT_FACTORY_CONFIGURATOR);
 
     static final DefaultClientFactory INSECURE =
-            (DefaultClientFactory) ClientFactory.builder().tlsNoVerify().build();
+            newDefaultClientFactory(true, DEFAULT_CLIENT_FACTORY_CONFIGURATOR);
 
     static {
         if (DefaultClientFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
@@ -92,6 +96,16 @@ final class DefaultClientFactory implements ClientFactory {
 
     static void disableShutdownHook0() {
         shutdownHookDisabled = true;
+    }
+
+    private static DefaultClientFactory newDefaultClientFactory(boolean insecure,
+                                                                ClientFactoryConfigurator configurator) {
+        final ClientFactoryBuilder builder = ClientFactory.builder();
+        configurator.configure(builder);
+        if (insecure) {
+            builder.tlsNoVerify();
+        }
+        return (DefaultClientFactory) builder.build();
     }
 
     private final HttpClientFactory httpClientFactory;

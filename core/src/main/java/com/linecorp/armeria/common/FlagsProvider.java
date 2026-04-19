@@ -33,6 +33,7 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientFactoryConfigurator;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -819,6 +820,29 @@ public interface FlagsProvider {
     @UnstableApi
     @Nullable
     default Long defaultRequestAutoAbortDelayMillis() {
+        return null;
+    }
+
+    /**
+     * Returns a {@link ClientFactoryConfigurator} that customizes the built-in default
+     * {@link com.linecorp.armeria.client.ClientFactory}s.
+     *
+     * <p>If {@code null} is returned, the next available {@link FlagsProvider} is consulted.</p>
+     *
+     * <p>The returned {@link ClientFactoryConfigurator} is applied while creating the built-in default
+     * {@link com.linecorp.armeria.client.ClientFactory}s, so it must not call
+     * {@link com.linecorp.armeria.client.ClientFactory#ofDefault()} or
+     * {@link com.linecorp.armeria.client.ClientFactory#insecure()}.</p>
+     *
+     * <p>This configurator is applied to both the default and insecure built-in
+     * {@link com.linecorp.armeria.client.ClientFactory}s. Because
+     * {@link com.linecorp.armeria.client.ClientFactory#insecure()} applies
+     * {@link com.linecorp.armeria.client.ClientFactoryBuilder#tlsNoVerify()} after the configurator runs,
+     * TLS verification-related customization is unsupported.</p>
+     */
+    @UnstableApi
+    @Nullable
+    default ClientFactoryConfigurator defaultClientFactoryConfigurator() {
         return null;
     }
 
