@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import java.util.Map;
 import java.util.ServiceLoader;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Any;
 import com.google.protobuf.Message;
@@ -48,7 +47,6 @@ final class XdsExtensionRegistry {
         this.validator = validator;
     }
 
-    @VisibleForTesting
     static XdsExtensionRegistry of(XdsResourceValidator validator) {
         final ImmutableMap.Builder<String, XdsExtensionFactory> byName = ImmutableMap.builder();
         final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
@@ -103,7 +101,6 @@ final class XdsExtensionRegistry {
      * @throws IllegalArgumentException if the factory does not implement the expected interface
      */
     @Nullable
-    @VisibleForTesting
     <T extends XdsExtensionFactory> T queryByTypeUrl(String typeUrl, Class<T> expectedType) {
         final XdsExtensionFactory factory = byTypeUrl.get(typeUrl);
         if (factory == null) {
