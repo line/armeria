@@ -161,7 +161,7 @@ public abstract class AbstractTlsSpec {
         }
         final AbstractTlsSpec tlsSpec = (AbstractTlsSpec) o;
         return Objects.equal(tlsVersions, tlsSpec.tlsVersions()) &&
-               Objects.equal(alpnProtocols, tlsSpec.alpnProtocols()) &&
+               Objects.equal(alpnProtocols(), tlsSpec.alpnProtocols()) &&
                Objects.equal(ciphers, tlsSpec.ciphers()) &&
                Objects.equal(tlsKeyPair, tlsSpec.tlsKeyPair()) &&
                Objects.equal(trustedCertificates, tlsSpec.trustedCertificates()) &&
@@ -173,7 +173,7 @@ public abstract class AbstractTlsSpec {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(tlsVersions, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates,
+        return Objects.hashCode(tlsVersions, alpnProtocols(), ciphers, tlsKeyPair, trustedCertificates,
                                 verifierFactories, engineType, tlsCustomizer, keyManagerFactory);
     }
 

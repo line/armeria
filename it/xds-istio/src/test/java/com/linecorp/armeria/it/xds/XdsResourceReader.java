@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -40,7 +40,7 @@ import io.envoyproxy.envoy.extensions.resource_monitors.downstream_connections.v
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions;
 
-public final class XdsResourceReader {
+final class XdsResourceReader {
 
     private static final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
     private static final ObjectMapper jsonMapper = new ObjectMapper();
@@ -67,7 +67,7 @@ public final class XdsResourceReader {
                                                       .add(UpstreamTlsContext.getDescriptor())
                                                       .build());
 
-    public static Bootstrap fromYaml(String yaml) {
+    static Bootstrap fromYaml(String yaml) {
         final Bootstrap.Builder bootstrapBuilder = Bootstrap.newBuilder();
         try {
             final JsonNode jsonNode = mapper.reader().readTree(yaml);
@@ -79,7 +79,7 @@ public final class XdsResourceReader {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends Message> T fromYaml(String yaml, Class<T> clazz) {
+    static <T extends Message> T fromYaml(String yaml, Class<T> clazz) {
         final Message.Builder builder;
         try {
             builder = (Message.Builder) clazz.getMethod("newBuilder").invoke(null);
@@ -92,7 +92,7 @@ public final class XdsResourceReader {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends Message> T fromJson(String json, Class<T> clazz) {
+    static <T extends Message> T fromJson(String json, Class<T> clazz) {
         final Message.Builder builder;
         try {
             builder = (Message.Builder) clazz.getMethod("newBuilder").invoke(null);

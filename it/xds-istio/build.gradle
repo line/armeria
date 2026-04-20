@@ -89,7 +89,7 @@ tasks.register('copyTestRuntimeJars', Sync) {
     dependsOn tasks.named('copyShadedTestClasses')
     from(configurations.shadedJarTestRuntime)
     from(sourceSets.main.output)
-    from(sourceSets.test.output)
+    from(files(tasks.copyShadedTestClasses.destinationDir))
     into(testRuntimeDir)
 }
 

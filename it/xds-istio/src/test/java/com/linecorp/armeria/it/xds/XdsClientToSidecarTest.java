@@ -231,7 +231,6 @@ class XdsClientToSidecarTest {
                         .contains(server.serviceName());
             });
             logger.info("Outbound listener snapshot loaded: {}", snapshotRef.get());
-            Thread.sleep(10_000);
         }
     }
 

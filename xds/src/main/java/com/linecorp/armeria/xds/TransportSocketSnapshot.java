@@ -19,8 +19,6 @@ package com.linecorp.armeria.xds;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +45,7 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 public final class TransportSocketSnapshot implements Snapshot<TransportSocket> {
 
     private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
-    private static final String istioPeerExchange = "istio-peer-exchange";
+    private static final String ISTIO_PEER_EXCHANGE = "istio-peer-exchange";
     private static boolean warnedNoVerify;
 
     private final TransportSocket transportSocket;
@@ -113,10 +111,13 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         if (upstreamTlsContext != null) {
             // Armeria doesn't implement "istio-peer-exchange" for now.
             final List<String> alpn = upstreamTlsContext.getCommonTlsContext().getAlpnProtocolsList();
-            final List<String> filteredAlpn = alpn.stream()
-                                                  .filter(a -> !istioPeerExchange.equals(a))
-                                                  .collect(Collectors.toList());
-            specBuilder.alpnProtocols(filteredAlpn);
+            if (!alpn.isEmpty()) {
+                final ImmutableList<String> filteredAlpn =
+                        alpn.stream()
+                            .filter(a -> !ISTIO_PEER_EXCHANGE.equals(a))
+                            .collect(ImmutableList.toImmutableList());
+                specBuilder.alpnProtocols(filteredAlpn);
+            }
         }
         final ImmutableList.Builder<TlsPeerVerifierFactory> verifiersBuilder = ImmutableList.builder();
         if (validationContext != null) {
@@ -160,8 +161,9 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         if (!warnedNoVerify) {
             warnedNoVerify = true;
             logger.warn("TLS peer verification is disabled because validation context has no trusted CA " +
-                        "and system_root_certs is unset. Set system_root_certs: \\{} to use the " +
-                        "default Java TLS roots.");
+                        "and system_root_certs is unset. " +
+                        "Set 'system_root_certs: {}' in the validation context " +
+                        "to use the default Java TLS roots.");
         }
     }
 
