@@ -21,9 +21,11 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 
@@ -60,7 +62,14 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
     @Override
     HttpResponse execute1(PreClient<HttpRequest, HttpResponse> delegate, PreClientRequestContext ctx,
                           HttpRequest req, RouteConfig routeConfig) throws Exception {
+        final RouteEntry selectedRoute = routeConfig.select(ctx);
+        if (selectedRoute == null) {
+            throw UnprocessedRequestException.of(
+                    new IllegalArgumentException("No route for listener '" +
+                                                 routeConfig.listenerSnapshot() + "'."));
+        }
+        ctx.setAttr(XdsAttributeKeys.SELECTED_ROUTE, selectedRoute);
         DelegatingHttpClient.setDelegate(ctx, delegate);
-        return routeConfig.httpPreClient().execute(ctx, req);
+        return selectedRoute.httpPreClient().execute(ctx, req);
     }
 }

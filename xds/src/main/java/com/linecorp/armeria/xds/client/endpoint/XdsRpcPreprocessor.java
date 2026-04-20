@@ -21,9 +21,11 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreprocessor;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
@@ -60,7 +62,14 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
     @Override
     RpcResponse execute1(PreClient<RpcRequest, RpcResponse> delegate, PreClientRequestContext ctx,
                          RpcRequest req, RouteConfig routeConfig) throws Exception {
+        final RouteEntry selectedRoute = routeConfig.select(ctx);
+        if (selectedRoute == null) {
+            throw UnprocessedRequestException.of(
+                    new IllegalArgumentException("No route for listener '" +
+                                                 routeConfig.listenerSnapshot() + "'."));
+        }
+        ctx.setAttr(XdsAttributeKeys.SELECTED_ROUTE, selectedRoute);
         DelegatingRpcClient.setDelegate(ctx, delegate);
-        return routeConfig.rpcPreClient().execute(ctx, req);
+        return selectedRoute.rpcPreClient().execute(ctx, req);
     }
 }

@@ -47,13 +47,20 @@ final class FilterUtil {
                            .buildKeepingLast();
     }
 
-    static ClientPreprocessors buildDownstreamFilter(List<XdsHttpFilter> downstreamFilters) {
-        if (downstreamFilters.isEmpty()) {
+    static ClientPreprocessors buildDownstreamFilter(
+            XdsExtensionRegistry extensionRegistry,
+            List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
+        if (httpFilters.isEmpty()) {
             return ClientPreprocessors.of();
         }
         final ClientPreprocessorsBuilder builder = ClientPreprocessors.builder();
-        for (int i = downstreamFilters.size() - 1; i >= 0; i--) {
-            final XdsHttpFilter instance = downstreamFilters.get(i);
+        for (int i = httpFilters.size() - 1; i >= 0; i--) {
+            final HttpFilter httpFilter = httpFilters.get(i);
+            final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
+            final XdsHttpFilter instance = resolveInstance(extensionRegistry, httpFilter, perRouteConfig);
+            if (instance == null) {
+                continue;
+            }
             builder.add(instance.httpPreprocessor());
             builder.addRpc(instance.rpcPreprocessor());
         }

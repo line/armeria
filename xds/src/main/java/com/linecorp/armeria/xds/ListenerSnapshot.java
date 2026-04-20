@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -34,7 +33,6 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     private final ListenerXdsResource listenerXdsResource;
     @Nullable
     private final RouteSnapshot routeSnapshot;
-    private final ClientPreprocessors downstreamFilter;
 
     ListenerSnapshot(ListenerXdsResource listenerXdsResource) {
         this(listenerXdsResource, null);
@@ -43,7 +41,6 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     ListenerSnapshot(ListenerXdsResource listenerXdsResource, @Nullable RouteSnapshot routeSnapshot) {
         this.listenerXdsResource = listenerXdsResource;
         this.routeSnapshot = routeSnapshot;
-        downstreamFilter = FilterUtil.buildDownstreamFilter(listenerXdsResource.downstreamFilters());
     }
 
     @Override
@@ -57,13 +54,6 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     @Nullable
     public RouteSnapshot routeSnapshot() {
         return routeSnapshot;
-    }
-
-    /**
-     * Returns the downstream filter.
-     */
-    public ClientPreprocessors downstreamFilter() {
-        return downstreamFilter;
     }
 
     @Override

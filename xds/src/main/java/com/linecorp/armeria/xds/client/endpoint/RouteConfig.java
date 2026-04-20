@@ -16,41 +16,24 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
-import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
-import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
-import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
 final class RouteConfig {
     private final ListenerSnapshot listenerSnapshot;
-
-    private final HttpPreClient httpPreClient;
-    private final RpcPreClient rpcPreClient;
     private final VirtualHostMatcher virtualHostMatcher;
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
-        httpPreClient = listenerSnapshot.downstreamFilter().decorate(DelegatingHttpClient.of());
-        rpcPreClient = listenerSnapshot.downstreamFilter().rpcDecorate(DelegatingRpcClient.of());
         virtualHostMatcher = new VirtualHostMatcher(listenerSnapshot);
     }
 
     ListenerSnapshot listenerSnapshot() {
         return listenerSnapshot;
-    }
-
-    HttpPreClient httpPreClient() {
-        return httpPreClient;
-    }
-
-    RpcPreClient rpcPreClient() {
-        return rpcPreClient;
     }
 
     @Nullable
