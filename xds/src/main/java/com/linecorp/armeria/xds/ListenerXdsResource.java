@@ -106,11 +106,4 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     public Router router() {
         return router;
     }
-
-    /**
-     * The pre-resolved downstream {@link XdsHttpFilter} instances.
-     */
-    List<XdsHttpFilter> downstreamFilters() {
-        return downstreamFilters;
-    }
 }
