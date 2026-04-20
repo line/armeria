@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
