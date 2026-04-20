@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,8 @@
  */
 
 package com.linecorp.armeria.xds;
+
+import static java.util.Objects.requireNonNull;
 
 import java.util.Comparator;
 import java.util.ServiceLoader;
@@ -65,6 +67,7 @@ public final class XdsResourceValidator {
      * Validates the given message using the SPI-loaded {@link XdsValidatorIndex}.
      */
     void assertValid(Object message) {
+        requireNonNull(message, "message");
         spiValidator.assertValid(message);
     }
 
@@ -74,6 +77,8 @@ public final class XdsResourceValidator {
      * as an opaque blob — parent-level validation cannot recurse into it.
      */
     public <T extends Message> T unpack(Any message, Class<T> clazz) {
+        requireNonNull(message, "message");
+        requireNonNull(clazz, "clazz");
         final T unpacked;
         try {
             unpacked = message.unpack(clazz);

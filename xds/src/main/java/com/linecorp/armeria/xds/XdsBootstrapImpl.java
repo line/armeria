@@ -47,10 +47,10 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        watchService = new DirectoryWatchService();
         final XdsResourceValidator resourceValidator = new XdsResourceValidator();
         final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(resourceValidator);
         extensionRegistry.assertValid(bootstrap);
+        watchService = new DirectoryWatchService();
         clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
         final BootstrapClusters bootstrapClusters =
                 new BootstrapClusters(bootstrap, clusterManager, defaultWatcher);

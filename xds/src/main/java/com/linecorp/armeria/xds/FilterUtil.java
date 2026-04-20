@@ -86,9 +86,10 @@ final class FilterUtil {
     static XdsHttpFilter resolveInstance(
             XdsExtensionRegistry extensionRegistry,
             HttpFilter httpFilter, @Nullable Any perRouteConfig) {
-        final Any typedConfig = httpFilter.getTypedConfig();
+        final Any defaultConfig = httpFilter.getTypedConfig();
+        final Any filterConfig = perRouteConfig != null ? perRouteConfig : defaultConfig;
         final HttpFilterFactory factory = extensionRegistry.query(
-                typedConfig, httpFilter.getName(), HttpFilterFactory.class);
+                filterConfig, httpFilter.getName(), HttpFilterFactory.class);
         if (factory == null) {
             if (!httpFilter.getIsOptional()) {
                 throw new IllegalArgumentException(
@@ -102,8 +103,7 @@ final class FilterUtil {
                       httpFilter.getConfigTypeCase() == ConfigTypeCase.CONFIGTYPE_NOT_SET,
                       "Only 'typed_config' is supported, but '%s' was supplied",
                       httpFilter.getConfigTypeCase());
-        final Any effectiveConfig = perRouteConfig != null ? perRouteConfig : typedConfig;
-        return factory.create(httpFilter, effectiveConfig, extensionRegistry.validator());
+        return factory.create(httpFilter, filterConfig, extensionRegistry.validator());
     }
 
     private FilterUtil() {}

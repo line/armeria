@@ -44,7 +44,7 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     private static final Logger logger = LoggerFactory.getLogger(SotwActualStream.class);
 
     // NACK backoff to prevent hot loops when the server keeps sending bad responses
-    static final long NACK_BACKOFF_MILLIS = 3_000L;
+    static final long NACK_BACKOFF_MILLIS = 1_000L;
 
     private final StreamObserver<DiscoveryRequest> requestObserver;
     private final AdsXdsStream owner;

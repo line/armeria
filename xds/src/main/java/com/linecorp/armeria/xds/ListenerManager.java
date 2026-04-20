@@ -31,7 +31,6 @@ import com.linecorp.armeria.xds.SnapshotStream.Subscription;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ListenerManager implements SafeCloseable {
@@ -62,13 +61,8 @@ final class ListenerManager implements SafeCloseable {
     void register(Listener listener, SubscriptionContext context, SnapshotWatcher<Object> watcher) {
         checkArgument(!nodes.containsKey(listener.getName()),
                       "Static listener with name '%s' already registered", listener.getName());
-        final XdsExtensionRegistry registry = context.extensionRegistry();
-        final HttpConnectionManager connectionManager =
-                XdsUnpackUtil.unpackConnectionManager(listener, registry);
         final ListenerXdsResource listenerResource =
-                new ListenerXdsResource(listener, connectionManager,
-                                        XdsUnpackUtil.resolveDownstreamFilters(connectionManager, registry),
-                                        "");
+                ListenerResourceParser.INSTANCE.parse(listener, context.extensionRegistry(), "");
         final ListenerStream node = new ListenerStream(listenerResource, context);
         nodes.put(listener.getName(), node);
         eventLoop.execute(safeRunnable(() -> {

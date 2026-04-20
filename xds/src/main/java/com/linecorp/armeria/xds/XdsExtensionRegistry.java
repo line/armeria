@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
 
@@ -51,8 +50,8 @@ final class XdsExtensionRegistry {
 
     @VisibleForTesting
     static XdsExtensionRegistry of(XdsResourceValidator validator) {
-        final Map<String, XdsExtensionFactory> byName = new HashMap<>();
-        final Map<String, XdsExtensionFactory> byTypeUrl = new HashMap<>();
+        final ImmutableMap.Builder<String, XdsExtensionFactory> byName = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
 
         // Load SPI-discovered HttpFilterFactory instances as base factories
         ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
@@ -66,13 +65,12 @@ final class XdsExtensionRegistry {
         register(UpstreamTlsTransportSocketFactory.INSTANCE, byName, byTypeUrl);
         register(RawBufferTransportSocketFactory.INSTANCE, byName, byTypeUrl);
 
-        return new XdsExtensionRegistry(ImmutableMap.copyOf(byTypeUrl),
-                                        ImmutableMap.copyOf(byName), validator);
+        return new XdsExtensionRegistry(byTypeUrl.build(), byName.build(), validator);
     }
 
     private static void register(XdsExtensionFactory factory,
-                                 Map<String, XdsExtensionFactory> byName,
-                                 Map<String, XdsExtensionFactory> byTypeUrl) {
+                                 ImmutableMap.Builder<String, XdsExtensionFactory> byName,
+                                 ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl) {
         byName.put(factory.name(), factory);
         for (String typeUrl : factory.typeUrls()) {
             byTypeUrl.put(typeUrl, factory);

@@ -163,8 +163,7 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
 
         @Override
         protected Subscription onStart(SnapshotWatcher<RouteEntry> watcher) {
-            final XdsExtensionRegistry extensionRegistry =
-                    context.extensionRegistry();
+            final XdsExtensionRegistry extensionRegistry = context.extensionRegistry();
             if (!route.getRoute().hasCluster()) {
                 return SnapshotStream.just(new RouteEntry(route, null, index,
                                                           listenerResource, routeResource, vhostResource,

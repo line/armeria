@@ -18,8 +18,6 @@ package com.linecorp.armeria.xds;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory.RouterXdsHttpFilter;
@@ -41,10 +39,6 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     private final List<XdsHttpFilter> downstreamFilters;
     @Nullable
     private final Router router;
-
-    ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager) {
-        this(listener, connectionManager, ImmutableList.of(), "", 0);
-    }
 
     ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
                         List<XdsHttpFilter> downstreamFilters, String version) {
