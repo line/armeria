@@ -41,7 +41,7 @@ public interface ClientFactoryConfigurator {
      * <p>Note that {@link ClientFactoryBuilder#tlsNoVerify()} is applied after this method returns when
      * creating {@link ClientFactory#insecure()}.
      */
-    void configure(ClientFactoryBuilder builder);
+    void configureDefault(ClientFactoryBuilder builder);
 
     /**
      * Returns a {@link ClientFactoryConfigurator} that does not customize the specified

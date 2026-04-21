@@ -101,7 +101,7 @@ final class DefaultClientFactory implements ClientFactory {
     private static DefaultClientFactory newDefaultClientFactory(boolean insecure,
                                                                 ClientFactoryConfigurator configurator) {
         final ClientFactoryBuilder builder = ClientFactory.builder();
-        configurator.configure(builder);
+        configurator.configureDefault(builder);
         if (insecure) {
             builder.tlsNoVerify();
         }
