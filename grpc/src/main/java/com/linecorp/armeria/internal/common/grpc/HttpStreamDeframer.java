@@ -19,8 +19,6 @@ package com.linecorp.armeria.internal.common.grpc;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -120,7 +118,11 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                reportStatus(exceptionHandler.handleAsync(ctx, t));
+                exceptionHandler.handleAsync(ctx, t)
+                                .thenAccept(statusAndMetadata ->
+                                        transportStatusListener.transportReportStatus(
+                                                statusAndMetadata.status(),
+                                                statusAndMetadata.metadata()));
                 return;
             }
         }
@@ -146,20 +148,11 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        reportStatus(exceptionHandler.handleAsync(ctx, cause));
-    }
-
-    private void reportStatus(CompletableFuture<StatusAndMetadata> future) {
-        if (future.isDone() && !future.isCompletedExceptionally()) {
-            final StatusAndMetadata statusAndMetadata = future.join();
-            transportStatusListener.transportReportStatus(
-                    statusAndMetadata.status(), statusAndMetadata.metadata());
-            return;
-        }
-        future.thenAcceptAsync(statusAndMetadata ->
-                        transportStatusListener.transportReportStatus(
-                                statusAndMetadata.status(), statusAndMetadata.metadata()),
-                        ctx.eventLoop());
+        exceptionHandler.handleAsync(ctx, cause)
+                        .thenAccept(statusAndMetadata ->
+                                transportStatusListener.transportReportStatus(
+                                        statusAndMetadata.status(),
+                                        statusAndMetadata.metadata()));
     }
 
     @Override

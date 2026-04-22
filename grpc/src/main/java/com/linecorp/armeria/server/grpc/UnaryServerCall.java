@@ -188,7 +188,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             closeListener(statusAndMetadata);
         } catch (Exception ex) {
             exceptionHandler().handleAsync(ctx, ex)
-                    .thenAcceptAsync(errorStatusAndMetadata -> {
+                    .thenAccept(errorStatusAndMetadata -> {
                         final Status status = errorStatusAndMetadata.status();
                         final Metadata metadata = errorStatusAndMetadata.metadata();
                         assert metadata != null;
@@ -202,7 +202,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                                                                    status, metadata));
                         resFuture.complete(response);
                         closeListener(errorSsm);
-                    }, ctx.eventLoop());
+                    });
         }
     }
 

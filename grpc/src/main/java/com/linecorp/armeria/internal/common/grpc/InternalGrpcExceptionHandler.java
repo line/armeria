@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -30,6 +31,7 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.netty.channel.EventLoop;
 
 public final class InternalGrpcExceptionHandler {
 
@@ -41,7 +43,8 @@ public final class InternalGrpcExceptionHandler {
 
     /**
      * Asynchronously handles the specified {@link Throwable} and returns a {@link CompletableFuture}
-     * of {@link StatusAndMetadata}.
+     * of {@link StatusAndMetadata}. The returned future is guaranteed to complete on
+     * {@link RequestContext#eventLoop()} so that callers can safely use non-Async continuations.
      */
     @SuppressWarnings("deprecation")
     public CompletableFuture<StatusAndMetadata> handleAsync(RequestContext ctx, Throwable t) {
@@ -52,31 +55,64 @@ public final class InternalGrpcExceptionHandler {
         }
         final Status status = restoreStatus(Status.fromThrowable(peeled), peeled);
         final Metadata finalMetadata = metadata;
-        return applyAsyncSafely(ctx, status, peeled, metadata)
-                       .handle((s, ex) -> {
-                           if (ex != null || s == null) {
-                               s = applyDefaultHandler(ctx, status, peeled, finalMetadata);
-                           }
-                           return new StatusAndMetadata(s, finalMetadata);
-                       });
+        final EventLoop eventLoop = eventLoopOrNull(ctx);
+        final CompletableFuture<StatusAndMetadata> completion = new CompletableFuture<>();
+        applyAsyncSafely(ctx, status, peeled, metadata)
+                .handle((s, ex) -> {
+                    if (ex != null || s == null) {
+                        s = applyDefaultHandler(ctx, status, peeled, finalMetadata);
+                    }
+                    final StatusAndMetadata result = new StatusAndMetadata(s, finalMetadata);
+                    completeOnEventLoop(completion, result, eventLoop);
+                    return null;
+                });
+        return completion;
     }
 
     /**
      * Asynchronously handles the specified {@link Throwable} with a pre-extracted {@link Status}
-     * and returns a {@link CompletableFuture} of {@link Status}.
+     * and returns a {@link CompletableFuture} of {@link Status}. The returned future is guaranteed
+     * to complete on {@link RequestContext#eventLoop()} so that callers can safely use non-Async
+     * continuations.
      */
     @SuppressWarnings("deprecation")
     public CompletableFuture<Status> handleAsync(RequestContext ctx, Status status,
                                                  Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
         final Status restoredStatus = restoreStatus(status, peeled);
-        return applyAsyncSafely(ctx, restoredStatus, peeled, metadata)
-                       .handle((s, ex) -> {
-                           if (ex != null || s == null) {
-                               s = applyDefaultHandler(ctx, restoredStatus, peeled, metadata);
-                           }
-                           return s;
-                       });
+        final EventLoop eventLoop = eventLoopOrNull(ctx);
+        final CompletableFuture<Status> completion = new CompletableFuture<>();
+        applyAsyncSafely(ctx, restoredStatus, peeled, metadata)
+                .handle((s, ex) -> {
+                    if (ex != null || s == null) {
+                        s = applyDefaultHandler(ctx, restoredStatus, peeled, metadata);
+                    }
+                    completeOnEventLoop(completion, s, eventLoop);
+                    return null;
+                });
+        return completion;
+    }
+
+    @Nullable
+    private static EventLoop eventLoopOrNull(@Nullable RequestContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        try {
+            return ctx.eventLoop();
+        } catch (Exception e) {
+            // ctx may not have an event loop in some derived/mocked contexts; fall back to inline.
+            return null;
+        }
+    }
+
+    private static <T> void completeOnEventLoop(CompletableFuture<T> future, T value,
+                                                @Nullable EventLoop eventLoop) {
+        if (eventLoop == null || eventLoop.inEventLoop()) {
+            future.complete(value);
+        } else {
+            eventLoop.execute(() -> future.complete(value));
+        }
     }
 
     private CompletableFuture<Status> applyAsyncSafely(RequestContext ctx, Status status,
