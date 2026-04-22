@@ -1,0 +1,16 @@
+syntax = "proto3";
+package armeria.xds;
+
+option java_package = "com.linecorp.armeria.xds.api";
+option java_outer_classname = "SupportedFieldProto";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  optional bool supported = 50000;
+}
+
+extend google.protobuf.EnumValueOptions {
+  // Distinct name from the FieldOptions extension to avoid Java codegen name collision.
+  optional bool supported_value = 50000;
+}
