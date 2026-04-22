@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
@@ -901,6 +903,52 @@ public final class GrpcServiceBuilder {
             this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
         }
         return this;
+    }
+
+    /**
+     * Sets the specified {@link AsyncGrpcExceptionHandlerFunction} that asynchronously maps a
+     * {@link Throwable} to a gRPC {@link Status}. Unlike
+     * {@link #exceptionHandler(GrpcExceptionHandlerFunction)}, this variant accepts a functional
+     * interface whose abstract method returns a {@link CompletableFuture}, allowing async-only
+     * handlers to be passed as a lambda directly.
+     *
+     * <p>The handler runs only on async server-side call paths. Client-side exception handling
+     * remains synchronous and this handler is skipped there; chain a synchronous fallback via
+     * {@link #exceptionHandler(GrpcExceptionHandlerFunction)} if you also need client-side
+     * mapping.
+     *
+     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        return exceptionHandler(toGrpcExceptionHandlerFunction(exceptionHandler));
+    }
+
+    @SuppressWarnings("deprecation")
+    private static GrpcExceptionHandlerFunction toGrpcExceptionHandlerFunction(
+            AsyncGrpcExceptionHandlerFunction async) {
+        return new GrpcExceptionHandlerFunction() {
+            @Override
+            @Nullable
+            public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+                // Async-only handler; sync call paths fall through to the next handler or default.
+                return null;
+            }
+
+            @Override
+            public CompletableFuture<@Nullable Status> applyAsync(
+                    RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+                try {
+                    return requireNonNull(async.applyAsync(ctx, status, cause, metadata),
+                                          "async.applyAsync(...)");
+                } catch (Throwable t) {
+                    final CompletableFuture<@Nullable Status> future = new CompletableFuture<>();
+                    future.completeExceptionally(t);
+                    return future;
+                }
+            }
+        };
     }
 
     /**

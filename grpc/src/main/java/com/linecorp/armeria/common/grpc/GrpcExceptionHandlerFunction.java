@@ -76,8 +76,13 @@ public interface GrpcExceptionHandlerFunction {
      *                                       })))
      *            .build();
      * }</pre>
+     *
+     * @deprecated Pass an {@link AsyncGrpcExceptionHandlerFunction} directly to
+     *             {@code GrpcServiceBuilder.asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)}
+     *             instead.
      */
     @UnstableApi
+    @Deprecated
     static GrpcExceptionHandlerFunction ofAsync(AsyncHandler asyncHandler) {
         requireNonNull(asyncHandler, "asyncHandler");
         return new GrpcExceptionHandlerFunction() {
@@ -105,8 +110,11 @@ public interface GrpcExceptionHandlerFunction {
     /**
      * A functional interface used by {@link #ofAsync(AsyncHandler)} for creating
      * async-only exception handlers with lambda syntax.
+     *
+     * @deprecated Use {@link AsyncGrpcExceptionHandlerFunction} instead.
      */
     @UnstableApi
+    @Deprecated
     @FunctionalInterface
     interface AsyncHandler {
         /**
