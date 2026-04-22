@@ -74,6 +74,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
@@ -639,5 +640,16 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
             this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
         }
         return this;
+    }
+
+    /**
+     * Sets the specified {@link AsyncGrpcExceptionHandlerFunction} that asynchronously maps a
+     * {@link Throwable} to a gRPC {@link Status}. {@link AsyncGrpcExceptionHandlerFunction} is a
+     * subinterface of {@link GrpcExceptionHandlerFunction} whose abstract method is
+     * {@code applyAsync}, so an async-only lambda can be passed directly without a wrapper.
+     */
+    public GrpcClientBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        return exceptionHandler(exceptionHandler);
     }
 }

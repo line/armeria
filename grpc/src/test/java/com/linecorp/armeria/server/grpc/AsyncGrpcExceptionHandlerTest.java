@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -71,16 +71,14 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-                                          (ctx, status, cause, metadata) -> {
-                                      return CompletableFuture.supplyAsync(() -> {
+                                  .asyncExceptionHandler((ctx, status, cause, metadata) ->
+                                      CompletableFuture.supplyAsync(() -> {
                                           metadata.put(ERROR_MESSAGE_KEY,
                                                        "translated: " + cause.getMessage());
                                           return Status.INTERNAL
                                                   .withDescription("async-handled")
                                                   .withCause(cause);
-                                      }, ASYNC_EXECUTOR);
-                                  }))
+                                      }, ASYNC_EXECUTOR))
                                   .build());
         }
     };
@@ -92,9 +90,8 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-                                          (ctx, status, cause, metadata) ->
-                                                  UnmodifiableFuture.completedFuture(null)))
+                                  .asyncExceptionHandler((ctx, status, cause, metadata) ->
+                                          UnmodifiableFuture.completedFuture(null))
                                   .build());
         }
     };
@@ -103,25 +100,23 @@ class AsyncGrpcExceptionHandlerTest {
     static final ServerExtension serverWithOrElse = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcExceptionHandlerFunction first = GrpcExceptionHandlerFunction.ofAsync(
-                    (ctx, status, cause, metadata) -> {
-                        if (cause instanceof IllegalArgumentException) {
-                            return UnmodifiableFuture.completedFuture(
-                                    Status.INVALID_ARGUMENT.withDescription("first-handler")
-                                                           .withCause(cause));
-                        }
-                        return UnmodifiableFuture.completedFuture(null);
-                    });
-            final GrpcExceptionHandlerFunction second = GrpcExceptionHandlerFunction.ofAsync(
-                    (ctx, status, cause, metadata) ->
-                            UnmodifiableFuture.completedFuture(
-                                    Status.INTERNAL.withDescription("second-handler")
-                                                   .withCause(cause)));
+            final AsyncGrpcExceptionHandlerFunction first = (ctx, status, cause, metadata) -> {
+                if (cause instanceof IllegalArgumentException) {
+                    return UnmodifiableFuture.completedFuture(
+                            Status.INVALID_ARGUMENT.withDescription("first-handler")
+                                                   .withCause(cause));
+                }
+                return UnmodifiableFuture.completedFuture(null);
+            };
+            final AsyncGrpcExceptionHandlerFunction second = (ctx, status, cause, metadata) ->
+                    UnmodifiableFuture.completedFuture(
+                            Status.INTERNAL.withDescription("second-handler")
+                                           .withCause(cause));
 
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(first.orElse(second))
+                                  .asyncExceptionHandler(first.orElse(second))
                                   .build());
         }
     };
@@ -133,13 +128,12 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-                                          (ctx, status, cause, metadata) -> {
+                                  .asyncExceptionHandler((ctx, status, cause, metadata) -> {
                                       final CompletableFuture<Status> future = new CompletableFuture<>();
                                       future.completeExceptionally(
                                               new RuntimeException("handler failed"));
                                       return future;
-                                  }))
+                                  })
                                   .build());
         }
     };
@@ -151,10 +145,9 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-                                          (ctx, status, cause, metadata) -> {
-                                              throw new RuntimeException("handler threw");
-                                          }))
+                                  .asyncExceptionHandler((ctx, status, cause, metadata) -> {
+                                      throw new RuntimeException("handler threw");
+                                  })
                                   .build());
         }
     };
@@ -166,15 +159,14 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new StreamingErrorService())
-                                  .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-                                          (ctx, status, cause, metadata) -> {
+                                  .asyncExceptionHandler((ctx, status, cause, metadata) -> {
                                       streamingHandlerInvocations.incrementAndGet();
                                       return CompletableFuture.supplyAsync(
                                               () -> Status.INTERNAL
                                                       .withDescription("streaming-async-handled")
                                                       .withCause(cause),
                                               ASYNC_EXECUTOR);
-                                  }))
+                                  })
                                   .build());
         }
     };

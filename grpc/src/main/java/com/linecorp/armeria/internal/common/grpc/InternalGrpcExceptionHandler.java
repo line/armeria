@@ -46,7 +46,6 @@ public final class InternalGrpcExceptionHandler {
      * of {@link StatusAndMetadata}. The returned future is guaranteed to complete on
      * {@link RequestContext#eventLoop()} so that callers can safely use non-Async continuations.
      */
-    @SuppressWarnings("deprecation")
     public CompletableFuture<StatusAndMetadata> handleAsync(RequestContext ctx, Throwable t) {
         final Throwable peeled = peelAndUnwrap(t);
         Metadata metadata = Status.trailersFromThrowable(peeled);
@@ -75,7 +74,6 @@ public final class InternalGrpcExceptionHandler {
      * to complete on {@link RequestContext#eventLoop()} so that callers can safely use non-Async
      * continuations.
      */
-    @SuppressWarnings("deprecation")
     public CompletableFuture<Status> handleAsync(RequestContext ctx, Status status,
                                                  Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
@@ -127,7 +125,6 @@ public final class InternalGrpcExceptionHandler {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private static Status applyDefaultHandler(RequestContext ctx, Status status, Throwable cause,
                                              Metadata metadata) {
         return requireNonNull(GrpcExceptionHandlerFunction.of().apply(ctx, status, cause, metadata),

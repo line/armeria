@@ -448,9 +448,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             });
         } catch (Throwable t) {
             exceptionHandler.handleAsync(ctx, t)
-                            .thenAcceptAsync(statusAndMetadata ->
-                                    close(statusAndMetadata.status(), statusAndMetadata.metadata()),
-                                    ctx.eventLoop());
+                            .thenAccept(statusAndMetadata ->
+                                    close(statusAndMetadata.status(), statusAndMetadata.metadata()));
         }
     }
 

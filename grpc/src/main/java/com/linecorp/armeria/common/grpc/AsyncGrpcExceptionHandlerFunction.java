@@ -29,8 +29,9 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
- * An async variant of {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable} to a gRPC
- * {@link Status} asynchronously.
+ * An async-only variant of {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable} to a
+ * gRPC {@link Status} asynchronously. The synchronous {@link #apply} path always falls through so
+ * only {@link #applyAsync} needs to be implemented.
  *
  * <p>Use this interface when your exception handling logic is inherently asynchronous (e.g., i18n
  * translation from a remote store) and you want to pass a lambda directly to
@@ -49,31 +50,49 @@ import io.grpc.Status;
  *            .build();
  * }</pre>
  *
- * <p>Note that client-side exception handling remains synchronous. Async-only handlers are skipped
- * on those paths unless chained with a synchronous fallback via
- * {@link GrpcExceptionHandlerFunction#orElse}.
+ * <p>Both server-side and client-side paths invoke the async handler; synchronous call sites that
+ * still need a {@link Status} (e.g., non-{@code Async} fallbacks) simply get {@code null} and fall
+ * through to the next handler in the chain or the default handler.
  */
+// Intentional SAM change: applyAsync is the abstract method here; apply falls through by default.
+@SuppressWarnings("FunctionalInterfaceMethodChanged")
 @UnstableApi
 @FunctionalInterface
-public interface AsyncGrpcExceptionHandlerFunction {
+public interface AsyncGrpcExceptionHandlerFunction extends GrpcExceptionHandlerFunction {
+
+    /**
+     * Always returns {@code null} so that synchronous call paths fall through to the next handler in
+     * the chain or to the default {@link GrpcExceptionHandlerFunction}. Async-only handlers provide
+     * their logic via {@link #applyAsync} instead.
+     */
+    @Override
+    default @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                   Metadata metadata) {
+        return null;
+    }
 
     /**
      * Asynchronously maps the specified {@link Throwable} to a gRPC {@link Status} and mutates the
      * specified {@link Metadata}. If the returned {@link CompletableFuture} completes with
      * {@code null}, the next handler in the chain or the default
      * {@link GrpcExceptionHandlerFunction} will be used.
-     *
-     * <p>The specified {@link Status} parameter was created via
-     * {@link Status#fromThrowable(Throwable)}. You can return the {@link Status} or any other
-     * {@link Status} as needed.
      */
+    @Override
     CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status, Throwable cause,
                                                    Metadata metadata);
 
     /**
-     * Returns an {@link AsyncGrpcExceptionHandlerFunction} that returns the result of this handler
-     * when it completes with a non-{@code null} {@link Status}; otherwise, the specified
-     * {@code next} handler is invoked.
+     * Returns an {@link AsyncGrpcExceptionHandlerFunction} that invokes this handler first and
+     * falls back to the specified {@code next} handler when this handler completes with
+     * {@code null}.
+     *
+     * <p>This overload preserves the async type so that chained async handlers can still be passed
+     * directly to
+     * {@code GrpcServiceBuilder#asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)} or
+     * {@code GrpcClientBuilder#asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)}. Mixing a
+     * sync handler into the chain uses the inherited
+     * {@link GrpcExceptionHandlerFunction#orElse(GrpcExceptionHandlerFunction)} instead and widens
+     * the return type to {@link GrpcExceptionHandlerFunction}.
      */
     default AsyncGrpcExceptionHandlerFunction orElse(AsyncGrpcExceptionHandlerFunction next) {
         requireNonNull(next, "next");

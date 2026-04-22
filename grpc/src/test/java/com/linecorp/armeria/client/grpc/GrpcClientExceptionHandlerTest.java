@@ -133,12 +133,11 @@ class GrpcClientExceptionHandlerTest {
         final RuntimeException exception = new RuntimeException();
         final TestServiceBlockingStub stub =
                 GrpcClients.builder(server.httpUri())
-                           .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-                                   (ctx, status, cause, metadata) -> {
-                                       asyncInvocations.incrementAndGet();
-                                       return UnmodifiableFuture.completedFuture(
-                                               Status.INTERNAL.withDescription("async"));
-                                   }))
+                           .asyncExceptionHandler((ctx, status, cause, metadata) -> {
+                               asyncInvocations.incrementAndGet();
+                               return UnmodifiableFuture.completedFuture(
+                                       Status.INTERNAL.withDescription("async"));
+                           })
                            .build(TestServiceBlockingStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> clientCall =
                 stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);

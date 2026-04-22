@@ -51,81 +51,6 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
-     * Returns a new {@link GrpcExceptionHandlerFunction} that only supports asynchronous
-     * exception handling.
-     *
-     * <p>The returned handler's synchronous {@link #apply} method always returns {@code null}
-     * so synchronous call paths can continue to the next handler in the chain or fall back to
-     * the default handler. Server-side call paths use {@link #applyAsync}; client-side exception
-     * handling remains synchronous and therefore requires a synchronous fallback if you need
-     * custom client-side status mapping.
-     *
-     * <p>Use this factory when your exception handling logic is inherently asynchronous
-     * (e.g., i18n translation from a remote store) and you don't need a synchronous variant.
-     *
-     * <p>Example usage:
-     * <pre>{@code
-     * GrpcService.builder()
-     *            .addService(myService)
-     *            .exceptionHandler(GrpcExceptionHandlerFunction.ofAsync(
-     *                    (ctx, status, cause, metadata) ->
-     *                            i18nService.translateAsync(cause, locale)
-     *                                       .thenApply(message -> {
-     *                                           metadata.put(ERROR_MESSAGE_KEY, message);
-     *                                           return status;
-     *                                       })))
-     *            .build();
-     * }</pre>
-     *
-     * @deprecated Pass an {@link AsyncGrpcExceptionHandlerFunction} directly to
-     *             {@code GrpcServiceBuilder.asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)}
-     *             instead.
-     */
-    @UnstableApi
-    @Deprecated
-    static GrpcExceptionHandlerFunction ofAsync(AsyncHandler asyncHandler) {
-        requireNonNull(asyncHandler, "asyncHandler");
-        return new GrpcExceptionHandlerFunction() {
-            @Override
-            public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
-                                          Metadata metadata) {
-                return null;
-            }
-
-            @Override
-            public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
-                                                                   Throwable cause, Metadata metadata) {
-                try {
-                    return requireNonNull(asyncHandler.apply(ctx, status, cause, metadata),
-                                          "asyncHandler.apply(...)");
-                } catch (Throwable t) {
-                    final CompletableFuture<@Nullable Status> future = new CompletableFuture<>();
-                    future.completeExceptionally(t);
-                    return future;
-                }
-            }
-        };
-    }
-
-    /**
-     * A functional interface used by {@link #ofAsync(AsyncHandler)} for creating
-     * async-only exception handlers with lambda syntax.
-     *
-     * @deprecated Use {@link AsyncGrpcExceptionHandlerFunction} instead.
-     */
-    @UnstableApi
-    @Deprecated
-    @FunctionalInterface
-    interface AsyncHandler {
-        /**
-         * Asynchronously maps the specified {@link Throwable} to a gRPC {@link Status}
-         * and mutates the specified {@link Metadata}.
-         */
-        CompletableFuture<@Nullable Status> apply(RequestContext ctx, Status status,
-                                                  Throwable cause, Metadata metadata);
-    }
-
-    /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status} synchronously
      * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
@@ -133,9 +58,10 @@ public interface GrpcExceptionHandlerFunction {
      * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable)}.
      * You can return the {@link Status} or any other {@link Status} as needed.
      *
-     * @deprecated Override {@link #applyAsync(RequestContext, Status, Throwable, Metadata)} instead.
+     * <p>Override {@link #applyAsync(RequestContext, Status, Throwable, Metadata)} instead when your
+     * handler needs to perform asynchronous work, or use {@link AsyncGrpcExceptionHandlerFunction} for
+     * async-only handlers.
      */
-    @Deprecated
     @Nullable
     Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata);
 
@@ -149,13 +75,9 @@ public interface GrpcExceptionHandlerFunction {
      *
      * <p>Override this method when your exception handling logic requires asynchronous operations
      * such as I/O-bound message lookups (e.g., i18n translation from a remote store).
-     * For async-only handlers, consider using {@link #ofAsync(AsyncHandler)} instead.
-     *
-     * <p>Note that client-side exception handling remains synchronous. Async-only handlers are
-     * skipped on those paths unless chained with a synchronous fallback using {@link #orElse}.
+     * For async-only handlers, see {@link AsyncGrpcExceptionHandlerFunction}.
      */
     @UnstableApi
-    @SuppressWarnings("deprecation")
     default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                            Throwable cause, Metadata metadata) {
         try {
@@ -181,7 +103,6 @@ public interface GrpcExceptionHandlerFunction {
         return new GrpcExceptionHandlerFunction() {
 
             @Override
-            @SuppressWarnings("deprecation")
             public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
                                           Metadata metadata) {
                 final Status newStatus =
