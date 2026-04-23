@@ -276,6 +276,8 @@ class XdsClientToSidecarTest {
                           route:
                             cluster: %s
                     http_filters:
+                    # only specified name since proto is not available
+                    - name: istio.alpn
                     - name: envoy.filters.http.router
                       typed_config:
                         "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -298,6 +300,8 @@ class XdsClientToSidecarTest {
                       config_source:
                         ads: {}
                     http_filters:
+                    # only specified name since proto is not available
+                    - name: istio.alpn
                     - name: envoy.filters.http.router
                       typed_config:
                         "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

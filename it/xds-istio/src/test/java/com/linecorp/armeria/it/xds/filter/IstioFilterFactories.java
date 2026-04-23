@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.it.xds.filter;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 
+import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
@@ -30,7 +33,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
  * automatically by {@link com.linecorp.armeria.xds.filter.HttpFilterFactoryRegistry}.
  * Returns {@code null} from {@code create()} so the filter is silently skipped.
  */
-public final class IstioNoOpFilterFactories {
+public final class IstioFilterFactories {
 
     public abstract static class Base implements HttpFilterFactory {
         @Override
@@ -47,10 +50,31 @@ public final class IstioNoOpFilterFactories {
         }
     }
 
-    public static final class IstioAlpn extends Base {
+    public static final class IstioAlpn implements HttpFilterFactory {
+
+        private static final AlpnFilter ALPN_FILTER = new AlpnFilter();
+
         @Override
         public String filterName() {
             return "istio.alpn";
+        }
+
+        @Override
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config) {
+            // we need to also generate istio proto configs to actually dynamically decide alpn
+            // based on filter config, but for testing purposes we just assume h2 is always used
+            return ALPN_FILTER;
+        }
+
+        private static class AlpnFilter implements XdsHttpFilter {
+
+            @Override
+            public HttpPreprocessor httpPreprocessor() {
+                return (delegate, ctx, req) -> {
+                    ctx.setAttr(XdsCommonUtil.ALPN_OVERRIDE_KEY, ImmutableSet.of("istio-h2", "istio", "h2"));
+                    return delegate.execute(ctx, req);
+                };
+            }
         }
     }
 
@@ -89,6 +113,13 @@ public final class IstioNoOpFilterFactories {
         }
     }
 
+    public static final class EnvoyBrotliCompressor extends Base {
+        @Override
+        public String filterName() {
+            return "envoy.filters.http.compressor.brotli";
+        }
+    }
+
     public static final class EnvoyGrpcStats extends Base {
         @Override
         public String filterName() {
@@ -96,5 +127,5 @@ public final class IstioNoOpFilterFactories {
         }
     }
 
-    private IstioNoOpFilterFactories() {}
+    private IstioFilterFactories() {}
 }

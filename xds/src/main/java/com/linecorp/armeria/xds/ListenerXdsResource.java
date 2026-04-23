@@ -20,6 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -37,6 +40,8 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
  */
 @UnstableApi
 public final class ListenerXdsResource extends AbstractXdsResource {
+
+    private static final Logger logger = LoggerFactory.getLogger(ListenerXdsResource.class);
 
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
@@ -65,16 +70,7 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         XdsValidatorIndexRegistry.assertValid(listener);
         this.listener = listener;
 
-        if (listener.getApiListener().hasApiListener()) {
-            final Any apiListener = listener.getApiListener().getApiListener();
-            if (HTTP_CONNECTION_MANAGER_TYPE_URL.equals(apiListener.getTypeUrl())) {
-                connectionManager = XdsValidatorIndexRegistry.unpack(apiListener, HttpConnectionManager.class);
-            } else {
-                throw new IllegalArgumentException("Unsupported api listener: " + apiListener);
-            }
-        } else {
-            connectionManager = extractHcmFromFilterChains(listener);
-        }
+        connectionManager = findHcm(listener);
         router = router(connectionManager);
     }
 
@@ -89,7 +85,8 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     }
 
     /**
-     * The {@link HttpConnectionManager} contained in the {@link Listener#getListenerFiltersList()}.
+     * The {@link HttpConnectionManager} derived from the {@link Listener} intended for client-side.
+     * The lookup order is: api_listener, filter chains, default filter chain.
      */
     @Nullable
     public HttpConnectionManager connectionManager() {
@@ -136,17 +133,41 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     }
 
     @Nullable
-    private static HttpConnectionManager extractHcmFromFilterChains(Listener listener) {
+    private static HttpConnectionManager findHcm(Listener listener) {
+        // 1. api_listener
+        if (listener.getApiListener().hasApiListener()) {
+            final Any apiListener = listener.getApiListener().getApiListener();
+            return XdsValidatorIndexRegistry.unpack(apiListener, HttpConnectionManager.class);
+        }
+        logger.warn("No api_listener set for listener {}; falling back to filter chains.", listener.getName());
+
+        // 2. filter chains
         for (FilterChain fc : listener.getFilterChainsList()) {
-            for (Filter filter : fc.getFiltersList()) {
-                if (HTTP_CONNECTION_MANAGER_FILTER_NAME.equals(filter.getName()) &&
-                    filter.hasTypedConfig() &&
-                    HTTP_CONNECTION_MANAGER_TYPE_URL.equals(
-                            filter.getTypedConfig().getTypeUrl())) {
-                    return XdsValidatorIndexRegistry.unpack(
-                            filter.getTypedConfig(), HttpConnectionManager.class);
-                }
+            final HttpConnectionManager hcm = findHcmInFilterChain(fc);
+            if (hcm != null) {
+                return hcm;
             }
+        }
+        // 3. default filter chain
+        if (listener.hasDefaultFilterChain()) {
+            return findHcmInFilterChain(listener.getDefaultFilterChain());
+        }
+        return null;
+    }
+
+    @Nullable
+    private static HttpConnectionManager findHcmInFilterChain(FilterChain filterChain) {
+        final List<Filter> filters = filterChain.getFiltersList();
+        if (filters.isEmpty()) {
+            return null;
+        }
+        // HCM is a terminal network filter and should be the last in the chain.
+        final Filter last = filters.get(filters.size() - 1);
+        if (HTTP_CONNECTION_MANAGER_FILTER_NAME.equals(last.getName()) &&
+            last.hasTypedConfig() &&
+            HTTP_CONNECTION_MANAGER_TYPE_URL.equals(last.getTypedConfig().getTypeUrl())) {
+            return XdsValidatorIndexRegistry.unpack(
+                    last.getTypedConfig(), HttpConnectionManager.class);
         }
         return null;
     }

@@ -1,8 +1,9 @@
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$IstioStats
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$IstioAlpn
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$IstioMetadataExchange
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$EnvoyFault
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$EnvoyCors
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$EnvoyGzipCompressor
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$EnvoyZstdCompressor
-com.linecorp.armeria.it.xds.filter.IstioNoOpFilterFactories$EnvoyGrpcStats
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$IstioStats
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$IstioAlpn
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$IstioMetadataExchange
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$EnvoyFault
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$EnvoyCors
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$EnvoyGzipCompressor
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$EnvoyZstdCompressor
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$EnvoyBrotliCompressor
+com.linecorp.armeria.it.xds.filter.IstioFilterFactories$EnvoyGrpcStats

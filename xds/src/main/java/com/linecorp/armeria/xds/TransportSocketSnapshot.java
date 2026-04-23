@@ -46,7 +46,6 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 public final class TransportSocketSnapshot implements Snapshot<TransportSocket> {
 
     private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
-    private static final String ISTIO_PEER_EXCHANGE = "istio-peer-exchange";
     private static boolean warnedNoVerify;
 
     private final TransportSocket transportSocket;
@@ -110,14 +109,9 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder()
                                                               .endpointIdentificationAlgorithm("");
         if (upstreamTlsContext != null) {
-            // Armeria doesn't implement "istio-peer-exchange" for now.
             final List<String> alpn = upstreamTlsContext.getCommonTlsContext().getAlpnProtocolsList();
             if (!alpn.isEmpty()) {
-                final ImmutableList<String> filteredAlpn =
-                        alpn.stream()
-                            .filter(a -> !ISTIO_PEER_EXCHANGE.equals(a))
-                            .collect(ImmutableList.toImmutableList());
-                specBuilder.alpnProtocols(filteredAlpn);
+                specBuilder.alpnProtocols(alpn);
             }
         }
         final ImmutableList.Builder<TlsPeerVerifierFactory> verifiersBuilder = ImmutableList.builder();
