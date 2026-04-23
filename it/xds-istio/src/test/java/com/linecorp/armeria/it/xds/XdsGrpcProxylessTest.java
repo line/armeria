@@ -131,7 +131,7 @@ class XdsGrpcProxylessTest {
 
     private static Bootstrap loadParsedBootstrap() throws Exception {
         final Path bootstrapPath = Paths.get("/etc/istio/proxy/envoy-rev.json");
-        assertThat(bootstrapPath).exists();
+        await().untilAsserted(() -> assertThat(bootstrapPath).exists());
         logger.info("Using Istio bootstrap file: {}", bootstrapPath);
         final String bootstrapJson = Files.readString(bootstrapPath);
         final String rewritten = XdsResourceReader.rewriteXdsGrpcBootstrap(bootstrapJson);
