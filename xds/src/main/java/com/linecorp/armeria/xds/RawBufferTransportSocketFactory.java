@@ -31,6 +31,7 @@ final class RawBufferTransportSocketFactory implements TransportSocketFactory {
     private static final String NAME = "envoy.transport_sockets.raw_buffer";
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer";
+    private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
     private RawBufferTransportSocketFactory() {}
 
@@ -41,7 +42,7 @@ final class RawBufferTransportSocketFactory implements TransportSocketFactory {
 
     @Override
     public List<String> typeUrls() {
-        return ImmutableList.of(TYPE_URL);
+        return TYPE_URLS;
     }
 
     @Override

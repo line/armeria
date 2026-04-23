@@ -44,6 +44,7 @@ public final class RouterFilterFactory implements HttpFilterFactory {
     private static final String NAME = "envoy.filters.http.router";
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
+    private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
     private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter = new RouterFilter<>();
     private static final RouterFilter<HttpRequest, HttpResponse> httpFilter = new RouterFilter<>();
 
@@ -54,7 +55,7 @@ public final class RouterFilterFactory implements HttpFilterFactory {
 
     @Override
     public List<String> typeUrls() {
-        return ImmutableList.of(TYPE_URL);
+        return TYPE_URLS;
     }
 
     @Override

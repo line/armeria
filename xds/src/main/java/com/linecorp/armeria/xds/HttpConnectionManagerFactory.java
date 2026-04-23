@@ -30,6 +30,7 @@ final class HttpConnectionManagerFactory implements XdsExtensionFactory {
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3" +
             ".HttpConnectionManager";
+    private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
     private HttpConnectionManagerFactory() {}
 
@@ -40,7 +41,7 @@ final class HttpConnectionManagerFactory implements XdsExtensionFactory {
 
     @Override
     public List<String> typeUrls() {
-        return ImmutableList.of(TYPE_URL);
+        return TYPE_URLS;
     }
 
     HttpConnectionManager create(Any config, XdsResourceValidator validator) {

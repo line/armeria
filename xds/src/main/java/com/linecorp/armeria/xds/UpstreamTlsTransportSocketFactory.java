@@ -38,6 +38,7 @@ final class UpstreamTlsTransportSocketFactory implements TransportSocketFactory 
     private static final String NAME = "envoy.transport_sockets.tls";
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext";
+    private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
     private UpstreamTlsTransportSocketFactory() {}
 
@@ -48,7 +49,7 @@ final class UpstreamTlsTransportSocketFactory implements TransportSocketFactory 
 
     @Override
     public List<String> typeUrls() {
-        return ImmutableList.of(TYPE_URL);
+        return TYPE_URLS;
     }
 
     @Override
