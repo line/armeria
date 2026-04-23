@@ -215,7 +215,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
 
-        exceptionHandler.handleAsync(ctx, status, cause, metadata)
+        exceptionHandler.applyAsyncSafely(ctx, status, cause, metadata)
                         .thenAccept(newStatus -> {
                             if (status.getDescription() != null) {
                                 newStatus = newStatus.withDescription(status.getDescription());
@@ -229,7 +229,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void close(Throwable exception, boolean cancelled) {
-        exceptionHandler.handleAsync(ctx, exception)
+        exceptionHandler.applyAsyncSafely(ctx, exception)
                         .thenAccept(statusAndMetadata -> {
                             close(new ServerStatusAndMetadata(
                                     statusAndMetadata.status(), statusAndMetadata.metadata(),

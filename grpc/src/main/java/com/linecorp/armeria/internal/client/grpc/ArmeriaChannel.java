@@ -173,7 +173,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
                 (unused, cause) -> HttpResponse.of(
-                        exceptionHandler.handleAsync(ctx, cause)
+                        exceptionHandler.applyAsyncSafely(ctx, cause)
                                         .thenApply(statusAndMetadata -> {
                                             Status s = statusAndMetadata.status();
                                             if (s.getDescription() == null) {

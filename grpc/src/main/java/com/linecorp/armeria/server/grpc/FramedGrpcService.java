@@ -247,7 +247,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
                     assert defaultHeaders != null;
                     return HttpResponse.of(
-                            exceptionHandler.handleAsync(ctx, status, e, metadata)
+                            exceptionHandler.applyAsyncSafely(ctx, status, e, metadata)
                                             .thenApply(newStatus -> HttpResponse.of(
                                                     (ResponseHeaders) AbstractServerCall
                                                             .statusToTrailers(
@@ -335,7 +335,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            call.exceptionHandler().handleAsync(ctx, cancellationCause)
+            call.exceptionHandler().applyAsyncSafely(ctx, cancellationCause)
                 .thenAccept(statusAndMetadata -> {
                     call.close(new ServerStatusAndMetadata(
                             statusAndMetadata.status(), statusAndMetadata.metadata(), true));

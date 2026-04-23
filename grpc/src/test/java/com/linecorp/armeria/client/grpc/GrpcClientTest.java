@@ -772,7 +772,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(grpcExceptionHandler.handleAsync(null, responseObserver.getError())
+        assertThat(grpcExceptionHandler.applyAsyncSafely(null, responseObserver.getError())
                                        .join().status().getCode())
                 .isEqualTo(Code.CANCELLED);
 
@@ -808,7 +808,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
-        assertThat(grpcExceptionHandler.handleAsync(null, responseObserver.getError()).join().status()
+        assertThat(grpcExceptionHandler.applyAsyncSafely(null, responseObserver.getError()).join().status()
                                        .getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
@@ -1442,7 +1442,7 @@ class GrpcClientTest {
         recorder.awaitCompletion();
 
         assertThat(recorder.getError()).isNotNull();
-        assertThat(grpcExceptionHandler.handleAsync(null, recorder.getError()).join().status()
+        assertThat(grpcExceptionHandler.applyAsyncSafely(null, recorder.getError()).join().status()
                                        .getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
@@ -1642,9 +1642,9 @@ class GrpcClientTest {
         verify(responseObserver,
                timeout(operationTimeoutMillis())).onError(captor.capture());
 
-        assertThat(grpcExceptionHandler.handleAsync(null, captor.getValue()).join().status()
+        assertThat(grpcExceptionHandler.applyAsyncSafely(null, captor.getValue()).join().status()
                                        .getCode()).isEqualTo(Status.UNKNOWN.getCode());
-        assertThat(grpcExceptionHandler.handleAsync(null, captor.getValue()).join().status()
+        assertThat(grpcExceptionHandler.applyAsyncSafely(null, captor.getValue()).join().status()
                                        .getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
 

@@ -909,8 +909,6 @@ public final class GrpcServiceBuilder {
      * {@link Throwable} to a gRPC {@link Status}. {@link AsyncGrpcExceptionHandlerFunction} is a
      * subinterface of {@link GrpcExceptionHandlerFunction} whose abstract method is
      * {@code applyAsync}, so an async-only lambda can be passed directly without a wrapper.
-     *
-     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
     @UnstableApi
     public GrpcServiceBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {

@@ -447,7 +447,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            exceptionHandler.handleAsync(ctx, t)
+            exceptionHandler.applyAsyncSafely(ctx, t)
                             .thenAccept(statusAndMetadata ->
                                     close(statusAndMetadata.status(), statusAndMetadata.metadata()));
         }
@@ -506,7 +506,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        exceptionHandler.handleAsync(ctx, t)
+        exceptionHandler.applyAsyncSafely(ctx, t)
                         .thenAccept(statusAndMetadata ->
                                 closeWhenEos(statusAndMetadata.status(), statusAndMetadata.metadata()));
     }

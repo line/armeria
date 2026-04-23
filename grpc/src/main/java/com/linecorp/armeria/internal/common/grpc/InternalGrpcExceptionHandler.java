@@ -45,8 +45,10 @@ public final class InternalGrpcExceptionHandler {
      * Asynchronously handles the specified {@link Throwable} and returns a {@link CompletableFuture}
      * of {@link StatusAndMetadata}. The returned future is guaranteed to complete on
      * {@link RequestContext#eventLoop()} so that callers can safely use non-Async continuations.
+     * Exceptions raised by the delegate handler and {@code null} results fall back to the default
+     * gRPC exception handler, so callers never see a failed future.
      */
-    public CompletableFuture<StatusAndMetadata> handleAsync(RequestContext ctx, Throwable t) {
+    public CompletableFuture<StatusAndMetadata> applyAsyncSafely(RequestContext ctx, Throwable t) {
         final Throwable peeled = peelAndUnwrap(t);
         Metadata metadata = Status.trailersFromThrowable(peeled);
         if (metadata == null) {
@@ -56,7 +58,7 @@ public final class InternalGrpcExceptionHandler {
         final Metadata finalMetadata = metadata;
         final EventLoop eventLoop = eventLoopOrNull(ctx);
         final CompletableFuture<StatusAndMetadata> completion = new CompletableFuture<>();
-        applyAsyncSafely(ctx, status, peeled, metadata)
+        invokeDelegate(ctx, status, peeled, metadata)
                 .handle((s, ex) -> {
                     if (ex != null || s == null) {
                         s = applyDefaultHandler(ctx, status, peeled, finalMetadata);
@@ -72,15 +74,16 @@ public final class InternalGrpcExceptionHandler {
      * Asynchronously handles the specified {@link Throwable} with a pre-extracted {@link Status}
      * and returns a {@link CompletableFuture} of {@link Status}. The returned future is guaranteed
      * to complete on {@link RequestContext#eventLoop()} so that callers can safely use non-Async
-     * continuations.
+     * continuations. Exceptions raised by the delegate handler and {@code null} results fall back
+     * to the default gRPC exception handler, so callers never see a failed future.
      */
-    public CompletableFuture<Status> handleAsync(RequestContext ctx, Status status,
-                                                 Throwable cause, Metadata metadata) {
+    public CompletableFuture<Status> applyAsyncSafely(RequestContext ctx, Status status,
+                                                      Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
         final Status restoredStatus = restoreStatus(status, peeled);
         final EventLoop eventLoop = eventLoopOrNull(ctx);
         final CompletableFuture<Status> completion = new CompletableFuture<>();
-        applyAsyncSafely(ctx, restoredStatus, peeled, metadata)
+        invokeDelegate(ctx, restoredStatus, peeled, metadata)
                 .handle((s, ex) -> {
                     if (ex != null || s == null) {
                         s = applyDefaultHandler(ctx, restoredStatus, peeled, metadata);
@@ -113,8 +116,8 @@ public final class InternalGrpcExceptionHandler {
         }
     }
 
-    private CompletableFuture<Status> applyAsyncSafely(RequestContext ctx, Status status,
-                                                       Throwable cause, Metadata metadata) {
+    private CompletableFuture<Status> invokeDelegate(RequestContext ctx, Status status,
+                                                     Throwable cause, Metadata metadata) {
         try {
             return requireNonNull(delegate.applyAsync(ctx, status, cause, metadata),
                                   "delegate.applyAsync(...)");

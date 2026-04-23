@@ -30,8 +30,7 @@ import io.grpc.Status;
 
 /**
  * An async-only variant of {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable} to a
- * gRPC {@link Status} asynchronously. The synchronous {@link #apply} path always falls through so
- * only {@link #applyAsync} needs to be implemented.
+ * gRPC {@link Status} asynchronously. Only {@link #applyAsync} needs to be implemented.
  *
  * <p>Use this interface when your exception handling logic is inherently asynchronous (e.g., i18n
  * translation from a remote store) and you want to pass a lambda directly to
@@ -50,25 +49,30 @@ import io.grpc.Status;
  *            .build();
  * }</pre>
  *
- * <p>Both server-side and client-side paths invoke the async handler; synchronous call sites that
- * still need a {@link Status} (e.g., non-{@code Async} fallbacks) simply get {@code null} and fall
- * through to the next handler in the chain or the default handler.
+ * <p>This interface is async-only. The inherited synchronous {@link #apply} method throws
+ * {@link UnsupportedOperationException} by default; implement {@link GrpcExceptionHandlerFunction}
+ * directly if you need a synchronous handler.
  */
-// Intentional SAM change: applyAsync is the abstract method here; apply falls through by default.
+// Intentional SAM change: applyAsync is the abstract method here; apply is unsupported.
 @SuppressWarnings("FunctionalInterfaceMethodChanged")
 @UnstableApi
 @FunctionalInterface
 public interface AsyncGrpcExceptionHandlerFunction extends GrpcExceptionHandlerFunction {
 
     /**
-     * Always returns {@code null} so that synchronous call paths fall through to the next handler in
-     * the chain or to the default {@link GrpcExceptionHandlerFunction}. Async-only handlers provide
-     * their logic via {@link #applyAsync} instead.
+     * Throws {@link UnsupportedOperationException} because this interface is async-only; use
+     * {@link #applyAsync} instead. Implement {@link GrpcExceptionHandlerFunction} directly if you
+     * need a synchronous handler.
+     *
+     * @deprecated Use {@link #applyAsync(RequestContext, Status, Throwable, Metadata)} instead.
      */
     @Override
+    @Deprecated
     default @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
                                    Metadata metadata) {
-        return null;
+        throw new UnsupportedOperationException(
+                "apply() is not supported on AsyncGrpcExceptionHandlerFunction; use applyAsync(...) " +
+                "instead. Implement GrpcExceptionHandlerFunction directly for synchronous handlers.");
     }
 
     /**
@@ -89,10 +93,7 @@ public interface AsyncGrpcExceptionHandlerFunction extends GrpcExceptionHandlerF
      * <p>This overload preserves the async type so that chained async handlers can still be passed
      * directly to
      * {@code GrpcServiceBuilder#asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)} or
-     * {@code GrpcClientBuilder#asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)}. Mixing a
-     * sync handler into the chain uses the inherited
-     * {@link GrpcExceptionHandlerFunction#orElse(GrpcExceptionHandlerFunction)} instead and widens
-     * the return type to {@link GrpcExceptionHandlerFunction}.
+     * {@code GrpcClientBuilder#asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction)}.
      */
     default AsyncGrpcExceptionHandlerFunction orElse(AsyncGrpcExceptionHandlerFunction next) {
         requireNonNull(next, "next");

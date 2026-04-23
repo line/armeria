@@ -80,13 +80,7 @@ public interface GrpcExceptionHandlerFunction {
     @UnstableApi
     default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                            Throwable cause, Metadata metadata) {
-        try {
-            return UnmodifiableFuture.completedFuture(apply(ctx, status, cause, metadata));
-        } catch (Throwable t) {
-            final CompletableFuture<@Nullable Status> future = new CompletableFuture<>();
-            future.completeExceptionally(t);
-            return future;
-        }
+        return UnmodifiableFuture.completedFuture(apply(ctx, status, cause, metadata));
     }
 
     /**
@@ -117,15 +111,14 @@ public interface GrpcExceptionHandlerFunction {
             public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
                                                                    Throwable cause,
                                                                    Metadata metadata) {
-                return GrpcExceptionHandlerFunction.this.applyAsync(ctx, status, cause, metadata)
-                                                        .thenCompose(newStatus -> {
-                                                            if (newStatus != null) {
-                                                                return UnmodifiableFuture.completedFuture(
-                                                                        newStatus);
-                                                            }
-                                                            return next.applyAsync(ctx, status, cause,
-                                                                                   metadata);
-                                                        });
+                return GrpcExceptionHandlerFunction
+                        .this.applyAsync(ctx, status, cause, metadata)
+                             .thenCompose(newStatus -> {
+                                 if (newStatus != null) {
+                                     return UnmodifiableFuture.completedFuture(newStatus);
+                                 }
+                                 return next.applyAsync(ctx, status, cause, metadata);
+                             });
             }
         };
     }

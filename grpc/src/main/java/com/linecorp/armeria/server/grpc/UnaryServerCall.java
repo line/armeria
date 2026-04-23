@@ -145,6 +145,10 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void doClose(ServerStatusAndMetadata statusAndMetadata) {
+        // Preserves the original "exactly once closeListener" semantics that relied on a
+        // finally block: capture any exception from building/logging/completing the happy-path
+        // response and route it through the async handler with its own try/finally.
+        Exception caught = null;
         try {
             final ResponseHeaders responseHeaders = responseHeaders();
             final Status status = statusAndMetadata.status();
@@ -185,25 +189,34 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
             resFuture.complete(response);
-            closeListener(statusAndMetadata);
         } catch (Exception ex) {
-            exceptionHandler().handleAsync(ctx, ex)
-                    .thenAccept(errorStatusAndMetadata -> {
-                        final Status status = errorStatusAndMetadata.status();
-                        final Metadata metadata = errorStatusAndMetadata.metadata();
-                        assert metadata != null;
-                        final ServerStatusAndMetadata errorSsm =
-                                new ServerStatusAndMetadata(status, metadata, true);
+            caught = ex;
+        }
 
+        if (caught == null) {
+            closeListener(statusAndMetadata);
+            return;
+        }
+
+        final Exception finalCaught = caught;
+        exceptionHandler().applyAsyncSafely(ctx, finalCaught)
+                .thenAccept(errorStatusAndMetadata -> {
+                    final Status status = errorStatusAndMetadata.status();
+                    final Metadata metadata = errorStatusAndMetadata.metadata();
+                    assert metadata != null;
+                    final ServerStatusAndMetadata errorSsm =
+                            new ServerStatusAndMetadata(status, metadata, true);
+                    try {
                         final ResponseHeadersBuilder trailersBuilder =
                                 defaultResponseHeaders().toBuilder();
-                        final HttpResponse response = HttpResponse.of(
+                        final HttpResponse errorResponse = HttpResponse.of(
                                 (ResponseHeaders) statusToTrailers(ctx, trailersBuilder,
                                                                    status, metadata));
-                        resFuture.complete(response);
+                        resFuture.complete(errorResponse);
+                    } finally {
                         closeListener(errorSsm);
-                    });
-        }
+                    }
+                });
     }
 
     @Nullable

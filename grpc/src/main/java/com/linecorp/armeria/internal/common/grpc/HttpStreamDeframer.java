@@ -118,7 +118,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                exceptionHandler.handleAsync(ctx, t)
+                exceptionHandler.applyAsyncSafely(ctx, t)
                                 .thenAccept(statusAndMetadata ->
                                         transportStatusListener.transportReportStatus(
                                                 statusAndMetadata.status(),
@@ -148,7 +148,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        exceptionHandler.handleAsync(ctx, cause)
+        exceptionHandler.applyAsyncSafely(ctx, cause)
                         .thenAccept(statusAndMetadata ->
                                 transportStatusListener.transportReportStatus(
                                         statusAndMetadata.status(),
