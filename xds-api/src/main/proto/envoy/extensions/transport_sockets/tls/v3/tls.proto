@@ -15,6 +15,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.transport_sockets.tls.v3";
 option java_outer_classname = "TlsProto";
 option java_multiple_files = true;
@@ -36,10 +38,10 @@ message UpstreamTlsContext {
   //
   //   Server certificate verification is not enabled by default. To enable verification, configure
   //   :ref:`trusted_ca<envoy_v3_api_field_extensions.transport_sockets.tls.v3.CertificateValidationContext.trusted_ca>`.
-  CommonTlsContext common_tls_context = 1;
+  CommonTlsContext common_tls_context = 1 [(armeria.xds.supported) = true];
 
   // SNI string to use when creating TLS backend connections.
-  string sni = 2 [(validate.rules).string = {max_bytes: 255}];
+  string sni = 2 [(validate.rules).string = {max_bytes: 255}, (armeria.xds.supported) = true];
 
   // If true, replaces the SNI for the connection with the hostname of the upstream host, if
   // the hostname is known due to either a DNS cluster type or the
@@ -245,12 +247,12 @@ message CommonTlsContext {
 
     // How to validate peer certificates.
     CertificateValidationContext default_validation_context = 1
-        [(validate.rules).message = {required: true}];
+        [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
     // Config for fetching validation context via SDS API. Note SDS API allows certificates to be
     // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
     SdsSecretConfig validation_context_sds_secret_config = 2
-        [(validate.rules).message = {required: true}];
+        [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
     // Certificate provider for fetching CA certs. This will populate the
     // ``default_validation_context.trusted_ca`` field.
@@ -276,7 +278,7 @@ message CommonTlsContext {
   //
   // If ``tls_certificate_provider_instance`` is set, this field is ignored.
   // If this field is set, ``tls_certificate_sds_secret_configs`` is ignored.
-  repeated TlsCertificate tls_certificates = 2;
+  repeated TlsCertificate tls_certificates = 2 [(armeria.xds.supported) = true];
 
   // Configs for fetching TLS certificates via SDS API. Note SDS API allows certificates to be
   // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
@@ -286,7 +288,7 @@ message CommonTlsContext {
   //
   // If ``tls_certificates`` or ``tls_certificate_provider_instance`` are set, this field
   // is ignored.
-  repeated SdsSecretConfig tls_certificate_sds_secret_configs = 6;
+  repeated SdsSecretConfig tls_certificate_sds_secret_configs = 6 [(armeria.xds.supported) = true];
 
   // Certificate provider instance for fetching TLS certs.
   //
@@ -314,11 +316,11 @@ message CommonTlsContext {
 
   oneof validation_context_type {
     // How to validate peer certificates.
-    CertificateValidationContext validation_context = 3;
+    CertificateValidationContext validation_context = 3 [(armeria.xds.supported) = true];
 
     // Config for fetching validation context via SDS API. Note SDS API allows certificates to be
     // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
-    SdsSecretConfig validation_context_sds_secret_config = 7;
+    SdsSecretConfig validation_context_sds_secret_config = 7 [(armeria.xds.supported) = true];
 
     // Combines the default ``CertificateValidationContext`` with the SDS-provided dynamic context for certificate
     // validation.
@@ -331,7 +333,7 @@ message CommonTlsContext {
     // * **Boolean Fields:** Boolean fields are combined using a logical OR operation.
     //
     // The resulting ``CertificateValidationContext`` is used to perform certificate validation.
-    CombinedCertificateValidationContext combined_validation_context = 8;
+    CombinedCertificateValidationContext combined_validation_context = 8 [(armeria.xds.supported) = true];
 
     // Certificate provider for fetching validation context.
     // [#not-implemented-hide:]

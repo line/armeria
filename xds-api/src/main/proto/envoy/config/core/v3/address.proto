@@ -12,6 +12,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "AddressProto";
 option java_multiple_files = true;
@@ -27,7 +29,7 @@ message Pipe {
   // abstract namespace. The starting '@' is replaced by a null byte by Envoy.
   // Paths starting with '@' will result in an error in environments other than
   // Linux.
-  string path = 1 [(validate.rules).string = {min_len: 1}];
+  string path = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   // The mode for the Pipe. Not applicable for abstract sockets.
   uint32 mode = 2 [(validate.rules).uint32 = {lte: 511}];
@@ -72,12 +74,12 @@ message SocketAddress {
   // address must be an IP (``STATIC`` or ``EDS`` clusters) or a hostname resolved by DNS
   // (``STRICT_DNS`` or ``LOGICAL_DNS`` clusters). Address resolution can be customized
   // via :ref:`resolver_name <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>`.
-  string address = 2 [(validate.rules).string = {min_len: 1}];
+  string address = 2 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   oneof port_specifier {
     option (validate.required) = true;
 
-    uint32 port_value = 3 [(validate.rules).uint32 = {lte: 65535}];
+    uint32 port_value = 3 [(validate.rules).uint32 = {lte: 65535}, (armeria.xds.supported) = true];
 
     // This is only valid if :ref:`resolver_name
     // <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>` is specified below and the
@@ -189,9 +191,9 @@ message Address {
   oneof address {
     option (validate.required) = true;
 
-    SocketAddress socket_address = 1;
+    SocketAddress socket_address = 1 [(armeria.xds.supported) = true];
 
-    Pipe pipe = 2;
+    Pipe pipe = 2 [(armeria.xds.supported) = true];
 
     // Specifies a user-space address handled by :ref:`internal listeners
     // <envoy_v3_api_field_config.listener.v3.Listener.internal_listener>`.

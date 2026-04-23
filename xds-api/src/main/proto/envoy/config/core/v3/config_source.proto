@@ -17,6 +17,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "ConfigSourceProto";
 option java_multiple_files = true;
@@ -29,13 +31,13 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 // protocol versions (in distinct configuration fields).
 enum ApiVersion {
   // When not specified, we assume v3; it is the only supported version.
-  AUTO = 0;
+  AUTO = 0 [(armeria.xds.supported_value) = true];
 
   // Use xDS v2 API. This is no longer supported.
   V2 = 1 [deprecated = true, (envoy.annotations.deprecated_at_minor_version_enum) = "3.0"];
 
   // Use xDS v3 API.
-  V3 = 2;
+  V3 = 2 [(armeria.xds.supported_value) = true];
 }
 
 // API configuration source. This identifies the API type and cluster that Envoy
@@ -57,30 +59,30 @@ message ApiConfigSource {
     REST = 1;
 
     // SotW gRPC service.
-    GRPC = 2;
+    GRPC = 2 [(armeria.xds.supported_value) = true];
 
     // Using the delta xDS gRPC service, i.e. DeltaDiscovery{Request,Response}
     // rather than Discovery{Request,Response}. Rather than sending Envoy the entire state
     // with every update, the xDS server only sends what has changed since the last update.
-    DELTA_GRPC = 3;
+    DELTA_GRPC = 3 [(armeria.xds.supported_value) = true];
 
     // SotW xDS gRPC with ADS. All resources which resolve to this configuration source will be
     // multiplexed on a single connection to an ADS endpoint.
     // [#not-implemented-hide:]
-    AGGREGATED_GRPC = 5;
+    AGGREGATED_GRPC = 5 [(armeria.xds.supported_value) = true];
 
     // Delta xDS gRPC with ADS. All resources which resolve to this configuration source will be
     // multiplexed on a single connection to an ADS endpoint.
     // [#not-implemented-hide:]
-    AGGREGATED_DELTA_GRPC = 6;
+    AGGREGATED_DELTA_GRPC = 6 [(armeria.xds.supported_value) = true];
   }
 
   // API type (gRPC, REST, delta gRPC)
-  ApiType api_type = 1 [(validate.rules).enum = {defined_only: true}];
+  ApiType api_type = 1 [(validate.rules).enum = {defined_only: true}, (armeria.xds.supported) = true];
 
   // API version for xDS transport protocol. This describes the xDS gRPC/REST
   // endpoint and version of [Delta]DiscoveryRequest/Response used on the wire.
-  ApiVersion transport_api_version = 8 [(validate.rules).enum = {defined_only: true}];
+  ApiVersion transport_api_version = 8 [(validate.rules).enum = {defined_only: true}, (armeria.xds.supported) = true];
 
   // Cluster names should be used only with REST. If > 1
   // cluster is defined, clusters will be cycled through if any kind of failure
@@ -94,7 +96,7 @@ message ApiConfigSource {
 
   // Multiple gRPC services be provided for GRPC. If > 1 cluster is defined,
   // services will be cycled through if any kind of failure occurs.
-  repeated GrpcService grpc_services = 4;
+  repeated GrpcService grpc_services = 4 [(armeria.xds.supported) = true];
 
   // For REST APIs, the delay between successive polls.
   google.protobuf.Duration refresh_delay = 3;
@@ -217,11 +219,11 @@ message ConfigSource {
     PathConfigSource path_config_source = 8;
 
     // API configuration source.
-    ApiConfigSource api_config_source = 2;
+    ApiConfigSource api_config_source = 2 [(armeria.xds.supported) = true];
 
     // When set, ADS will be used to fetch resources. The ADS API configuration
     // source in the bootstrap configuration is used.
-    AggregatedConfigSource ads = 3;
+    AggregatedConfigSource ads = 3 [(armeria.xds.supported) = true];
 
     // [#not-implemented-hide:]
     // When set, the client will access the resources from the same server it got the
@@ -234,7 +236,14 @@ message ConfigSource {
     // [#next-major-version: In xDS v3, consider replacing the ads field with this one, since
     // this field can implicitly mean to use the same stream in the case where the ConfigSource
     // is provided via ADS and the specified data can also be obtained via ADS.]
-    SelfConfigSource self = 5;
+    SelfConfigSource self = 5 [(armeria.xds.supported) = true];
+
+    // Armeria extension: a custom config source implementation resolved via
+    // the extension registry by the Any's type URL. This allows plugging in
+    // non-standard config sources (e.g. CentralDogma, etcd, Consul) without
+    // modifying the upstream proto definition.
+    // The large field number avoids conflicts with future upstream additions.
+    google.protobuf.Any custom_config_source = 1000 [(armeria.xds.supported) = true];
   }
 
   // When this timeout is specified, Envoy will wait no longer than the specified time for first
@@ -244,12 +253,12 @@ message ConfigSource {
   // when the xDS API subscription starts, and is disarmed on first config update or on error. 0
   // means no timeout - Envoy will wait indefinitely for the first xDS config (unless another
   // timeout applies). The default is 15s.
-  google.protobuf.Duration initial_fetch_timeout = 4;
+  google.protobuf.Duration initial_fetch_timeout = 4 [(armeria.xds.supported) = true];
 
   // API version for xDS resources. This implies the type URLs that the client
   // will request for resources and the resource type that the client will in
   // turn expect to be delivered.
-  ApiVersion resource_api_version = 6 [(validate.rules).enum = {defined_only: true}];
+  ApiVersion resource_api_version = 6 [(validate.rules).enum = {defined_only: true}, (armeria.xds.supported) = true];
 }
 
 // Configuration source specifier for a late-bound extension configuration. The

@@ -21,13 +21,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.Node;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ControlPlaneClientManager implements SafeCloseable {
@@ -35,21 +34,19 @@ final class ControlPlaneClientManager implements SafeCloseable {
     private final EventExecutor eventLoop;
     private final BootstrapClusters bootstrapClusters;
     private final ConfigSourceMapper configSourceMapper;
-    private final MeterRegistry meterRegistry;
-    private final MeterIdPrefix meterIdPrefix;
-    private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
+    private final XdsExtensionRegistry extensionRegistry;
+    private final Map<ConfigSource, SubscriptionHandler> clientMap = new HashMap<>();
     private boolean closed;
 
     ControlPlaneClientManager(Bootstrap bootstrap, EventExecutor eventLoop,
                               BootstrapClusters bootstrapClusters,
                               ConfigSourceMapper configSourceMapper,
-                              MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
+                              XdsExtensionRegistry extensionRegistry) {
         bootstrapNode = bootstrap.getNode();
         this.eventLoop = eventLoop;
         this.bootstrapClusters = bootstrapClusters;
         this.configSourceMapper = configSourceMapper;
-        this.meterRegistry = meterRegistry;
-        this.meterIdPrefix = meterIdPrefix;
+        this.extensionRegistry = extensionRegistry;
     }
 
     void subscribe(ResourceNode<?> node) {
@@ -62,10 +59,8 @@ final class ControlPlaneClientManager implements SafeCloseable {
         final ConfigSource configSource = node.configSource();
         checkArgument(configSource != null, "Cannot subscribe to a node without a configSource");
 
-        final ConfigSourceClient client = clientMap.computeIfAbsent(
-                configSource, ignored -> new ConfigSourceClient(
-                        configSource, eventLoop, bootstrapNode, bootstrapClusters, configSourceMapper,
-                        meterRegistry, meterIdPrefix));
+        final SubscriptionHandler client = clientMap.computeIfAbsent(
+                configSource, ignored -> createClient(configSource));
         client.addSubscriber(type, name, node);
     }
 
@@ -76,14 +71,58 @@ final class ControlPlaneClientManager implements SafeCloseable {
         }
         final XdsType type = node.type();
         final String resourceName = node.name();
-        final ConfigSourceClient client = clientMap.get(node.configSource());
+        final SubscriptionHandler client = clientMap.get(node.configSource());
         if (client != null && client.removeSubscriber(type, resourceName, node)) {
             client.close();
             clientMap.remove(node.configSource());
         }
     }
 
-    Map<ConfigSource, ConfigSourceClient> clientMap() {
+    private SubscriptionHandler createClient(ConfigSource configSource) {
+        switch (configSource.getConfigSourceSpecifierCase()) {
+            case PATH_CONFIG_SOURCE:
+            case CUSTOM_CONFIG_SOURCE:
+                final SotwConfigSourceSubscriptionFactory streamFactory = resolveStreamFactory(configSource);
+                checkArgument(streamFactory != null,
+                              "No SotwConfigSourceSubscriptionFactory found for: %s", configSource);
+                final StateCoordinator stateCoordinator =
+                        new StateCoordinator(eventLoop, configSource, false);
+                final SubscriptionCallbacks callbacks =
+                        new SubscriptionCallbacks(stateCoordinator, extensionRegistry);
+                final ConfigSourceSubscription stream =
+                        streamFactory.create(configSource, callbacks, eventLoop);
+                return new ConfigSourceHandler(stateCoordinator, stream);
+            case ADS:
+            case API_CONFIG_SOURCE:
+                final GrpcConfigSourceStreamFactory grpcFactory =
+                        extensionRegistry.queryByName(GrpcConfigSourceStreamFactory.NAME,
+                                                      GrpcConfigSourceStreamFactory.class);
+                checkArgument(grpcFactory != null, "No GrpcConfigSourceStreamFactory registered");
+                return grpcFactory.create(
+                        configSource, eventLoop, bootstrapNode, bootstrapClusters,
+                        configSourceMapper, extensionRegistry);
+            default:
+                throw new IllegalArgumentException("Unsupported config source: " + configSource);
+        }
+    }
+
+    @Nullable
+    private SotwConfigSourceSubscriptionFactory resolveStreamFactory(ConfigSource configSource) {
+        switch (configSource.getConfigSourceSpecifierCase()) {
+            case PATH_CONFIG_SOURCE:
+                return extensionRegistry.queryByName(
+                        PathSotwConfigSourceSubscriptionFactory.NAME,
+                        SotwConfigSourceSubscriptionFactory.class);
+            case CUSTOM_CONFIG_SOURCE:
+                return extensionRegistry.queryByTypeUrl(
+                        configSource.getCustomConfigSource().getTypeUrl(),
+                        SotwConfigSourceSubscriptionFactory.class);
+            default:
+                return null;
+        }
+    }
+
+    Map<ConfigSource, SubscriptionHandler> clientMap() {
         return clientMap;
     }
 
@@ -94,7 +133,7 @@ final class ControlPlaneClientManager implements SafeCloseable {
             return;
         }
         closed = true;
-        clientMap.values().forEach(ConfigSourceClient::close);
+        clientMap.values().forEach(SubscriptionHandler::close);
         clientMap.clear();
     }
 }

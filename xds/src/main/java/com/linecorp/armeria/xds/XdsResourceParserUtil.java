@@ -16,40 +16,46 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
+
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class XdsResourceParserUtil {
 
-    private static final Map<String, ResourceParser<?, ?>> typeUrlToResourceType = new HashMap<>();
-    private static final Map<XdsType, ResourceParser<?, ?>> typeToResourceType = new EnumMap<>(XdsType.class);
+    private static final Map<String, ResourceParser<?, ?>> typeUrlToParser;
+    private static final Map<XdsType, ResourceParser<?, ?>> typeToParser;
 
     static {
-        typeUrlToResourceType.put(XdsType.ENDPOINT.typeUrl(), EndpointResourceParser.INSTANCE);
-        typeUrlToResourceType.put(XdsType.CLUSTER.typeUrl(), ClusterResourceParser.INSTANCE);
-        typeUrlToResourceType.put(XdsType.LISTENER.typeUrl(), ListenerResourceParser.INSTANCE);
-        typeUrlToResourceType.put(XdsType.ROUTE.typeUrl(), RouteResourceParser.INSTANCE);
-        typeUrlToResourceType.put(XdsType.SECRET.typeUrl(), SecretResourceParser.INSTANCE);
+        final ImmutableMap.Builder<String, ResourceParser<?, ?>> byTypeUrl = ImmutableMap.builder();
+        final ImmutableMap.Builder<XdsType, ResourceParser<?, ?>> byType = ImmutableMap.builder();
 
-        typeToResourceType.put(XdsType.ENDPOINT, EndpointResourceParser.INSTANCE);
-        typeToResourceType.put(XdsType.CLUSTER, ClusterResourceParser.INSTANCE);
-        typeToResourceType.put(XdsType.LISTENER, ListenerResourceParser.INSTANCE);
-        typeToResourceType.put(XdsType.ROUTE, RouteResourceParser.INSTANCE);
-        typeToResourceType.put(XdsType.SECRET, SecretResourceParser.INSTANCE);
+        register(ListenerResourceParser.INSTANCE, byTypeUrl, byType);
+        register(ClusterResourceParser.INSTANCE, byTypeUrl, byType);
+        register(RouteResourceParser.INSTANCE, byTypeUrl, byType);
+        register(EndpointResourceParser.INSTANCE, byTypeUrl, byType);
+        register(SecretResourceParser.INSTANCE, byTypeUrl, byType);
+
+        typeUrlToParser = byTypeUrl.build();
+        typeToParser = byType.build();
+    }
+
+    private static void register(ResourceParser<?, ?> parser,
+                                 ImmutableMap.Builder<String, ResourceParser<?, ?>> byTypeUrl,
+                                 ImmutableMap.Builder<XdsType, ResourceParser<?, ?>> byType) {
+        byTypeUrl.put(parser.type().typeUrl(), parser);
+        byType.put(parser.type(), parser);
     }
 
     @Nullable
     static ResourceParser<?, ?> fromTypeUrl(String typeUrl) {
-        return typeUrlToResourceType.get(typeUrl);
+        return typeUrlToParser.get(typeUrl);
     }
 
-    static ResourceParser<?, ?> fromType(XdsType xdsType) {
-        final ResourceParser<?, ?> parser = typeToResourceType.get(xdsType);
-        assert parser != null;
-        return parser;
+    @Nullable
+    static ResourceParser<?, ?> fromType(XdsType type) {
+        return typeToParser.get(type);
     }
 
     private XdsResourceParserUtil() {}

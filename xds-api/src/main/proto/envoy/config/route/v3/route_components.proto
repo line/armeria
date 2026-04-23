@@ -21,6 +21,7 @@ import "google/protobuf/wrappers.proto";
 
 import "xds/type/matcher/v3/matcher.proto";
 
+import "armeria/xds/supported.proto";
 import "envoy/annotations/deprecation.proto";
 import "udpa/annotations/migrate.proto";
 import "udpa/annotations/status.proto";
@@ -65,7 +66,7 @@ message VirtualHost {
 
   // The logical name of the virtual host. This is used when emitting certain
   // statistics but is not relevant for routing.
-  string name = 1 [(validate.rules).string = {min_len: 1}];
+  string name = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   // A list of domains (host/authority header) that will be matched to this
   // virtual host. Wildcard hosts are supported in the suffix or prefix form.
@@ -88,12 +89,12 @@ message VirtualHost {
   repeated string domains = 2 [(validate.rules).repeated = {
     min_items: 1
     items {string {well_known_regex: HTTP_HEADER_VALUE strict: false}}
-  }];
+  }, (armeria.xds.supported) = true];
 
   // The list of routes that will be matched, in order, for incoming requests.
   // The first route that matches will be used.
   // Only one of this and ``matcher`` can be specified.
-  repeated Route routes = 3 [(udpa.annotations.field_migrate).oneof_promotion = "route_selection"];
+  repeated Route routes = 3 [(udpa.annotations.field_migrate).oneof_promotion = "route_selection", (armeria.xds.supported) = true];
 
   // The match tree to use when resolving route actions for incoming requests. Only one of this and ``routes``
   // can be specified.
@@ -161,7 +162,7 @@ message VirtualHost {
   // [#comment: An entry's value may be wrapped in a
   // :ref:`FilterConfig<envoy_v3_api_msg_config.route.v3.FilterConfig>`
   // message to specify additional options.]
-  map<string, google.protobuf.Any> typed_per_filter_config = 15;
+  map<string, google.protobuf.Any> typed_per_filter_config = 15 [(armeria.xds.supported) = true];
 
   // Decides whether the :ref:`x-envoy-attempt-count
   // <config_http_filters_router_x-envoy-attempt-count>` header should be included
@@ -194,7 +195,7 @@ message VirtualHost {
   // Indicates the retry policy for all routes in this virtual host. Note that setting a
   // route level entry will take precedence over this config and it'll be treated
   // independently (e.g., values are not inherited).
-  RetryPolicy retry_policy = 16;
+  RetryPolicy retry_policy = 16 [(armeria.xds.supported) = true];
 
   // [#not-implemented-hide:]
   // Specifies the configuration for retry policy extension. Note that setting a route level entry
@@ -287,16 +288,16 @@ message Route {
   reserved "per_filter_config";
 
   // Name for the route.
-  string name = 14;
+  string name = 14 [(armeria.xds.supported) = true];
 
   // Route matching parameters.
-  RouteMatch match = 1 [(validate.rules).message = {required: true}];
+  RouteMatch match = 1 [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
   oneof action {
     option (validate.required) = true;
 
     // Route request to some upstream cluster.
-    RouteAction route = 2;
+    RouteAction route = 2 [(armeria.xds.supported) = true];
 
     // Return a redirect.
     RedirectAction redirect = 3;
@@ -336,7 +337,7 @@ message Route {
   // [#comment: An entry's value may be wrapped in a
   // :ref:`FilterConfig<envoy_v3_api_msg_config.route.v3.FilterConfig>`
   // message to specify additional options.]
-  map<string, google.protobuf.Any> typed_per_filter_config = 13;
+  map<string, google.protobuf.Any> typed_per_filter_config = 13 [(armeria.xds.supported) = true];
 
   // Specifies a set of headers that will be added to requests matching this
   // route. Headers specified at this level are applied before headers from the
@@ -623,11 +624,11 @@ message RouteMatch {
 
     // If specified, the route is a prefix rule meaning that the prefix must
     // match the beginning of the ``:path`` header.
-    string prefix = 1;
+    string prefix = 1 [(armeria.xds.supported) = true];
 
     // If specified, the route is an exact path rule meaning that the path must
     // exactly match the ``:path`` header once the query string is removed.
-    string path = 2;
+    string path = 2 [(armeria.xds.supported) = true];
 
     // If specified, the route is a regular expression rule meaning that the
     // regex must match the ``:path`` header once the query string is removed. The entire path
@@ -641,7 +642,7 @@ message RouteMatch {
     // path_specifier entirely and just rely on a set of header matchers which can already match
     // on :path, etc. The issue with that is it is unclear how to generically deal with query string
     // stripping. This needs more thought.]
-    type.matcher.v3.RegexMatcher safe_regex = 10 [(validate.rules).message = {required: true}];
+    type.matcher.v3.RegexMatcher safe_regex = 10 [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
     // If this is used as the matcher, the matcher will only match CONNECT or CONNECT-UDP requests.
     // Note that this will not match other Extended CONNECT requests (WebSocket and the like) as
@@ -662,7 +663,7 @@ message RouteMatch {
     // but would not match ``/api/developer``
     //
     // Expect the value to not contain ``?`` or ``#`` and not to end in ``/``
-    string path_separated_prefix = 14 [(validate.rules).string = {pattern: "^[^?#]+[^?#/]$"}];
+    string path_separated_prefix = 14 [(validate.rules).string = {pattern: "^[^?#]+[^?#/]$"}, (armeria.xds.supported) = true];
 
     // [#extension-category: envoy.path.match]
     core.v3.TypedExtensionConfig path_match_policy = 15;
@@ -670,7 +671,7 @@ message RouteMatch {
 
   // Indicates that prefix/path matching should be case-sensitive. The default
   // is true. Ignored for safe_regex matching.
-  google.protobuf.BoolValue case_sensitive = 4;
+  google.protobuf.BoolValue case_sensitive = 4 [(armeria.xds.supported) = true];
 
   // Indicates that the route should additionally match on a runtime key. Every time the route
   // is considered for a match, it must also fall under the percentage of matches indicated by
@@ -695,7 +696,7 @@ message RouteMatch {
   // config. A match will happen if all the headers in the route are present in
   // the request with the same values (or based on presence if the value field
   // is not in the config).
-  repeated HeaderMatcher headers = 6;
+  repeated HeaderMatcher headers = 6 [(armeria.xds.supported) = true];
 
   // Specifies a set of URL query parameters on which the route should
   // match. The router will check the query string from the ``path`` header
@@ -711,12 +712,12 @@ message RouteMatch {
   //    is used, the transcoded message fields may be different. The query parameters are
   //    URL-encoded, but the message fields are not. For example, if a query
   //    parameter is "foo%20bar", the message field will be "foo bar".
-  repeated QueryParameterMatcher query_parameters = 7;
+  repeated QueryParameterMatcher query_parameters = 7 [(armeria.xds.supported) = true];
 
   // If specified, only gRPC requests will be matched. The router will check
   // that the ``Content-Type`` header has ``application/grpc`` or one of the various
   // ``application/grpc+`` values.
-  GrpcRouteMatchOptions grpc = 8;
+  GrpcRouteMatchOptions grpc = 8 [(armeria.xds.supported) = true];
 
   // If specified, the client tls context will be matched against the defined
   // match options.
@@ -1127,7 +1128,7 @@ message RouteAction {
 
     // Indicates the upstream cluster to which the request should be routed
     // to.
-    string cluster = 1 [(validate.rules).string = {min_len: 1}];
+    string cluster = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
     // Envoy will determine the cluster to route to by reading the value of the
     // HTTP header named by cluster_header from the request headers. If the
@@ -1173,7 +1174,7 @@ message RouteAction {
   // for load balancing. If using :ref:`weighted_clusters
   // <envoy_v3_api_field_config.route.v3.RouteAction.weighted_clusters>`, metadata will be merged, with values
   // provided there taking precedence. The filter name should be specified as ``envoy.lb``.
-  core.v3.Metadata metadata_match = 4;
+  core.v3.Metadata metadata_match = 4 [(armeria.xds.supported) = true];
 
   // Indicates that during forwarding, the matched prefix (or path) should be
   // swapped with this value. This option allows application URLs to be rooted
@@ -1324,7 +1325,7 @@ message RouteAction {
   //   :ref:`config_http_filters_router_x-envoy-upstream-rq-timeout-ms`,
   //   :ref:`config_http_filters_router_x-envoy-upstream-rq-per-try-timeout-ms`, and the
   //   :ref:`retry overview <arch_overview_http_routing_retry>`.
-  google.protobuf.Duration timeout = 8;
+  google.protobuf.Duration timeout = 8 [(armeria.xds.supported) = true];
 
   // Specifies the idle timeout for the route. If not specified, there is no per-route idle timeout,
   // although the connection manager wide :ref:`stream_idle_timeout
@@ -1378,7 +1379,7 @@ message RouteAction {
   // Indicates that the route has a retry policy. Note that if this is set,
   // it'll take precedence over the virtual host level retry policy entirely
   // (e.g., policies are not merged, the most internal one becomes the enforced policy).
-  RetryPolicy retry_policy = 9;
+  RetryPolicy retry_policy = 9 [(armeria.xds.supported) = true];
 
   // [#not-implemented-hide:]
   // Specifies the configuration for retry policy extension. Note that if this is set, it'll take
@@ -1560,13 +1561,13 @@ message RetryPolicy {
     google.protobuf.Duration base_interval = 1 [(validate.rules).duration = {
       required: true
       gt {}
-    }];
+    }, (armeria.xds.supported) = true];
 
     // Specifies the maximum interval between retries. This parameter is optional, but must be
     // greater than or equal to the ``base_interval`` if set. The default is 10 times the
     // ``base_interval``. See :ref:`config_http_filters_router_x-envoy-max-retries` for a discussion
     // of Envoy's back-off algorithm.
-    google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {}}];
+    google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {}}, (armeria.xds.supported) = true];
   }
 
   message ResetHeader {
@@ -1576,7 +1577,7 @@ message RetryPolicy {
     //
     //   If the header appears multiple times only the first value is used.
     string name = 1
-        [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}];
+        [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}, (armeria.xds.supported) = true];
 
     // The format of the reset header.
     ResetHeaderFormat format = 2 [(validate.rules).enum = {defined_only: true}];
@@ -1630,26 +1631,26 @@ message RetryPolicy {
     // to match against the response. Headers are tried in order, and matched case
     // insensitive. The first header to be parsed successfully is used. If no headers
     // match the default exponential back-off is used instead.
-    repeated ResetHeader reset_headers = 1 [(validate.rules).repeated = {min_items: 1}];
+    repeated ResetHeader reset_headers = 1 [(validate.rules).repeated = {min_items: 1}, (armeria.xds.supported) = true];
 
     // Specifies the maximum back off interval that Envoy will allow. If a reset
     // header contains an interval longer than this then it will be discarded and
     // the next header will be tried.
     //
     // Defaults to 300 seconds.
-    google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {}}];
+    google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {}}, (armeria.xds.supported) = true];
   }
 
   // Specifies the conditions under which retry takes place. These are the same
   // conditions documented for :ref:`config_http_filters_router_x-envoy-retry-on` and
   // :ref:`config_http_filters_router_x-envoy-retry-grpc-on`.
-  string retry_on = 1;
+  string retry_on = 1 [(armeria.xds.supported) = true];
 
   // Specifies the allowed number of retries. This parameter is optional and
   // defaults to 1. These are the same conditions documented for
   // :ref:`config_http_filters_router_x-envoy-max-retries`.
   google.protobuf.UInt32Value num_retries = 2
-      [(udpa.annotations.field_migrate).rename = "max_retries"];
+      [(udpa.annotations.field_migrate).rename = "max_retries", (armeria.xds.supported) = true];
 
   // Specifies a non-zero upstream timeout per retry attempt (including the initial attempt). This
   // parameter is optional. The same conditions documented for
@@ -1662,7 +1663,7 @@ message RetryPolicy {
   //   Consequently, when using a :ref:`5xx <config_http_filters_router_x-envoy-retry-on>` based
   //   retry policy, a request that times out will not be retried as the total timeout budget
   //   would have been exhausted.
-  google.protobuf.Duration per_try_timeout = 3;
+  google.protobuf.Duration per_try_timeout = 3 [(armeria.xds.supported) = true];
 
   // Specifies an upstream idle timeout per retry attempt (including the initial attempt). This
   // parameter is optional and if absent there is no per-try idle timeout. The semantics of the per-
@@ -1707,14 +1708,14 @@ message RetryPolicy {
   int64 host_selection_retry_max_attempts = 6;
 
   // HTTP status codes that should trigger a retry in addition to those specified by retry_on.
-  repeated uint32 retriable_status_codes = 7;
+  repeated uint32 retriable_status_codes = 7 [(armeria.xds.supported) = true];
 
   // Specifies parameters that control exponential retry back off. This parameter is optional, in which case the
   // default base interval is 25 milliseconds or, if set, the current value of the
   // ``upstream.base_retry_backoff_ms`` runtime parameter. The default maximum interval is 10 times
   // the base interval. The documentation for :ref:`config_http_filters_router_x-envoy-max-retries`
   // describes Envoy's back-off algorithm.
-  RetryBackOff retry_back_off = 8;
+  RetryBackOff retry_back_off = 8 [(armeria.xds.supported) = true];
 
   // Specifies parameters that control a retry back-off strategy that is used
   // when the request is rate limited by the upstream server. The server may
@@ -1723,15 +1724,15 @@ message RetryPolicy {
   // configured, this back-off strategy will be used instead of the
   // default exponential back off strategy (configured using ``retry_back_off``)
   // whenever a response includes the matching headers.
-  RateLimitedRetryBackOff rate_limited_retry_back_off = 11;
+  RateLimitedRetryBackOff rate_limited_retry_back_off = 11 [(armeria.xds.supported) = true];
 
   // HTTP response headers that trigger a retry if present in the response. A retry will be
   // triggered if any of the header matches match the upstream response headers.
   // The field is only consulted if 'retriable-headers' retry policy is active.
-  repeated HeaderMatcher retriable_headers = 9;
+  repeated HeaderMatcher retriable_headers = 9 [(armeria.xds.supported) = true];
 
   // HTTP headers which must be present in the request for retries to be attempted.
-  repeated HeaderMatcher retriable_request_headers = 10;
+  repeated HeaderMatcher retriable_request_headers = 10 [(armeria.xds.supported) = true];
 }
 
 // HTTP request hedging :ref:`architecture overview <arch_overview_http_routing_hedging>`.
@@ -2482,7 +2483,7 @@ message HeaderMatcher {
 
   // Specifies the name of the header in the request.
   string name = 1
-      [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}];
+      [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}, (armeria.xds.supported) = true];
 
   // Specifies how the header match will be performed to route the request.
   oneof header_match_specifier {
@@ -2515,11 +2516,11 @@ message HeaderMatcher {
     //
     // * For range [-10,0), route will match for header value -1, but not for 0, ``somestring``, 10.9,
     //   ``-1somestring``
-    type.v3.Int64Range range_match = 6;
+    type.v3.Int64Range range_match = 6 [(armeria.xds.supported) = true];
 
     // If specified as true, header match will be performed based on whether the header is in the
     // request. If specified as false, header match will be performed based on whether the header is absent.
-    bool present_match = 7;
+    bool present_match = 7 [(armeria.xds.supported) = true];
 
     // If specified, header match will be performed based on the prefix of the header value.
     //
@@ -2580,7 +2581,7 @@ message HeaderMatcher {
     ];
 
     // If specified, header match will be performed based on the string match of the header value.
-    type.matcher.v3.StringMatcher string_match = 13;
+    type.matcher.v3.StringMatcher string_match = 13 [(armeria.xds.supported) = true];
   }
 
   // If specified, the match result will be inverted before checking.
@@ -2591,7 +2592,7 @@ message HeaderMatcher {
   //
   // * The regex ``\d{3}`` does not match the value ``1234``, so it will match when inverted.
   // * The range [-10,0) will match the value -1, so it will not match when inverted.
-  bool invert_match = 8;
+  bool invert_match = 8 [(armeria.xds.supported) = true];
 
   // If specified, for any header match rule, if the header match rule specified header
   // does not exist, this header value will be treated as empty.
@@ -2621,7 +2622,7 @@ message HeaderMatcher {
   //   :ref:`treat_missing_header_as_empty <envoy_v3_api_field_config.route.v3.HeaderMatcher.treat_missing_header_as_empty>`
   //   is set to false; The "header4" header is not present.
   //   The match rule for "header4" will be ignored so it will not match.
-  bool treat_missing_header_as_empty = 14;
+  bool treat_missing_header_as_empty = 14 [(armeria.xds.supported) = true];
 }
 
 // Query parameter matching treats the query string of a request's :path header
@@ -2637,14 +2638,14 @@ message QueryParameterMatcher {
 
   // Specifies the name of a key that must be present in the requested
   // ``path``'s query string.
-  string name = 1 [(validate.rules).string = {min_len: 1 max_bytes: 1024}];
+  string name = 1 [(validate.rules).string = {min_len: 1 max_bytes: 1024}, (armeria.xds.supported) = true];
 
   oneof query_parameter_match_specifier {
     // Specifies whether a query parameter value should match against a string.
-    type.matcher.v3.StringMatcher string_match = 5 [(validate.rules).message = {required: true}];
+    type.matcher.v3.StringMatcher string_match = 5 [(validate.rules).message = {required: true}, (armeria.xds.supported) = true];
 
     // Specifies whether a query parameter should be present.
-    bool present_match = 6;
+    bool present_match = 6 [(armeria.xds.supported) = true];
   }
 }
 

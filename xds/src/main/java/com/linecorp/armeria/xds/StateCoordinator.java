@@ -16,12 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.time.Instant;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.netty.util.concurrent.EventExecutor;
 
 final class StateCoordinator implements SafeCloseable {
@@ -29,9 +35,26 @@ final class StateCoordinator implements SafeCloseable {
     private final SubscriberStorage subscriberStorage;
     private final ResourceStateStore stateStore;
 
+    StateCoordinator(EventExecutor eventLoop, ConfigSource configSource, boolean delta) {
+        this(eventLoop, initialFetchTimeoutMillis(configSource), delta);
+    }
+
     StateCoordinator(EventExecutor eventLoop, long timeoutMillis, boolean delta) {
         subscriberStorage = new SubscriberStorage(eventLoop, timeoutMillis, delta);
         stateStore = new ResourceStateStore();
+    }
+
+    private static long initialFetchTimeoutMillis(ConfigSource configSource) {
+        if (!configSource.hasInitialFetchTimeout()) {
+            return 15_000;
+        }
+        final Duration timeoutDuration = configSource.getInitialFetchTimeout();
+        final Instant instant = Instant.ofEpochSecond(timeoutDuration.getSeconds(),
+                                                      timeoutDuration.getNanos());
+        final long epochMilli = instant.toEpochMilli();
+        checkArgument(epochMilli >= 0, "Invalid initialFetchTimeout received: %s (expected >= 0)",
+                      timeoutDuration);
+        return epochMilli;
     }
 
     <T extends XdsResource> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {

@@ -9,6 +9,7 @@ import "envoy/config/route/v3/route_components.proto";
 import "google/protobuf/any.proto";
 import "google/protobuf/wrappers.proto";
 
+import "armeria/xds/supported.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
@@ -31,10 +32,10 @@ message RouteConfiguration {
   // :ref:`route_config_name
   // <envoy_v3_api_field_extensions.filters.network.http_connection_manager.v3.Rds.route_config_name>` in
   // :ref:`envoy_v3_api_msg_extensions.filters.network.http_connection_manager.v3.Rds`.
-  string name = 1;
+  string name = 1 [(armeria.xds.supported) = true];
 
   // An array of virtual hosts that make up the route table.
-  repeated VirtualHost virtual_hosts = 2;
+  repeated VirtualHost virtual_hosts = 2 [(armeria.xds.supported) = true];
 
   // An array of virtual hosts will be dynamically loaded via the VHDS API.
   // Both ``virtual_hosts`` and ``vhds`` fields will be used when present. ``virtual_hosts`` can be used
@@ -131,7 +132,7 @@ message RouteConfiguration {
   // With this option enabled, Envoy will ignore the port number in the :authority header (if any) when picking VirtualHost.
   // NOTE: this option will not strip the port number (if any) contained in route config
   // :ref:`envoy_v3_api_msg_config.route.v3.VirtualHost`.domains field.
-  bool ignore_port_in_host_matching = 14;
+  bool ignore_port_in_host_matching = 14 [(armeria.xds.supported) = true];
 
   // Ignore path-parameters in path-matching.
   // Before RFC3986, URI were like(RFC1808): <scheme>://<net_loc>/<path>;<params>?<query>#<fragment>

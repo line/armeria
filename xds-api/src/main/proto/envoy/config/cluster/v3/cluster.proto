@@ -30,6 +30,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.cluster.v3";
 option java_outer_classname = "ClusterProto";
 option java_multiple_files = true;
@@ -54,12 +56,12 @@ message Cluster {
   enum DiscoveryType {
     // Refer to the :ref:`static discovery type<arch_overview_service_discovery_types_static>`
     // for an explanation.
-    STATIC = 0;
+    STATIC = 0 [(armeria.xds.supported_value) = true];
 
     // Refer to the :ref:`strict DNS discovery
     // type<arch_overview_service_discovery_types_strict_dns>`
     // for an explanation.
-    STRICT_DNS = 1;
+    STRICT_DNS = 1 [(armeria.xds.supported_value) = true];
 
     // Refer to the :ref:`logical DNS discovery
     // type<arch_overview_service_discovery_types_logical_dns>`
@@ -68,7 +70,7 @@ message Cluster {
 
     // Refer to the :ref:`service discovery type<arch_overview_service_discovery_types_eds>`
     // for an explanation.
-    EDS = 3;
+    EDS = 3 [(armeria.xds.supported_value) = true];
 
     // Refer to the :ref:`original destination discovery
     // type<arch_overview_service_discovery_types_original_destination>`
@@ -86,12 +88,12 @@ message Cluster {
     // Refer to the :ref:`round robin load balancing
     // policy<arch_overview_load_balancing_types_round_robin>`
     // for an explanation.
-    ROUND_ROBIN = 0;
+    ROUND_ROBIN = 0 [(armeria.xds.supported_value) = true];
 
     // Refer to the :ref:`least request load balancing
     // policy<arch_overview_load_balancing_types_least_request>`
     // for an explanation.
-    LEAST_REQUEST = 1;
+    LEAST_REQUEST = 1 [(armeria.xds.supported_value) = true];
 
     // Refer to the :ref:`ring hash load balancing
     // policy<arch_overview_load_balancing_types_ring_hash>`
@@ -101,7 +103,7 @@ message Cluster {
     // Refer to the :ref:`random load balancing
     // policy<arch_overview_load_balancing_types_random>`
     // for an explanation.
-    RANDOM = 3;
+    RANDOM = 3 [(armeria.xds.supported_value) = true];
 
     // Refer to the :ref:`Maglev load balancing policy<arch_overview_load_balancing_types_maglev>`
     // for an explanation.
@@ -166,18 +168,18 @@ message Cluster {
         "envoy.api.v2.Cluster.TransportSocketMatch";
 
     // The name of the match, used in stats generation.
-    string name = 1 [(validate.rules).string = {min_len: 1}];
+    string name = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
     // Optional metadata match criteria.
     // The connection to the endpoint with metadata matching what is set in this field
     // will use the transport socket configuration specified here.
     // The endpoint's metadata entry in ``envoy.transport_socket_match`` is used to match
     // against the values specified in this field.
-    google.protobuf.Struct match = 2;
+    google.protobuf.Struct match = 2 [(armeria.xds.supported) = true];
 
     // The configuration of the transport socket.
     // [#extension-category: envoy.transport_sockets.upstream]
-    core.v3.TransportSocket transport_socket = 3;
+    core.v3.TransportSocket transport_socket = 3 [(armeria.xds.supported) = true];
   }
 
   // Extended cluster type.
@@ -200,12 +202,12 @@ message Cluster {
         "envoy.api.v2.Cluster.EdsClusterConfig";
 
     // Configuration for the source of EDS updates for this Cluster.
-    core.v3.ConfigSource eds_config = 1;
+    core.v3.ConfigSource eds_config = 1 [(armeria.xds.supported) = true];
 
     // Optional alternative to cluster name to present to EDS. This does not
     // have the same restrictions as cluster name, i.e. it may be arbitrary
     // length. This may be a xdstp:// URL.
-    string service_name = 2;
+    string service_name = 2 [(armeria.xds.supported) = true];
   }
 
   // Optionally divide the endpoints in this cluster into subsets defined by
@@ -221,9 +223,9 @@ message Cluster {
     // etc). If DEFAULT_SUBSET is selected, load balancing is performed over the
     // endpoints matching the values from the default_subset field.
     enum LbSubsetFallbackPolicy {
-      NO_FALLBACK = 0;
-      ANY_ENDPOINT = 1;
-      DEFAULT_SUBSET = 2;
+      NO_FALLBACK = 0 [(armeria.xds.supported_value) = true];
+      ANY_ENDPOINT = 1 [(armeria.xds.supported_value) = true];
+      DEFAULT_SUBSET = 2 [(armeria.xds.supported_value) = true];
     }
 
     enum LbSubsetMetadataFallbackPolicy {
@@ -302,7 +304,7 @@ message Cluster {
       }
 
       // List of keys to match with the weighted cluster metadata.
-      repeated string keys = 1;
+      repeated string keys = 1 [(armeria.xds.supported) = true];
 
       // Selects a mode of operation in which each subset has only one host. This mode uses the same rules for
       // choosing a host, but updating hosts is faster, especially for large numbers of hosts.
@@ -335,7 +337,7 @@ message Cluster {
     // The behavior used when no endpoint subset matches the selected route's
     // metadata. The value defaults to
     // :ref:`NO_FALLBACK<envoy_v3_api_enum_value_config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetFallbackPolicy.NO_FALLBACK>`.
-    LbSubsetFallbackPolicy fallback_policy = 1 [(validate.rules).enum = {defined_only: true}];
+    LbSubsetFallbackPolicy fallback_policy = 1 [(validate.rules).enum = {defined_only: true}, (armeria.xds.supported) = true];
 
     // Specifies the default subset of endpoints used during fallback if
     // fallback_policy is
@@ -361,7 +363,7 @@ message Cluster {
     // A subset is matched when the metadata from the selected route and
     // weighted cluster contains the same keys and values as the subset's
     // metadata. The same host may appear in multiple subsets.
-    repeated LbSubsetSelector subset_selectors = 3;
+    repeated LbSubsetSelector subset_selectors = 3 [(armeria.xds.supported) = true];
 
     // If true, routing to subsets will take into account the localities and locality weights of the
     // endpoints when making the routing decision.
@@ -410,7 +412,7 @@ message Cluster {
     // Represents the size of slow start window.
     // If set, the newly created host remains in slow start mode starting from its creation time
     // for the duration of slow start window.
-    google.protobuf.Duration slow_start_window = 1;
+    google.protobuf.Duration slow_start_window = 1 [(armeria.xds.supported) = true];
 
     // This parameter controls the speed of traffic increase over the slow start window. Defaults to 1.0,
     // so that endpoint would get linearly increasing amount of traffic.
@@ -424,19 +426,19 @@ message Cluster {
     //
     // As time progresses, more and more traffic would be sent to endpoint, which is in slow start window.
     // Once host exits slow start, time_factor and aggression no longer affect its weight.
-    core.v3.RuntimeDouble aggression = 2;
+    core.v3.RuntimeDouble aggression = 2 [(armeria.xds.supported) = true];
 
     // Configures the minimum percentage of origin weight that avoids too small new weight,
     // which may cause endpoints in slow start mode receive no traffic in slow start window.
     // If not specified, the default is 10%.
-    type.v3.Percent min_weight_percent = 3;
+    type.v3.Percent min_weight_percent = 3 [(armeria.xds.supported) = true];
   }
 
   // Specific configuration for the RoundRobin load balancing policy.
   message RoundRobinLbConfig {
     // Configuration for slow start mode.
     // If this configuration is not set, slow start will not be not enabled.
-    SlowStartConfig slow_start_config = 1;
+    SlowStartConfig slow_start_config = 1 [(armeria.xds.supported) = true];
   }
 
   // Specific configuration for the LeastRequest load balancing policy.
@@ -475,7 +477,7 @@ message Cluster {
 
     // Configuration for slow start mode.
     // If this configuration is not set, slow start will not be not enabled.
-    SlowStartConfig slow_start_config = 3;
+    SlowStartConfig slow_start_config = 3 [(armeria.xds.supported) = true];
   }
 
   // Specific configuration for the :ref:`RingHash<arch_overview_load_balancing_types_ring_hash>`
@@ -574,20 +576,20 @@ message Cluster {
       // if zone aware routing is configured. If not specified, the default is 100%.
       // * :ref:`runtime values <config_cluster_manager_cluster_runtime_zone_routing>`.
       // * :ref:`Zone aware routing support <arch_overview_load_balancing_zone_aware_routing>`.
-      type.v3.Percent routing_enabled = 1;
+      type.v3.Percent routing_enabled = 1 [(armeria.xds.supported) = true];
 
       // Configures minimum upstream cluster size required for zone aware routing
       // If upstream cluster size is less than specified, zone aware routing is not performed
       // even if zone aware routing is configured. If not specified, the default is 6.
       // * :ref:`runtime values <config_cluster_manager_cluster_runtime_zone_routing>`.
       // * :ref:`Zone aware routing support <arch_overview_load_balancing_zone_aware_routing>`.
-      google.protobuf.UInt64Value min_cluster_size = 2;
+      google.protobuf.UInt64Value min_cluster_size = 2 [(armeria.xds.supported) = true];
 
       // If set to true, Envoy will not consider any hosts when the cluster is in :ref:`panic
       // mode<arch_overview_load_balancing_panic_threshold>`. Instead, the cluster will fail all
       // requests as if all hosts are unhealthy. This can help avoid potentially overwhelming a
       // failing service.
-      bool fail_traffic_on_panic = 3;
+      bool fail_traffic_on_panic = 3 [(armeria.xds.supported) = true];
     }
 
     // Configuration for :ref:`locality weighted load balancing
@@ -633,12 +635,12 @@ message Cluster {
     //
     // .. note::
     //   The specified percent will be truncated to the nearest 1%.
-    type.v3.Percent healthy_panic_threshold = 1;
+    type.v3.Percent healthy_panic_threshold = 1 [(armeria.xds.supported) = true];
 
     oneof locality_config_specifier {
-      ZoneAwareLbConfig zone_aware_lb_config = 2;
+      ZoneAwareLbConfig zone_aware_lb_config = 2 [(armeria.xds.supported) = true];
 
-      LocalityWeightedLbConfig locality_weighted_lb_config = 3;
+      LocalityWeightedLbConfig locality_weighted_lb_config = 3 [(armeria.xds.supported) = true];
     }
 
     // If set, all health check/weight/metadata updates that happen within this duration will be
@@ -688,13 +690,13 @@ message Cluster {
     google.protobuf.Duration base_interval = 1 [(validate.rules).duration = {
       required: true
       gt {nanos: 1000000}
-    }];
+    }, (armeria.xds.supported) = true];
 
     // Specifies the maximum interval between refreshes. This parameter is optional, but must be
     // greater than or equal to the
     // :ref:`base_interval <envoy_v3_api_field_config.cluster.v3.Cluster.RefreshRate.base_interval>`  if set. The default
     // is 10 times the :ref:`base_interval <envoy_v3_api_field_config.cluster.v3.Cluster.RefreshRate.base_interval>`.
-    google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {nanos: 1000000}}];
+    google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {nanos: 1000000}}, (armeria.xds.supported) = true];
   }
 
   message PreconnectPolicy {
@@ -807,14 +809,14 @@ message Cluster {
   // :ref:`transport socket match criteria <envoy_v3_api_field_config.core.v3.HealthCheck.transport_socket_match_criteria>` field.
   //
   // [#comment:TODO(incfly): add a detailed architecture doc on intended usage.]
-  repeated TransportSocketMatch transport_socket_matches = 43;
+  repeated TransportSocketMatch transport_socket_matches = 43 [(armeria.xds.supported) = true];
 
   // Supplies the name of the cluster which must be unique across all clusters.
   // The cluster name is used when emitting
   // :ref:`statistics <config_cluster_manager_cluster_stats>` if :ref:`alt_stat_name
   // <envoy_v3_api_field_config.cluster.v3.Cluster.alt_stat_name>` is not provided.
   // Any ``:`` in the cluster name will be converted to ``_`` when emitting statistics.
-  string name = 1 [(validate.rules).string = {min_len: 1}];
+  string name = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   // An optional alternative to the cluster name to be used for observability. This name is used
   // for emitting stats for the cluster and access logging the cluster name. This will appear as
@@ -830,18 +832,18 @@ message Cluster {
   oneof cluster_discovery_type {
     // The :ref:`service discovery type <arch_overview_service_discovery_types>`
     // to use for resolving the cluster.
-    DiscoveryType type = 2 [(validate.rules).enum = {defined_only: true}];
+    DiscoveryType type = 2 [(validate.rules).enum = {defined_only: true}, (armeria.xds.supported) = true];
 
     // The custom cluster type.
     CustomClusterType cluster_type = 38;
   }
 
   // Configuration to use for EDS updates for the Cluster.
-  EdsClusterConfig eds_cluster_config = 3;
+  EdsClusterConfig eds_cluster_config = 3 [(armeria.xds.supported) = true];
 
   // The timeout for new network connections to hosts in the cluster.
   // If not set, a default value of 5s will be used.
-  google.protobuf.Duration connect_timeout = 4 [(validate.rules).duration = {gt {}}];
+  google.protobuf.Duration connect_timeout = 4 [(validate.rules).duration = {gt {}}, (armeria.xds.supported) = true];
 
   // Soft limit on size of the cluster’s connections read and write buffers. If
   // unspecified, an implementation defined default is applied (1MiB).
@@ -850,7 +852,7 @@ message Cluster {
 
   // The :ref:`load balancer type <arch_overview_load_balancing_types>` to use
   // when picking a host in the cluster.
-  LbPolicy lb_policy = 6 [(validate.rules).enum = {defined_only: true}];
+  LbPolicy lb_policy = 6 [(validate.rules).enum = {defined_only: true}, (armeria.xds.supported) = true];
 
   // Setting this is required for specifying members of
   // :ref:`STATIC<envoy_v3_api_enum_value_config.cluster.v3.Cluster.DiscoveryType.STATIC>`,
@@ -863,13 +865,13 @@ message Cluster {
   //   Setting this allows non-EDS cluster types to contain embedded EDS equivalent
   //   :ref:`endpoint assignments<envoy_v3_api_msg_config.endpoint.v3.ClusterLoadAssignment>`.
   //
-  endpoint.v3.ClusterLoadAssignment load_assignment = 33;
+  endpoint.v3.ClusterLoadAssignment load_assignment = 33 [(armeria.xds.supported) = true];
 
   // Optional :ref:`active health checking <arch_overview_health_checking>`
   // configuration for the cluster. If no
   // configuration is specified no health checking will be done and all cluster
   // members will be considered healthy at all times.
-  repeated core.v3.HealthCheck health_checks = 8;
+  repeated core.v3.HealthCheck health_checks = 8 [(armeria.xds.supported) = true];
 
   // Optional maximum requests for a single upstream connection. This parameter
   // is respected by both the HTTP/1.1 and HTTP/2 connection pool
@@ -964,7 +966,8 @@ message Cluster {
   google.protobuf.Duration dns_refresh_rate = 16 [
     deprecated = true,
     (validate.rules).duration = {gt {nanos: 1000000}},
-    (envoy.annotations.deprecated_at_minor_version) = "3.0"
+    (envoy.annotations.deprecated_at_minor_version) = "3.0",
+    (armeria.xds.supported) = true
   ];
 
   // DNS jitter can be optionally specified if the cluster type is either
@@ -999,7 +1002,7 @@ message Cluster {
   // If :ref:`cluster_type<envoy_v3_api_field_config.cluster.v3.Cluster.cluster_type>` is configured with
   // :ref:`DnsCluster<envoy_v3_api_msg_extensions.clusters.dns.v3.DnsCluster>`, this field will be ignored.
   RefreshRate dns_failure_refresh_rate = 44
-      [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0"];
+      [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0", (armeria.xds.supported) = true];
 
   // Optional configuration for setting cluster's DNS refresh rate. If the value is set to true,
   // cluster's DNS refresh rate will be set to resource record's TTL which comes from DNS
@@ -1009,7 +1012,7 @@ message Cluster {
   // If :ref:`cluster_type<envoy_v3_api_field_config.cluster.v3.Cluster.cluster_type>` is configured with
   // :ref:`DnsCluster<envoy_v3_api_msg_extensions.clusters.dns.v3.DnsCluster>`, this field will be ignored.
   bool respect_dns_ttl = 39
-      [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0"];
+      [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0", (armeria.xds.supported) = true];
 
   // The DNS IP address resolution policy. If this setting is not specified, the
   // value defaults to
@@ -1098,7 +1101,7 @@ message Cluster {
   core.v3.BindConfig upstream_bind_config = 21;
 
   // Configuration for load balancing subsetting.
-  LbSubsetConfig lb_subset_config = 22;
+  LbSubsetConfig lb_subset_config = 22 [(armeria.xds.supported) = true];
 
   // Optional configuration for the load balancing algorithm selected by
   // LbPolicy. Currently only
@@ -1119,21 +1122,21 @@ message Cluster {
     OriginalDstLbConfig original_dst_lb_config = 34;
 
     // Optional configuration for the LeastRequest load balancing policy.
-    LeastRequestLbConfig least_request_lb_config = 37;
+    LeastRequestLbConfig least_request_lb_config = 37 [(armeria.xds.supported) = true];
 
     // Optional configuration for the RoundRobin load balancing policy.
-    RoundRobinLbConfig round_robin_lb_config = 56;
+    RoundRobinLbConfig round_robin_lb_config = 56 [(armeria.xds.supported) = true];
   }
 
   // Common configuration for all load balancer implementations.
-  CommonLbConfig common_lb_config = 27;
+  CommonLbConfig common_lb_config = 27 [(armeria.xds.supported) = true];
 
   // Optional custom transport socket implementation to use for upstream connections.
   // To setup TLS, set a transport socket with name ``envoy.transport_sockets.tls`` and
   // :ref:`UpstreamTlsContexts <envoy_v3_api_msg_extensions.transport_sockets.tls.v3.UpstreamTlsContext>` in the ``typed_config``.
   // If no transport socket configuration is specified, new connections
   // will be set up with plaintext.
-  core.v3.TransportSocket transport_socket = 24;
+  core.v3.TransportSocket transport_socket = 24 [(armeria.xds.supported) = true];
 
   // The Metadata field can be used to provide additional information about the
   // cluster. It can be used for stats, logging, and varying filter behavior.

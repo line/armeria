@@ -27,6 +27,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3";
 option java_outer_classname = "HttpConnectionManagerProto";
 option java_multiple_files = true;
@@ -413,16 +415,16 @@ message HttpConnectionManager {
   // The human readable prefix to use when emitting statistics for the
   // connection manager. See the :ref:`statistics documentation <config_http_conn_man_stats>` for
   // more information.
-  string stat_prefix = 2 [(validate.rules).string = {min_len: 1}];
+  string stat_prefix = 2 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   oneof route_specifier {
     option (validate.required) = true;
 
     // The connection manager’s route table will be dynamically loaded via the RDS API.
-    Rds rds = 3;
+    Rds rds = 3 [(armeria.xds.supported) = true];
 
     // The route table for the connection manager is static and is specified in this property.
-    config.route.v3.RouteConfiguration route_config = 4;
+    config.route.v3.RouteConfiguration route_config = 4 [(armeria.xds.supported) = true];
 
     // A route table will be dynamically assigned to each request based on request attributes
     // (e.g., the value of a header). The "routing scopes" (i.e., route tables) and "scope keys" are
@@ -433,7 +435,7 @@ message HttpConnectionManager {
   // A list of individual HTTP filters that make up the filter chain for
   // requests made to the connection manager. :ref:`Order matters <arch_overview_http_filters_ordering>`
   // as the filters are processed sequentially as request events happen.
-  repeated HttpFilter http_filters = 5;
+  repeated HttpFilter http_filters = 5 [(armeria.xds.supported) = true];
 
   // Whether the connection manager manipulates the :ref:`config_http_conn_man_headers_user-agent`
   // and :ref:`config_http_conn_man_headers_downstream-service-cluster` headers. See the linked
@@ -1046,13 +1048,13 @@ message Rds {
       "envoy.config.filter.network.http_connection_manager.v2.Rds";
 
   // Configuration source specifier for RDS.
-  config.core.v3.ConfigSource config_source = 1;
+  config.core.v3.ConfigSource config_source = 1 [(armeria.xds.supported) = true];
 
   // The name of the route configuration. This name will be passed to the RDS
   // API. This allows an Envoy configuration with multiple HTTP listeners (and
   // associated HTTP connection manager filters) to use different route
   // configurations.
-  string route_config_name = 2;
+  string route_config_name = 2 [(armeria.xds.supported) = true];
 }
 
 // This message is used to work around the limitations with 'oneof' and repeated fields.
@@ -1220,7 +1222,7 @@ message HttpFilter {
   reserved "config";
 
   // The name of the filter configuration. It also serves as a resource name in ExtensionConfigDS.
-  string name = 1 [(validate.rules).string = {min_len: 1}];
+  string name = 1 [(validate.rules).string = {min_len: 1}, (armeria.xds.supported) = true];
 
   oneof config_type {
     // Filter specific configuration which depends on the filter being instantiated. See the supported
@@ -1230,7 +1232,7 @@ message HttpFilter {
     // :ref:`ExtensionWithMatcher <envoy_v3_api_msg_extensions.common.matching.v3.ExtensionWithMatcher>`
     // with the desired HTTP filter.
     // [#extension-category: envoy.filters.http]
-    google.protobuf.Any typed_config = 4;
+    google.protobuf.Any typed_config = 4 [(armeria.xds.supported) = true];
 
     // Configuration source specifier for an extension configuration discovery service.
     // In case of a failure and without the default configuration, the HTTP listener responds with code 500.
@@ -1246,7 +1248,7 @@ message HttpFilter {
   // If true, clients that do not support this filter may ignore the
   // filter but otherwise accept the config.
   // Otherwise, clients that do not support this filter must reject the config.
-  bool is_optional = 6;
+  bool is_optional = 6 [(armeria.xds.supported) = true];
 
   // If true, the filter is disabled by default and must be explicitly enabled by setting
   // per filter configuration in the route configuration.

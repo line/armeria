@@ -16,18 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsResourceParserUtil.fromTypeUrl;
-
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.Message;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
 
@@ -53,7 +49,9 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     private final EventExecutor eventLoop;
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Node node;
+    private final XdsExtensionRegistry extensionRegistry;
 
+    private final SubscriptionCallbacks callbacks;
     private final Map<XdsType, String> noncesMap = new EnumMap<>(XdsType.class);
     private final Map<XdsType, String> lastAckedVersions = new EnumMap<>(XdsType.class);
     private boolean completed;
@@ -61,12 +59,14 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     SotwActualStream(SotwDiscoveryStub stub, AdsXdsStream owner,
                      StateCoordinator stateCoordinator,
                      EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver,
-                     Node node) {
+                     Node node, XdsExtensionRegistry extensionRegistry) {
         this.owner = owner;
         this.stateCoordinator = stateCoordinator;
         this.eventLoop = eventLoop;
         this.lifecycleObserver = lifecycleObserver;
         this.node = node;
+        this.extensionRegistry = extensionRegistry;
+        callbacks = new SubscriptionCallbacks(stateCoordinator, extensionRegistry);
         requestObserver = stub.stream(this);
         lifecycleObserver.streamOpened();
     }
@@ -142,12 +142,12 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
         }
         lifecycleObserver.responseReceived(value);
 
-        final ResourceParser<?, ?> resourceParser = fromTypeUrl(value.getTypeUrl());
-        if (resourceParser == null) {
+        final ResourceParser<?, ?> parser = XdsResourceParserUtil.fromTypeUrl(value.getTypeUrl());
+        if (parser == null) {
             logger.warn("XDS stream Received unexpected type: {}", value.getTypeUrl());
             return;
         }
-        handleResponse(resourceParser, value);
+        handleResponse(parser, value);
     }
 
     @Override
@@ -172,42 +172,25 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
         owner.retryOrClose(false);
     }
 
-    private <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DiscoveryResponse response) {
+    private void handleResponse(ResourceParser<?, ?> parser, DiscoveryResponse response) {
+        final XdsType type = parser.type();
         final ParsedResourcesHolder holder =
-                resourceParser.parseResources(response.getResourcesList(), response.getVersionInfo());
+                parser.parseResources(response.getResourcesList(), extensionRegistry,
+                                      response.getVersionInfo());
 
         if (!holder.errors().isEmpty()) {
-            holder.invalidResources().forEach((name, error) -> stateCoordinator.onResourceError(
-                    resourceParser.type(), name, error));
-            lifecycleObserver.resourceRejected(resourceParser.type(), response, holder.invalidResources());
-
-            nackResponse(resourceParser.type(), response.getNonce(),
+            holder.invalidResources().forEach((name, error) ->
+                    stateCoordinator.onResourceError(type, name, error));
+            lifecycleObserver.resourceRejected(type, response, holder.invalidResources());
+            nackResponse(type, response.getNonce(),
                          String.join("\n", holder.errors()));
             return;
         }
 
-        // first save data
-        holder.parsedResources().forEach((name, resource) -> {
-            if (resource instanceof XdsResource) {
-                stateCoordinator.onResourceUpdated(resourceParser.type(), name, (XdsResource) resource);
-            }
-        });
-
-        final boolean fullStateOfTheWorld = resourceParser.isFullStateOfTheWorld();
-        if (fullStateOfTheWorld) {
-            final Set<String> activeResources = stateCoordinator.activeResources(resourceParser.type());
-            for (String name : activeResources) {
-                if (holder.parsedResources().containsKey(name)) {
-                    continue;
-                }
-                stateCoordinator.onResourceMissing(resourceParser.type(), name);
-            }
-        } else {
-            // A limitation of sotw - we can't know if resources should be removed.
-        }
-        lifecycleObserver.resourceUpdated(resourceParser.type(), response, holder.parsedResources());
+        callbacks.onConfigUpdate(type, holder.parsedResources(),
+                                 holder.invalidResources(), response.getVersionInfo());
+        lifecycleObserver.resourceUpdated(type, response, holder.parsedResources());
         // send the ack
-        ackResponse(resourceParser.type(), response.getVersionInfo(), response.getNonce());
+        ackResponse(type, response.getVersionInfo(), response.getNonce());
     }
 }

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsResourceParserUtil.fromTypeUrl;
-
 import java.util.ArrayDeque;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -29,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.protobuf.Message;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
 
@@ -52,7 +49,9 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
     private final EventExecutor eventLoop;
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Node node;
+    private final XdsExtensionRegistry extensionRegistry;
 
+    private final SubscriptionCallbacks callbacks;
     private final ArrayDeque<PendingAck> ackQueue = new ArrayDeque<>();
     private final EnumSet<XdsType> pendingUpdates = EnumSet.noneOf(XdsType.class);
     // Types for which initial_resource_versions has already been sent on this stream.
@@ -61,12 +60,15 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
     private boolean draining;
 
     DeltaActualStream(DeltaDiscoveryStub stub, AdsXdsStream owner, StateCoordinator stateCoordinator,
-                      EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver, Node node) {
+                      EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver, Node node,
+                      XdsExtensionRegistry extensionRegistry) {
         this.owner = owner;
         this.stateCoordinator = stateCoordinator;
         this.eventLoop = eventLoop;
         this.lifecycleObserver = lifecycleObserver;
         this.node = node;
+        this.extensionRegistry = extensionRegistry;
+        callbacks = new SubscriptionCallbacks(stateCoordinator, extensionRegistry);
         requestObserver = stub.stream(this);
         lifecycleObserver.streamOpened();
     }
@@ -218,12 +220,12 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
         }
         lifecycleObserver.responseReceived(value);
 
-        final ResourceParser<?, ?> resourceParser = fromTypeUrl(value.getTypeUrl());
-        if (resourceParser == null) {
+        final ResourceParser<?, ?> parser = XdsResourceParserUtil.fromTypeUrl(value.getTypeUrl());
+        if (parser == null) {
             logger.warn("Delta XDS stream received unexpected type: {}", value.getTypeUrl());
             return;
         }
-        handleResponse(resourceParser, value);
+        handleResponse(parser, value);
     }
 
     @Override
@@ -248,30 +250,25 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
         owner.retryOrClose(false);
     }
 
-    private <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DeltaDiscoveryResponse response) {
-        final XdsType type = resourceParser.type();
+    private void handleResponse(ResourceParser<?, ?> parser, DeltaDiscoveryResponse response) {
+        final XdsType type = parser.type();
         final List<Resource> deltaResources = response.getResourcesList();
-        final ParsedResourcesHolder holder = resourceParser.parseDeltaResources(deltaResources);
+        final ParsedResourcesHolder holder =
+                parser.parseDeltaResources(deltaResources, extensionRegistry);
 
         if (!holder.errors().isEmpty()) {
             holder.invalidResources().forEach((name, error) ->
-                                                      stateCoordinator.onResourceError(type, name, error));
+                    stateCoordinator.onResourceError(type, name, error));
             lifecycleObserver.resourceRejected(type, response, holder.invalidResources());
             nackResponse(type, response.getNonce(), String.join("\n", holder.errors()));
             return;
         }
+
+        callbacks.onConfigUpdate(type, holder.parsedResources(),
+                                 holder.invalidResources(),
+                                 response.getRemovedResourcesList(),
+                                 response.getSystemVersionInfo());
         lifecycleObserver.resourceUpdated(type, response, holder.parsedResources());
-
-        holder.parsedResources().forEach((name, resource) -> {
-            if (resource instanceof XdsResource) {
-                stateCoordinator.onResourceUpdated(type, name, (XdsResource) resource);
-            }
-        });
-
-        for (String removedName : response.getRemovedResourcesList()) {
-            stateCoordinator.onResourceMissing(type, removedName);
-        }
 
         // ack after processing so that the diff between interested - state is computed correctly
         ackResponse(type, response.getNonce());
