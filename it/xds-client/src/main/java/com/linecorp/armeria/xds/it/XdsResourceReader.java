@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
-import com.google.protobuf.GeneratedMessage;
+import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.JsonFormat.Parser;
 import com.google.protobuf.util.JsonFormat.TypeRegistry;
@@ -54,10 +54,10 @@ public final class XdsResourceReader {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends GeneratedMessage> T fromYaml(String yaml, Class<T> clazz) {
-        final GeneratedMessage.Builder<?> builder;
+    public static <T extends Message> T fromYaml(String yaml, Class<T> clazz) {
+        final Message.Builder builder;
         try {
-            builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
+            builder = (Message.Builder) clazz.getMethod("newBuilder").invoke(null);
             final JsonNode jsonNode = mapper.reader().readTree(yaml);
             parser.merge(jsonNode.toString(), builder);
         } catch (Exception e) {
@@ -67,10 +67,10 @@ public final class XdsResourceReader {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends GeneratedMessage> T fromJson(String json, Class<T> clazz) {
-        final GeneratedMessage.Builder<?> builder;
+    public static <T extends Message> T fromJson(String json, Class<T> clazz) {
+        final Message.Builder builder;
         try {
-            builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
+            builder = (Message.Builder) clazz.getMethod("newBuilder").invoke(null);
             final JsonNode jsonNode = jsonMapper.reader().readTree(json);
             parser.merge(jsonNode.toString(), builder);
         } catch (Exception e) {

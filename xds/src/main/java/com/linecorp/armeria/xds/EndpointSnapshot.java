@@ -62,4 +62,11 @@ public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
                           .add("endpoint", endpoint)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("endpoint", endpoint.resource())
+                          .toString();
+    }
 }

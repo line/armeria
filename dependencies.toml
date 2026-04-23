@@ -52,6 +52,7 @@ hibernate-validator8 = "8.0.3.Final"
 # used by :it:xds-istio
 istio = "1.29.1"
 j2objc = "3.1"
+json-path = "3.0.0"
 jackson = "2.21.2"
 jakarta-inject = "2.0.1"
 jakarta-validation = "3.1.1"
@@ -590,6 +591,10 @@ version.ref = "hibernate-validator8"
 [libraries.j2objc]
 module = "com.google.j2objc:j2objc-annotations"
 version.ref = "j2objc"
+
+[libraries.json-path]
+module = "com.jayway.jsonpath:json-path"
+version.ref = "json-path"
 
 [libraries.jakarta-inject]
 module = "jakarta.inject:jakarta.inject-api"
