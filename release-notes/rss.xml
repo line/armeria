@@ -4,10 +4,17 @@
         <title>Armeria Release Notes</title>
         <link>https://armeria.dev/release-notes</link>
         
-        <lastBuildDate>Tue, 07 Apr 2026 04:52:50 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 23 Apr 2026 05:58:36 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <language>en</language>
         <copyright>© 2015-2026, LY Corporation</copyright>
+        <item>
+            <title><![CDATA[v1.32.6]]></title>
+            <link>https://armeria.dev/release-notes/1.32.6/</link>
+            <guid>https://armeria.dev/release-notes/1.32.6/</guid>
+            <pubDate>Thu, 23 Apr 2026 00:00:00 GMT</pubDate>
+            <description><![CDATA[The server no longer sends a spurious RST_STREAM frame after endStream has already been sent, which previously could interrupt in-flight responses and drop data. #6279 HTTP/2 flow control now operates...]]></description>
+        </item>
         <item>
             <title><![CDATA[v1.38.0]]></title>
             <link>https://armeria.dev/release-notes/1.38.0/</link>
