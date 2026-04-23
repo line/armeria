@@ -12,6 +12,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "AddressProto";
 option java_multiple_files = true;
@@ -27,6 +29,7 @@ message Pipe {
   // abstract namespace. The starting '@' is replaced by a null byte by Envoy.
   // Paths starting with '@' will result in an error in environments other than
   // Linux.
+  option (armeria.xds.supported.field) = 1;
   string path = 1 [(validate.rules).string = {min_len: 1}];
 
   // The mode for the Pipe. Not applicable for abstract sockets.
@@ -72,8 +75,10 @@ message SocketAddress {
   // address must be an IP (``STATIC`` or ``EDS`` clusters) or a hostname resolved by DNS
   // (``STRICT_DNS`` or ``LOGICAL_DNS`` clusters). Address resolution can be customized
   // via :ref:`resolver_name <envoy_v3_api_field_config.core.v3.SocketAddress.resolver_name>`.
+  option (armeria.xds.supported.field) = 2;
   string address = 2 [(validate.rules).string = {min_len: 1}];
 
+  option (armeria.xds.supported.field) = 3;
   oneof port_specifier {
     option (validate.required) = true;
 
@@ -186,6 +191,8 @@ message BindConfig {
 message Address {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.Address";
 
+  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = 2;
   oneof address {
     option (validate.required) = true;
 

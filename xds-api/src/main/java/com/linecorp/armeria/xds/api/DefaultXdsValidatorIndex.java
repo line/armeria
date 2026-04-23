@@ -16,40 +16,33 @@
 
 package com.linecorp.armeria.xds.api;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
 
-import io.envoyproxy.pgv.ReflectiveValidatorIndex;
-import io.envoyproxy.pgv.ValidationException;
-import io.envoyproxy.pgv.Validator;
-import io.envoyproxy.pgv.ValidatorIndex;
-
 /**
- * The default validator which uses reflection in conjunction with pgv to validate messages.
+ * The default validator which applies pgv (protoc-gen-validate) structural validation
+ * and warns usage of unsupported fields.
  */
 @UnstableApi
-public final class DefaultXdsValidatorIndex implements ValidatorIndex, XdsValidatorIndex {
+public final class DefaultXdsValidatorIndex implements XdsValidatorIndex {
 
-    private final ValidatorIndex delegate;
+    private static final DefaultXdsValidatorIndex INSTANCE = new DefaultXdsValidatorIndex();
+
+    private final PgvValidator pgvValidator = PgvValidator.of();
+    private final SupportedFieldValidator supportedFieldValidator = SupportedFieldValidator.of();
 
     /**
-     * Creates a validator.
+     * Returns the default singleton instance.
      */
-    public DefaultXdsValidatorIndex() {
-        delegate = new ReflectiveValidatorIndex();
+    public static DefaultXdsValidatorIndex of() {
+        return INSTANCE;
     }
 
     @Override
-    public <T> Validator<T> validatorFor(Class clazz) {
-        return delegate.validatorFor(clazz);
-    }
-
-    @Override
-    public void assertValid(Object message) {
-        try {
-            validatorFor(message).assertValid(message);
-        } catch (ValidationException e) {
-            throw new IllegalArgumentException(e);
-        }
+    public void assertValid(Message message) {
+        pgvValidator.assertValid(message);
+        supportedFieldValidator.validate(message);
     }
 }

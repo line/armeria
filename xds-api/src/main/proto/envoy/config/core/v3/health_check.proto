@@ -20,6 +20,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "HealthCheckProto";
 option java_multiple_files = true;
@@ -36,12 +38,15 @@ enum HealthStatus {
   // The health status is not known. This is interpreted by Envoy as ``HEALTHY``.
   UNKNOWN = 0;
 
+  option (armeria.xds.supported.enum_value) = 1;
   // Healthy.
   HEALTHY = 1;
 
+  option (armeria.xds.supported.enum_value) = 2;
   // Unhealthy.
   UNHEALTHY = 2;
 
+  option (armeria.xds.supported.enum_value) = 3;
   // Connection draining in progress. E.g.,
   // `<https://aws.amazon.com/blogs/aws/elb-connection-draining-remove-instances-from-service-with-care/>`_
   // or
@@ -53,6 +58,7 @@ enum HealthStatus {
   // ``UNHEALTHY``.
   TIMEOUT = 4;
 
+  option (armeria.xds.supported.enum_value) = 5;
   // Degraded.
   DEGRADED = 5;
 }
@@ -96,10 +102,12 @@ message HealthCheck {
     // left empty (default value), the name of the cluster this health check is associated
     // with will be used. The host header can be customized for a specific endpoint by setting the
     // :ref:`hostname <envoy_v3_api_field_config.endpoint.v3.Endpoint.HealthCheckConfig.hostname>` field.
+    option (armeria.xds.supported.field) = 1;
     string host = 1 [(validate.rules).string = {well_known_regex: HTTP_HEADER_VALUE}];
 
     // Specifies the HTTP path that will be requested during health checking. For example
     // ``/healthcheck``.
+    option (armeria.xds.supported.field) = 2;
     string path = 2 [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_VALUE}];
 
     // HTTP specific payload to be sent as the request body during health checking.
@@ -166,6 +174,7 @@ message HealthCheck {
     // Request body payloads are supported for POST, PUT, PATCH, and OPTIONS methods only.
     // CONNECT method is disallowed because it is not appropriate for health check request.
     // If a non-200 response is expected by the method, it needs to be set in :ref:`expected_statuses <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.expected_statuses>`.
+    option (armeria.xds.supported.field) = 13;
     RequestMethod method = 13 [(validate.rules).enum = {defined_only: true not_in: 6}];
   }
 
@@ -268,12 +277,14 @@ message HealthCheck {
 
   // The time to wait for a health check response. If the timeout is reached the
   // health check attempt will be considered a failure.
+  option (armeria.xds.supported.field) = 1;
   google.protobuf.Duration timeout = 1 [(validate.rules).duration = {
     required: true
     gt {}
   }];
 
   // The interval between health checks.
+  option (armeria.xds.supported.field) = 2;
   google.protobuf.Duration interval = 2 [(validate.rules).duration = {
     required: true
     gt {}
@@ -301,11 +312,13 @@ message HealthCheck {
   // :ref:`expected_statuses <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.expected_statuses>`
   // or :ref:`retriable_statuses <envoy_v3_api_field_config.core.v3.HealthCheck.HttpHealthCheck.retriable_statuses>`,
   // this threshold is ignored and the host is considered immediately unhealthy.
+  option (armeria.xds.supported.field) = 4;
   google.protobuf.UInt32Value unhealthy_threshold = 4 [(validate.rules).message = {required: true}];
 
   // The number of healthy health checks required before a host is marked
   // healthy. Note that during startup, only a single successful health check is
   // required to mark a host healthy.
+  option (armeria.xds.supported.field) = 5;
   google.protobuf.UInt32Value healthy_threshold = 5 [(validate.rules).message = {required: true}];
 
   // [#not-implemented-hide:] Non-serving port for health checking.
@@ -314,6 +327,7 @@ message HealthCheck {
   // Reuse health check connection between health checks. Default is true.
   google.protobuf.BoolValue reuse_connection = 7;
 
+  option (armeria.xds.supported.field) = 8;
   oneof health_checker {
     option (validate.required) = true;
 

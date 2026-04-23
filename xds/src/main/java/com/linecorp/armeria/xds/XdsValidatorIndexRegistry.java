@@ -34,7 +34,7 @@ final class XdsValidatorIndexRegistry {
                    .max(Comparator.comparingInt(XdsValidatorIndex::priority))
                    .orElse(XdsValidatorIndex.noop());
 
-    static void assertValid(Object message) {
+    static void assertValid(Message message) {
         xdsValidatorIndex.assertValid(message);
     }
 

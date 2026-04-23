@@ -20,6 +20,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "BaseProto";
 option java_multiple_files = true;
@@ -71,6 +73,7 @@ message Locality {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.Locality";
 
   // Region this :ref:`zone <envoy_v3_api_field_config.core.v3.Locality.zone>` belongs to.
+  option (armeria.xds.supported.field) = 1;
   string region = 1;
 
   // Defines the local service zone where Envoy is running. Though optional, it
@@ -81,11 +84,13 @@ message Locality {
   // <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html>`_
   // on AWS, `Zone <https://cloud.google.com/compute/docs/regions-zones/>`_ on
   // GCP, etc.
+  option (armeria.xds.supported.field) = 2;
   string zone = 2;
 
   // When used for locality of upstream hosts, this field further splits zone
   // into smaller chunks of sub-zones so they can be load balanced
   // independently.
+  option (armeria.xds.supported.field) = 3;
   string sub_zone = 3;
 }
 
@@ -181,6 +186,7 @@ message Node {
   map<string, xds.core.v3.ContextParams> dynamic_parameters = 12;
 
   // Locality specifying where the Envoy instance is running.
+  option (armeria.xds.supported.field) = 4;
   Locality locality = 4;
 
   // Free-form string that identifies the entity requesting config.
@@ -245,6 +251,7 @@ message Metadata {
   // :ref:`typed_filter_metadata <envoy_v3_api_field_config.core.v3.Metadata.typed_filter_metadata>`
   // fields are present in the metadata with same keys,
   // only ``typed_filter_metadata`` field will be parsed.
+  option (armeria.xds.supported.field) = 1;
   map<string, google.protobuf.Struct> filter_metadata = 1
       [(validate.rules).map = {keys {string {min_len: 1}}}];
 
@@ -400,6 +407,7 @@ message QueryParameter {
 message HeaderValue {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.HeaderValue";
 
+  option (armeria.xds.supported.field) = 1;
   // Header name.
   string key = 1
       [(validate.rules).string =
@@ -412,6 +420,7 @@ message HeaderValue {
   // unknown header values are replaced with the empty string instead of ``-``.
   // Header value is encoded as string. This does not work for non-utf8 characters.
   // Only one of ``value`` or ``raw_value`` can be set.
+  option (armeria.xds.supported.field) = 2;
   string value = 2 [
     (validate.rules).string = {max_bytes: 16384 well_known_regex: HTTP_HEADER_VALUE strict: false},
     (udpa.annotations.field_migrate).oneof_promotion = "value_type"
@@ -492,6 +501,7 @@ message HeaderMap {
 // events inside this directory trigger the watch.
 message WatchedDirectory {
   // Directory path to watch.
+  option (armeria.xds.supported.field) = 1;
   string path = 1 [(validate.rules).string = {min_len: 1}];
 }
 
@@ -500,6 +510,9 @@ message WatchedDirectory {
 message DataSource {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.DataSource";
 
+  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = 3;
   oneof specifier {
     option (validate.required) = true;
 
@@ -619,12 +632,14 @@ message TransportSocket {
 
   reserved "config";
 
+  option (armeria.xds.supported.field) = 1;
   // The name of the transport socket to instantiate. The name must match a supported transport
   // socket implementation.
   string name = 1 [(validate.rules).string = {min_len: 1}];
 
   // Implementation specific configuration which depends on the implementation being instantiated.
   // See the supported transport socket implementations for further documentation.
+  option (armeria.xds.supported.field) = 3;
   oneof config_type {
     google.protobuf.Any typed_config = 3;
   }

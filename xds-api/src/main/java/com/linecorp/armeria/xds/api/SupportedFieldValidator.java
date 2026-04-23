@@ -37,13 +37,16 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Validates protobuf messages against the {@code (armeria.xds.supported)} field annotation.
- * Any set field that lacks the annotation is reported as an unsupported field violation.
- * The validator walks recursively into supported message-typed fields.
+ * Validates protobuf messages against the {@code (armeria.xds.supported_fields)} message-level annotation.
+ * Any set field whose number is not listed in the message's {@code supported_fields} option is reported
+ * as an unsupported field violation. The validator walks recursively into supported message-typed fields.
  *
- * <p>Currently, supported fields are annotated inline on each field declaration in the proto files, e.g.:
+ * <p>Supported fields are annotated at the message level in the proto files, e.g.:
  * <pre>{@code
- * string exact = 1 [(armeria.xds.supported) = true];
+ * message StringMatcher {
+ *   option (armeria.xds.supported_fields) = 1;
+ *   string exact = 1;
+ * }
  * }</pre>
  */
 @UnstableApi
@@ -162,7 +165,9 @@ public final class SupportedFieldValidator {
     }
 
     private static boolean unsupportedEnumValue(EnumValueDescriptor ev) {
-        return !ev.getOptions().getExtension(SupportedFieldProto.supportedValue);
+        final List<Integer> supportedValues =
+                ev.getType().getOptions().getExtension(SupportedFieldProto.supported.enumValue);
+        return !supportedValues.contains(ev.getNumber());
     }
 
     private static boolean unsupportedPackage(String pkg) {
@@ -171,9 +176,11 @@ public final class SupportedFieldValidator {
 
     private Set<FieldDescriptor> supportedFields(Descriptors.Descriptor descriptor) {
         return supportedFieldsCache.computeIfAbsent(descriptor, d -> {
+            final List<Integer> supportedNumbers =
+                    d.getOptions().getExtension(SupportedFieldProto.supported.field);
             final Set<FieldDescriptor> result = new HashSet<>();
             for (FieldDescriptor fd : d.getFields()) {
-                if (fd.getOptions().getExtension(SupportedFieldProto.supported)) {
+                if (supportedNumbers.contains(fd.getNumber())) {
                     result.add(fd);
                 }
             }

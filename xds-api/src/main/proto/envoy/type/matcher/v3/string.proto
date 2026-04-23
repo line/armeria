@@ -6,6 +6,7 @@ import "envoy/type/matcher/v3/regex.proto";
 
 import "xds/core/v3/extension.proto";
 
+import "armeria/xds/supported.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
@@ -27,6 +28,11 @@ message StringMatcher {
 
   reserved "regex";
 
+  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = 5;
+  option (armeria.xds.supported.field) = 7;
   oneof match_pattern {
     option (validate.required) = true;
 
@@ -82,6 +88,7 @@ message StringMatcher {
   // has no effect for the ``safe_regex`` match.
   // For example, the matcher ``data`` will match both input string ``Data`` and ``data`` if this option
   // is set to ``true``.
+  option (armeria.xds.supported.field) = 6;
   bool ignore_case = 6;
 }
 
