@@ -139,5 +139,23 @@ final class XdsResourceReader {
                        .jsonString();
     }
 
+    /**
+     * Adds a listener (specified as YAML) to the bootstrap JSON's
+     * {@code static_resources.listeners} array.
+     */
+    static String addStaticListener(String bootstrapJson, String listenerYaml) {
+        try {
+            final JsonNode listenerNode = mapper.reader().readTree(listenerYaml);
+            final Object listenerObj = Configuration.defaultConfiguration()
+                                                    .jsonProvider()
+                                                    .parse(listenerNode.toString());
+            return JsonPath.parse(bootstrapJson)
+                           .add("$.static_resources.listeners", listenerObj)
+                           .jsonString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private XdsResourceReader() {}
 }

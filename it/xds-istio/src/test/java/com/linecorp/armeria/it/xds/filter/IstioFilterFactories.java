@@ -28,10 +28,11 @@ import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
- * No-op {@link HttpFilterFactory} implementations for Istio/Envoy-specific HTTP filters
+ * {@link HttpFilterFactory} implementations for Istio/Envoy-specific HTTP filters
  * that Armeria has no built-in factory for. Registered via SPI so they are picked up
  * automatically by {@link com.linecorp.armeria.xds.filter.HttpFilterFactoryRegistry}.
- * Returns {@code null} from {@code create()} so the filter is silently skipped.
+ * Most factories return {@code null} from {@code create()} so the filter is silently skipped,
+ * except for {@link IstioAlpn} which overrides the ALPN protocols per-request.
  */
 public final class IstioFilterFactories {
 

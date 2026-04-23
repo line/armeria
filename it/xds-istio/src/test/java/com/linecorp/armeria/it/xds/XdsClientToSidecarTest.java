@@ -45,7 +45,6 @@ import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
-import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 @EnabledIfDockerAvailable
 class XdsClientToSidecarTest {
@@ -63,10 +62,11 @@ class XdsClientToSidecarTest {
 
     @IstioPodTest
     void clusterLoad() throws Exception {
-        final Bootstrap parsedBootstrap = loadParsedBootstrap();
+        final String bootstrapJson = loadBootstrapJson();
+        final Bootstrap bootstrap = XdsResourceReader.fromJson(bootstrapJson, Bootstrap.class);
         final String clusterName = "outbound|8080||echo-server.default.svc.cluster.local";
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(parsedBootstrap);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName)) {
             final AtomicReference<ClusterSnapshot> snapshotRef = new AtomicReference<>();
             final AtomicReference<Throwable> errorRef = new AtomicReference<>();
@@ -94,16 +94,11 @@ class XdsClientToSidecarTest {
     void clusterRequest() throws Exception {
         final String clusterName = "outbound|8080||echo-server.default.svc.cluster.local";
         final String listenerName = "armeria-test-cluster-listener";
-        final Listener listener = listenerWithStaticRoute(listenerName, clusterName);
+        final String listenerYaml = listenerWithStaticRoute(listenerName, clusterName);
 
-        final Bootstrap parsedBootstrap = loadParsedBootstrap();
-        final Bootstrap.StaticResources staticResources =
-                parsedBootstrap.getStaticResources().toBuilder()
-                               .addListeners(listener)
-                               .build();
-        final Bootstrap bootstrap = parsedBootstrap.toBuilder()
-                                                   .setStaticResources(staticResources)
-                                                   .build();
+        final String bootstrapJson = loadBootstrapJson();
+        final String patched = XdsResourceReader.addStaticListener(bootstrapJson, listenerYaml);
+        final Bootstrap bootstrap = XdsResourceReader.fromJson(patched, Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              XdsHttpPreprocessor preprocessor =
@@ -120,21 +115,13 @@ class XdsClientToSidecarTest {
 
     @IstioPodTest
     void routeLoad() throws Exception {
-        final Bootstrap parsedBootstrap = loadParsedBootstrap();
-
         final String listenerName = "armeria-test-ads-listener";
         final String routeConfigName = "echo-server.default.svc.cluster.local:8080";
-        final Listener listener = listenerWithRdsAds(listenerName, routeConfigName);
+        final String listenerYaml = listenerWithRdsAds(listenerName, routeConfigName);
 
-        final Bootstrap.StaticResources staticResources = parsedBootstrap.getStaticResources().toBuilder()
-                                                                         .addListeners(listener)
-                                                                         .build();
-
-        final Bootstrap.DynamicResources dynamicResources = parsedBootstrap.getDynamicResources();
-        final Bootstrap bootstrap = parsedBootstrap.toBuilder()
-                                                   .setStaticResources(staticResources)
-                                                   .setDynamicResources(dynamicResources)
-                                                   .build();
+        final String bootstrapJson = loadBootstrapJson();
+        final String patched = XdsResourceReader.addStaticListener(bootstrapJson, listenerYaml);
+        final Bootstrap bootstrap = XdsResourceReader.fromJson(patched, Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName)) {
@@ -167,19 +154,13 @@ class XdsClientToSidecarTest {
 
     @IstioPodTest
     void routeRequest() throws Exception {
-        final Bootstrap parsedBootstrap = loadParsedBootstrap();
-
         final String listenerName = "armeria-test-ads-listener";
         final String routeConfigName = "echo-server.default.svc.cluster.local:8080";
-        final Listener listener = listenerWithRdsAds(listenerName, routeConfigName);
+        final String listenerYaml = listenerWithRdsAds(listenerName, routeConfigName);
 
-        final Bootstrap.StaticResources staticResources =
-                parsedBootstrap.getStaticResources().toBuilder()
-                               .addListeners(listener)
-                               .build();
-        final Bootstrap bootstrap = parsedBootstrap.toBuilder()
-                                                   .setStaticResources(staticResources)
-                                                   .build();
+        final String bootstrapJson = loadBootstrapJson();
+        final String patched = XdsResourceReader.addStaticListener(bootstrapJson, listenerYaml);
+        final Bootstrap bootstrap = XdsResourceReader.fromJson(patched, Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              XdsHttpPreprocessor preprocessor =
@@ -203,9 +184,10 @@ class XdsClientToSidecarTest {
         final String listenerName = serviceIp + '_' + server.port();
         logger.info("Istio outbound listener name resolved: {}", listenerName);
 
-        final Bootstrap parsedBootstrap = loadParsedBootstrap();
+        final String bootstrapJson = loadBootstrapJson();
+        final Bootstrap bootstrap = XdsResourceReader.fromJson(bootstrapJson, Bootstrap.class);
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(parsedBootstrap);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName)) {
             final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
             final AtomicReference<Throwable> errorRef = new AtomicReference<>();
@@ -241,9 +223,10 @@ class XdsClientToSidecarTest {
         final String listenerName = serviceIp + '_' + server.port();
         logger.info("Istio outbound listener name resolved: {}", listenerName);
 
-        final Bootstrap parsedBootstrap = loadParsedBootstrap();
+        final String bootstrapJson = loadBootstrapJson();
+        final Bootstrap bootstrap = XdsResourceReader.fromJson(bootstrapJson, Bootstrap.class);
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(parsedBootstrap);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener(listenerName, xdsBootstrap)) {
             final WebClient client = WebClient.builder(preprocessor)
                                               .decorator(LoggingClient.newDecorator())
@@ -255,10 +238,9 @@ class XdsClientToSidecarTest {
         }
     }
 
-    private static Listener listenerWithStaticRoute(String name, String clusterName) {
+    private static String listenerWithStaticRoute(String name, String clusterName) {
         //language=YAML
-        final String yaml =
-                """
+        return """
                 name: %s
                 api_listener:
                   api_listener:
@@ -282,13 +264,11 @@ class XdsClientToSidecarTest {
                       typed_config:
                         "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                 """.formatted(name, name, clusterName);
-        return XdsResourceReader.fromYaml(yaml, Listener.class);
     }
 
-    private static Listener listenerWithRdsAds(String name, String routeConfigName) {
+    private static String listenerWithRdsAds(String name, String routeConfigName) {
         //language=YAML
-        final String yaml =
-                """
+        return """
                 name: %s
                 api_listener:
                   api_listener:
@@ -306,15 +286,13 @@ class XdsClientToSidecarTest {
                       typed_config:
                         "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                 """.formatted(name, name, routeConfigName);
-        return XdsResourceReader.fromYaml(yaml, Listener.class);
     }
 
-    private static Bootstrap loadParsedBootstrap() throws Exception {
+    private static String loadBootstrapJson() throws Exception {
         final Path bootstrapPath = Paths.get("/etc/istio/proxy/envoy-rev.json");
         assertThat(bootstrapPath).exists();
         logger.info("Using Istio bootstrap file: {}", bootstrapPath);
         final String bootstrapJson = Files.readString(bootstrapPath);
-        final String rewritten = XdsResourceReader.rewriteXdsGrpcBootstrap(bootstrapJson);
-        return XdsResourceReader.fromJson(rewritten, Bootstrap.class);
+        return XdsResourceReader.rewriteXdsGrpcBootstrap(bootstrapJson);
     }
 }
