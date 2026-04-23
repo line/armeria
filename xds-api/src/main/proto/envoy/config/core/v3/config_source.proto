@@ -218,9 +218,6 @@ message ConfigSource {
   // [#not-implemented-hide:]
   repeated xds.core.v3.Authority authorities = 7;
 
-  option (armeria.xds.supported.field) = 2;
-  option (armeria.xds.supported.field) = 3;
-  option (armeria.xds.supported.field) = 5;
   oneof config_source_specifier {
     option (validate.required) = true;
 
@@ -231,10 +228,12 @@ message ConfigSource {
     PathConfigSource path_config_source = 8;
 
     // API configuration source.
+    option (armeria.xds.supported.oneof_field) = 2;
     ApiConfigSource api_config_source = 2;
 
     // When set, ADS will be used to fetch resources. The ADS API configuration
     // source in the bootstrap configuration is used.
+    option (armeria.xds.supported.oneof_field) = 3;
     AggregatedConfigSource ads = 3;
 
     // [#not-implemented-hide:]
@@ -248,6 +247,7 @@ message ConfigSource {
     // [#next-major-version: In xDS v3, consider replacing the ads field with this one, since
     // this field can implicitly mean to use the same stream in the case where the ConfigSource
     // is provided via ADS and the specified data can also be obtained via ADS.]
+    option (armeria.xds.supported.oneof_field) = 5;
     SelfConfigSource self = 5;
   }
 

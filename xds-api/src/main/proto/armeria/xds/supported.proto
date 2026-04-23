@@ -7,13 +7,21 @@ option java_outer_classname = "SupportedFieldProto";
 import "google/protobuf/descriptor.proto";
 
 // Enclosing message so that option usage reads as
-// `(armeria.xds.supported.field)` and `(armeria.xds.supported.enum_value)`.
+// `(armeria.xds.supported.field)`, `(armeria.xds.supported.oneof_field)`,
+// and `(armeria.xds.supported.enum_value)`.
 message supported {
   extend google.protobuf.MessageOptions {
     // Field numbers of supported fields in this message.
     // Place each `option (armeria.xds.supported.field) = <field_number>;`
     // directly above the corresponding field declaration.
     repeated int32 field = 50000;
+  }
+
+  extend google.protobuf.OneofOptions {
+    // Field numbers of supported oneof members.
+    // Place each `option (armeria.xds.supported.oneof_field) = <field_number>;`
+    // directly above the corresponding field inside a oneof block.
+    repeated int32 oneof_field = 50000;
   }
 
   extend google.protobuf.EnumOptions {

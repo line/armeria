@@ -418,15 +418,15 @@ message HttpConnectionManager {
   option (armeria.xds.supported.field) = 2;
   string stat_prefix = 2 [(validate.rules).string = {min_len: 1}];
 
-  option (armeria.xds.supported.field) = 3;
-  option (armeria.xds.supported.field) = 4;
   oneof route_specifier {
     option (validate.required) = true;
 
     // The connection manager’s route table will be dynamically loaded via the RDS API.
+    option (armeria.xds.supported.oneof_field) = 3;
     Rds rds = 3;
 
     // The route table for the connection manager is static and is specified in this property.
+    option (armeria.xds.supported.oneof_field) = 4;
     config.route.v3.RouteConfiguration route_config = 4;
 
     // A route table will be dynamically assigned to each request based on request attributes
@@ -1231,7 +1231,6 @@ message HttpFilter {
   option (armeria.xds.supported.field) = 1;
   string name = 1 [(validate.rules).string = {min_len: 1}];
 
-  option (armeria.xds.supported.field) = 4;
   oneof config_type {
     // Filter specific configuration which depends on the filter being instantiated. See the supported
     // filters for further documentation.
@@ -1240,6 +1239,7 @@ message HttpFilter {
     // :ref:`ExtensionWithMatcher <envoy_v3_api_msg_extensions.common.matching.v3.ExtensionWithMatcher>`
     // with the desired HTTP filter.
     // [#extension-category: envoy.filters.http]
+    option (armeria.xds.supported.oneof_field) = 4;
     google.protobuf.Any typed_config = 4;
 
     // Configuration source specifier for an extension configuration discovery service.

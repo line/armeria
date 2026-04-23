@@ -78,10 +78,10 @@ message SocketAddress {
   option (armeria.xds.supported.field) = 2;
   string address = 2 [(validate.rules).string = {min_len: 1}];
 
-  option (armeria.xds.supported.field) = 3;
   oneof port_specifier {
     option (validate.required) = true;
 
+    option (armeria.xds.supported.oneof_field) = 3;
     uint32 port_value = 3 [(validate.rules).uint32 = {lte: 65535}];
 
     // This is only valid if :ref:`resolver_name
@@ -191,13 +191,13 @@ message BindConfig {
 message Address {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.Address";
 
-  option (armeria.xds.supported.field) = 1;
-  option (armeria.xds.supported.field) = 2;
   oneof address {
     option (validate.required) = true;
 
+    option (armeria.xds.supported.oneof_field) = 1;
     SocketAddress socket_address = 1;
 
+    option (armeria.xds.supported.oneof_field) = 2;
     Pipe pipe = 2;
 
     // Specifies a user-space address handled by :ref:`internal listeners

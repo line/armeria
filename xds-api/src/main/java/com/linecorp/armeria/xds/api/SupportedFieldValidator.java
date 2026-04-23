@@ -37,15 +37,21 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Validates protobuf messages against the {@code (armeria.xds.supported_fields)} message-level annotation.
- * Any set field whose number is not listed in the message's {@code supported_fields} option is reported
- * as an unsupported field violation. The validator walks recursively into supported message-typed fields.
+ * Validates protobuf messages against the {@code (armeria.xds.supported.field)} and
+ * {@code (armeria.xds.supported.oneof_field)} annotations. Any set field whose number is not listed
+ * is reported as an unsupported field violation. The validator walks recursively into supported
+ * message-typed fields.
  *
- * <p>Supported fields are annotated at the message level in the proto files, e.g.:
+ * <p>Supported fields are annotated in the proto files, e.g.:
  * <pre>{@code
- * message StringMatcher {
- *   option (armeria.xds.supported_fields) = 1;
- *   string exact = 1;
+ * message Address {
+ *   option (armeria.xds.supported.field) = 2;
+ *   string address = 2;
+ *
+ *   oneof port_specifier {
+ *     option (armeria.xds.supported.oneof_field) = 3;
+ *     uint32 port_value = 3;
+ *   }
  * }
  * }</pre>
  */
@@ -167,7 +173,8 @@ public final class SupportedFieldValidator {
     private static boolean unsupportedEnumValue(EnumValueDescriptor ev) {
         final List<Integer> supportedValues =
                 ev.getType().getOptions().getExtension(SupportedFieldProto.supported.enumValue);
-        return !supportedValues.contains(ev.getNumber());
+        // If no enum values are annotated, treat as "no opinion" — skip validation.
+        return !supportedValues.isEmpty() && !supportedValues.contains(ev.getNumber());
     }
 
     private static boolean unsupportedPackage(String pkg) {
@@ -176,8 +183,12 @@ public final class SupportedFieldValidator {
 
     private Set<FieldDescriptor> supportedFields(Descriptors.Descriptor descriptor) {
         return supportedFieldsCache.computeIfAbsent(descriptor, d -> {
-            final List<Integer> supportedNumbers =
-                    d.getOptions().getExtension(SupportedFieldProto.supported.field);
+            final Set<Integer> supportedNumbers = new HashSet<>(
+                    d.getOptions().getExtension(SupportedFieldProto.supported.field));
+            for (Descriptors.OneofDescriptor oneof : d.getOneofs()) {
+                supportedNumbers.addAll(
+                        oneof.getOptions().getExtension(SupportedFieldProto.supported.oneofField));
+            }
             final Set<FieldDescriptor> result = new HashSet<>();
             for (FieldDescriptor fd : d.getFields()) {
                 if (supportedNumbers.contains(fd.getNumber())) {

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.api;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -42,6 +44,7 @@ public final class DefaultXdsValidatorIndex implements XdsValidatorIndex {
 
     @Override
     public void assertValid(Message message) {
+        requireNonNull(message, "message");
         pgvValidator.assertValid(message);
         supportedFieldValidator.validate(message);
     }

@@ -300,11 +300,11 @@ message Route {
   option (armeria.xds.supported.field) = 1;
   RouteMatch match = 1 [(validate.rules).message = {required: true}];
 
-  option (armeria.xds.supported.field) = 2;
   oneof action {
     option (validate.required) = true;
 
     // Route request to some upstream cluster.
+    option (armeria.xds.supported.oneof_field) = 2;
     RouteAction route = 2;
 
     // Return a redirect.
@@ -628,19 +628,17 @@ message RouteMatch {
 
   reserved "regex";
 
-  option (armeria.xds.supported.field) = 1;
-  option (armeria.xds.supported.field) = 2;
-  option (armeria.xds.supported.field) = 10;
-  option (armeria.xds.supported.field) = 14;
   oneof path_specifier {
     option (validate.required) = true;
 
     // If specified, the route is a prefix rule meaning that the prefix must
     // match the beginning of the ``:path`` header.
+    option (armeria.xds.supported.oneof_field) = 1;
     string prefix = 1;
 
     // If specified, the route is an exact path rule meaning that the path must
     // exactly match the ``:path`` header once the query string is removed.
+    option (armeria.xds.supported.oneof_field) = 2;
     string path = 2;
 
     // If specified, the route is a regular expression rule meaning that the
@@ -655,6 +653,7 @@ message RouteMatch {
     // path_specifier entirely and just rely on a set of header matchers which can already match
     // on :path, etc. The issue with that is it is unclear how to generically deal with query string
     // stripping. This needs more thought.]
+    option (armeria.xds.supported.oneof_field) = 10;
     type.matcher.v3.RegexMatcher safe_regex = 10 [(validate.rules).message = {required: true}];
 
     // If this is used as the matcher, the matcher will only match CONNECT or CONNECT-UDP requests.
@@ -676,6 +675,7 @@ message RouteMatch {
     // but would not match ``/api/developer``
     //
     // Expect the value to not contain ``?`` or ``#`` and not to end in ``/``
+    option (armeria.xds.supported.oneof_field) = 14;
     string path_separated_prefix = 14 [(validate.rules).string = {pattern: "^[^?#]+[^?#/]$"}];
 
     // [#extension-category: envoy.path.match]
@@ -1140,12 +1140,12 @@ message RouteAction {
 
   reserved "request_mirror_policy";
 
-  option (armeria.xds.supported.field) = 1;
   oneof cluster_specifier {
     option (validate.required) = true;
 
     // Indicates the upstream cluster to which the request should be routed
     // to.
+    option (armeria.xds.supported.oneof_field) = 1;
     string cluster = 1 [(validate.rules).string = {min_len: 1}];
 
     // Envoy will determine the cluster to route to by reading the value of the
@@ -2521,9 +2521,6 @@ message HeaderMatcher {
       [(validate.rules).string = {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}];
 
   // Specifies how the header match will be performed to route the request.
-  option (armeria.xds.supported.field) = 6;
-  option (armeria.xds.supported.field) = 7;
-  option (armeria.xds.supported.field) = 13;
   oneof header_match_specifier {
     // If specified, header match will be performed based on the value of the header.
     //
@@ -2554,10 +2551,12 @@ message HeaderMatcher {
     //
     // * For range [-10,0), route will match for header value -1, but not for 0, ``somestring``, 10.9,
     //   ``-1somestring``
+    option (armeria.xds.supported.oneof_field) = 6;
     type.v3.Int64Range range_match = 6;
 
     // If specified as true, header match will be performed based on whether the header is in the
     // request. If specified as false, header match will be performed based on whether the header is absent.
+    option (armeria.xds.supported.oneof_field) = 7;
     bool present_match = 7;
 
     // If specified, header match will be performed based on the prefix of the header value.
@@ -2619,6 +2618,7 @@ message HeaderMatcher {
     ];
 
     // If specified, header match will be performed based on the string match of the header value.
+    option (armeria.xds.supported.oneof_field) = 13;
     type.matcher.v3.StringMatcher string_match = 13;
   }
 
@@ -2681,13 +2681,13 @@ message QueryParameterMatcher {
   option (armeria.xds.supported.field) = 1;
   string name = 1 [(validate.rules).string = {min_len: 1 max_bytes: 1024}];
 
-  option (armeria.xds.supported.field) = 5;
-  option (armeria.xds.supported.field) = 6;
   oneof query_parameter_match_specifier {
     // Specifies whether a query parameter value should match against a string.
+    option (armeria.xds.supported.oneof_field) = 5;
     type.matcher.v3.StringMatcher string_match = 5 [(validate.rules).message = {required: true}];
 
     // Specifies whether a query parameter should be present.
+    option (armeria.xds.supported.oneof_field) = 6;
     bool present_match = 6;
   }
 }

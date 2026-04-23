@@ -113,8 +113,8 @@ message LbEndpoint {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.endpoint.LbEndpoint";
 
   // Upstream host identifier or a named reference.
-  option (armeria.xds.supported.field) = 1;
   oneof host_identifier {
+    option (armeria.xds.supported.oneof_field) = 1;
     Endpoint endpoint = 1;
 
     // [#not-implemented-hide:]

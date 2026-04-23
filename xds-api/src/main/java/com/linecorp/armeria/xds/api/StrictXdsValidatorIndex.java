@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.api;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +43,7 @@ public final class StrictXdsValidatorIndex implements XdsValidatorIndex {
 
     @Override
     public void assertValid(Message message) {
+        requireNonNull(message, "message");
         pgvValidator.assertValid(message);
         final List<String> violations = new ArrayList<>();
         final SupportedFieldValidator validator =

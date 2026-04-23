@@ -407,8 +407,8 @@ message QueryParameter {
 message HeaderValue {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.HeaderValue";
 
-  option (armeria.xds.supported.field) = 1;
   // Header name.
+  option (armeria.xds.supported.field) = 1;
   string key = 1
       [(validate.rules).string =
            {min_len: 1 max_bytes: 16384 well_known_regex: HTTP_HEADER_NAME strict: false}];
@@ -510,19 +510,19 @@ message WatchedDirectory {
 message DataSource {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.DataSource";
 
-  option (armeria.xds.supported.field) = 1;
-  option (armeria.xds.supported.field) = 2;
-  option (armeria.xds.supported.field) = 3;
   oneof specifier {
     option (validate.required) = true;
 
     // Local filesystem data source.
+    option (armeria.xds.supported.oneof_field) = 1;
     string filename = 1 [(validate.rules).string = {min_len: 1}];
 
     // Bytes inlined in the configuration.
+    option (armeria.xds.supported.oneof_field) = 2;
     bytes inline_bytes = 2;
 
     // String inlined in the configuration.
+    option (armeria.xds.supported.oneof_field) = 3;
     string inline_string = 3;
 
     // Environment variable data source.
@@ -639,8 +639,8 @@ message TransportSocket {
 
   // Implementation specific configuration which depends on the implementation being instantiated.
   // See the supported transport socket implementations for further documentation.
-  option (armeria.xds.supported.field) = 3;
   oneof config_type {
+    option (armeria.xds.supported.oneof_field) = 3;
     google.protobuf.Any typed_config = 3;
   }
 }

@@ -327,11 +327,11 @@ message HealthCheck {
   // Reuse health check connection between health checks. Default is true.
   google.protobuf.BoolValue reuse_connection = 7;
 
-  option (armeria.xds.supported.field) = 8;
   oneof health_checker {
     option (validate.required) = true;
 
     // HTTP health check.
+    option (armeria.xds.supported.oneof_field) = 8;
     HttpHealthCheck http_health_check = 8;
 
     // TCP health check.

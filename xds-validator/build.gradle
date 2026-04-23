@@ -1,5 +1,5 @@
 dependencies {
-    implementation libs.protobuf.java
+    api libs.protobuf.java
 }
 
 tasks.withType(Test).configureEach {

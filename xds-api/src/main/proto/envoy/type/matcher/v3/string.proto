@@ -28,11 +28,6 @@ message StringMatcher {
 
   reserved "regex";
 
-  option (armeria.xds.supported.field) = 1;
-  option (armeria.xds.supported.field) = 2;
-  option (armeria.xds.supported.field) = 3;
-  option (armeria.xds.supported.field) = 5;
-  option (armeria.xds.supported.field) = 7;
   oneof match_pattern {
     option (validate.required) = true;
 
@@ -41,6 +36,7 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` only matches the value ``abc``.
+    option (armeria.xds.supported.oneof_field) = 1;
     string exact = 1;
 
     // The input string must have the prefix specified here.
@@ -52,6 +48,7 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` matches the value ``abc.xyz``
+    option (armeria.xds.supported.oneof_field) = 2;
     string prefix = 2 [(validate.rules).string = {min_len: 1}];
 
     // The input string must have the suffix specified here.
@@ -63,9 +60,11 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` matches the value ``xyz.abc``
+    option (armeria.xds.supported.oneof_field) = 3;
     string suffix = 3 [(validate.rules).string = {min_len: 1}];
 
     // The input string must match the regular expression specified here.
+    option (armeria.xds.supported.oneof_field) = 5;
     RegexMatcher safe_regex = 5 [(validate.rules).message = {required: true}];
 
     // The input string must have the substring specified here.
@@ -77,6 +76,7 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` matches the value ``xyz.abc.def``
+    option (armeria.xds.supported.oneof_field) = 7;
     string contains = 7 [(validate.rules).string = {min_len: 1}];
 
     // Use an extension as the matcher type.

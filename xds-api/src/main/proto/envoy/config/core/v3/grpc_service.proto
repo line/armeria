@@ -307,13 +307,13 @@ message GrpcService {
 
   reserved 4;
 
-  option (armeria.xds.supported.field) = 1;
   oneof target_specifier {
     option (validate.required) = true;
 
     // Envoy's in-built gRPC client.
     // See the :ref:`gRPC services overview <arch_overview_grpc_services>`
     // documentation for discussion on gRPC client selection.
+    option (armeria.xds.supported.oneof_field) = 1;
     EnvoyGrpc envoy_grpc = 1;
 
     // `Google C++ gRPC client <https://github.com/grpc/grpc>`_
