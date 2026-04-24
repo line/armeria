@@ -235,7 +235,7 @@ export default async function createConfigAsync() {
       },
       algolia: {
         appId: 'TASSHENNEI',
-        apiKey: '1defe0560dbb853243bd0cccce18127f',
+        apiKey: '1defe0560dbb853243bd0cccce18127f', // Public API key, safe to expose
         indexName: 'Armeria Crawler',
         contextualSearch: false,
         searchPagePath: 'search',
@@ -610,6 +610,7 @@ export default async function createConfigAsync() {
 
     future: {
       v4: true,
+      faster: true,
     },
 
     customFields: {
