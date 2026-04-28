@@ -49,6 +49,7 @@ import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsResourceException;
 import com.linecorp.armeria.xds.XdsType;
+import com.linecorp.armeria.xds.validator.XdsValidationException;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -366,7 +367,7 @@ class ErrorHandlingTest {
             try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
                 // do nothing
             }
-        }).isInstanceOf(IllegalArgumentException.class)
+        }).isInstanceOf(XdsValidationException.class)
           .hasMessageContaining(errorMsg);
     }
 
@@ -561,7 +562,7 @@ class ErrorHandlingTest {
             assertThat(xdsResourceException.type()).isEqualTo(type);
             assertThat(xdsResourceException.name()).isEqualTo(name);
             assertThat(xdsResourceException).cause()
-                                            .isInstanceOf(IllegalArgumentException.class)
+                                            .isInstanceOf(XdsValidationException.class)
                                             .cause()
                                             .isInstanceOf(ValidationException.class)
                                             .hasMessageContaining(errorMsg);
@@ -619,7 +620,7 @@ class ErrorHandlingTest {
             assertThat(xdsResourceException.type()).isEqualTo(type);
             assertThat(xdsResourceException.name()).isEqualTo(name);
             assertThat(xdsResourceException).cause()
-                                            .isInstanceOf(IllegalArgumentException.class)
+                                            .isInstanceOf(XdsValidationException.class)
                                             .cause()
                                             .isInstanceOf(ValidationException.class)
                                             .hasMessageContaining(errorMsg);
