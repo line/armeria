@@ -59,6 +59,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.DNSResolverFacadeUtils;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
@@ -251,6 +252,7 @@ class ProxyClientIntegrationTest {
     void beforeEach() {
         numSuccessfulProxyRequests = 0;
         channelHandlerFactory = NOOP_CHANNEL_HANDLER_FACTORY;
+        SessionProtocolNegotiationCache.clear();
     }
 
     @Test
@@ -479,7 +481,8 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
-            assertThat(numSuccessfulProxyRequests).isEqualTo(2);
+            // With the H2C fallback chain: upgrade fails → preface fallback fails → HTTP/1.1
+            assertThat(numSuccessfulProxyRequests).isEqualTo(3);
         }
     }
 
@@ -523,7 +526,8 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
-            assertThat(numSuccessfulProxyRequests).isEqualTo(2);
+            // With the H2C fallback chain: preface fails → upgrade fallback fails → HTTP/1.1
+            assertThat(numSuccessfulProxyRequests).isEqualTo(3);
         }
     }
 
