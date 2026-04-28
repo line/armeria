@@ -24,12 +24,13 @@ import java.util.List;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.validator.XdsValidationException;
 import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
 
 /**
  * A strict {@link XdsValidatorIndex} that composes pgv (protoc-gen-validate) structural validation
  * with supported-field validation. All unsupported field violations are collected and reported
- * together in a single {@link IllegalArgumentException}.
+ * together in a single {@link XdsValidationException}.
  *
  * <p>This validator is intended for use in test environments via SPI to catch unsupported
  * field usage early. Its {@link #priority()} is {@code 1}, which is higher than
@@ -51,8 +52,8 @@ public final class StrictXdsValidatorIndex implements XdsValidatorIndex {
                         violations.add(descriptorName + ": " + fieldPath));
         validator.validate(message);
         if (!violations.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Unsupported xDS fields detected: " + String.join(", ", violations));
+            throw XdsValidationException.of(
+                    message, "Unsupported xDS fields detected: " + String.join(", ", violations));
         }
     }
 

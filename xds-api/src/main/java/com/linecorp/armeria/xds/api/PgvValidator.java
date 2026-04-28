@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.xds.api;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.validator.XdsValidationException;
 
 import io.envoyproxy.pgv.ReflectiveValidatorIndex;
 import io.envoyproxy.pgv.ValidationException;
@@ -44,13 +47,13 @@ public final class PgvValidator {
     /**
      * Validates the given message using pgv structural validation.
      *
-     * @throws IllegalArgumentException if validation fails
+     * @throws XdsValidationException if validation fails
      */
-    public void assertValid(Object message) {
+    public void assertValid(Message message) {
         try {
             delegate.validatorFor(message).assertValid(message);
         } catch (ValidationException e) {
-            throw new IllegalArgumentException(e);
+            throw XdsValidationException.of(message, e);
         }
     }
 }

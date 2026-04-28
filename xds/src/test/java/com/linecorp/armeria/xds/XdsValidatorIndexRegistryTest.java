@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.xds.validator.XdsValidationException;
+
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.envoyproxy.pgv.ValidationException;
 
@@ -29,7 +31,7 @@ class XdsValidatorIndexRegistryTest {
     void validationIsEnabled() throws Exception {
         final VirtualHost virtualHost = VirtualHost.getDefaultInstance();
         assertThatThrownBy(() -> XdsValidatorIndexRegistry.assertValid(virtualHost))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(XdsValidationException.class)
                 .cause()
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("length must be at least 1 but got: 0");
