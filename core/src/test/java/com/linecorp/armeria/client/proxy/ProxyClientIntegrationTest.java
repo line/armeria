@@ -40,6 +40,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -234,13 +235,10 @@ class ProxyClientIntegrationTest {
         }
     };
 
-    private static volatile int numSuccessfulProxyRequests;
+    private static final AtomicReference<Consumer<Boolean>> proxyCallback =
+            new AtomicReference<>(b -> {});
 
-    private static final Consumer<Boolean> PROXY_CALLBACK = success -> {
-        if (success) {
-            numSuccessfulProxyRequests++;
-        }
-    };
+    private static final Consumer<Boolean> PROXY_CALLBACK = success -> proxyCallback.get().accept(success);
 
     @BeforeAll
     static void beforeAll() throws Exception {
@@ -250,7 +248,7 @@ class ProxyClientIntegrationTest {
 
     @BeforeEach
     void beforeEach() {
-        numSuccessfulProxyRequests = 0;
+        proxyCallback.set(b -> {});
         channelHandlerFactory = NOOP_CHANNEL_HANDLER_FACTORY;
         SessionProtocolNegotiationCache.clear();
     }
@@ -278,6 +276,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testSocks4BasicCase() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
                                   .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
@@ -294,12 +298,18 @@ class ProxyClientIntegrationTest {
 
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            assertThat(proxyRequests).hasValue(1);
         }
     }
 
     @Test
     void testSocks5BasicCase() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
                                   .proxyConfig(ProxyConfig.socks5(socksProxyServer.address()))
@@ -315,12 +325,18 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            assertThat(proxyRequests).hasValue(1);
         }
     }
 
     @Test
     void testH1CProxyBasicCase() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
                                   .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
@@ -336,12 +352,18 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            assertThat(proxyRequests).hasValue(1);
         }
     }
 
     @Test
     void testWrappingSelectorBasicCase() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         final ProxySelector proxySelector = new ProxySelector() {
             @Override
             public List<Proxy> select(URI uri) {
@@ -367,7 +389,7 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            assertThat(proxyRequests).hasValue(1);
         }
     }
 
@@ -443,6 +465,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testHttpProxyUpgradeRequestFailure() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
@@ -482,12 +510,18 @@ class ProxyClientIntegrationTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
             // With the H2C fallback chain: upgrade fails → preface fallback fails → HTTP/1.1
-            assertThat(numSuccessfulProxyRequests).isEqualTo(3);
+            assertThat(proxyRequests).hasValue(3);
         }
     }
 
     @Test
     void testHttpProxyPrefaceFailure() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
@@ -527,13 +561,19 @@ class ProxyClientIntegrationTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
             // With the H2C fallback chain: preface fails → upgrade fallback fails → HTTP/1.1
-            assertThat(numSuccessfulProxyRequests).isEqualTo(3);
+            assertThat(proxyRequests).hasValue(3);
         }
     }
 
     @ParameterizedTest
     @MethodSource("sessionAndEndpointProvider")
     void testHttpsProxy(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
                         ProxyConfig.connect(httpsProxyServer.address(), true)).build();
@@ -546,13 +586,19 @@ class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        assertThat(proxyRequests).hasValue(1);
         clientFactory.closeAsync();
     }
 
     @ParameterizedTest
     @MethodSource("sessionAndEndpointProvider")
     void testMTlsHttpsProxyWithTlsProvider(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
                            .keyPair(clientSsc.tlsKeyPair())
@@ -573,12 +619,18 @@ class ProxyClientIntegrationTest {
         final AggregatedHttpResponse response = responseFuture.join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-        assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+        assertThat(proxyRequests).hasValue(1);
         clientFactory.closeAsync();
     }
 
     @Test
     void testProxyWithH2C() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         final int numRequests = 5;
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
@@ -598,12 +650,18 @@ class ProxyClientIntegrationTest {
             await().until(() -> responseFutures.stream().allMatch(CompletableFuture::isDone));
             assertThat(responseFutures.stream().map(CompletableFuture::join))
                     .allMatch(response -> response.contentUtf8().equals(SUCCESS_RESPONSE));
-            assertThat(numSuccessfulProxyRequests).isGreaterThanOrEqualTo(1);
+            assertThat(proxyRequests).hasValueGreaterThanOrEqualTo(1);
         }
     }
 
     @Test
     void testProxyWithUserName() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         final String username = "username";
         channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
@@ -626,7 +684,7 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-            assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+            assertThat(proxyRequests).hasValue(1);
         }
     }
 
@@ -862,6 +920,12 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testProxyConfigShouldBeResolved() throws Exception {
+        final AtomicInteger proxyRequests = new AtomicInteger();
+        proxyCallback.set(success -> {
+            if (success) {
+                proxyRequests.incrementAndGet();
+            }
+        });
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("a.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("a.com.", "127.0.0.1"))))
@@ -885,7 +949,7 @@ class ProxyClientIntegrationTest {
                 final AggregatedHttpResponse response = responseFuture.join();
                 assertThat(response.status()).isEqualTo(HttpStatus.OK);
                 assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
-                assertThat(numSuccessfulProxyRequests).isEqualTo(1);
+                assertThat(proxyRequests).hasValue(1);
             }
         }
     }

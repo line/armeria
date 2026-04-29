@@ -496,7 +496,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (protocol == null || !channelActivated) {
             return false;
         }
-        if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
+        if (!isProxyConnectComplete()) {
             // ProxyConnectionEvent is necessary for a proxied connection.
             return false;
         }
@@ -517,6 +517,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         return true;
     }
 
+    /**
+     * Returns {@code true} if no proxy is configured or the proxy CONNECT handshake completed successfully.
+     */
+    private boolean isProxyConnectComplete() {
+        return poolKey.proxyConfig.proxyType() == ProxyType.DIRECT || proxyDestinationAddress != null;
+    }
+
     private void tryFailSessionPromise(Throwable cause) {
         if (sessionTimeoutFuture != null) {
             sessionTimeoutFuture.cancel(false);
@@ -530,8 +537,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         isAcquirable = false;
 
-        // protocol != null means negotation was successful
-        if (protocol == null && fallbackPreference != null) {
+        // protocol != null means negotiation was successful.
+        // For proxy connections, only fall back if the proxy CONNECT completed
+        if (protocol == null && fallbackPreference != null && isProxyConnectComplete()) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             if (sessionTimeoutFuture != null) {
                 sessionTimeoutFuture.cancel(false);
