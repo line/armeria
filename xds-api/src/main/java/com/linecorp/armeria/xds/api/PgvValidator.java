@@ -33,7 +33,7 @@ public final class PgvValidator {
 
     private static final PgvValidator INSTANCE = new PgvValidator();
 
-    private final ValidatorIndex delegate = new ReflectiveValidatorIndex();
+    private static final ValidatorIndex delegate = new ReflectiveValidatorIndex();
 
     private PgvValidator() {}
 
