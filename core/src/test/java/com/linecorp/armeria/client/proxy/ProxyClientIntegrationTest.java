@@ -170,7 +170,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(channelHandlerFactory.newHandler());
             ch.pipeline().addLast(new Socks4ProxyServerHandler());
             ch.pipeline().addLast(new Socks5ProxyServerHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("socks", PROXY_CALLBACK));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("socks", proxyCallback.get()));
         }
     };
 
@@ -182,7 +182,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", proxyCallback.get()));
         }
     };
 
@@ -199,7 +199,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
             ch.pipeline().addLast(new SleepHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", proxyCallback.get()));
         }
     };
 
@@ -219,7 +219,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
             ch.pipeline().addLast(new SleepHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", proxyCallback.get()));
         }
     };
 
@@ -237,8 +237,6 @@ class ProxyClientIntegrationTest {
 
     private static final AtomicReference<Consumer<Boolean>> proxyCallback =
             new AtomicReference<>(b -> {});
-
-    private static final Consumer<Boolean> PROXY_CALLBACK = success -> proxyCallback.get().accept(success);
 
     @BeforeAll
     static void beforeAll() throws Exception {
