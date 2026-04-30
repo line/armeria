@@ -38,6 +38,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.ARMERIAN_PAT }}
           branch: update-xds-protobuf
           base: main
           author: Meri Kim <dl_armeria@linecorp.com>
