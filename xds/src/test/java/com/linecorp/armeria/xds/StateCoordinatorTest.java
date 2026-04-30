@@ -37,7 +37,9 @@ class StateCoordinatorTest {
 
     @Test
     void lateSubscriberReceivesCachedResource() {
-        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false);
+        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(new XdsResourceValidator());
+        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false,
+                                                                  extensionRegistry);
         final ClusterXdsResource resource =
                 new ClusterXdsResource(createCluster(CLUSTER_NAME), "1").withRevision(1);
         coordinator.onResourceUpdated(XdsType.CLUSTER, CLUSTER_NAME, resource);
@@ -51,7 +53,9 @@ class StateCoordinatorTest {
 
     @Test
     void missingResourceNotCachedAfterRemoval() {
-        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false);
+        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(new XdsResourceValidator());
+        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false,
+                                                                  extensionRegistry);
         final CapturingWatcher watcher1 = new CapturingWatcher();
         coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
 
@@ -70,7 +74,9 @@ class StateCoordinatorTest {
 
     @Test
     void stateRetainedAfterUnsubscribe() {
-        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false);
+        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(new XdsResourceValidator());
+        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false,
+                                                                  extensionRegistry);
         final RouteXdsResource resource =
                 new RouteXdsResource(RouteConfiguration.newBuilder().setName(ROUTE_NAME).build(), "1")
                         .withRevision(1);

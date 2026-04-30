@@ -53,7 +53,7 @@ class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
         restartTimer();
     }
 
-    void restartTimer() {
+    private void restartTimer() {
         if (!enableAbsentOnTimeout) {
             return;
         }

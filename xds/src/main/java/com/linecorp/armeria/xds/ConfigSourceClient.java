@@ -50,7 +50,8 @@ final class ConfigSourceClient implements SafeCloseable {
                        EventExecutor eventLoop,
                        Node node, BootstrapClusters bootstrapClusters,
                        ConfigSourceMapper configSourceMapper, MeterRegistry meterRegistry,
-                       MeterIdPrefix meterIdPrefix) {
+                       MeterIdPrefix meterIdPrefix,
+                       XdsExtensionRegistry extensionRegistry) {
         final ApiConfigSource apiConfigSource;
         if (configSource.hasAds()) {
             apiConfigSource = configSourceMapper.bootstrapAdsConfig();
@@ -87,7 +88,8 @@ final class ConfigSourceClient implements SafeCloseable {
                               apiType == ApiType.AGGREGATED_DELTA_GRPC;
 
         final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
-        stateCoordinator = new StateCoordinator(eventLoop, fetchTimeoutMillis, isDelta);
+        stateCoordinator = new StateCoordinator(eventLoop, fetchTimeoutMillis, isDelta,
+                                                extensionRegistry);
         final Backoff backoff = Backoff.ofDefault();
         if (isAds) {
             final ConfigSourceLifecycleObserver lifecycleObserver = metersFunction.apply("ads");

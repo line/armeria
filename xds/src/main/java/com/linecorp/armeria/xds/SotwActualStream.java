@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.Message;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
 
@@ -45,7 +44,7 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     private static final Logger logger = LoggerFactory.getLogger(SotwActualStream.class);
 
     // NACK backoff to prevent hot loops when the server keeps sending bad responses
-    static final long NACK_BACKOFF_MILLIS = 3_000L;
+    static final long NACK_BACKOFF_MILLIS = 1_000L;
 
     private final StreamObserver<DiscoveryRequest> requestObserver;
     private final AdsXdsStream owner;
@@ -172,10 +171,10 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
         owner.retryOrClose(false);
     }
 
-    private <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DiscoveryResponse response) {
+    private void handleResponse(ResourceParser<?, ?> resourceParser, DiscoveryResponse response) {
         final ParsedResourcesHolder holder =
-                resourceParser.parseResources(response.getResourcesList(), response.getVersionInfo());
+                resourceParser.parseResources(response.getResourcesList(),
+                                              stateCoordinator.extensionRegistry(), response.getVersionInfo());
 
         if (!holder.errors().isEmpty()) {
             holder.invalidResources().forEach((name, error) -> stateCoordinator.onResourceError(

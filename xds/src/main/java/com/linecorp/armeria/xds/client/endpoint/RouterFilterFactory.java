@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.HttpPreprocessor;
@@ -25,6 +28,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.XdsResourceValidator;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
@@ -38,10 +42,52 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 public final class RouterFilterFactory implements HttpFilterFactory {
 
     private static final String NAME = "envoy.filters.http.router";
+    private static final String TYPE_URL =
+            "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
+    private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
     private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter = new RouterFilter<>();
     private static final RouterFilter<HttpRequest, HttpResponse> httpFilter = new RouterFilter<>();
 
-    private static final XdsHttpFilter ROUTER_FILTER = new XdsHttpFilter() {
+    @Override
+    public String name() {
+        return NAME;
+    }
+
+    @Override
+    public List<String> typeUrls() {
+        return TYPE_URLS;
+    }
+
+    @Override
+    public XdsHttpFilter create(HttpFilter filter, Any config, XdsResourceValidator validator) {
+        final Router router;
+        if (config == Any.getDefaultInstance()) {
+            router = Router.getDefaultInstance();
+        } else {
+            router = validator.unpack(config, Router.class);
+        }
+        return new RouterXdsHttpFilter(router);
+    }
+
+    /**
+     * An {@link XdsHttpFilter} that holds the parsed {@link Router} config.
+     */
+    @UnstableApi
+    public static final class RouterXdsHttpFilter implements XdsHttpFilter {
+
+        private final Router router;
+
+        RouterXdsHttpFilter(Router router) {
+            this.router = router;
+        }
+
+        /**
+         * Returns the {@link Router} config.
+         */
+        public Router router() {
+            return router;
+        }
+
         @Override
         public HttpPreprocessor httpPreprocessor() {
             return httpFilter::execute;
@@ -51,15 +97,5 @@ public final class RouterFilterFactory implements HttpFilterFactory {
         public RpcPreprocessor rpcPreprocessor() {
             return rpcFilter::execute;
         }
-    };
-
-    @Override
-    public String filterName() {
-        return NAME;
-    }
-
-    @Override
-    public XdsHttpFilter create(HttpFilter filter, Any config) {
-        return ROUTER_FILTER;
     }
 }
