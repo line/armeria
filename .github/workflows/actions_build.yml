@@ -136,7 +136,7 @@ jobs:
 
       - name: Upload Gradle build scan
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
           path: ~/.gradle/build-scan-data
@@ -213,7 +213,7 @@ jobs:
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reports-${{ env.JOB_NAME }}
           path: reports-${{ env.JOB_NAME }}.tar
@@ -269,7 +269,7 @@ jobs:
 
       - name: Upload npm logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-debug-logs
           path: /home/runner/.npm/_logs/
@@ -331,7 +331,7 @@ jobs:
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reports-flaky-tests
           path: reports-flaky-tests.tar
