@@ -45,6 +45,7 @@ const sidebars: SidebarsConfig = {
         'server/service-registration',
         'server/multipart',
         'server/timeouts',
+        'server/graceful-shutdown',
       ],
     },
     {

@@ -1,0 +1,153 @@
+# Graceful shutdown
+
+When a server shuts down, in-flight requests may be interrupted abruptly. Armeria provides
+a graceful shutdown mechanism that allows the server to wait for active requests to complete
+before fully stopping.
+
+## How it works
+
+Graceful shutdown consists of two phases:
+
+1. **Quiet period** - When shutdown begins, the server stops passing health checks and enters
+   a quiet period. During this period, existing requests and blocking tasks are allowed to
+   complete, and clients can observe that the server is no longer healthy. After the configured
+   quiet period has passed since the last running request completed, the server proceeds with
+   shutdown.
+2. **Timeout** - Regardless of the quiet period, the server will forcefully shut down after
+   this duration. This acts as a safety net for stuck requests.
+
+:::info
+
+The timeout must be greater than or equal to the quiet period.
+
+:::
+
+## Basic configuration
+
+Use [ServerBuilder](type://ServerBuilder) to configure graceful shutdown:
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+import java.time.Duration;
+
+ServerBuilder sb = Server.builder();
+Server server = sb.http(8080)
+                  .service("/", (ctx, req) -> HttpResponse.of("OK"))
+                  .gracefulShutdownTimeout(
+                      Duration.ofSeconds(5),  // quiet period
+                      Duration.ofSeconds(30)) // timeout
+                  .build();
+```
+
+By default, graceful shutdown is disabled (`GracefulShutdown.disabled()`). You must explicitly
+configure it to enable.
+
+## Advanced configuration
+
+For more control, use [GracefulShutdown.builder()](type://GracefulShutdown#builder()):
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.GracefulShutdown;
+import com.linecorp.armeria.server.Server;
+
+import java.time.Duration;
+
+Server server =
+    Server.builder()
+          .http(8080)
+          .service("/", (ctx, req) -> HttpResponse.of("OK"))
+          .gracefulShutdown(
+              GracefulShutdown.builder()
+                              .quietPeriod(Duration.ofSeconds(5))
+                              .timeout(Duration.ofSeconds(30))
+                              .build())
+          .build();
+```
+
+### Custom shutdown response
+
+By default, pending requests receive a `503 Service Unavailable` response during shutdown.
+You can customize this behavior using `toExceptionFunction()`:
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.GracefulShutdown;
+import com.linecorp.armeria.server.Server;
+
+import java.time.Duration;
+
+Server server =
+    Server.builder()
+          .http(8080)
+          .service("/", (ctx, req) -> HttpResponse.of("OK"))
+          .gracefulShutdown(
+              GracefulShutdown.builder()
+                              .quietPeriod(Duration.ofSeconds(5))
+                              .timeout(Duration.ofSeconds(30))
+                              .toExceptionFunction((ctx, req) -> {
+                                  // Return a custom exception during shutdown.
+                                  return new MyCustomException("Server is shutting down");
+                              })
+                              .build())
+          .errorHandler((ctx, cause) -> {
+              if (cause instanceof MyCustomException) {
+                  // Map the custom exception to 502 Bad Gateway,
+                  // which signals a load balancer to retry on another server.
+                  return HttpResponse.of(HttpStatus.BAD_GATEWAY);
+              }
+              return null;
+          })
+          .build();
+```
+
+The `toExceptionFunction` receives a [ServiceRequestContext](type://ServiceRequestContext) and an [HttpRequest](type://HttpRequest),
+so you can return different exceptions depending on the request path, headers, or other attributes.
+
+## Spring Boot integration
+
+When using Armeria with Spring Boot, graceful shutdown is enabled by default with the following values:
+
+| Property | Default |
+|----------|---------|
+| `armeria.graceful-shutdown-quiet-period-millis` | `5000` (5 seconds) |
+| `armeria.graceful-shutdown-timeout-millis` | `40000` (40 seconds) |
+
+To customize in `application.yml`:
+
+```yaml
+armeria:
+  graceful-shutdown-quiet-period-millis: 10000
+  graceful-shutdown-timeout-millis: 60000
+```
+
+To disable graceful shutdown in Spring Boot, set either value to `-1`:
+
+```yaml
+armeria:
+  graceful-shutdown-quiet-period-millis: -1
+  graceful-shutdown-timeout-millis: -1
+```
+
+:::warning
+
+Note that the default behavior differs between the core API and Spring Boot integration.
+The core API disables graceful shutdown by default (`GracefulShutdown.disabled()`),
+while the Spring Boot integration enables it with `5000`/`40000` ms defaults.
+
+:::
+
+## Best practices
+
+- **Set the quiet period shorter than the timeout.** The quiet period is for normal drain;
+  the timeout is a hard limit for stuck requests.
+- **Consider your load balancer's configuration.** If your load balancer has its own drain
+  timeout, ensure the server's graceful shutdown timeout is shorter to avoid the load balancer
+  forcefully closing connections.
+- **Use health checks with graceful shutdown.** Combine with a
+  [health check](/docs/server/basics#health-check) so that the load balancer stops routing
+  new requests before the server starts shutting down.
