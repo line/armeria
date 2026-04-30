@@ -26,6 +26,7 @@ import java.util.function.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.ClientFactoryConfigurator;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.multipart.MultipartFilenameDecodingMode;
 import com.linecorp.armeria.common.util.Sampler;
@@ -372,6 +373,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultRequestAutoAbortDelayMillis() {
         return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
+    }
+
+    @Override
+    public ClientFactoryConfigurator defaultClientFactoryConfigurator() {
+        return ClientFactoryConfigurator.noop();
     }
 
     @Override

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import java.net.InetAddress;
 import java.util.function.Predicate;
 
+import com.linecorp.armeria.client.ClientFactoryConfigurator;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -69,6 +70,11 @@ public final class BaseFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultServerConnectionDrainDurationMicros() {
         return 500L;
+    }
+
+    @Override
+    public ClientFactoryConfigurator defaultClientFactoryConfigurator() {
+        return builder -> builder.connectTimeoutMillis(4242);
     }
 
     @Override
