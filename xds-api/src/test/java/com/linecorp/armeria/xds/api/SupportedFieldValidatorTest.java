@@ -33,6 +33,7 @@ import com.linecorp.armeria.xds.api.testing.TestCluster;
 import com.linecorp.armeria.xds.api.testing.TestDiscoveryType;
 import com.linecorp.armeria.xds.api.testing.TestEdsConfig;
 import com.linecorp.armeria.xds.api.testing.TestOutlierDetection;
+import com.linecorp.armeria.xds.validator.XdsValidationException;
 
 class SupportedFieldValidatorTest {
 
@@ -144,7 +145,7 @@ class SupportedFieldValidatorTest {
                                                .setUnsupportedField("bad")
                                                .build();
         assertThatThrownBy(() -> validator.validate(cluster))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(XdsValidationException.class)
                 .hasMessageContaining("$.unsupportedField");
     }
 
@@ -217,7 +218,7 @@ class SupportedFieldValidatorTest {
                                                                            .build())
                                                .build();
         assertThatThrownBy(() -> validator.validate(cluster))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(XdsValidationException.class);
     }
 
     @Test

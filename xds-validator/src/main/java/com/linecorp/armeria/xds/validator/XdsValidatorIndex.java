@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.validator;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -28,7 +30,7 @@ public interface XdsValidatorIndex {
     /**
      * Validates whether the specified message is valid.
      */
-    void assertValid(Object message);
+    void assertValid(Message message);
 
     /**
      * The priority this validator will have. The validator with the highest priority

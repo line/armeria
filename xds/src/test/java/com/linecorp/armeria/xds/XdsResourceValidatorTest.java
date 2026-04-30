@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 
 import com.google.protobuf.Any;
 
+import com.linecorp.armeria.xds.validator.XdsValidationException;
+
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.envoyproxy.pgv.ValidationException;
@@ -34,7 +36,7 @@ class XdsResourceValidatorTest {
         final XdsResourceValidator validator = new XdsResourceValidator();
         final VirtualHost virtualHost = VirtualHost.getDefaultInstance();
         assertThatThrownBy(() -> validator.assertValid(virtualHost))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(XdsValidationException.class)
                 .cause()
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("length must be at least 1 but got: 0");
@@ -66,6 +68,6 @@ class XdsResourceValidatorTest {
         final VirtualHost vhost = VirtualHost.getDefaultInstance();
         final Any packed = Any.pack(vhost);
         assertThatThrownBy(() -> validator.unpack(packed, VirtualHost.class))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(XdsValidationException.class);
     }
 }

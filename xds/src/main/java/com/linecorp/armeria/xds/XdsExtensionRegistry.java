@@ -83,7 +83,7 @@ final class XdsExtensionRegistry {
      * Validates the given message using both pgv structural validation and supported-field
      * validation.
      */
-    void assertValid(Object message) {
+    void assertValid(Message message) {
         validator.assertValid(message);
     }
 

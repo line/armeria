@@ -35,14 +35,14 @@ import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
  *
  * <p>Validation is performed at exactly two levels:
  * <ul>
- *   <li><b>Static resources</b> — {@link XdsBootstrapImpl} calls {@link #assertValid(Object)} once
+ *   <li><b>Static resources</b> — {@link XdsBootstrapImpl} calls {@link #assertValid(Message)} once
  *       on the entire {@code Bootstrap} message at construction time. Both pgv and supported-field
  *       validators recurse into nested messages, so this single call covers all static clusters,
  *       listeners, secrets, and their sub-messages. Inline sub-resources (e.g. {@code VirtualHost}
  *       within a {@code RouteConfiguration}, {@code ClusterLoadAssignment} within a {@code Cluster})
  *       are covered by parent validation and do not need separate calls.</li>
  *   <li><b>Dynamic resources</b> — calls
- *       {@link #assertValid(Object)} on each top-level resource unpacked from a
+ *       {@link #assertValid(Message)} on each top-level resource unpacked from a
  *       {@code DiscoveryResponse}. Validation failures are caught and reported as invalid
  *       resources (NACK'd back to the control plane).</li>
  * </ul>
@@ -66,7 +66,7 @@ public final class XdsResourceValidator {
     /**
      * Validates the given message using the SPI-loaded {@link XdsValidatorIndex}.
      */
-    void assertValid(Object message) {
+    void assertValid(Message message) {
         requireNonNull(message, "message");
         spiValidator.assertValid(message);
     }
