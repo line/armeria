@@ -5,6 +5,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 buildscript {
     repositories {
+        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        if (mavenCentralMirror) {
+            maven { url = mavenCentralMirror }
+        }
         gradlePluginPortal()
         google()
     }

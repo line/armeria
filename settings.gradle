@@ -1,3 +1,15 @@
+// Use -DmavenCentralMirror=<url> or systemProp.mavenCentralMirror=<url> in
+// ~/.gradle/gradle.properties to redirect all Maven Central requests to a mirror.
+pluginManagement {
+    repositories {
+        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        if (mavenCentralMirror) {
+            maven { url = mavenCentralMirror }
+        }
+        gradlePluginPortal()
+    }
+}
+
 plugins {
     // This plugin should be applied in settings.gradle, not build.gradle.
     // https://github.com/gradle/foojay-toolchains/issues/15

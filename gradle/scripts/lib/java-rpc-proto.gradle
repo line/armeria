@@ -2,6 +2,10 @@ import org.gradle.internal.os.OperatingSystem
 
 buildscript {
     repositories {
+        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        if (mavenCentralMirror) {
+            maven { url = mavenCentralMirror }
+        }
         gradlePluginPortal()
     }
     dependencies {

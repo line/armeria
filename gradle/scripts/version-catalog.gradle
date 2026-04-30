@@ -4,7 +4,12 @@ import org.tomlj.TomlArray
 
 buildscript {
     repositories {
-        mavenCentral()
+        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        if (mavenCentralMirror) {
+            maven { url = mavenCentralMirror }
+        } else {
+            mavenCentral()
+        }
     }
 
     dependencies {

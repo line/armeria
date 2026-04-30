@@ -3,8 +3,13 @@ plugins {
 }
 
 repositories {
+	def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+	if (mavenCentralMirror) {
+		maven { url = mavenCentralMirror }
+	} else {
+		mavenCentral()
+	}
 	gradlePluginPortal()
-	mavenCentral()
 }
 
 dependencies {
