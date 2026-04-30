@@ -315,7 +315,7 @@ Armeria により Reactive Streams を活用すると、大量のデータとト
 
 他にも以下のように、マイクロサービスに必要なさまざまな機能を提供しています。
 
-- クラウド環境でサーバーの位置を把握するため、Kubernetes タイプの DNS（Domain Name System）と ZooKeeper を活用したサービス検索（discovery）を提供（[参照](https://line.github.io/armeria/advanced-zookeeper.html)）しています。
+- クラウド環境でサーバーの位置を把握するため、Kubernetes タイプの DNS（Domain Name System）と ZooKeeper を活用したサービス検索（discovery）を提供（[参照](/docs/server/service-registration#zookeeper-based-service-registration-with-zookeeperupdatinglistener)）しています。
 - 検索されたサービスは、クライアント側のロードバランシングで直接負荷を分散してサーバーと通信します。それにより障害点を減らすことができます。
 - [L7](https://www.nginx.com/resources/glossary/layer-7-load-balancing/)ではないクライアントが、直接サーバーの状態をチェックできます。
 - ログを確認する際、分散されたサーバーにアクセスせずに確認できるように、Kafka でアクセスログを送信します。

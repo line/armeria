@@ -132,8 +132,8 @@ receiving the first message until `responseObserver.onCompleted()` is called. Th
 stream is expected to last longer than the configured request timeout, you must manually extend the
 timeout as messages are sent.
 
-You can extend the timeout dynamically using [ServiceRequestContext](type://ServiceRequestContext) with
-[TimeoutMode.EXTEND](type://TimeoutMode#EXTEND):
+You can extend the timeout dynamically using [ServiceRequestContext](type) with
+[TimeoutMode#EXTEND](type):
 
 ```java
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -200,7 +200,7 @@ sb.requestTimeoutMillis(0)
 :::tip
 
 See [Timeout control](/docs/advanced/request-context#timeout-control) for more details on using
-[TimeoutMode](type://TimeoutMode) to dynamically adjust timeouts.
+[TimeoutMode](type) to dynamically adjust timeouts.
 
 :::
 

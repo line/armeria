@@ -233,14 +233,13 @@ export default async function createConfigAsync() {
           autoCollapseCategories: true,
         },
       },
-      // TODO: enable Algolia search when the index is ready.
-      // algolia: {
-      //   appId: 'TASSHENNEI',
-      //   apiKey: '1defe0560dbb853243bd0cccce18127f',
-      //   indexName: 'Armeria Crawler',
-      //   contextualSearch: true,
-      //   searchPagePath: 'search',
-      // },
+      algolia: {
+        appId: 'TASSHENNEI',
+        apiKey: '1defe0560dbb853243bd0cccce18127f', // Public API key, safe to expose
+        indexName: 'Armeria Crawler',
+        contextualSearch: false,
+        searchPagePath: 'search',
+      },
     } satisfies Preset.ThemeConfig,
 
     plugins: [
@@ -611,6 +610,7 @@ export default async function createConfigAsync() {
 
     future: {
       v4: true,
+      faster: true,
     },
 
     customFields: {
