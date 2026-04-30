@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -146,6 +145,10 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void doClose(ServerStatusAndMetadata statusAndMetadata) {
+        // Preserves the original "exactly once closeListener" semantics that relied on a
+        // finally block: capture any exception from building/logging/completing the happy-path
+        // response and route it through the async handler with its own try/finally.
+        Exception caught = null;
         try {
             final ResponseHeaders responseHeaders = responseHeaders();
             final Status status = statusAndMetadata.status();
@@ -187,19 +190,33 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
             resFuture.complete(response);
         } catch (Exception ex) {
-            final StatusAndMetadata statusAndMetadata0 = exceptionHandler().handle(ctx, ex);
-            final Status status = statusAndMetadata0.status();
-            final Metadata metadata = statusAndMetadata0.metadata();
-            assert metadata != null;
-            statusAndMetadata = new ServerStatusAndMetadata(status, metadata, true);
-
-            final ResponseHeadersBuilder trailersBuilder = defaultResponseHeaders().toBuilder();
-            final HttpResponse response = HttpResponse.of(
-                    (ResponseHeaders) statusToTrailers(ctx, trailersBuilder, status, metadata));
-            resFuture.complete(response);
-        } finally {
-            closeListener(statusAndMetadata);
+            caught = ex;
         }
+
+        if (caught == null) {
+            closeListener(statusAndMetadata);
+            return;
+        }
+
+        final Exception finalCaught = caught;
+        exceptionHandler().applyAsyncSafely(ctx, finalCaught)
+                .thenAccept(errorStatusAndMetadata -> {
+                    final Status status = errorStatusAndMetadata.status();
+                    final Metadata metadata = errorStatusAndMetadata.metadata();
+                    assert metadata != null;
+                    final ServerStatusAndMetadata errorSsm =
+                            new ServerStatusAndMetadata(status, metadata, true);
+                    try {
+                        final ResponseHeadersBuilder trailersBuilder =
+                                defaultResponseHeaders().toBuilder();
+                        final HttpResponse errorResponse = HttpResponse.of(
+                                (ResponseHeaders) statusToTrailers(ctx, trailersBuilder,
+                                                                   status, metadata));
+                        resFuture.complete(errorResponse);
+                    } finally {
+                        closeListener(errorSsm);
+                    }
+                });
     }
 
     @Nullable

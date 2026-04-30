@@ -63,7 +63,6 @@ import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -216,11 +215,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
 
-        Status newStatus = exceptionHandler.handle(ctx, status, cause, metadata);
-        if (status.getDescription() != null) {
-            newStatus = newStatus.withDescription(status.getDescription());
-        }
-        close(new ServerStatusAndMetadata(newStatus, metadata), cause);
+        exceptionHandler.applyAsyncSafely(ctx, status, cause, metadata)
+                        .thenAccept(newStatus -> {
+                            if (status.getDescription() != null) {
+                                newStatus = newStatus.withDescription(status.getDescription());
+                            }
+                            close(new ServerStatusAndMetadata(newStatus, metadata), cause);
+                        });
     }
 
     public final void close(Throwable exception) {
@@ -228,9 +229,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void close(Throwable exception, boolean cancelled) {
-        final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, exception);
-        close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
-                                          cancelled), exception);
+        exceptionHandler.applyAsyncSafely(ctx, exception)
+                        .thenAccept(statusAndMetadata -> {
+                            close(new ServerStatusAndMetadata(
+                                    statusAndMetadata.status(), statusAndMetadata.metadata(),
+                                    cancelled), exception);
+                        });
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {

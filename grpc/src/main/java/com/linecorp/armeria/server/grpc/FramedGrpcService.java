@@ -61,7 +61,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
@@ -248,10 +247,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
                     assert defaultHeaders != null;
                     return HttpResponse.of(
-                            (ResponseHeaders) AbstractServerCall.statusToTrailers(
-                                    ctx, defaultHeaders.toBuilder(),
-                                    exceptionHandler.handle(ctx, status, e, metadata),
-                                    metadata));
+                            exceptionHandler.applyAsyncSafely(ctx, status, e, metadata)
+                                            .thenApply(newStatus -> HttpResponse.of(
+                                                    (ResponseHeaders) AbstractServerCall
+                                                            .statusToTrailers(
+                                                                    ctx, defaultHeaders.toBuilder(),
+                                                                    newStatus, metadata))));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
@@ -334,9 +335,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            final StatusAndMetadata statusAndMetadata = call.exceptionHandler().handle(ctx, cancellationCause);
-            call.close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
-                                                   true));
+            call.exceptionHandler().applyAsyncSafely(ctx, cancellationCause)
+                .thenAccept(statusAndMetadata -> {
+                    call.close(new ServerStatusAndMetadata(
+                            statusAndMetadata.status(), statusAndMetadata.metadata(), true));
+                });
             return null;
         });
     }
