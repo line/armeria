@@ -61,7 +61,9 @@ final class ListenerManager implements SafeCloseable {
     void register(Listener listener, SubscriptionContext context, SnapshotWatcher<Object> watcher) {
         checkArgument(!nodes.containsKey(listener.getName()),
                       "Static listener with name '%s' already registered", listener.getName());
-        final ListenerStream node = new ListenerStream(new ListenerXdsResource(listener), context);
+        final ListenerXdsResource listenerResource =
+                ListenerResourceParser.INSTANCE.parse(listener, context.extensionRegistry(), "");
+        final ListenerStream node = new ListenerStream(listenerResource, context);
         nodes.put(listener.getName(), node);
         eventLoop.execute(safeRunnable(() -> {
             final Subscription subscription = node.subscribe(watcher);

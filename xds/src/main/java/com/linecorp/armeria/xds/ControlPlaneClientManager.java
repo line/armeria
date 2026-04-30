@@ -37,19 +37,22 @@ final class ControlPlaneClientManager implements SafeCloseable {
     private final ConfigSourceMapper configSourceMapper;
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
+    private final XdsExtensionRegistry extensionRegistry;
     private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
     private boolean closed;
 
     ControlPlaneClientManager(Bootstrap bootstrap, EventExecutor eventLoop,
                               BootstrapClusters bootstrapClusters,
                               ConfigSourceMapper configSourceMapper,
-                              MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix) {
+                              MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix,
+                              XdsExtensionRegistry extensionRegistry) {
         bootstrapNode = bootstrap.getNode();
         this.eventLoop = eventLoop;
         this.bootstrapClusters = bootstrapClusters;
         this.configSourceMapper = configSourceMapper;
         this.meterRegistry = meterRegistry;
         this.meterIdPrefix = meterIdPrefix;
+        this.extensionRegistry = extensionRegistry;
     }
 
     void subscribe(ResourceNode<?> node) {
@@ -65,7 +68,7 @@ final class ControlPlaneClientManager implements SafeCloseable {
         final ConfigSourceClient client = clientMap.computeIfAbsent(
                 configSource, ignored -> new ConfigSourceClient(
                         configSource, eventLoop, bootstrapNode, bootstrapClusters, configSourceMapper,
-                        meterRegistry, meterIdPrefix));
+                        meterRegistry, meterIdPrefix, extensionRegistry));
         client.addSubscriber(type, name, node);
     }
 

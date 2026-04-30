@@ -20,12 +20,13 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 final class RouteResourceParser extends ResourceParser<RouteConfiguration, RouteXdsResource> {
 
-    public static final RouteResourceParser INSTANCE = new RouteResourceParser();
+    static final RouteResourceParser INSTANCE = new RouteResourceParser();
 
     private RouteResourceParser() {}
 
     @Override
-    RouteXdsResource parse(RouteConfiguration message, String version) {
+    RouteXdsResource parse(RouteConfiguration message, XdsExtensionRegistry registry,
+                           String version) {
         return new RouteXdsResource(message, version);
     }
 

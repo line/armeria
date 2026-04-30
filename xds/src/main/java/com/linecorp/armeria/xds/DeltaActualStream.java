@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.protobuf.Message;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
 
@@ -248,11 +247,12 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
         owner.retryOrClose(false);
     }
 
-    private <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DeltaDiscoveryResponse response) {
+    private void handleResponse(ResourceParser<?, ?> resourceParser, DeltaDiscoveryResponse response) {
         final XdsType type = resourceParser.type();
         final List<Resource> deltaResources = response.getResourcesList();
-        final ParsedResourcesHolder holder = resourceParser.parseDeltaResources(deltaResources);
+        final ParsedResourcesHolder holder =
+                resourceParser.parseDeltaResources(deltaResources,
+                                                   stateCoordinator.extensionRegistry());
 
         if (!holder.errors().isEmpty()) {
             holder.invalidResources().forEach((name, error) ->
