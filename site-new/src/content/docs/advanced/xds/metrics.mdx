@@ -1,0 +1,103 @@
+---
+sidebar_position: 3
+---
+
+# Metrics
+
+Armeria's xDS module exposes metrics for monitoring control plane communication,
+resource state, and load balancer behavior. All metrics are prefixed with `armeria.xds`
+by default.
+
+:::note
+
+The metrics listed on this page are not yet finalized and may change in future releases.
+
+:::
+
+## Configuration
+
+Metrics are configured when creating the [XdsBootstrap](type:com.linecorp.armeria.xds.XdsBootstrap):
+
+```java
+XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                        .meterRegistry(meterRegistry)
+                                        .meterIdPrefix(new MeterIdPrefix("my.custom.prefix"))
+                                        .build();
+```
+
+## Control plane metrics
+
+These metrics track xDS stream lifecycle and communication with the control plane.
+
+All metrics in this group are tagged with:
+- `type` — the config source type (e.g. `ads`, `api_config_source`)
+- `name` — the gRPC cluster name
+- `xdsType` — the resource type (e.g. `listeners`, `routes`, `clusters`, `endpoints`, `secrets`)
+
+| Metric | Type | Description |
+|---|---|---|
+| `configsource.stream.active` | Gauge | Whether the stream is currently active (`1` or `0`) |
+| `configsource.stream.opened` | Counter | Number of times the xDS stream was opened |
+| `configsource.stream.completed` | Counter | Number of normal stream closures |
+| `configsource.stream.error` | Counter | Number of stream errors |
+| `configsource.stream.request` | Counter | Discovery requests sent |
+| `configsource.stream.response` | Counter | Discovery responses received |
+| `configsource.resource.parse.success` | Counter | Resources successfully parsed |
+| `configsource.resource.parse.rejected` | Counter | Resources rejected due to parse errors |
+
+## Resource node metrics
+
+These metrics track the state of individual xDS resources. They are created per resource
+when a subscription is established and removed when the last subscriber unsubscribes.
+
+All metrics in this group are tagged with:
+- `name` — the resource name (e.g. listener name, cluster name)
+- `type` — the resource type (e.g. `listener`, `cluster`, `cluster_load_assignment`)
+
+| Metric | Type | Description |
+|---|---|---|
+| `resource.node.revision` | Gauge | Latest revision of the loaded resource |
+| `resource.node.error` | Counter | Errors encountered when updating this resource |
+| `resource.node.missing` | Counter | Times this resource was reported as missing |
+
+## Load balancer metrics
+
+These metrics track endpoint selection, health, and locality distribution. They are
+created dynamically per cluster and updated as the load balancer state changes.
+
+### Cluster-level metrics
+
+Tagged with `cluster` (the cluster name).
+
+| Metric | Type | Description |
+|---|---|---|
+| `lb.resource.updated.revision` | Gauge | Latest cluster resource revision |
+| `lb.resource.updated.count` | Counter | Number of cluster resource updates |
+| `lb.endpoints.updated.revision` | Gauge | Latest endpoint snapshot revision |
+| `lb.endpoints.updated.count` | Counter | Number of endpoint updates |
+| `lb.state.updated.revision` | Gauge | Latest load balancer state revision |
+| `lb.state.updated.count` | Counter | Number of load balancer state updates |
+| `lb.state.rejected.revision` | Gauge | Revision of last rejected state |
+| `lb.state.rejected.count` | Counter | Number of rejected load balancer states |
+| `lb.state.subsets` | Gauge | Number of endpoint subsets |
+
+### Priority-level metrics
+
+Tagged with `cluster` and `priority` (integer, `0` is highest).
+
+| Metric | Type | Description |
+|---|---|---|
+| `lb.state.load.healthy` | Gauge | Healthy endpoint load at this priority |
+| `lb.state.load.degraded` | Gauge | Degraded endpoint load at this priority |
+| `lb.state.panic` | Gauge | Whether panic mode is active (`1` or `0`) |
+
+### Locality-level metrics
+
+Tagged with `cluster`, `priority`, `region`, `zone`, and `sub_zone`.
+
+| Metric | Type | Description |
+|---|---|---|
+| `lb.membership.total` | Gauge | Total endpoints in this locality |
+| `lb.membership.healthy` | Gauge | Healthy endpoints in this locality |
+| `lb.membership.degraded` | Gauge | Degraded endpoints in this locality |
+| `lb.locality.weight` | Gauge | Weight assigned to this locality |

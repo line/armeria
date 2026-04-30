@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 class VirtualHostRoutingTest {

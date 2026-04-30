@@ -10,6 +10,8 @@ dependencies {
     api project(':xds-api')
     api project(':xds-validator')
 
+    implementation libs.jackson.dataformat.yaml
+    implementation libs.protobuf.java.util
     implementation libs.re2j
 
     testImplementation libs.controlplane.server

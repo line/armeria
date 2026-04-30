@@ -48,6 +48,7 @@ import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsResourceException;
+import com.linecorp.armeria.xds.XdsResourceReader;
 import com.linecorp.armeria.xds.XdsType;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;

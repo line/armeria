@@ -1,0 +1,259 @@
+---
+sidebar_position: 1
+---
+
+# Getting started
+
+Armeria's xDS module lets clients discover endpoints, route requests, and apply policies
+(retry, timeout, load balancing) dynamically via an xDS control plane such as Istio or
+the Envoy control plane. See [Supported features](/docs/advanced/xds/supported-features)
+for the full list of xDS resources Armeria understands, or [Concepts](/docs/advanced/xds/concepts)
+for a deeper look at the architecture.
+
+## Dependencies
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-xds' },
+  ]}
+/>
+
+## Setting up a new client
+
+### Creating an Envoy Bootstrap
+
+The xDS module is driven by an Envoy
+[Bootstrap](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto)
+protobuf message. The easiest way to define one is to write a YAML file (the same format used
+by Envoy) and load it with [XdsResourceReader](type:com.linecorp.armeria.xds.XdsResourceReader).
+
+#### Static resources
+
+All listeners, clusters, and endpoints are declared inline — no control plane needed.
+
+Create a file `bootstrap.yaml`:
+
+```yaml
+static_resources:
+  listeners:
+    - name: my-listener
+      api_listener:
+        api_listener:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          route_config:
+            name: route
+            virtual_hosts:
+              - name: my-vhost
+                domains: ["*"]
+                routes:
+                  - match: { prefix: "/" }
+                    route: { cluster: my-cluster }
+          http_filters:
+            - name: envoy.filters.http.router
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: my-cluster
+      type: STATIC
+      load_assignment:
+        cluster_name: my-cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8080
+```
+
+Then load it in Java:
+
+```java
+import com.linecorp.armeria.xds.XdsResourceReader;
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+
+Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
+```
+
+#### Dynamic resources (control plane)
+
+Point the bootstrap at an xDS control plane using `ads_config`. Only a bootstrap cluster
+is declared statically; everything else is fetched dynamically.
+
+```yaml
+static_resources:
+  clusters:
+    - name: xds-cluster
+      type: STATIC
+      load_assignment:
+        cluster_name: xds-cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: istiod.istio-system.svc
+                      port_value: 15010
+dynamic_resources:
+  ads_config:
+    api_type: DELTA_GRPC
+    grpc_services:
+      - envoy_grpc:
+          cluster_name: xds-cluster
+  lds_config:
+    ads: {}
+  cds_config:
+    ads: {}
+```
+
+```java
+Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
+```
+
+### Creating the XdsBootstrap
+
+Wrap the Envoy `Bootstrap` in an Armeria [XdsBootstrap](type:com.linecorp.armeria.xds.XdsBootstrap):
+
+```java
+import com.linecorp.armeria.xds.XdsBootstrap;
+
+// Simple creation
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+
+// Or use the builder for customization
+XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                        .meterRegistry(meterRegistry)
+                                        .build();
+```
+
+### Creating the preprocessor
+
+An [XdsHttpPreprocessor](type:com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor)
+bridges xDS config into an Armeria client. It resolves endpoints, applies route-level policies,
+and selects the target cluster — all transparently. For Thrift clients, use
+[XdsRpcPreprocessor](type:com.linecorp.armeria.xds.client.endpoint.XdsRpcPreprocessor) instead.
+
+```java
+import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+import com.linecorp.armeria.xds.client.endpoint.XdsRpcPreprocessor;
+
+// For HTTP and gRPC clients
+XdsHttpPreprocessor preprocessor =
+        XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+
+// For Thrift clients
+XdsRpcPreprocessor rpcPreprocessor =
+        XdsRpcPreprocessor.ofListener("my-listener", xdsBootstrap);
+```
+
+- `"my-listener"` — the name of the Listener resource to watch. If a matching listener
+  is declared in `static_resources` it will be used directly; otherwise it will be
+  fetched from the control plane via LDS.
+- `xdsBootstrap` — the [XdsBootstrap](type:com.linecorp.armeria.xds.XdsBootstrap) created
+  in the previous step.
+
+The preprocessor begins fetching xDS resources immediately. You can wait for the initial
+configuration to be loaded before serving traffic:
+
+```java
+preprocessor.whenReady().join();
+```
+
+### Building the client and making requests
+
+Pass the preprocessor directly to the client factory method. No scheme, host, or port is needed —
+the preprocessor resolves everything from the xDS configuration.
+
+**HTTP:**
+
+```java
+WebClient client = WebClient.of(preprocessor);
+AggregatedHttpResponse res = client.get("/hello").aggregate().join();
+```
+
+**gRPC:**
+
+```java
+MyServiceBlockingStub stub = GrpcClients.newClient(preprocessor, MyServiceBlockingStub.class);
+stub.myMethod(request);
+```
+
+**Thrift:**
+
+```java
+HelloService.Iface iface = ThriftClients.newClient(rpcPreprocessor, HelloService.Iface.class);
+iface.hello();
+```
+
+### Cleanup
+
+Close the preprocessor and bootstrap when they are no longer needed:
+
+```java
+preprocessor.close();
+xdsBootstrap.close();
+```
+
+## Field mappings
+
+With xDS, settings like endpoints and timeouts are configured in YAML rather than in Java code.
+
+**Armeria:**
+
+```java
+WebClient client = WebClient.builder("http://my-service:8080")
+                             .responseTimeout(Duration.ofSeconds(5))
+                             .build();
+```
+
+**xDS — endpoint address and port** (in a Cluster):
+
+```yaml
+clusters:
+  - name: my-cluster
+    load_assignment:
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: my-service
+                    port_value: 8080
+```
+
+**xDS — response timeout** (in a VirtualHost route):
+
+```yaml
+virtual_hosts:
+  - name: my-vhost
+    routes:
+      - match: { prefix: "/" }
+        route:
+          cluster: my-cluster
+          timeout: 5s
+```
+
+### Real-life example
+
+You can combine xDS with standard Armeria client options by using the builder form.
+Decorators from xDS configuration wrap around decorators you add via the builder.
+The xDS decorators run first (outermost), then your custom decorators, then the wire.
+
+For any field **not** explicitly set in the xDS configuration, the original Armeria
+client defaults apply. For example, if no `timeout` is specified on a route, the
+client's `responseTimeout` is used as-is.
+
+```java
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.logging.LoggingClient;
+
+WebClient client =
+        WebClient.builder(preprocessor)
+                 // Overridden per-request if the xDS route sets `timeout`.
+                 // Used as the default when the route does not set `timeout`.
+                 .responseTimeoutMillis(3000)
+                 // Always applied regardless of xDS configuration.
+                 .decorator(LoggingClient.newDecorator())
+                 .build();
+```

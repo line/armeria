@@ -35,6 +35,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 class TransportSocketMatchesIntegrationTest {
