@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpPreference;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
@@ -125,23 +126,20 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private int numRequestsSent;
 
     /**
-     * {@code true} if the protocol upgrade to HTTP/2 has failed.
-     * If set to {@code true}, another connection attempt will follow.
-     */
-    @Nullable
-    private SessionProtocol retryProtocol;
-
-    /**
      * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
      */
     private boolean isSettingsFrameReceived;
     // Note: This field never becomes false once it becomes true.
     private boolean channelActivated;
 
+    @Nullable
+    private final HttpPreference fallbackPreference;
+
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, int connectionTimeoutMillis,
                        SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                       PoolKey poolKey, HttpClientFactory clientFactory) {
+                       PoolKey poolKey, HttpClientFactory clientFactory,
+                       HttpPreference httpPreference) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
@@ -151,6 +149,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
+        fallbackPreference = httpPreference.nextFallback(clientFactory.useHttp2Preface());
         final OutlierDetection outlierDetection = clientFactory.options().connectionOutlierDetection();
         if (outlierDetection != OutlierDetection.disabled()) {
             outlierDetector = outlierDetection.newDetector();
@@ -328,11 +327,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void retryWith(SessionProtocol protocol) {
-        retryProtocol = protocol;
-    }
-
-    @Override
     public boolean isAcquirable() {
         // responseDecoder and keepAliveHandler are set before this session is added to the pool.
         assert responseDecoder != null;
@@ -502,7 +496,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (protocol == null || !channelActivated) {
             return false;
         }
-        if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
+        if (!isProxyConnectComplete()) {
             // ProxyConnectionEvent is necessary for a proxied connection.
             return false;
         }
@@ -523,6 +517,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         return true;
     }
 
+    /**
+     * Returns {@code true} if no proxy is configured or the proxy CONNECT handshake completed successfully.
+     */
+    private boolean isProxyConnectComplete() {
+        return poolKey.proxyConfig.proxyType() == ProxyType.DIRECT || proxyDestinationAddress != null;
+    }
+
     private void tryFailSessionPromise(Throwable cause) {
         if (sessionTimeoutFuture != null) {
             sessionTimeoutFuture.cancel(false);
@@ -536,18 +537,23 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         isAcquirable = false;
 
-        // Protocol upgrade has failed, but needs to retry.
-        if (retryProtocol != null) {
+        // protocol != null means negotiation was successful.
+        // For proxy connections, only fall back if the proxy CONNECT completed
+        if (protocol == null && fallbackPreference != null && isProxyConnectComplete()) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             if (sessionTimeoutFuture != null) {
                 sessionTimeoutFuture.cancel(false);
             }
-            if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
-                                    poolKey, sessionPromise, null);
+            final SocketAddress addr = proxyDestinationAddress != null ? proxyDestinationAddress
+                                                                       : remoteAddress;
+            if (fallbackPreference == HttpPreference.HTTP1_REQUIRED) {
+                final SessionProtocol http2 = desiredProtocol.isTls() ? H2 : H2C;
+                SessionProtocolNegotiationCache.setUnsupported(addr, http2);
+                channelPool.connect(addr, desiredProtocol.isTls() ? H1 : H1C,
+                                    serializationFormat, poolKey, sessionPromise, null, fallbackPreference);
             } else {
-                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise,
-                                    null);
+                channelPool.connect(addr, desiredProtocol, serializationFormat, poolKey,
+                                    sessionPromise, null, fallbackPreference);
             }
         } else {
             // Fail all pending responses.

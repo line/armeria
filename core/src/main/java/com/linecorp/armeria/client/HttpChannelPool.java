@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.internal.client.HttpPreference;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.ConnectionEventListener;
@@ -385,9 +386,20 @@ final class HttpChannelPool implements AsyncCloseable {
                  SerializationFormat serializationFormat,
                  PoolKey poolKey, Promise<Channel> sessionPromise,
                  @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
+        final HttpPreference pref =
+                HttpPreference.of(desiredProtocol, clientFactory.options().useHttp2Preface());
+        connect(remoteAddress, desiredProtocol, serializationFormat, poolKey, sessionPromise,
+                timingsBuilder, pref);
+    }
+
+    void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
+                 SerializationFormat serializationFormat,
+                 PoolKey poolKey, Promise<Channel> sessionPromise,
+                 @Nullable ClientConnectionTimingsBuilder timingsBuilder,
+                 HttpPreference httpPreference) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol,
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, httpPreference,
                                                serializationFormat, poolKey.tlsSpec);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
@@ -419,7 +431,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 connectionPromise.addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
                         initSession(desiredProtocol, serializationFormat,
-                                    poolKey, connectFuture, sessionPromise);
+                                    poolKey, connectFuture, sessionPromise, httpPreference);
                     } else {
                         maybeHandleProxyFailure(desiredProtocol, poolKey, connectFuture.cause());
                         sessionPromise.tryFailure(connectFuture.cause());
@@ -467,7 +479,8 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void initSession(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                             PoolKey poolKey, ChannelFuture connectFuture, Promise<Channel> sessionPromise) {
+                             PoolKey poolKey, ChannelFuture connectFuture, Promise<Channel> sessionPromise,
+                             HttpPreference httpPreference) {
         assert connectFuture.isSuccess();
 
         final Channel ch = connectFuture.channel();
@@ -476,7 +489,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, connectTimeoutMillis,
-                                       desiredProtocol, serializationFormat, poolKey, clientFactory));
+                                       desiredProtocol, serializationFormat, poolKey, clientFactory,
+                                       httpPreference));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol,

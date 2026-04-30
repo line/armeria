@@ -76,11 +76,6 @@ public interface HttpSession {
         }
 
         @Override
-        public void retryWith(SessionProtocol protocol) {
-            throw new IllegalStateException();
-        }
-
-        @Override
         public boolean isAcquirable() {
             return false;
         }
@@ -158,8 +153,6 @@ public interface HttpSession {
 
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                 HttpRequest req, DecodedHttpResponse res);
-
-    void retryWith(SessionProtocol protocol);
 
     int incrementAndGetNumRequestsSent();
 }
