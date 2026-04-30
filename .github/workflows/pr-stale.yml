@@ -8,7 +8,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v10
         with:
           # Mark PRs as stale if they are open and inactive for 30 days.
           days-before-pr-stale: 30
