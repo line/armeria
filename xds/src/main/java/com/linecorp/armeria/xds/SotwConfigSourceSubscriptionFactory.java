@@ -26,7 +26,7 @@ import io.netty.util.concurrent.EventExecutor;
  * Implementations are resolved by name or by the {@code custom_config_source} type URL
  * via the extension registry.
  *
- * <h3>How the pieces fit together</h3>
+ * <h2>How the pieces fit together</h2>
  * <ol>
  *   <li>Armeria calls {@link #create} with a {@link ConfigSource}, a
  *       {@link SotwSubscriptionCallbacks}, and an {@link EventExecutor}.</li>
@@ -37,7 +37,7 @@ import io.netty.util.concurrent.EventExecutor;
  *       watched resource names changes, and {@link ConfigSourceSubscription#close()} on shutdown.</li>
  * </ol>
  *
- * <h3>Example</h3>
+ * <h2>Example</h2>
  * <pre>{@code
  * public class MyConfigSourceFactory implements SotwConfigSourceSubscriptionFactory {
  *

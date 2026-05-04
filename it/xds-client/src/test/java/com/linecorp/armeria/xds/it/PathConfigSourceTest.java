@@ -127,7 +127,12 @@ class PathConfigSourceTest {
     private static void verifyClusterFromPathConfigSource(String bootstrapYaml) {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml, Bootstrap.class);
         final AtomicReference<ClusterSnapshot> snapshotRef = new AtomicReference<>();
+        final AtomicReference<Throwable> errorRef = new AtomicReference<>();
         final SnapshotWatcher<Object> watcher = (snapshot, t) -> {
+            if (t != null) {
+                errorRef.set(t);
+                return;
+            }
             if (snapshot instanceof ClusterSnapshot) {
                 snapshotRef.set((ClusterSnapshot) snapshot);
             }
@@ -138,6 +143,7 @@ class PathConfigSourceTest {
                                                      .build()) {
             xdsBootstrap.clusterRoot("path-cluster");
             await().untilAsserted(() -> {
+                assertThat(errorRef.get()).isNull();
                 assertThat(snapshotRef.get()).isNotNull();
                 assertThat(snapshotRef.get().xdsResource().resource().getName())
                         .isEqualTo("path-cluster");

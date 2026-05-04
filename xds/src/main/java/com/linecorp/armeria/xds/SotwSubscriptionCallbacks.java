@@ -39,6 +39,11 @@ public interface SotwSubscriptionCallbacks {
      * The implementation is responsible for resolving the resource type, parsing resources,
      * and applying the results.
      *
+     * <p><strong>Threading:</strong> This method must be called from the
+     * {@link io.netty.util.concurrent.EventExecutor} that was supplied to
+     * {@link SotwConfigSourceSubscriptionFactory#create}. Calling it from any other
+     * thread will result in an {@link IllegalArgumentException}.
+     *
      * @param response the discovery response
      */
     void onDiscoveryResponse(DiscoveryResponse response);

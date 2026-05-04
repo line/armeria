@@ -18,7 +18,6 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Duration;
+import com.google.protobuf.util.Durations;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -63,9 +63,7 @@ final class StateCoordinator implements SotwSubscriptionCallbacks, SafeCloseable
             return 15_000;
         }
         final Duration timeoutDuration = configSource.getInitialFetchTimeout();
-        final Instant instant = Instant.ofEpochSecond(timeoutDuration.getSeconds(),
-                                                      timeoutDuration.getNanos());
-        final long epochMilli = instant.toEpochMilli();
+        final long epochMilli = Durations.toMillis(timeoutDuration);
         checkArgument(epochMilli >= 0, "Invalid initialFetchTimeout received: %s (expected >= 0)",
                       timeoutDuration);
         return epochMilli;
