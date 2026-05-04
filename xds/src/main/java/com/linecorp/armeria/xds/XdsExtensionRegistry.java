@@ -24,7 +24,11 @@ import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.file.DirectoryWatchService;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A dual-key registry for {@link XdsExtensionFactory} instances.
@@ -47,12 +51,24 @@ final class XdsExtensionRegistry {
         this.validator = validator;
     }
 
-    static XdsExtensionRegistry of(XdsResourceValidator validator) {
+    static XdsExtensionRegistry of(XdsResourceValidator validator,
+                                   DirectoryWatchService watchService,
+                                   MeterRegistry meterRegistry,
+                                   MeterIdPrefix meterIdPrefix) {
         final ImmutableMap.Builder<String, XdsExtensionFactory> byName = ImmutableMap.builder();
         final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
 
+        register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),
+                 byName, byTypeUrl);
+        register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
+
         // Load SPI-discovered HttpFilterFactory instances as base factories
         ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
+            register(factory, byName, byTypeUrl);
+        });
+
+        // Load SPI-discovered SotwConfigSourceSubscriptionFactory instances
+        ServiceLoader.load(SotwConfigSourceSubscriptionFactory.class).forEach(factory -> {
             register(factory, byName, byTypeUrl);
         });
 

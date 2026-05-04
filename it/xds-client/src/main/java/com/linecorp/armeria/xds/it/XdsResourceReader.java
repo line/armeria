@@ -16,67 +16,28 @@
 
 package com.linecorp.armeria.xds.it;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
-import com.google.protobuf.GeneratedMessage;
-import com.google.protobuf.util.JsonFormat;
-import com.google.protobuf.util.JsonFormat.Parser;
-import com.google.protobuf.util.JsonFormat.TypeRegistry;
+import com.google.protobuf.GeneratedMessageV3;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
-import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
+/**
+ * Delegates to {@link com.linecorp.armeria.xds.XdsResourceReader} for YAML/JSON parsing.
+ * Keeps test-only utilities like {@link #escapeMultiLine(String)}.
+ */
 public final class XdsResourceReader {
 
-    private static final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-    private static final ObjectMapper jsonMapper = new ObjectMapper();
-    private static final Parser parser =
-            JsonFormat.parser().usingTypeRegistry(TypeRegistry.newBuilder()
-                                                              .add(HttpConnectionManager.getDescriptor())
-                                                              .add(Router.getDescriptor())
-                                                              .add(UpstreamTlsContext.getDescriptor())
-                                                              .build());
-
     public static Bootstrap fromYaml(String yaml) {
-        final Bootstrap.Builder bootstrapBuilder = Bootstrap.newBuilder();
-        try {
-            final JsonNode jsonNode = mapper.reader().readTree(yaml);
-            parser.merge(jsonNode.toString(), bootstrapBuilder);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return bootstrapBuilder.build();
+        return com.linecorp.armeria.xds.XdsResourceReader.from(yaml, Bootstrap.class);
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends GeneratedMessage> T fromYaml(String yaml, Class<T> clazz) {
-        final GeneratedMessage.Builder<?> builder;
-        try {
-            builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
-            final JsonNode jsonNode = mapper.reader().readTree(yaml);
-            parser.merge(jsonNode.toString(), builder);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return (T) builder.build();
+    public static <T extends GeneratedMessageV3> T fromYaml(String yaml, Class<T> clazz) {
+        return com.linecorp.armeria.xds.XdsResourceReader.from(yaml, clazz);
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends GeneratedMessage> T fromJson(String json, Class<T> clazz) {
-        final GeneratedMessage.Builder<?> builder;
-        try {
-            builder = (GeneratedMessage.Builder<?>) clazz.getMethod("newBuilder").invoke(null);
-            final JsonNode jsonNode = jsonMapper.reader().readTree(json);
-            parser.merge(jsonNode.toString(), builder);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return (T) builder.build();
+    public static <T extends GeneratedMessageV3> T fromJson(String json, Class<T> clazz) {
+        return com.linecorp.armeria.xds.XdsResourceReader.from(json, clazz);
     }
 
     private static final Escaper multiLineEscaper = Escapers.builder()

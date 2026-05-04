@@ -168,6 +168,7 @@ message RateLimitSettings {
 
 // Local filesystem path configuration source.
 message PathConfigSource {
+  option (armeria.xds.supported.field) = 1;
   // Path on the filesystem to source and watch for configuration updates.
   // When sourcing configuration for a :ref:`secret <envoy_v3_api_msg_extensions.transport_sockets.tls.v3.Secret>`,
   // the certificate and key files are also watched for updates.
@@ -186,6 +187,7 @@ message PathConfigSource {
   //   this path. This is required in certain deployment scenarios. See below for more information.
   string path = 1 [(validate.rules).string = {min_len: 1}];
 
+  option (armeria.xds.supported.field) = 2;
   // If configured, this directory will be watched for *moves*. When an entry in this directory is
   // moved to, the ``path`` will be reloaded. This is required in certain deployment scenarios.
   //
@@ -225,6 +227,7 @@ message ConfigSource {
     string path = 1 [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0"];
 
     // Local filesystem path configuration source.
+    option (armeria.xds.supported.oneof_field) = 8;
     PathConfigSource path_config_source = 8;
 
     // API configuration source.
@@ -249,6 +252,14 @@ message ConfigSource {
     // is provided via ADS and the specified data can also be obtained via ADS.]
     option (armeria.xds.supported.oneof_field) = 5;
     SelfConfigSource self = 5;
+
+    // Armeria extension: a custom config source implementation resolved via
+    // the extension registry by the Any's type URL. This allows plugging in
+    // non-standard config sources (e.g. CentralDogma, etcd, Consul) without
+    // modifying the upstream proto definition.
+    // The large field number avoids conflicts with future upstream additions.
+    option (armeria.xds.supported.oneof_field) = 1000;
+    google.protobuf.Any custom_config_source = 1000;
   }
 
   // When this timeout is specified, Envoy will wait no longer than the specified time for first

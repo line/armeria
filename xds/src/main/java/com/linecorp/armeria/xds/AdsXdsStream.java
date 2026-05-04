@@ -47,6 +47,10 @@ final class AdsXdsStream implements XdsStream {
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Set<XdsType> targetTypes;
 
+    StateCoordinator stateCoordinator() {
+        return stateCoordinator;
+    }
+
     private int connBackoffAttempts = 1;
     private boolean stopped;
     @Nullable

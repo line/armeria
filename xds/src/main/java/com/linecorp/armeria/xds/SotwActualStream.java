@@ -21,7 +21,6 @@ import static com.linecorp.armeria.xds.XdsResourceParserUtil.fromTypeUrl;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -48,7 +47,6 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
 
     private final StreamObserver<DiscoveryRequest> requestObserver;
     private final AdsXdsStream owner;
-    private final StateCoordinator stateCoordinator;
     private final EventExecutor eventLoop;
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Node node;
@@ -58,11 +56,9 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     private boolean completed;
 
     SotwActualStream(SotwDiscoveryStub stub, AdsXdsStream owner,
-                     StateCoordinator stateCoordinator,
                      EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver,
                      Node node) {
         this.owner = owner;
-        this.stateCoordinator = stateCoordinator;
         this.eventLoop = eventLoop;
         this.lifecycleObserver = lifecycleObserver;
         this.node = node;
@@ -70,17 +66,21 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
         lifecycleObserver.streamOpened();
     }
 
+    private StateCoordinator stateCoordinator() {
+        return owner.stateCoordinator();
+    }
+
     void ackResponse(XdsType type, String versionInfo, String nonce) {
         noncesMap.put(type, nonce);
         lastAckedVersions.put(type, versionInfo);
-        sendDiscoveryRequest(type, versionInfo, stateCoordinator.interestedResources(type),
+        sendDiscoveryRequest(type, versionInfo, stateCoordinator().interestedResources(type),
                              nonce, null);
     }
 
     void nackResponse(XdsType type, String nonce, String errorDetail) {
         noncesMap.put(type, nonce);
         eventLoop.schedule(() -> sendDiscoveryRequest(type, lastAckedVersions.get(type),
-                                                      stateCoordinator.interestedResources(type), nonce,
+                                                      stateCoordinator().interestedResources(type), nonce,
                                                       errorDetail),
                            NACK_BACKOFF_MILLIS, TimeUnit.MILLISECONDS);
     }
@@ -101,7 +101,7 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
 
     private void sendDiscoveryRequest(XdsType type) {
         sendDiscoveryRequest(type, lastAckedVersions.get(type),
-                             stateCoordinator.interestedResources(type), noncesMap.get(type), null);
+                             stateCoordinator().interestedResources(type), noncesMap.get(type), null);
     }
 
     private void sendDiscoveryRequest(XdsType type, @Nullable String version, Collection<String> resources,
@@ -172,41 +172,24 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     }
 
     private void handleResponse(ResourceParser<?, ?> resourceParser, DiscoveryResponse response) {
+        final StateCoordinator stateCoordinator = stateCoordinator();
         final ParsedResourcesHolder holder =
                 resourceParser.parseResources(response.getResourcesList(),
                                               stateCoordinator.extensionRegistry(), response.getVersionInfo());
 
+        final XdsType type = resourceParser.type();
         if (!holder.errors().isEmpty()) {
             holder.invalidResources().forEach((name, error) -> stateCoordinator.onResourceError(
-                    resourceParser.type(), name, error));
-            lifecycleObserver.resourceRejected(resourceParser.type(), response, holder.invalidResources());
-
-            nackResponse(resourceParser.type(), response.getNonce(),
+                    type, name, error));
+            lifecycleObserver.resourceRejected(type, response, holder.invalidResources());
+            nackResponse(type, response.getNonce(),
                          String.join("\n", holder.errors()));
             return;
         }
 
-        // first save data
-        holder.parsedResources().forEach((name, resource) -> {
-            if (resource instanceof XdsResource) {
-                stateCoordinator.onResourceUpdated(resourceParser.type(), name, (XdsResource) resource);
-            }
-        });
-
-        final boolean fullStateOfTheWorld = resourceParser.isFullStateOfTheWorld();
-        if (fullStateOfTheWorld) {
-            final Set<String> activeResources = stateCoordinator.activeResources(resourceParser.type());
-            for (String name : activeResources) {
-                if (holder.parsedResources().containsKey(name)) {
-                    continue;
-                }
-                stateCoordinator.onResourceMissing(resourceParser.type(), name);
-            }
-        } else {
-            // A limitation of sotw - we can't know if resources should be removed.
-        }
-        lifecycleObserver.resourceUpdated(resourceParser.type(), response, holder.parsedResources());
+        stateCoordinator.onSotwConfigUpdate(type, holder.parsedResources());
+        lifecycleObserver.resourceUpdated(type, response, holder.parsedResources());
         // send the ack
-        ackResponse(resourceParser.type(), response.getVersionInfo(), response.getNonce());
+        ackResponse(type, response.getVersionInfo(), response.getNonce());
     }
 }

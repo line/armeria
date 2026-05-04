@@ -47,10 +47,12 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        final XdsResourceValidator resourceValidator = new XdsResourceValidator();
-        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(resourceValidator);
-        extensionRegistry.assertValid(bootstrap);
         watchService = new DirectoryWatchService();
+        final XdsResourceValidator resourceValidator = new XdsResourceValidator();
+        final XdsExtensionRegistry extensionRegistry =
+                XdsExtensionRegistry.of(resourceValidator, watchService,
+                                        meterRegistry, meterIdPrefix);
+        extensionRegistry.assertValid(bootstrap);
         clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
         final BootstrapClusters bootstrapClusters =
                 new BootstrapClusters(bootstrap, clusterManager, defaultWatcher);
@@ -58,8 +60,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
-                bootstrap, eventLoop, bootstrapClusters,
-                configSourceMapper, meterRegistry, meterIdPrefix, extensionRegistry);
+                bootstrap, eventLoop, bootstrapClusters, configSourceMapper, extensionRegistry);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
                 meterRegistry, meterIdPrefix, watchService, bootstrapSecrets, extensionRegistry);
@@ -80,7 +81,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     }
 
     @VisibleForTesting
-    Map<ConfigSource, ConfigSourceClient> clientMap() {
+    Map<ConfigSource, ConfigSourceHandler> clientMap() {
         return controlPlaneClientManager.clientMap();
     }
 

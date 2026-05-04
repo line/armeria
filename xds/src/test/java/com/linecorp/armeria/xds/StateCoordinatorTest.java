@@ -18,14 +18,20 @@ package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.file.DirectoryWatchService;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class StateCoordinatorTest {
 
@@ -35,11 +41,18 @@ class StateCoordinatorTest {
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
 
+    private static final DirectoryWatchService watchService = new DirectoryWatchService();
+
+    @AfterAll
+    static void tearDown() {
+        watchService.close();
+    }
+
     @Test
     void lateSubscriberReceivesCachedResource() {
-        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(new XdsResourceValidator());
-        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false,
-                                                                  extensionRegistry);
+        final XdsExtensionRegistry extensionRegistry = extensionRegistry();
+        final StateCoordinator coordinator = new StateCoordinator(
+                eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
         final ClusterXdsResource resource =
                 new ClusterXdsResource(createCluster(CLUSTER_NAME), "1").withRevision(1);
         coordinator.onResourceUpdated(XdsType.CLUSTER, CLUSTER_NAME, resource);
@@ -53,9 +66,9 @@ class StateCoordinatorTest {
 
     @Test
     void missingResourceNotCachedAfterRemoval() {
-        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(new XdsResourceValidator());
-        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false,
-                                                                  extensionRegistry);
+        final XdsExtensionRegistry extensionRegistry = extensionRegistry();
+        final StateCoordinator coordinator = new StateCoordinator(
+                eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
         final CapturingWatcher watcher1 = new CapturingWatcher();
         coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
 
@@ -74,9 +87,9 @@ class StateCoordinatorTest {
 
     @Test
     void stateRetainedAfterUnsubscribe() {
-        final XdsExtensionRegistry extensionRegistry = XdsExtensionRegistry.of(new XdsResourceValidator());
-        final StateCoordinator coordinator = new StateCoordinator(eventLoop.get(), 15_000, false,
-                                                                  extensionRegistry);
+        final XdsExtensionRegistry extensionRegistry = extensionRegistry();
+        final StateCoordinator coordinator = new StateCoordinator(
+                eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
         final RouteXdsResource resource =
                 new RouteXdsResource(RouteConfiguration.newBuilder().setName(ROUTE_NAME).build(), "1")
                         .withRevision(1);
@@ -94,6 +107,14 @@ class StateCoordinatorTest {
 
         assertThat(watcher2.changed).isSameAs(resource);
         assertThat(watcher2.missingType).isNull();
+    }
+
+    private static XdsExtensionRegistry extensionRegistry() {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        return XdsExtensionRegistry.of(new XdsResourceValidator(),
+                                       watchService,
+                                       meterRegistry,
+                                       new MeterIdPrefix("test"));
     }
 
     private static Cluster createCluster(String name) {
