@@ -28,7 +28,7 @@ jobs:
 
       - id: setup-jdk-25
         name: Setup Java 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 25
