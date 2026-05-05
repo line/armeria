@@ -180,7 +180,7 @@ jobs:
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}
