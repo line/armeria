@@ -22,7 +22,7 @@ jobs:
     if: github.repository == 'line/armeria'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - id: setup-jdk-25
         name: Set up JDK 25

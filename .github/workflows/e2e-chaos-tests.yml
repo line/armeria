@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 120
     if: github.repository == 'line/armeria'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - id: setup-jdk-25
         name: Setup Java 25
