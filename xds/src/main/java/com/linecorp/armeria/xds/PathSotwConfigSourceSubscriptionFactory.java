@@ -107,6 +107,7 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
                                 eventLoop.execute(() -> parseAndPush(bytes));
                             }));
                 } catch (Exception e) {
+                    lifecycleObserver.fileParseError(e);
                     lifecycleObserver.close();
                     return;
                 }
