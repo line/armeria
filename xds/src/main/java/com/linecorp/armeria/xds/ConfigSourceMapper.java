@@ -29,12 +29,14 @@ final class ConfigSourceMapper {
     static final boolean HAS_CUSTOM_CONFIG_SOURCE;
 
     static {
+        boolean hasCustomConfigSource;
         try {
             ConfigSource.class.getMethod("hasCustomConfigSource");
-            HAS_CUSTOM_CONFIG_SOURCE = true;
+            hasCustomConfigSource = true;
         } catch (NoSuchMethodException e) {
-            HAS_CUSTOM_CONFIG_SOURCE = false;
+            hasCustomConfigSource = false;
         }
+        HAS_CUSTOM_CONFIG_SOURCE = hasCustomConfigSource;
     }
 
     private final ConfigSource bootstrapCdsConfig;
