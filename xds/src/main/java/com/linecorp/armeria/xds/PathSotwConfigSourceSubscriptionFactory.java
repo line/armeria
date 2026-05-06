@@ -100,10 +100,16 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
 
         private void startWatching() {
             CommonPools.blockingTaskExecutor().execute(() -> {
-                final Cancellable cancellable = watchService.register(
-                        watchDir, PathWatcher.ofFile(filePath, bytes -> {
-                            eventLoop.execute(() -> parseAndPush(bytes));
-                        }));
+                final Cancellable cancellable;
+                try {
+                    cancellable = watchService.register(
+                            watchDir, PathWatcher.ofFile(filePath, bytes -> {
+                                eventLoop.execute(() -> parseAndPush(bytes));
+                            }));
+                } catch (Exception e) {
+                    lifecycleObserver.close();
+                    return;
+                }
                 eventLoop.execute(() -> {
                     if (closed) {
                         close0(cancellable);
