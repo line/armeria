@@ -24,6 +24,19 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 final class ConfigSourceMapper {
 
+    // custom_config_source is an Armeria extension (field 1000) that may not exist
+    // when a different proto artifact (e.g. java-control-plane api) is used at runtime.
+    static final boolean HAS_CUSTOM_CONFIG_SOURCE;
+
+    static {
+        try {
+            ConfigSource.class.getMethod("hasCustomConfigSource");
+            HAS_CUSTOM_CONFIG_SOURCE = true;
+        } catch (NoSuchMethodException e) {
+            HAS_CUSTOM_CONFIG_SOURCE = false;
+        }
+    }
+
     private final ConfigSource bootstrapCdsConfig;
     private final ConfigSource bootstrapLdsConfig;
     private final ApiConfigSource bootstrapAdsConfig;
@@ -62,9 +75,9 @@ final class ConfigSourceMapper {
     }
 
     private static boolean hasExplicitConfigSource(ConfigSource configSource) {
-
         return configSource.hasApiConfigSource() || configSource.hasAds() ||
-               configSource.hasPathConfigSource() || configSource.hasCustomConfigSource();
+               configSource.hasPathConfigSource() ||
+               (HAS_CUSTOM_CONFIG_SOURCE && configSource.hasCustomConfigSource());
     }
 
     ApiConfigSource bootstrapAdsConfig() {

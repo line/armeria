@@ -1,0 +1,12 @@
+dependencies {
+    // Use the vanilla java-control-plane api protos instead of Armeria's xds-api.
+    // This verifies that the xds module works when custom_config_source is not present.
+    configurations.configureEach {
+        exclude group: 'com.linecorp.armeria', module: 'xds-api'
+    }
+
+    testImplementation project(':xds')
+    testImplementation libs.controlplane.server
+    testImplementation libs.controlplane.cache
+    testImplementation libs.protobuf.java.util
+}

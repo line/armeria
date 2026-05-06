@@ -99,9 +99,19 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
         }
 
         private void startWatching() {
-            watchCancellable = watchService.register(watchDir, PathWatcher.ofFile(filePath, bytes -> {
-                eventLoop.execute(() -> parseAndPush(bytes));
-            }));
+            CommonPools.blockingTaskExecutor().execute(() -> {
+                final Cancellable cancellable = watchService.register(
+                        watchDir, PathWatcher.ofFile(filePath, bytes -> {
+                            eventLoop.execute(() -> parseAndPush(bytes));
+                        }));
+                eventLoop.execute(() -> {
+                    if (closed) {
+                        close0(cancellable);
+                    } else {
+                        watchCancellable = cancellable;
+                    }
+                });
+            });
         }
 
         private void parseAndPush(byte[] bytes) {
@@ -128,10 +138,14 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
         @Override
         public void close() {
             closed = true;
-            lifecycleObserver.close();
             if (watchCancellable != null) {
-                CommonPools.blockingTaskExecutor().execute(watchCancellable::cancel);
+                close0(watchCancellable);
             }
+        }
+
+        private void close0(Cancellable watchCancellable) {
+            lifecycleObserver.close();
+            CommonPools.blockingTaskExecutor().execute(watchCancellable::cancel);
         }
     }
 }
