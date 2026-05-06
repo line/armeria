@@ -289,7 +289,7 @@ class VirtualHostRoutingTest {
                     .isInstanceOf(UnprocessedRequestException.class)
                     .cause()
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageStartingWith("No route has been selected for listener");
+                    .hasMessageStartingWith("No route for listener");
         }
     }
 }

@@ -6,6 +6,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.type.v3";
 option java_outer_classname = "PercentProto";
 option java_multiple_files = true;
@@ -18,6 +20,7 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 message Percent {
   option (udpa.annotations.versioning).previous_message_type = "envoy.type.Percent";
 
+  option (armeria.xds.supported.field) = 1;
   double value = 1 [(validate.rules).double = {lte: 100.0 gte: 0.0}];
 }
 

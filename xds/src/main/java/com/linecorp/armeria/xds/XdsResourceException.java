@@ -74,6 +74,13 @@ public class XdsResourceException extends RuntimeException {
     }
 
     @Override
+    public String getMessage() {
+        final String superMsg = super.getMessage();
+        final String typeAndName = "[type=" + type + ", name='" + name + "']";
+        return superMsg != null ? typeAndName + ": " + superMsg : typeAndName;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("type", type)

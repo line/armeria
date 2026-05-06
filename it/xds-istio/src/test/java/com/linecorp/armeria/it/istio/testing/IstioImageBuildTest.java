@@ -13,25 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.xds;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package com.linecorp.armeria.it.istio.testing;
 
 import org.junit.jupiter.api.Test;
 
-import io.envoyproxy.envoy.config.route.v3.VirtualHost;
-import io.envoyproxy.pgv.ValidationException;
-
-class XdsValidatorIndexRegistryTest {
+@EnabledIfDockerAvailable
+class IstioImageBuildTest {
 
     @Test
-    void validationIsEnabled() throws Exception {
-        final VirtualHost virtualHost = VirtualHost.getDefaultInstance();
-        assertThatThrownBy(() -> XdsValidatorIndexRegistry.assertValid(virtualHost))
-                .isInstanceOf(IllegalArgumentException.class)
-                .cause()
-                .isInstanceOf(ValidationException.class)
-                .hasMessageContaining("length must be at least 1 but got: 0");
+    void dockerImageBuildsSuccessfully() {
+        IstioTestImage.build().get();
     }
 }

@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -30,13 +32,14 @@ final class SubscriberStorage implements SafeCloseable {
 
     private final EventExecutor eventLoop;
     private final long timeoutMillis;
-
+    private final boolean delta;
     private final Map<XdsType, Map<String, XdsStreamSubscriber<?>>> subscriberMap =
             new EnumMap<>(XdsType.class);
 
-    SubscriberStorage(EventExecutor eventLoop, long timeoutMillis) {
+    SubscriberStorage(EventExecutor eventLoop, long timeoutMillis, boolean delta) {
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
+        this.delta = delta;
     }
 
     /**
@@ -48,7 +51,9 @@ final class SubscriberStorage implements SafeCloseable {
                 type, key -> new HashMap<>()).get(resourceName);
         boolean updated = false;
         if (subscriber == null) {
-            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis);
+            final boolean enableAbsentOnTimeout = !delta && timeoutMillis > 0;
+            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis,
+                                                   enableAbsentOnTimeout);
             subscriberMap.get(type).put(resourceName, subscriber);
             updated = true;
         }
@@ -82,21 +87,23 @@ final class SubscriberStorage implements SafeCloseable {
         return false;
     }
 
-    <T extends XdsResource> Map<String, XdsStreamSubscriber<T>> subscribers(XdsType type) {
-        return unsafeCast(subscriberMap.getOrDefault(type, Collections.emptyMap()));
+    @Nullable
+    <T extends XdsResource> XdsStreamSubscriber<T> subscriber(XdsType type, String resourceName) {
+        return unsafeCast(subscriberMap.getOrDefault(type, ImmutableMap.of()).get(resourceName));
     }
 
-    static <T> T unsafeCast(Object obj) {
+    @Nullable
+    private static <T> T unsafeCast(@Nullable Object obj) {
         //noinspection unchecked
         return (T) obj;
     }
 
-    Set<String> resources(XdsType type) {
-        return subscriberMap.getOrDefault(type, Collections.emptyMap()).keySet();
+    ImmutableSet<String> resources(XdsType type) {
+        return ImmutableSet.copyOf(subscriberMap.getOrDefault(type, ImmutableMap.of()).keySet());
     }
 
-    Map<XdsType, Map<String, XdsStreamSubscriber<?>>> allSubscribers() {
-        return subscriberMap;
+    boolean hasNoSubscribers() {
+        return subscriberMap.isEmpty();
     }
 
     @Override
