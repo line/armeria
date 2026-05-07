@@ -17,14 +17,12 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
@@ -63,6 +61,9 @@ class Http2ClientPrefaceTest {
     @ValueSource(booleans = { true, false })
     @ParameterizedTest
     void shouldUseConnectionPrefaceOrUpgradeForHttp(boolean useHttp2Preface) {
+        // With the H2C fallback chain, both cases succeed:
+        // - useHttp2Preface=true: preface succeeds directly
+        // - useHttp2Preface=false: upgrade fails → preface fallback succeeds
         try (ClientFactory factory = ClientFactory.builder()
                                                   .useHttp2Preface(useHttp2Preface)
                                                   .build()) {
@@ -70,15 +71,8 @@ class Http2ClientPrefaceTest {
                                                       .factory(factory)
                                                       .build()
                                                       .blocking();
-            if (useHttp2Preface) {
-                final AggregatedHttpResponse response = client.get("/");
-                assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            } else {
-                // Upgrade HTTP/1.1 to HTTP/2 fails because the server only supports H2C.
-                assertThatThrownBy(() -> client.get("/"))
-                        .isInstanceOf(UnprocessedRequestException.class)
-                        .hasCauseInstanceOf(ClosedSessionException.class);
-            }
+            final AggregatedHttpResponse response = client.get("/");
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
         }
     }
 

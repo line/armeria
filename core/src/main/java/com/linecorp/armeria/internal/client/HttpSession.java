@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.client;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpPreference;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
@@ -76,7 +77,7 @@ public interface HttpSession {
         }
 
         @Override
-        public void retryWith(SessionProtocol protocol) {
+        public void retryWith(HttpPreference httpPreference) {
             throw new IllegalStateException();
         }
 
@@ -159,7 +160,7 @@ public interface HttpSession {
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                 HttpRequest req, DecodedHttpResponse res);
 
-    void retryWith(SessionProtocol protocol);
+    void retryWith(HttpPreference httpPreference);
 
     int incrementAndGetNumRequestsSent();
 }

@@ -226,10 +226,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             return SessionProtocolNegotiationCache.isUnsupported(endpointWithPort, SessionProtocol.H2C);
         }
 
-        if (sessionProtocol == SessionProtocol.HTTPS) {
-            return SessionProtocolNegotiationCache.isUnsupported(endpointWithPort, SessionProtocol.H2);
-        }
-
+        // For HTTPS, ALPN handles negotiation per-connection and results are not cached,
+        // so we always assume H2 is possible
         return false;
     }
 

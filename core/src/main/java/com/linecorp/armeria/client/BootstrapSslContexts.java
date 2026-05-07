@@ -16,12 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import java.util.Map;
-
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 
@@ -29,43 +23,37 @@ import io.netty.handler.ssl.SslContext;
 
 final class BootstrapSslContexts {
 
-    private final Map<SessionProtocol, ClientTlsSpec> tlsSpecs;
-    private final Map<SessionProtocol, SslContext> contexts;
+    private final ClientTlsSpec http1OnlyTlsSpec;
+    private final ClientTlsSpec defaultTlsSpec;
+    private final SslContext http1OnlySslCtx;
+    private final SslContext sslCtx;
 
     BootstrapSslContexts(ClientTlsSpec baseClientTlsSpec, ClientFactoryOptions options,
                          SslContextFactory sslContextFactory) {
-        final ImmutableMap.Builder<SessionProtocol, ClientTlsSpec> tlsSpecsBuilder = ImmutableMap.builder();
-        final ImmutableMap.Builder<SessionProtocol, SslContext> sslContextsBuilder = ImmutableMap.builder();
-        for (SessionProtocol sessionProtocol: SessionProtocol.httpsValues()) {
-            final ClientTlsSpec tlsSpec = baseClientTlsSpec.toBuilder()
-                                                           .engineType(options.tlsEngineType())
-                                                           .alpnProtocols(sessionProtocol)
-                                                           .tlsCustomizer(options.tlsCustomizer())
-                                                           .build();
-            tlsSpecsBuilder.put(sessionProtocol, tlsSpec);
-            sslContextsBuilder.put(sessionProtocol, sslContextFactory.getOrCreate(tlsSpec));
-        }
-        tlsSpecs =  tlsSpecsBuilder.build();
-        contexts = sslContextsBuilder.build();
+        http1OnlyTlsSpec = baseClientTlsSpec.toBuilder()
+                                            .engineType(options.tlsEngineType())
+                                            .alpnProtocols(SessionProtocol.H1)
+                                            .tlsCustomizer(options.tlsCustomizer())
+                                            .build();
+        defaultTlsSpec = baseClientTlsSpec.toBuilder()
+                                          .engineType(options.tlsEngineType())
+                                          .alpnProtocols(SessionProtocol.H2)
+                                          .tlsCustomizer(options.tlsCustomizer())
+                                          .build();
+        http1OnlySslCtx = sslContextFactory.getOrCreate(http1OnlyTlsSpec);
+        sslCtx = sslContextFactory.getOrCreate(defaultTlsSpec);
     }
 
     ClientTlsSpec getClientTlsSpec(SessionProtocol sessionProtocol) {
-        final ClientTlsSpec clientTlsSpec = tlsSpecs.get(sessionProtocol);
-        checkArgument(clientTlsSpec != null, "Unsupported protocol '%s'. Only TLS-enabled protocols" +
-                                             " have a default ClientTlsSpec.", sessionProtocol);
-        return clientTlsSpec;
+        return sessionProtocol.isExplicitHttp1() ? http1OnlyTlsSpec : defaultTlsSpec;
     }
 
-    SslContext getSslContext(SessionProtocol sessionProtocol) {
-        final SslContext sslContext = contexts.get(sessionProtocol);
-        checkArgument(sslContext != null, "Unsupported protocol '%s'. Only TLS-enabled protocols" +
-                                          " have a default ClientTlsSpec.", sessionProtocol);
-        return sslContext;
+    SslContext getSslContext(HttpPreference httpPreference) {
+        return httpPreference == HttpPreference.HTTP1_REQUIRED ? http1OnlySslCtx : sslCtx;
     }
 
     void release(SslContextFactory factory) {
-        for (SslContext sslContext: contexts.values()) {
-            factory.release(sslContext);
-        }
+        factory.release(http1OnlySslCtx);
+        factory.release(sslCtx);
     }
 }

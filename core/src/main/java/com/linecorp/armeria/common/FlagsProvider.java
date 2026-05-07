@@ -471,11 +471,10 @@ public interface FlagsProvider {
 
     /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp2Preface(boolean)} option.
-     * If enabled, the HTTP/2 connection preface is sent immediately for a cleartext HTTP/2 connection,
+     * If enabled, the HTTP/2 connection preface is tried first for a cleartext HTTP/2 connection,
      * reducing an extra round trip incurred by the {@code OPTIONS * HTTP/1.1} upgrade request.
-     * If disabled, the {@code OPTIONS * HTTP/1.1} request with {@code "Upgrade: h2c"} header is sent for
-     * a cleartext HTTP/2 connection. Consider disabling this flag if your HTTP servers have issues
-     * handling or rejecting the HTTP/2 connection preface without a upgrade request.
+     * If disabled, the {@code OPTIONS * HTTP/1.1} request with {@code "Upgrade: h2c"} header is tried first.
+     * In both cases, the client will try the other strategy before falling back to HTTP/1.1.
      * Note that this option does not affect ciphertext HTTP/2 connections, which use ALPN for protocol
      * negotiation, and it has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#useHttp2Preface(boolean)}.

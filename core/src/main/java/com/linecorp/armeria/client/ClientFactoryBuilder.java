@@ -856,8 +856,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
-     * the protocol version of a cleartext HTTP connection.
+     * Sets whether to try the HTTP/2 connection preface before the HTTP/1.1 upgrade request when
+     * negotiating the protocol version of a cleartext HTTP connection. The client will try both
+     * strategies before falling back to HTTP/1.1; this option only controls which strategy is
+     * attempted first.
      */
     public ClientFactoryBuilder useHttp2Preface(boolean useHttp2Preface) {
         option(ClientFactoryOptions.USE_HTTP2_PREFACE, useHttp2Preface);

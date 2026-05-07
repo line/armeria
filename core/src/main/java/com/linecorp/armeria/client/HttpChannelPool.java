@@ -349,7 +349,9 @@ final class HttpChannelPool implements AsyncCloseable {
 
         // Fail immediately if it is certain that the remote address doesn't support the desired protocol.
         final SocketAddress remoteAddress = key.toRemoteAddress();
-        if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
+        final HttpPreference pref =
+                HttpPreference.of(desiredProtocol, clientFactory.options().useHttp2Preface(), remoteAddress);
+        if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, pref)) {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
                                   new SessionProtocolNegotiationException(
@@ -362,7 +364,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         // Create a new connection.
         final Promise<Channel> sessionPromise = eventLoop.newPromise();
-        connect(remoteAddress, desiredProtocol, serializationFormat, key, sessionPromise, timingsBuilder);
+        connect(remoteAddress, desiredProtocol, serializationFormat, key, sessionPromise, timingsBuilder, pref);
 
         if (sessionPromise.isDone()) {
             notifyConnect(desiredProtocol, key, sessionPromise, promise, timingsBuilder);
@@ -384,10 +386,11 @@ final class HttpChannelPool implements AsyncCloseable {
     void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
                  SerializationFormat serializationFormat,
                  PoolKey poolKey, Promise<Channel> sessionPromise,
-                 @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
+                 @Nullable ClientConnectionTimingsBuilder timingsBuilder,
+                 HttpPreference httpPreference) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol,
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, httpPreference,
                                                serializationFormat, poolKey.tlsSpec);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);

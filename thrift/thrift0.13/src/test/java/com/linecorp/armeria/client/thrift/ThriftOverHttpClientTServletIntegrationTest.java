@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.HttpPreference;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -181,7 +182,8 @@ class ThriftOverHttpClientTServletIntegrationTest {
                     assertThat(cause.expected()).isEqualTo(H2C);
                     assertThat(cause.actual()).isEqualTo(H1C);
                     // .. and if the negotiation cache is updated.
-                    assertThat(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C)).isTrue();
+                    assertThat(SessionProtocolNegotiationCache
+                                       .isUnsupported(remoteAddress, HttpPreference.PREFACE)).isTrue();
                 });
 
         assertThatThrownBy(() -> client.hello("unused"))

@@ -125,11 +125,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private int numRequestsSent;
 
     /**
-     * {@code true} if the protocol upgrade to HTTP/2 has failed.
-     * If set to {@code true}, another connection attempt will follow.
+     * Set when the protocol upgrade to HTTP/2 has failed and another connection attempt will follow.
      */
     @Nullable
-    private SessionProtocol retryProtocol;
+    private HttpPreference nextPref;
 
     /**
      * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
@@ -328,8 +327,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void retryWith(SessionProtocol protocol) {
-        retryProtocol = protocol;
+    public void retryWith(HttpPreference httpPreference) {
+        nextPref = httpPreference;
     }
 
     @Override
@@ -537,18 +536,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         isAcquirable = false;
 
         // Protocol upgrade has failed, but needs to retry.
-        if (retryProtocol != null) {
+        if (nextPref != null) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             if (sessionTimeoutFuture != null) {
                 sessionTimeoutFuture.cancel(false);
             }
-            if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
-                                    poolKey, sessionPromise, null);
-            } else {
-                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise,
-                                    null);
-            }
+            final SocketAddress addr = proxyDestinationAddress != null ? proxyDestinationAddress
+                                                                       : remoteAddress;
+            channelPool.connect(addr, desiredProtocol, serializationFormat, poolKey, sessionPromise,
+                                null, nextPref);
         } else {
             // Fail all pending responses.
             final HttpResponseDecoder responseDecoder = this.responseDecoder;

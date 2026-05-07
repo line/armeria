@@ -81,7 +81,41 @@ public final class SessionProtocolNegotiationCache {
         return isUnsupported(key(remoteAddress), protocol);
     }
 
+    /**
+     * Returns {@code true} if the specified {@link HttpPreference} is known to be unsupported for the given
+     * {@code remoteAddress}.
+     */
+    public static boolean isUnsupported(SocketAddress remoteAddress, HttpPreference preference) {
+        requireNonNull(remoteAddress, "remoteAddress");
+        requireNonNull(preference, "preference");
+        final CacheEntry e;
+        final long stamp = lock.readLock();
+        try {
+            e = cache.get(key(remoteAddress));
+        } finally {
+            lock.unlockRead(stamp);
+        }
+
+        if (e == null) {
+            return false;
+        }
+        switch (preference) {
+            case HTTP1_REQUIRED:
+                return false;
+            case HTTP2_REQUIRED:
+                preference = HttpPreference.PREFACE;
+                // fall through
+            case PREFACE:
+            case UPGRADE:
+                return e.isUnsupported(preference);
+        }
+        throw new Error();
+    }
+
     private static boolean isUnsupported(String key, SessionProtocol protocol) {
+        if (!isCacheableProtocol(protocol)) {
+            return false;
+        }
         final CacheEntry e;
         final long stamp = lock.readLock();
         try {
@@ -94,8 +128,13 @@ public final class SessionProtocolNegotiationCache {
             // Can't tell if it's unsupported
             return false;
         }
+        return e.h2cUnsupported();
+    }
 
-        return e.isUnsupported(protocol);
+    private static boolean isCacheableProtocol(SessionProtocol protocol) {
+        // TLS negotiation (ALPN) can differ per connection so caching is unreliable.
+        // HTTP, H1C is always supported
+        return protocol == SessionProtocol.H2C;
     }
 
     /**
@@ -104,10 +143,36 @@ public final class SessionProtocolNegotiationCache {
      */
     public static void setUnsupported(SocketAddress remoteAddress, SessionProtocol protocol) {
         requireNonNull(protocol, "protocol");
+        if (!isCacheableProtocol(protocol)) {
+            return;
+        }
         final String key = key(remoteAddress);
         final CacheEntry e = getOrCreate(key);
 
-        if (e.addUnsupported(protocol)) {
+        if (e.addUnsupported(HttpPreference.PREFACE) |
+            e.addUnsupported(HttpPreference.UPGRADE)) {
+            logger.debug("Updated: '{}' does not support {}", key, e);
+        }
+    }
+
+    /**
+     * Updates the cache with the information that the specified {@link HttpPreference} is not supported
+     * by the given {@code remoteAddress}.
+     */
+    public static void setUnsupported(SocketAddress remoteAddress, HttpPreference preference) {
+        requireNonNull(remoteAddress, "remoteAddress");
+        requireNonNull(preference, "preference");
+        switch (preference) {
+            case HTTP1_REQUIRED:
+                return;
+            case HTTP2_REQUIRED:
+                preference = HttpPreference.PREFACE;
+        }
+
+        final String key = key(remoteAddress);
+        final CacheEntry e = getOrCreate(key);
+
+        if (e.addUnsupported(preference)) {
             logger.debug("Updated: '{}' does not support {}", key, e);
         }
     }
@@ -204,33 +269,37 @@ public final class SessionProtocolNegotiationCache {
     }
 
     private static final class CacheEntry {
-        private volatile Set<SessionProtocol> unsupported = ImmutableSet.of();
+        private volatile Set<HttpPreference> failedPreferences = ImmutableSet.of();
 
         CacheEntry(@SuppressWarnings("unused") String key) {
             // Key is unused. It's just here to simplify the Map.computeIfAbsent() call in getOrCreate().
         }
 
-        boolean addUnsupported(SessionProtocol protocol) {
-            final Set<SessionProtocol> unsupported = this.unsupported;
-            if (unsupported.contains(protocol)) {
+        private boolean addUnsupported(HttpPreference preference) {
+            assert preference == HttpPreference.PREFACE || preference == HttpPreference.UPGRADE;
+            final Set<HttpPreference> current = failedPreferences;
+            if (current.contains(preference)) {
                 return false;
             }
-
-            this.unsupported = ImmutableSet.<SessionProtocol>builder()
-                                           .addAll(unsupported)
-                                           .add(protocol)
-                                           .build();
+            failedPreferences = ImmutableSet.<HttpPreference>builder()
+                                            .addAll(current)
+                                            .add(preference)
+                                            .build();
             return true;
         }
 
-        boolean isUnsupported(SessionProtocol protocol) {
-            requireNonNull(protocol, "protocol");
-            return unsupported.contains(protocol);
+        private boolean isUnsupported(HttpPreference preference) {
+            return failedPreferences.contains(preference);
+        }
+
+        private boolean h2cUnsupported() {
+            return failedPreferences.contains(HttpPreference.PREFACE) &&
+                   failedPreferences.contains(HttpPreference.UPGRADE);
         }
 
         @Override
         public String toString() {
-            return unsupported.toString();
+            return failedPreferences.toString();
         }
     }
 

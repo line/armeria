@@ -479,7 +479,8 @@ class ProxyClientIntegrationTest {
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(HttpMethod.GET.name());
-            assertThat(numSuccessfulProxyRequests).isEqualTo(2);
+            // upgrade -> preface -> http1
+            assertThat(numSuccessfulProxyRequests).isEqualTo(3);
         }
     }
 

@@ -50,23 +50,26 @@ class SessionProtocolNegotiationCacheTest {
 
         SessionProtocolNegotiationCache.setUnsupported(aRemoteAddress, H2C);
         assertThat(SessionProtocolNegotiationCache.isUnsupported(a, H2C)).isTrue();
+        // TLS protocols (H2) are never cached because ALPN can differ per connection.
         assertThat(SessionProtocolNegotiationCache.isUnsupported(a, H2)).isFalse();
+    }
 
+    @Test
+    void tlsProtocolsAreNotCached() throws UnknownHostException {
+        // TLS negotiation (ALPN) can differ per connection (e.g. per-request TLS specs),
+        // so TLS protocol failures should not be cached.
         final Endpoint b = Endpoint.of("b", 443).withIpAddr("127.0.0.2");
         final InetSocketAddress bRemoteAddress = toRemoteAddress(b);
-        assertThat(SessionProtocolNegotiationCache.isUnsupported(b, H2)).isFalse(); // Do not know yet.
 
         SessionProtocolNegotiationCache.setUnsupported(bRemoteAddress, H2);
-        assertThat(SessionProtocolNegotiationCache.isUnsupported(b, H2)).isTrue();
-        assertThat(SessionProtocolNegotiationCache.isUnsupported(b, H2C)).isFalse();
+        // setUnsupported is a no-op for TLS protocols.
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(b, H2)).isFalse();
 
         final Endpoint ip = Endpoint.of("127.0.0.3", 443);
         final InetSocketAddress ipRemoteAddress = toRemoteAddress(ip);
-        assertThat(SessionProtocolNegotiationCache.isUnsupported(ip, H2)).isFalse(); // Do not know yet.
 
         SessionProtocolNegotiationCache.setUnsupported(ipRemoteAddress, H2);
-        assertThat(SessionProtocolNegotiationCache.isUnsupported(ip, H2)).isTrue();
-        assertThat(SessionProtocolNegotiationCache.isUnsupported(ip, H2C)).isFalse();
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(ip, H2)).isFalse();
     }
 
     /**
@@ -137,6 +140,39 @@ class SessionProtocolNegotiationCacheTest {
         assertThat(SessionProtocolNegotiationCache.key(
                 new io.netty.channel.unix.DomainSocketAddress("/var/run/foo.sock")))
                 .isEqualTo(expectedKey);
+    }
+
+    @Test
+    void prefaceAndUpgradeUnsupported() {
+        final InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 8080);
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.PREFACE)).isFalse();
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.UPGRADE)).isFalse();
+
+        SessionProtocolNegotiationCache.setUnsupported(addr, HttpPreference.PREFACE);
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.PREFACE)).isTrue();
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.UPGRADE)).isFalse();
+
+        SessionProtocolNegotiationCache.setUnsupported(addr, HttpPreference.UPGRADE);
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.PREFACE)).isTrue();
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.UPGRADE)).isTrue();
+    }
+
+    @Test
+    void clearAlsoClearsPreferences() {
+        final InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 9090);
+        SessionProtocolNegotiationCache.setUnsupported(addr, HttpPreference.PREFACE);
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.PREFACE)).isTrue();
+
+        SessionProtocolNegotiationCache.clear();
+        assertThat(SessionProtocolNegotiationCache.isUnsupported(
+                addr, HttpPreference.PREFACE)).isFalse();
     }
 
     private static InetSocketAddress toRemoteAddress(Endpoint endpoint) throws UnknownHostException {
