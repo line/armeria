@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Map;
 import java.util.Set;
@@ -139,7 +140,7 @@ final class StateCoordinator implements SotwSubscriptionCallbacks, SafeCloseable
 
     @Override
     public void onDiscoveryResponse(DiscoveryResponse response) {
-        checkArgument(eventLoop.inEventLoop(), "eventLoop must be inEventLoop");
+        checkState(eventLoop.inEventLoop(), "eventLoop must be inEventLoop");
         final String typeUrl = response.getTypeUrl();
         final ResourceParser<?, ?> parser = XdsResourceParserUtil.fromTypeUrl(typeUrl);
         if (parser == null) {

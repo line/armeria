@@ -26,7 +26,7 @@ final class ConfigSourceMapper {
 
     // custom_config_source is an Armeria extension (field 1000) that may not exist
     // when a different proto artifact (e.g. java-control-plane api) is used at runtime.
-    static final boolean HAS_CUSTOM_CONFIG_SOURCE;
+    private static final boolean HAS_CUSTOM_CONFIG_SOURCE;
 
     static {
         boolean hasCustomConfigSource;
