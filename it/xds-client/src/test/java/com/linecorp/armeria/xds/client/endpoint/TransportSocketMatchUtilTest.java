@@ -35,7 +35,7 @@ import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.it.XdsResourceReader;
+import com.linecorp.armeria.xds.XdsResourceReader;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;

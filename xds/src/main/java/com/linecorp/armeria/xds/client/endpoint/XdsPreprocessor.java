@@ -81,6 +81,14 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
     abstract O execute1(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,
                         RouteConfig routeConfig) throws Exception;
 
+    /**
+     * Returns a {@link CompletableFuture} that completes when the initial xDS configuration
+     * has been received and the preprocessor is ready to route requests.
+     */
+    public CompletableFuture<Void> whenReady() {
+        return routeConfigSelector.whenReady();
+    }
+
     @Override
     public void close() {
         listenerRoot.close();

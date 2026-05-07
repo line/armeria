@@ -31,6 +31,7 @@ import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.TlsCertificateSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 

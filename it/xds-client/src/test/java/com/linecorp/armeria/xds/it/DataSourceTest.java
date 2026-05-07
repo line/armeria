@@ -42,6 +42,7 @@ import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.TlsCertificateSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -50,6 +51,11 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
 
 class DataSourceTest {
+
+    private static String escapeMultiLine(String str) {
+        return str.replace("\\", "\\\\").replace("\"", "\\\"")
+                  .replace("\n", "\\n").replace("\r", "\\r");
+    }
 
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
@@ -842,8 +848,8 @@ class DataSourceTest {
                     inline_string: "%s"
                   certificate_chain:
                     inline_string: "%s"
-                """.formatted(XdsResourceReader.escapeMultiLine(privateKeyContent),
-                              XdsResourceReader.escapeMultiLine(certContent));
+                """.formatted(escapeMultiLine(privateKeyContent),
+                              escapeMultiLine(certContent));
         final Secret secret = XdsResourceReader.fromYaml(tlsCertYaml, Secret.class);
         version.incrementAndGet();
         cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),

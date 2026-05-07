@@ -1,0 +1,300 @@
+---
+sidebar_position: 2
+---
+
+# Concepts
+
+## The service mesh landscape
+
+Service meshes provide powerful traffic management capabilities —
+dynamic routing, load balancing, retries, timeouts, and mutual TLS — without requiring
+changes to application code. However, they are tightly coupled to orchestration platforms
+like Kubernetes. A typical deployment looks like this:
+
+1. A **control plane** watches the orchestration platform for service
+   changes and computes routing configuration.
+2. A **sidecar proxy** (e.g. Envoy) is injected alongside every application container.
+3. The control plane pushes configuration to sidecars using the **xDS protocol**.
+4. All traffic flows through the sidecar, which enforces policies transparently.
+
+```bob-svg
+                                    +--------------------+
+                                    |                    |
+               request              |   Control Plane    |
+                  |                 |                    |
+                  v                 +---+------------+---+
+  +---------------+----------------+    |            |
+  |                                +<---+            |
+  |     Sidecar Proxy (Inbound)    |    xDS          |
+  |   (mTLS, auth, rate limit)     |                 |
+  |                                |                 |
+  +---------------+----------------+                 |
+                  |                                  |
+                  v                                  |
+  +---------------+----------------+                 |
+  |                                |                 |
+  |      User Application          |                 |
+  |                                |                 |
+  +---------------+----------------+                 |
+                  |                                  |
+                  v                                  |
+  +---------------+----------------+                 |
+  |                                +<----------------+
+  |    Sidecar Proxy (Outbound)    |    xDS
+  | (discovery, LB, retry, mTLS)  |
+  |                                |
+  +---------------+----------------+
+                  |
+                  v
+            remote service
+```
+
+This architecture works well when you already run on Kubernetes, but it introduces
+significant overhead for teams that don't:
+
+- You need an orchestration platform just to get service mesh features.
+- Every service gets a sidecar proxy, adding latency, memory, and operational complexity.
+- Debugging becomes harder when requests pass through an additional network hop.
+
+## xDS without the sidecar
+
+Armeria implements the xDS protocol directly in the application. Instead of routing
+traffic through a sidecar proxy, Armeria speaks xDS to a control plane and applies
+the configuration internally — endpoint discovery, routing, retries, timeouts, and
+load balancing all happen in-process.
+
+This means soon you can use a service mesh control plane **without** requiring
+Kubernetes or sidecar proxies. You can also run a standalone xDS control plane for
+environments where Kubernetes isn't available.
+
+```bob-svg
+                                    +--------------------+
+                                    |                    |
+               request              |   Control Plane    |
+                  |                 |                    |
+                  v                 +---+------------+---+
+  +---------------------------------------------+  |   |
+  |                JVM Runtime                   |  |   |
+  |                                              |  |   |
+  |  +---------------+----------------+          +<-+   |
+  |  |                                |          |      |
+  |  |    xDS Inbound (coming soon)   |          |      |
+  |  |   (mTLS, auth, rate limit)     |          |      |
+  |  |                                |          |      |
+  |  +---------------+----------------+          |      |
+  |                  |                            |      |
+  |                  v                            |      |
+  |  +---------------+----------------+          |      |
+  |  |                                |          |      |
+  |  |      User Application          |          |      |
+  |  |                                |          |      |
+  |  +---------------+----------------+          |      |
+  |                  |                            |      |
+  |                  v                            |      |
+  |  +---------------+----------------+          +<-----+
+  |  |                                |          |
+  |  |          xDS Outbound          |          |
+  |  | (discovery, LB, retry, mTLS)  |          |
+  |  |                                |          |
+  |  +---------------+----------------+          |
+  |                  |                            |
+  +---------------------------------------------+
+                     |
+                     v
+               remote service
+```
+
+- **xDS Inbound** *(coming soon)* — will handle incoming requests before they reach your
+  application. Will control routing, authentication, rate limiting, and other server-side
+  policies.
+- **User Application** — your business logic
+- **xDS Outbound** — handles outgoing requests after they leave your application.
+  Controls endpoint discovery, load balancing, retries, timeouts, and mTLS.
+
+Both layers receive their configuration from the control plane via xDS, so policies
+can be updated at runtime without redeploying the application.
+
+## Server (Inbound)
+
+Coming soon.
+
+## Client (Outbound)
+
+```bob-svg
+  +------------------+                +--------------------+
+  |                  |                |                    |
+  |  bootstrap.yaml  |                |   Control Plane    |
+  |                  |                |                    |
+  +--------+---------+                +----------+---------+
+           |                                     |
+           v                                     | xDS
+  +--------+--------------------+                |
+  |                             +<---------------+
+  |       XdsBootstrap          |
+  |                             |
+  +--------+--------------------+
+           |
+           |
+  +--------+--------------------+
+  |                             |
+  |      XdsPreprocessor        |
+  |                             |
+  +--------+--------------------+
+           |
+           v
+     remote service
+```
+
+```java
+Bootstrap bootstrap = XdsResourceReader.fromYamlFile("bootstrap.yaml");
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+WebClient client = WebClient.of(preprocessor);
+```
+
+- **bootstrap.yaml** — an Envoy
+  [Bootstrap](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto)
+  configuration file that tells Armeria where the control plane is and optionally declares
+  static resources.
+- [XdsBootstrap](type:com.linecorp.armeria.xds.XdsBootstrap) — reads the bootstrap
+  configuration, connects to the control plane, and subscribes to xDS resources
+  (Listeners, Routes, Clusters, Endpoints).
+- [XdsHttpPreprocessor](type:com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor) /
+  [XdsRpcPreprocessor](type:com.linecorp.armeria.xds.client.endpoint.XdsRpcPreprocessor) —
+  consumes xDS updates and applies them to each outgoing request (route matching,
+  endpoint selection, timeouts, retries, mTLS). Passed directly to the Armeria client,
+  replacing the usual scheme, host, and port.
+
+### How the preprocessor works
+
+In a traditional sidecar setup, an outgoing request is intercepted by the Envoy proxy,
+which listens on a local port. The request enters the HttpConnectionManager, passes through
+downstream HTTP filters, hits the router (which selects the route, endpoint, and TLS
+parameters), then passes through upstream HTTP filters before reaching the remote service.
+
+```bob-svg
+  request
+     |
+     v
+  Envoy Port (e.g. 15001)
+     |
+     v
+  HttpConnectionManager
+     |
+     v
+  Downstream HTTP Filters
+     |
+     v
+  Router                      (route match, endpoint select, TLS)
+     |
+     v
+  Upstream HTTP Filters
+     |
+     v
+  remote service
+```
+
+Armeria replaces this entire flow in-process. The preprocessor acts as the
+HttpConnectionManager — a request sent via `WebClient#execute` follows the same
+stages without leaving the JVM.
+
+```java
+WebClient client = WebClient.of(preprocessor);
+client.execute(HttpRequest.of(HttpMethod.GET, "/hello"));
+```
+
+```bob-svg
+  WebClient#execute(HttpRequest)
+     |
+     v
+  Downstream HTTP Filters    (preprocessors)
+     |
+     v
+  Router                      (route match, endpoint select, TLS)
+     |
+     v
+  Upstream HTTP Filters       (decorators)
+     |
+     v
+  User Decorators    WebClient.builder(preprocessor).decorator(...)
+     |
+     v
+  remote service
+```
+
+1. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`
+   (e.g. RBAC, rate limiting). These run as preprocessors.
+2. **Router** — matches the request to a route, selects an endpoint using the cluster's
+   load balancing policy, and determines the protocol and TLS parameters.
+3. **Upstream HTTP filters** — per-route filters declared on the router. These run as
+   decorators.
+4. **User decorators** — any decorators added manually via `WebClient.builder(preprocessor).decorator(...)`.
+
+### Snapshots
+
+A snapshot is an immutable, point-in-time view of the xDS resource tree. When the
+control plane pushes an update, Armeria rebuilds the affected part of the tree and
+produces a new snapshot. Snapshots form a tree that mirrors the xDS resource hierarchy:
+
+```bob-svg
+  ListenerSnapshot
+  |
+  +---> RouteSnapshot
+        |
+        +---> ClusterSnapshot
+        |     |
+        |     +---> EndpointSnapshot
+        |
+        +---> ClusterSnapshot
+              |
+              +---> EndpointSnapshot
+```
+
+Snapshots have the following guarantees:
+
+- **Complete** — partial snapshots are never published. A snapshot is only produced
+  once all dependent resources (routes, clusters, endpoints) have been resolved.
+- **Error-free** — if any resource in the tree fails to load, the snapshot is not
+  published. The preprocessor continues using the last successful snapshot.
+- **Immutable** — once published, a snapshot never changes. The preprocessor can read
+  it on the client thread without synchronization. When a new snapshot is produced,
+  it simply replaces the previous reference.
+
+### Threading model
+
+xDS resource management and request processing run on separate threads:
+
+```bob-svg
+                              +-------------------------+
+                              |   xDS Event Loop        |
++-------------------+  xDS   |   (xds-common-worker)   |
+|  Control Plane    +-------->|                         |
++-------------------+         |   - resource parsing    |
+                              |   - snapshot updates    |
+                              +------------+------------+
+                                           |
+                                           | ListenerSnapshot
+                                           |
+                              +------------+------------+
+  WebClient#execute  -------->|   Client Thread         +--------->  remote service
+                              |                         |
+                              |   - filter execution    |
+                              |   - routing             |
+                              |   - load balancing      |
+                              +-------------------------+
+```
+
+- **xDS event loop** — a single dedicated thread (`xds-common-worker`) handles all
+  communication with the control plane, resource parsing, and snapshot updates. This
+  thread is created automatically and shared across all `XdsBootstrap` instances.
+- **Client thread** — request processing (filter execution, routing, load balancing)
+  runs on whatever thread the client executes on.
+
+The two are connected through a thread-safe handoff — when a new `ListenerSnapshot`
+arrives on the xDS event loop, it is published to the preprocessor and becomes visible
+to all subsequent requests on the client thread. There is no locking on the request path.
+
+This means:
+- xDS updates do not block request processing.
+- Request processing does not block xDS updates.
+- No additional threads are introduced beyond the single xDS event loop.

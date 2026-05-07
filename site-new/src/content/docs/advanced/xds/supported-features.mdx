@@ -1,0 +1,91 @@
+---
+sidebar_position: 5
+---
+
+# Supported features
+
+Armeria does not implement every field in the xDS specification. To help users
+identify which fields are supported, support information is embedded directly in
+the protobuf definitions using a custom annotation.
+
+## Supported field validation
+
+Each supported field in the xDS proto files is annotated with
+`(armeria.xds.supported) = true`. When a protobuf message is received from the
+control plane, Armeria can validate it against these annotations — if a field that
+is **not** annotated as supported contains a non-default value, the validator
+detects it.
+
+The behavior when an unsupported field is detected is controlled by an
+`UnsupportedFieldHandler`. The following built-in handlers are available:
+
+| Handler | Behavior |
+|---|---|
+| `UnsupportedFieldHandler.warn()` | Logs a warning (default) |
+| `UnsupportedFieldHandler.reject()` | Throws an `IllegalArgumentException` |
+| `UnsupportedFieldHandler.ignore()` | Silently ignores the field |
+
+:::note
+
+The list below is a summary and may become stale. The proto annotations are the
+source of truth for which fields are supported. You can find them in the
+`xds-api/src/main/proto/` directory of the `armeria-xds-api` module, which contains
+the annotated envoy proto files and the `armeria/xds/supported.proto` annotation definition.
+
+:::
+
+## Bootstrap
+
+- `static_resources` — listeners, clusters, secrets
+- `dynamic_resources` — LDS, CDS, ADS config
+- `node` — node identification
+- `cluster_manager.local_cluster_name`
+
+## Listeners
+
+- `name`
+- `api_listener` — HttpConnectionManager via API listener
+- HttpConnectionManager: stat_prefix, rds, route_config, http_filters
+
+## Routes
+
+- `RouteConfiguration` — name, virtual_hosts, ignore_port_in_host_matching
+- `VirtualHost` — name, domains, routes, typed_per_filter_config, retry_policy
+- `Route` — name, match, route, typed_per_filter_config
+- `RouteMatch` — prefix, path, safe_regex, path_separated_prefix,
+  case_sensitive, headers, query_parameters, grpc
+- `RouteAction` — cluster, metadata_match, timeout
+
+## Clusters
+
+- `name`, `type` (`STATIC`, `STRICT_DNS`, `EDS`)
+- `lb_policy` (`ROUND_ROBIN`, `LEAST_REQUEST`, `RANDOM`)
+- `eds_cluster_config` — EDS config source and service name
+- `lb_subset_config` — fallback policy, subset selectors
+- `slow_start_config` — slow start window, aggression, min weight percent
+- `transport_socket_matches` — name, match, transport socket
+- Health checking: http_health_check (host, path, method), thresholds
+
+## Endpoints
+
+- `ClusterLoadAssignment` — cluster_name, endpoints, policy
+  (overprovisioning factor, weighted priority health)
+- `LocalityLbEndpoints` — locality, lb_endpoints, load_balancing_weight,
+  priority, metadata
+- `LbEndpoint` — endpoint, health_status, metadata, load_balancing_weight
+- `Endpoint` — address, health_check_config, hostname
+
+## TLS
+
+- `UpstreamTlsContext` — common_tls_context, sni
+- `CommonTlsContext` — tls_certificates, tls_certificate_sds_secret_configs,
+  validation_context, validation_context_sds_secret_config,
+  combined_validation_context
+- `TlsCertificate` — certificate_chain, private_key, password, watched_directory
+- `CertificateValidationContext` — trusted_ca, system_root_certs,
+  watched_directory, match_typed_subject_alt_names
+- SDS: `SdsSecretConfig` — name, sds_config
+
+## String matching
+
+- exact, prefix, suffix, safe_regex, contains, ignore_case

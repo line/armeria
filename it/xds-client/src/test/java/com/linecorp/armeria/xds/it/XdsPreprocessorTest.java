@@ -36,6 +36,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
@@ -142,6 +143,22 @@ class XdsPreprocessorTest {
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
              XdsHttpPreprocessor xdsPreprocessor =
                      XdsHttpPreprocessor.ofListener(LISTENER_NAME, xdsBootstrap)) {
+            final BlockingWebClient blockingClient = WebClient.of(xdsPreprocessor).blocking();
+            assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
+        }
+    }
+
+    @Test
+    void whenReady() {
+        final Bootstrap bootstrap =
+                bootstrapYaml(BOOTSTRAP_CLUSTER_NAME,
+                              server.httpSocketAddress().getHostString(),
+                              server.httpPort(),
+                              null);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
+             XdsHttpPreprocessor xdsPreprocessor =
+                     XdsHttpPreprocessor.ofListener(LISTENER_NAME, xdsBootstrap)) {
+            xdsPreprocessor.whenReady().join();
             final BlockingWebClient blockingClient = WebClient.of(xdsPreprocessor).blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
         }
