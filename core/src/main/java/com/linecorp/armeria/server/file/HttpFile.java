@@ -125,6 +125,15 @@ public interface HttpFile {
     }
 
     /**
+     * Returns an {@link HttpFile} which represents a non-existent file with the specified
+     * {@code decodedMappedPath}.
+     */
+    @UnstableApi
+    static HttpFile nonExistent(String decodedMappedPath) {
+        return new NonExistentHttpFile(null, decodedMappedPath);
+    }
+
+    /**
      * Returns an {@link HttpFile} redirected to the specified {@code location}.
      */
     static HttpFile ofRedirect(String location) {
