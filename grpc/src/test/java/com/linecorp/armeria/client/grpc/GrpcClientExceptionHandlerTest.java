@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Deque;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -131,13 +133,26 @@ class GrpcClientExceptionHandlerTest {
     void asyncHandlerIsUsedOnClientPath() {
         final AtomicInteger asyncInvocations = new AtomicInteger();
         final RuntimeException exception = new RuntimeException();
+        final GrpcExceptionHandlerFunction asyncHandler = new GrpcExceptionHandlerFunction() {
+            @Override
+            public Status apply(RequestContext ctx, Status status, Throwable cause,
+                                Metadata metadata) {
+                return null;
+            }
+
+            @Override
+            public CompletableFuture<Status> applyAsync(RequestContext ctx,
+                                                        Status status,
+                                                        Throwable cause,
+                                                        Metadata metadata) {
+                asyncInvocations.incrementAndGet();
+                return UnmodifiableFuture.completedFuture(
+                        Status.INTERNAL.withDescription("async"));
+            }
+        };
         final TestServiceBlockingStub stub =
                 GrpcClients.builder(server.httpUri())
-                           .asyncExceptionHandler((ctx, status, cause, metadata) -> {
-                               asyncInvocations.incrementAndGet();
-                               return UnmodifiableFuture.completedFuture(
-                                       Status.INTERNAL.withDescription("async"));
-                           })
+                           .exceptionHandler(asyncHandler)
                            .build(TestServiceBlockingStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> clientCall =
                 stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);

@@ -118,11 +118,10 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                exceptionHandler.applyAsyncSafely(ctx, t)
-                                .thenAccept(statusAndMetadata ->
-                                        transportStatusListener.transportReportStatus(
-                                                statusAndMetadata.status(),
-                                                statusAndMetadata.metadata()));
+                exceptionHandler.handle(ctx, t).thenAccept(statusAndMetadata -> {
+                    transportStatusListener.transportReportStatus(statusAndMetadata.status(),
+                                                                  statusAndMetadata.metadata());
+                });
                 return;
             }
         }
@@ -148,11 +147,10 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        exceptionHandler.applyAsyncSafely(ctx, cause)
-                        .thenAccept(statusAndMetadata ->
-                                transportStatusListener.transportReportStatus(
-                                        statusAndMetadata.status(),
-                                        statusAndMetadata.metadata()));
+        exceptionHandler.handle(ctx, cause).thenAccept(statusAndMetadata -> {
+            transportStatusListener.transportReportStatus(statusAndMetadata.status(),
+                                                          statusAndMetadata.metadata());
+        });
     }
 
     @Override

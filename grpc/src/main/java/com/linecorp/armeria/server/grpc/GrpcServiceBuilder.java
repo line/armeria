@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
@@ -902,18 +901,6 @@ public final class GrpcServiceBuilder {
             this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
         }
         return this;
-    }
-
-    /**
-     * Sets the specified {@link AsyncGrpcExceptionHandlerFunction} that asynchronously maps a
-     * {@link Throwable} to a gRPC {@link Status}. {@link AsyncGrpcExceptionHandlerFunction} is a
-     * subinterface of {@link GrpcExceptionHandlerFunction} whose abstract method is
-     * {@code applyAsync}, so an async-only lambda can be passed directly without a wrapper.
-     */
-    @UnstableApi
-    public GrpcServiceBuilder asyncExceptionHandler(AsyncGrpcExceptionHandlerFunction exceptionHandler) {
-        requireNonNull(exceptionHandler, "exceptionHandler");
-        return exceptionHandler(exceptionHandler);
     }
 
     /**

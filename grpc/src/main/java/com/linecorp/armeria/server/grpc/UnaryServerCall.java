@@ -198,25 +198,20 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             return;
         }
 
-        final Exception finalCaught = caught;
-        exceptionHandler().applyAsyncSafely(ctx, finalCaught)
-                .thenAccept(errorStatusAndMetadata -> {
-                    final Status status = errorStatusAndMetadata.status();
-                    final Metadata metadata = errorStatusAndMetadata.metadata();
-                    assert metadata != null;
-                    final ServerStatusAndMetadata errorSsm =
-                            new ServerStatusAndMetadata(status, metadata, true);
-                    try {
-                        final ResponseHeadersBuilder trailersBuilder =
-                                defaultResponseHeaders().toBuilder();
-                        final HttpResponse errorResponse = HttpResponse.of(
-                                (ResponseHeaders) statusToTrailers(ctx, trailersBuilder,
-                                                                   status, metadata));
-                        resFuture.complete(errorResponse);
-                    } finally {
-                        closeListener(errorSsm);
-                    }
-                });
+        exceptionHandler().handle(ctx, caught).thenAccept(errorStatusAndMetadata -> {
+            final Status status = errorStatusAndMetadata.status();
+            final Metadata metadata = errorStatusAndMetadata.metadata();
+            assert metadata != null;
+            final ServerStatusAndMetadata errorSsm = new ServerStatusAndMetadata(status, metadata, true);
+            try {
+                final ResponseHeadersBuilder trailersBuilder = defaultResponseHeaders().toBuilder();
+                final HttpResponse errorResponse = HttpResponse.of(
+                        (ResponseHeaders) statusToTrailers(ctx, trailersBuilder, status, metadata));
+                resFuture.complete(errorResponse);
+            } finally {
+                closeListener(errorSsm);
+            }
+        });
     }
 
     @Nullable

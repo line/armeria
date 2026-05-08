@@ -31,7 +31,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.grpc.AsyncGrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -68,17 +71,29 @@ class AsyncGrpcExceptionHandlerTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final GrpcExceptionHandlerFunction asyncHandler = new GrpcExceptionHandlerFunction() {
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                            Throwable cause, Metadata metadata) {
+                    return CompletableFuture.supplyAsync(() -> {
+                        metadata.put(ERROR_MESSAGE_KEY,
+                                     "translated: " + cause.getMessage());
+                        return Status.INTERNAL
+                                .withDescription("async-handled")
+                                .withCause(cause);
+                    }, ASYNC_EXECUTOR);
+                }
+            };
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .asyncExceptionHandler((ctx, status, cause, metadata) ->
-                                      CompletableFuture.supplyAsync(() -> {
-                                          metadata.put(ERROR_MESSAGE_KEY,
-                                                       "translated: " + cause.getMessage());
-                                          return Status.INTERNAL
-                                                  .withDescription("async-handled")
-                                                  .withCause(cause);
-                                      }, ASYNC_EXECUTOR))
+                                  .exceptionHandler(asyncHandler)
                                   .build());
         }
     };
@@ -87,36 +102,159 @@ class AsyncGrpcExceptionHandlerTest {
     static final ServerExtension serverWithNullFallback = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final GrpcExceptionHandlerFunction asyncHandler = new GrpcExceptionHandlerFunction() {
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                            Throwable cause, Metadata metadata) {
+                    return UnmodifiableFuture.completedFuture(null);
+                }
+            };
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .asyncExceptionHandler((ctx, status, cause, metadata) ->
-                                          UnmodifiableFuture.completedFuture(null))
+                                  .exceptionHandler(asyncHandler)
                                   .build());
         }
     };
+
+    // The four servers below verify the build-time chain
+    // (.orElse(GrpcExceptionHandlerFunction.of())) reaches the default handler from every
+    // fallback path. Each server uses ContentTooLargeService whose only non-trivial mapping
+    // (ContentTooLargeException -> RESOURCE_EXHAUSTED) lives in DefaultGrpcExceptionHandlerFunction;
+    // observing RESOURCE_EXHAUSTED on the client proves the default handler ran.
+
+    @RegisterExtension
+    static final ServerExtension serverWithDefaultMappingFallback =
+            newDefaultMappingServer(new GrpcExceptionHandlerFunction() {
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                            Throwable cause, Metadata metadata) {
+                    return UnmodifiableFuture.completedFuture(null);
+                }
+            });
+
+    @RegisterExtension
+    static final ServerExtension serverWithDefaultMappingFromNullApplyAsync =
+            newDefaultMappingServer(new GrpcExceptionHandlerFunction() {
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public @Nullable CompletableFuture<Status> applyAsync(RequestContext ctx,
+                                                                      Status status, Throwable cause,
+                                                                      Metadata metadata) {
+                    return null;
+                }
+            });
+
+    @RegisterExtension
+    static final ServerExtension serverWithDefaultMappingFromThrowingApplyAsync =
+            newDefaultMappingServer(new GrpcExceptionHandlerFunction() {
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                            Throwable cause, Metadata metadata) {
+                    throw new RuntimeException("handler threw");
+                }
+            });
+
+    @RegisterExtension
+    static final ServerExtension serverWithDefaultMappingFromFailingApplyAsync =
+            newDefaultMappingServer(new GrpcExceptionHandlerFunction() {
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                            Throwable cause, Metadata metadata) {
+                    final CompletableFuture<Status> future = new CompletableFuture<>();
+                    future.completeExceptionally(new RuntimeException("handler failed"));
+                    return future;
+                }
+            });
+
+    private static ServerExtension newDefaultMappingServer(GrpcExceptionHandlerFunction handler) {
+        return new ServerExtension() {
+            @Override
+            protected void configure(ServerBuilder sb) {
+                sb.requestTimeoutMillis(5000)
+                  .service(GrpcService.builder()
+                                      .addService(new ContentTooLargeService())
+                                      .exceptionHandler(handler)
+                                      .build());
+            }
+        };
+    }
 
     @RegisterExtension
     static final ServerExtension serverWithOrElse = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final AsyncGrpcExceptionHandlerFunction first = (ctx, status, cause, metadata) -> {
-                if (cause instanceof IllegalArgumentException) {
-                    return UnmodifiableFuture.completedFuture(
-                            Status.INVALID_ARGUMENT.withDescription("first-handler")
-                                                   .withCause(cause));
+            final GrpcExceptionHandlerFunction first = new GrpcExceptionHandlerFunction() {
+
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
                 }
-                return UnmodifiableFuture.completedFuture(null);
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status, Throwable cause,
+                                                            Metadata metadata) {
+                    if (cause instanceof IllegalArgumentException) {
+                        return UnmodifiableFuture.completedFuture(
+                                Status.INVALID_ARGUMENT.withDescription("first-handler")
+                                                       .withCause(cause));
+                    }
+                    return UnmodifiableFuture.completedFuture(null);
+                }
             };
-            final AsyncGrpcExceptionHandlerFunction second = (ctx, status, cause, metadata) ->
-                    UnmodifiableFuture.completedFuture(
+
+            final GrpcExceptionHandlerFunction second = new GrpcExceptionHandlerFunction() {
+
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public @Nullable CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                                      Throwable cause,
+                                                                      Metadata metadata) {
+                    return UnmodifiableFuture.completedFuture(
                             Status.INTERNAL.withDescription("second-handler")
                                            .withCause(cause));
+                }
+            };
 
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .asyncExceptionHandler(first.orElse(second))
+                                  .exceptionHandler(first.orElse(second))
                                   .build());
         }
     };
@@ -128,11 +266,23 @@ class AsyncGrpcExceptionHandlerTest {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .asyncExceptionHandler((ctx, status, cause, metadata) -> {
-                                      final CompletableFuture<Status> future = new CompletableFuture<>();
-                                      future.completeExceptionally(
-                                              new RuntimeException("handler failed"));
-                                      return future;
+                                  .exceptionHandler(new GrpcExceptionHandlerFunction() {
+                                      @Override
+                                      public @Nullable Status apply(RequestContext ctx, Status status,
+                                                                    Throwable cause, Metadata metadata) {
+                                          return null;
+                                      }
+
+                                      @Override
+                                      public CompletableFuture<Status> applyAsync(RequestContext ctx,
+                                                                                  Status status,
+                                                                                  Throwable cause,
+                                                                                  Metadata metadata) {
+                                          final CompletableFuture<Status> future = new CompletableFuture<>();
+                                          future.completeExceptionally(
+                                                  new RuntimeException("handler failed"));
+                                          return future;
+                                      }
                                   })
                                   .build());
         }
@@ -142,12 +292,26 @@ class AsyncGrpcExceptionHandlerTest {
     static final ServerExtension serverWithThrowingHandler = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final GrpcExceptionHandlerFunction asyncHandler = new GrpcExceptionHandlerFunction() {
+
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status,
+                                              Throwable cause, Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx,
+                                                            Status status,
+                                                            Throwable cause,
+                                                            Metadata metadata) {
+                    throw new RuntimeException("handler threw");
+                }
+            };
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new ErrorThrowingService())
-                                  .asyncExceptionHandler((ctx, status, cause, metadata) -> {
-                                      throw new RuntimeException("handler threw");
-                                  })
+                                  .exceptionHandler(asyncHandler)
                                   .build());
         }
     };
@@ -156,17 +320,29 @@ class AsyncGrpcExceptionHandlerTest {
     static final ServerExtension streamingServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final GrpcExceptionHandlerFunction asyncHandler = new GrpcExceptionHandlerFunction() {
+
+                @Override
+                public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                              Metadata metadata) {
+                    return null;
+                }
+
+                @Override
+                public CompletableFuture<Status> applyAsync(RequestContext ctx, Status status,
+                                                            Throwable cause, Metadata metadata) {
+                    streamingHandlerInvocations.incrementAndGet();
+                    return CompletableFuture.supplyAsync(
+                            () -> Status.INTERNAL
+                                    .withDescription("streaming-async-handled")
+                                    .withCause(cause),
+                            ASYNC_EXECUTOR);
+                }
+            };
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
                                   .addService(new StreamingErrorService())
-                                  .asyncExceptionHandler((ctx, status, cause, metadata) -> {
-                                      streamingHandlerInvocations.incrementAndGet();
-                                      return CompletableFuture.supplyAsync(
-                                              () -> Status.INTERNAL
-                                                      .withDescription("streaming-async-handled")
-                                                      .withCause(cause),
-                                              ASYNC_EXECUTOR);
-                                  })
+                                  .exceptionHandler(asyncHandler)
                                   .build());
         }
     };
@@ -203,6 +379,39 @@ class AsyncGrpcExceptionHandlerTest {
         assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
                     assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.UNKNOWN);
+                });
+    }
+
+    @Test
+    void defaultHandlerSpecialMappingAppliedWhenAsyncReturnsFutureOfNull() {
+        assertResourceExhausted(serverWithDefaultMappingFallback);
+    }
+
+    @Test
+    void defaultHandlerSpecialMappingAppliedWhenApplyAsyncReturnsNull() {
+        assertResourceExhausted(serverWithDefaultMappingFromNullApplyAsync);
+    }
+
+    @Test
+    void defaultHandlerSpecialMappingAppliedWhenApplyAsyncThrows() {
+        assertResourceExhausted(serverWithDefaultMappingFromThrowingApplyAsync);
+    }
+
+    @Test
+    void defaultHandlerSpecialMappingAppliedWhenApplyAsyncReturnsFailingFuture() {
+        assertResourceExhausted(serverWithDefaultMappingFromFailingApplyAsync);
+    }
+
+    private static void assertResourceExhausted(ServerExtension server) {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
+        // ContentTooLargeException is mapped to RESOURCE_EXHAUSTED only by
+        // DefaultGrpcExceptionHandlerFunction; seeing it on the client proves the build-time
+        // chain (userHandler.orElse(GrpcExceptionHandlerFunction.of())) ultimately delegated to
+        // the default handler.
+        assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.Code.RESOURCE_EXHAUSTED);
                 });
     }
 
@@ -288,6 +497,13 @@ class AsyncGrpcExceptionHandlerTest {
         public void streamingOutputCall(StreamingOutputCallRequest request,
                                         StreamObserver<StreamingOutputCallResponse> responseObserver) {
             responseObserver.onError(new RuntimeException("streaming error"));
+        }
+    }
+
+    private static class ContentTooLargeService extends TestServiceImplBase {
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            throw ContentTooLargeException.get();
         }
     }
 }

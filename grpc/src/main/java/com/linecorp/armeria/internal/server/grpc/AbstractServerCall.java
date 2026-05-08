@@ -215,13 +215,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
 
-        exceptionHandler.applyAsyncSafely(ctx, status, cause, metadata)
-                        .thenAccept(newStatus -> {
-                            if (status.getDescription() != null) {
-                                newStatus = newStatus.withDescription(status.getDescription());
-                            }
-                            close(new ServerStatusAndMetadata(newStatus, metadata), cause);
-                        });
+        exceptionHandler.handle(ctx, status, cause, metadata).thenAccept(newStatus -> {
+            if (status.getDescription() != null) {
+                newStatus = newStatus.withDescription(status.getDescription());
+            }
+            close(new ServerStatusAndMetadata(newStatus, metadata), cause);
+        });
     }
 
     public final void close(Throwable exception) {
@@ -229,12 +228,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void close(Throwable exception, boolean cancelled) {
-        exceptionHandler.applyAsyncSafely(ctx, exception)
-                        .thenAccept(statusAndMetadata -> {
-                            close(new ServerStatusAndMetadata(
-                                    statusAndMetadata.status(), statusAndMetadata.metadata(),
-                                    cancelled), exception);
-                        });
+        exceptionHandler.handle(ctx, exception).thenAccept(statusAndMetadata -> {
+            close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
+                                              cancelled), exception);
+        });
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {

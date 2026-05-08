@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toE
 import java.net.URI;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import com.google.common.base.Strings;
@@ -172,15 +173,17 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         }
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> HttpResponse.of(
-                        exceptionHandler.applyAsyncSafely(ctx, cause)
-                                        .thenApply(statusAndMetadata -> {
-                                            Status s = statusAndMetadata.status();
-                                            if (s.getDescription() == null) {
-                                                s = s.withDescription(cause.getMessage());
-                                            }
-                                            return HttpResponse.ofFailure(s.asRuntimeException());
-                                        }));
+                (unused, cause) -> {
+                    final CompletableFuture<HttpResponse> future =
+                            exceptionHandler.handle(ctx, cause).thenApply(statusAndMetadata -> {
+                                Status status = statusAndMetadata.status();
+                                if (status.getDescription() == null) {
+                                    status = status.withDescription(cause.getMessage());
+                                }
+                                return HttpResponse.ofFailure(status.asRuntimeException());
+                            });
+                    return HttpResponse.of(future);
+                };
         final HttpPreClient preClient =
                 options().clientPreprocessors()
                          .decorate(TailPreClient.of(client, HttpResponse::of, errorResponseFactory));

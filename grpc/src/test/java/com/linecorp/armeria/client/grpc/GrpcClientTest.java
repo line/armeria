@@ -73,6 +73,8 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -156,6 +158,9 @@ class GrpcClientTest {
 
     private static final Key<String> CUSTOM_VALUE_KEY = Key.of("custom-header",
                                                                Metadata.ASCII_STRING_MARSHALLER);
+
+    private static final ClientRequestContext mockCtx = ClientRequestContext.of(
+            HttpRequest.of(HttpMethod.GET, "/"));
 
     private static class UnitTestServiceImpl extends UnitTestServiceImplBase {
         @Override
@@ -772,7 +777,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(grpcExceptionHandler.applyAsyncSafely(null, responseObserver.getError())
+        assertThat(grpcExceptionHandler.handle(mockCtx, responseObserver.getError())
                                        .join().status().getCode())
                 .isEqualTo(Code.CANCELLED);
 
@@ -808,7 +813,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
-        assertThat(grpcExceptionHandler.applyAsyncSafely(null, responseObserver.getError()).join().status()
+        assertThat(grpcExceptionHandler.handle(mockCtx, responseObserver.getError()).join().status()
                                        .getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
@@ -1442,7 +1447,7 @@ class GrpcClientTest {
         recorder.awaitCompletion();
 
         assertThat(recorder.getError()).isNotNull();
-        assertThat(grpcExceptionHandler.applyAsyncSafely(null, recorder.getError()).join().status()
+        assertThat(grpcExceptionHandler.handle(mockCtx, recorder.getError()).join().status()
                                        .getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
@@ -1642,9 +1647,9 @@ class GrpcClientTest {
         verify(responseObserver,
                timeout(operationTimeoutMillis())).onError(captor.capture());
 
-        assertThat(grpcExceptionHandler.applyAsyncSafely(null, captor.getValue()).join().status()
+        assertThat(grpcExceptionHandler.handle(mockCtx, captor.getValue()).join().status()
                                        .getCode()).isEqualTo(Status.UNKNOWN.getCode());
-        assertThat(grpcExceptionHandler.applyAsyncSafely(null, captor.getValue()).join().status()
+        assertThat(grpcExceptionHandler.handle(mockCtx, captor.getValue()).join().status()
                                        .getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
 
