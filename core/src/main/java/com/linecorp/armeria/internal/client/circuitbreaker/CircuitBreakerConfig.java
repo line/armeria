@@ -14,19 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.internal.client.circuitbreaker;
 
 import java.time.Duration;
 import java.util.List;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Stores configurations of circuit breaker.
  */
-final class CircuitBreakerConfig {
+public final class CircuitBreakerConfig {
 
     @Nullable
     private final String name;
@@ -45,11 +46,11 @@ final class CircuitBreakerConfig {
 
     private final List<CircuitBreakerListener> listeners;
 
-    CircuitBreakerConfig(@Nullable String name,
-                         double failureRateThreshold, long minimumRequestThreshold,
-                         Duration circuitOpenWindow, Duration trialRequestInterval,
-                         Duration counterSlidingWindow, Duration counterUpdateInterval,
-                         List<CircuitBreakerListener> listeners) {
+    public CircuitBreakerConfig(@Nullable String name,
+                                double failureRateThreshold, long minimumRequestThreshold,
+                                Duration circuitOpenWindow, Duration trialRequestInterval,
+                                Duration counterSlidingWindow, Duration counterUpdateInterval,
+                                List<CircuitBreakerListener> listeners) {
         this.name = name;
         this.failureRateThreshold = failureRateThreshold;
         this.minimumRequestThreshold = minimumRequestThreshold;
@@ -61,35 +62,35 @@ final class CircuitBreakerConfig {
     }
 
     @Nullable
-    String name() {
+    public String name() {
         return name;
     }
 
-    double failureRateThreshold() {
+    public double failureRateThreshold() {
         return failureRateThreshold;
     }
 
-    long minimumRequestThreshold() {
+    public long minimumRequestThreshold() {
         return minimumRequestThreshold;
     }
 
-    Duration circuitOpenWindow() {
+    public Duration circuitOpenWindow() {
         return circuitOpenWindow;
     }
 
-    Duration trialRequestInterval() {
+    public Duration trialRequestInterval() {
         return trialRequestInterval;
     }
 
-    Duration counterSlidingWindow() {
+    public Duration counterSlidingWindow() {
         return counterSlidingWindow;
     }
 
-    Duration counterUpdateInterval() {
+    public Duration counterUpdateInterval() {
         return counterUpdateInterval;
     }
 
-    List<CircuitBreakerListener> listeners() {
+    public List<CircuitBreakerListener> listeners() {
         return listeners;
     }
 

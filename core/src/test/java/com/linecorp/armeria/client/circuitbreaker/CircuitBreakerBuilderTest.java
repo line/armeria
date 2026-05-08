@@ -23,6 +23,8 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig;
+
 class CircuitBreakerBuilderTest {
 
     private static final String remoteServiceName = "testService";

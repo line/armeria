@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.
