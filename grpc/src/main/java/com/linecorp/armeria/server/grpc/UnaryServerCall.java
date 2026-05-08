@@ -145,9 +145,6 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void doClose(ServerStatusAndMetadata statusAndMetadata) {
-        // Preserves the original "exactly once closeListener" semantics that relied on a
-        // finally block: capture any exception from building/logging/completing the happy-path
-        // response and route it through the async handler with its own try/finally.
         Exception caught = null;
         try {
             final ResponseHeaders responseHeaders = responseHeaders();

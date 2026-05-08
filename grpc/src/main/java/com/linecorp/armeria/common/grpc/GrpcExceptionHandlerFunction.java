@@ -76,7 +76,6 @@ public interface GrpcExceptionHandlerFunction {
      *
      *    @Override
      *    public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
-     *         // Return null to indicate that the exception was handled asynchronously.
      *        return null;
      *    }
      *
@@ -84,7 +83,7 @@ public interface GrpcExceptionHandlerFunction {
      *    public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
      *                                                          Throwable cause, Metadata metadata) {
      *        return CompletableFuture.supplyAsync(() -> {
-     *            // Perform asynchronous work here.
+     *            // Perform asynchronous work and return the Status.
      *            return Status.INTERNAL;
      *        })
      *    }
@@ -138,7 +137,12 @@ public interface GrpcExceptionHandlerFunction {
                     if (newStatus != null) {
                         return UnmodifiableFuture.completedFuture(newStatus);
                     }
-                    return next.applyAsync(ctx, status, cause, metadata);
+                    final CompletableFuture<@Nullable Status> nextFuture =
+                            next.applyAsync(ctx, status, cause, metadata);
+                    if (nextFuture == null) {
+                        return UnmodifiableFuture.completedFuture(null);
+                    }
+                    return nextFuture;
                 });
             }
         };
