@@ -25,7 +25,7 @@ When in doubt, check `settings.gradle` for the `java`, `java11`, or `java17` fla
 ## Step 1: Run dependencyUpdates
 
 ```
-./gradlew dependencyUpdates
+./gradlew dependencyUpdates --no-parallel
 ```
 
 The report is saved to `build/dependencyUpdates/report.txt`.

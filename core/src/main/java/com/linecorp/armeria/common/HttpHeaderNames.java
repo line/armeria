@@ -934,6 +934,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString AD_AUCTION_ALLOWED = create("Ad-Auction-Allowed");
     /**
+     * The HTTP <a href="https://datatracker.ietf.org/doc/rfc9213/">{@code CDN-Cache-Control}</a>
+     * header field name.
+     */
+    public static final AsciiString CDN_CACHE_CONTROL = create("CDN-Cache-Control");
+    /**
      * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc8586">{@code CDN-Loop}</a> header field name.
      */
     public static final AsciiString CDN_LOOP = create("CDN-Loop");
