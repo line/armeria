@@ -1,0 +1,47 @@
+syntax = "proto3";
+package armeria.xds.testing;
+
+option java_package = "com.linecorp.armeria.xds.api.testing";
+option java_multiple_files = true;
+
+import "armeria/xds/supported.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/duration.proto";
+
+message TestCluster {
+  option (armeria.xds.supported.field) = 1;
+  string name = 1;
+  option (armeria.xds.supported.field) = 2;
+  TestDiscoveryType type = 2;
+  option (armeria.xds.supported.field) = 3;
+  TestEdsConfig eds_config = 3;
+  string unsupported_field = 4;
+  TestOutlierDetection outlier_detection = 5;
+  option (armeria.xds.supported.field) = 6;
+  google.protobuf.Any typed_config = 6;
+  option (armeria.xds.supported.field) = 7;
+  google.protobuf.UInt32Value max_requests = 7;
+  option (armeria.xds.supported.field) = 8;
+  google.protobuf.Duration timeout = 8;
+  option (armeria.xds.supported.field) = 9;
+  map<string, TestDiscoveryType> type_map = 9;
+}
+
+enum TestDiscoveryType {
+  option (armeria.xds.supported.enum_value) = 0;
+  STATIC = 0;
+  option (armeria.xds.supported.enum_value) = 1;
+  EDS = 1;
+  LOGICAL_DNS = 2;
+}
+
+message TestEdsConfig {
+  option (armeria.xds.supported.field) = 1;
+  string service_name = 1;
+  string unsupported_nested = 2;
+}
+
+message TestOutlierDetection {
+  int32 consecutive_errors = 1;
+}

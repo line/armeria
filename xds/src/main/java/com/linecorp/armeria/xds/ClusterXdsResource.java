@@ -16,13 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 /**
  * A resource object for a {@link Cluster}.
@@ -31,42 +27,18 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 public final class ClusterXdsResource extends AbstractXdsResource {
 
     private final Cluster cluster;
-    @Nullable
-    UpstreamTlsContext upstreamTlsContext;
 
     ClusterXdsResource(Cluster cluster) {
-        this(cluster, "", 0);
+        this(cluster, "");
     }
 
-    ClusterXdsResource(Cluster cluster, String version, long revision) {
+    ClusterXdsResource(Cluster cluster, String version) {
+        this(cluster, version, 0);
+    }
+
+    private ClusterXdsResource(Cluster cluster, String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(cluster);
         this.cluster = cluster;
-        upstreamTlsContext = upstreamTlsContext(cluster);
-    }
-
-    @Nullable
-    private static UpstreamTlsContext upstreamTlsContext(Cluster cluster) {
-        if (cluster.hasTransportSocket()) {
-            final String transportSocketName = cluster.getTransportSocket().getName();
-            checkArgument("envoy.transport_sockets.tls".equals(transportSocketName),
-                          "Unexpected tls transport socket name '%s'", transportSocketName);
-            if (!cluster.getTransportSocket().hasTypedConfig()) {
-                return UpstreamTlsContext.getDefaultInstance();
-            }
-            return XdsValidatorIndexRegistry.unpack(cluster.getTransportSocket().getTypedConfig(),
-                                                    UpstreamTlsContext.class);
-        }
-        return null;
-    }
-
-    /**
-     * The upstream TLS context extracted from {@link Cluster#getTransportSocket()}.
-     */
-    @Nullable
-    @UnstableApi
-    public UpstreamTlsContext upstreamTlsContext() {
-        return upstreamTlsContext;
     }
 
     @Override
@@ -82,5 +54,13 @@ public final class ClusterXdsResource extends AbstractXdsResource {
     @Override
     public String name() {
         return cluster.getName();
+    }
+
+    @Override
+    ClusterXdsResource withRevision(long revision) {
+        if (revision == revision()) {
+            return this;
+        }
+        return new ClusterXdsResource(cluster, version(), revision);
     }
 }

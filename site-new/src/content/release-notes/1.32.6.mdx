@@ -1,0 +1,27 @@
+---
+date: 2026-04-23
+---
+
+# v1.32.6
+
+This patch backports HTTP/2 fixes from 1.33.0 and 1.33.2 to the `1.32.x` line
+for users who cannot yet upgrade due to the Netty 4.2 requirement introduced in
+1.33.0. #6733
+
+## 🛠️ Bug fixes
+
+- The server no longer sends a spurious `RST_STREAM` frame after `endStream` has
+  already been sent, which previously could interrupt in-flight responses and drop data. #6279
+- HTTP/2 flow control now operates at the stream level. Previously,
+  `InboundTrafficController` worked only at the TCP level, so a stream could
+  receive more data than its window allowed and starve other streams on the
+  same connection. [ServerBuilder#http2StreamWindowUpdateRatio(float)](type) and
+  [ClientFactoryBuilder#http2StreamWindowUpdateRatio(float)](type) are
+  introduced to tune the `WINDOW_UPDATE` threshold. #6253 #6266
+- HTTP/2 flow control now uses the actual Netty stream ID instead of deriving
+  one from Armeria's internal request ID, fixing window-size miscalculations on
+  the server side. #6367 #6371
+
+## 🙇 Thank you
+
+<ThankYou usernames={['JannikBrand', 'ikhoon', 'jrhee17', 'minwoox', 'trustin', 'yzfeng2020']} />

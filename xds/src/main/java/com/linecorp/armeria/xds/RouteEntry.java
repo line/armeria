@@ -25,9 +25,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
+import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
@@ -52,11 +55,13 @@ public final class RouteEntry {
     private final int index;
     private final HttpClient httpClient;
     private final RpcClient rpcClient;
+    private final HttpPreClient httpPreClient;
+    private final RpcPreClient rpcPreClient;
     private final RouteEntryMatcher matcher;
 
     RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
                @Nullable ListenerXdsResource listenerResource, RouteXdsResource routeResource,
-               VirtualHostXdsResource vhostResource) {
+               VirtualHostXdsResource vhostResource, XdsExtensionRegistry extensionRegistry) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
         this.index = index;
@@ -86,9 +91,21 @@ public final class RouteEntry {
         final RetryPolicy effectiveRetryPolicy =
                 retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
         final ClientDecoration clientDecoration = FilterUtil.buildUpstreamFilter(
-                upstreamFilters, filterConfigs, effectiveRetryPolicy);
+                extensionRegistry, upstreamFilters, filterConfigs, effectiveRetryPolicy);
         httpClient = clientDecoration.decorate(DelegatingHttpClient.of());
         rpcClient = clientDecoration.rpcDecorate(DelegatingRpcClient.of());
+
+        // Build downstream filters (HCM http_filters) with per-route config
+        final List<HttpFilter> hcmHttpFilters;
+        if (listenerResource != null && listenerResource.connectionManager() != null) {
+            hcmHttpFilters = listenerResource.connectionManager().getHttpFiltersList();
+        } else {
+            hcmHttpFilters = ImmutableList.of();
+        }
+        final ClientPreprocessors downstreamPreprocessors = FilterUtil.buildDownstreamFilter(
+                extensionRegistry, hcmHttpFilters, filterConfigs);
+        httpPreClient = downstreamPreprocessors.decorate(DelegatingHttpClient.of());
+        rpcPreClient = downstreamPreprocessors.rpcDecorate(DelegatingRpcClient.of());
     }
 
     /**
@@ -116,6 +133,22 @@ public final class RouteEntry {
     @Nullable
     public Any filterConfig(String filterName) {
         return filterConfigs.get(filterName);
+    }
+
+    /**
+     * Returns the downstream {@link HttpPreClient} chain for this route.
+     */
+    @UnstableApi
+    public HttpPreClient httpPreClient() {
+        return httpPreClient;
+    }
+
+    /**
+     * Returns the downstream {@link RpcPreClient} chain for this route.
+     */
+    @UnstableApi
+    public RpcPreClient rpcPreClient() {
+        return rpcPreClient;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.Collection;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-interface XdsStreamState {
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 
-    void retryOrClose(boolean closedByError);
+interface TransportSocketFactory extends XdsExtensionFactory {
 
-    Collection<String> watchedResources(XdsType type);
+    SnapshotStream<TransportSocketSnapshot> create(SubscriptionContext context,
+                                                   @Nullable ConfigSource configSource,
+                                                   TransportSocket transportSocket);
 }

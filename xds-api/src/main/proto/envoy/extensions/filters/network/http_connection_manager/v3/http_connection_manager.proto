@@ -27,6 +27,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3";
 option java_outer_classname = "HttpConnectionManagerProto";
 option java_multiple_files = true;
@@ -413,15 +415,18 @@ message HttpConnectionManager {
   // The human readable prefix to use when emitting statistics for the
   // connection manager. See the :ref:`statistics documentation <config_http_conn_man_stats>` for
   // more information.
+  option (armeria.xds.supported.field) = 2;
   string stat_prefix = 2 [(validate.rules).string = {min_len: 1}];
 
   oneof route_specifier {
     option (validate.required) = true;
 
     // The connection manager’s route table will be dynamically loaded via the RDS API.
+    option (armeria.xds.supported.oneof_field) = 3;
     Rds rds = 3;
 
     // The route table for the connection manager is static and is specified in this property.
+    option (armeria.xds.supported.oneof_field) = 4;
     config.route.v3.RouteConfiguration route_config = 4;
 
     // A route table will be dynamically assigned to each request based on request attributes
@@ -433,6 +438,7 @@ message HttpConnectionManager {
   // A list of individual HTTP filters that make up the filter chain for
   // requests made to the connection manager. :ref:`Order matters <arch_overview_http_filters_ordering>`
   // as the filters are processed sequentially as request events happen.
+  option (armeria.xds.supported.field) = 5;
   repeated HttpFilter http_filters = 5;
 
   // Whether the connection manager manipulates the :ref:`config_http_conn_man_headers_user-agent`
@@ -1046,12 +1052,14 @@ message Rds {
       "envoy.config.filter.network.http_connection_manager.v2.Rds";
 
   // Configuration source specifier for RDS.
+  option (armeria.xds.supported.field) = 1;
   config.core.v3.ConfigSource config_source = 1;
 
   // The name of the route configuration. This name will be passed to the RDS
   // API. This allows an Envoy configuration with multiple HTTP listeners (and
   // associated HTTP connection manager filters) to use different route
   // configurations.
+  option (armeria.xds.supported.field) = 2;
   string route_config_name = 2;
 }
 
@@ -1220,6 +1228,7 @@ message HttpFilter {
   reserved "config";
 
   // The name of the filter configuration. It also serves as a resource name in ExtensionConfigDS.
+  option (armeria.xds.supported.field) = 1;
   string name = 1 [(validate.rules).string = {min_len: 1}];
 
   oneof config_type {
@@ -1230,6 +1239,7 @@ message HttpFilter {
     // :ref:`ExtensionWithMatcher <envoy_v3_api_msg_extensions.common.matching.v3.ExtensionWithMatcher>`
     // with the desired HTTP filter.
     // [#extension-category: envoy.filters.http]
+    option (armeria.xds.supported.oneof_field) = 4;
     google.protobuf.Any typed_config = 4;
 
     // Configuration source specifier for an extension configuration discovery service.
@@ -1246,6 +1256,7 @@ message HttpFilter {
   // If true, clients that do not support this filter may ignore the
   // filter but otherwise accept the config.
   // Otherwise, clients that do not support this filter must reject the config.
+  option (armeria.xds.supported.field) = 6;
   bool is_optional = 6;
 
   // If true, the filter is disabled by default and must be explicitly enabled by setting

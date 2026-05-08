@@ -100,7 +100,7 @@ class PreprocessorErrorTest {
                                         port_value: 8081
                         """,
                         IllegalArgumentException.class,
-                        "No route has been selected for listener "
+                        "No route for listener "
                 ),
                 Arguments.of(
                         //language=YAML

@@ -33,12 +33,14 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     private final DirectoryWatchService watchService;
     private final BootstrapSecrets bootstrapSecrets;
     private final ResourceNodeMeterBinderFactory meterBinderFactory;
+    private final XdsExtensionRegistry extensionRegistry;
 
     DefaultSubscriptionContext(EventExecutor eventLoop, XdsClusterManager clusterManager,
                                ConfigSourceMapper configSourceMapper,
                                ControlPlaneClientManager controlPlaneClientManager,
                                MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix,
-                               DirectoryWatchService watchService, BootstrapSecrets bootstrapSecrets) {
+                               DirectoryWatchService watchService, BootstrapSecrets bootstrapSecrets,
+                               XdsExtensionRegistry extensionRegistry) {
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         this.configSourceMapper = configSourceMapper;
@@ -47,6 +49,7 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
         this.meterIdPrefix = meterIdPrefix;
         this.watchService = watchService;
         this.bootstrapSecrets = bootstrapSecrets;
+        this.extensionRegistry = extensionRegistry;
         meterBinderFactory = new ResourceNodeMeterBinderFactory(meterRegistry, meterIdPrefix);
     }
 
@@ -98,5 +101,10 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     @Override
     public ResourceNodeMeterBinderFactory meterBinderFactory() {
         return meterBinderFactory;
+    }
+
+    @Override
+    public XdsExtensionRegistry extensionRegistry() {
+        return extensionRegistry;
     }
 }

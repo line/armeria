@@ -25,8 +25,9 @@ final class EndpointResourceParser extends ResourceParser<ClusterLoadAssignment,
     private EndpointResourceParser() {}
 
     @Override
-    EndpointXdsResource parse(ClusterLoadAssignment message, String version, long revision) {
-        return new EndpointXdsResource(message, version, revision);
+    EndpointXdsResource parse(ClusterLoadAssignment message, XdsExtensionRegistry registry,
+                              String version) {
+        return new EndpointXdsResource(message, version);
     }
 
     @Override

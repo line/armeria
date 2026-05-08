@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
@@ -139,7 +141,13 @@ final class XdsEndpointUtil {
         final ClusterLoadAssignment loadAssignment = endpointSnapshot.xdsResource().resource();
         for (LocalityLbEndpoints localityLbEndpoints: loadAssignment.getEndpointsList()) {
             for (LbEndpoint lbEndpoint: localityLbEndpoints.getLbEndpointsList()) {
-                final SocketAddress socketAddress = lbEndpoint.getEndpoint().getAddress().getSocketAddress();
+                final io.envoyproxy.envoy.config.core.v3.Address address =
+                        lbEndpoint.getEndpoint().getAddress();
+                if (address.hasPipe()) {
+                    throw new UnsupportedOperationException(
+                            "Pipe addresses are not supported for STRICT_DNS cluster type");
+                }
+                final SocketAddress socketAddress = address.getSocketAddress();
                 final String dnsAddress = socketAddress.getAddress();
                 final DnsAddressEndpointGroupBuilder builder = DnsAddressEndpointGroup.builder(dnsAddress);
                 if (socketAddress.hasPortValue()) {
@@ -191,12 +199,24 @@ final class XdsEndpointUtil {
             LocalityLbEndpoints localityLbEndpoints, LbEndpoint lbEndpoint,
             TransportSocketSnapshot transportSocket,
             List<TransportSocketMatchSnapshot> transportSocketMatches) {
-        final SocketAddress socketAddress =
-                lbEndpoint.getEndpoint().getAddress().getSocketAddress();
-        final String hostname = lbEndpoint.getEndpoint().getHostname();
+        final io.envoyproxy.envoy.config.core.v3.Address address =
+                lbEndpoint.getEndpoint().getAddress();
         final int weight = endpointWeight(lbEndpoint);
         final TransportSocketSnapshot matchedTransport = TransportSocketMatchUtil.selectTransportSocket(
                 transportSocket, transportSocketMatches, lbEndpoint, localityLbEndpoints);
+
+        if (address.hasPipe()) {
+            final String pipePath = Paths.get(address.getPipe().getPath()).toAbsolutePath().toString();
+            return DomainSocketAddress.of(pipePath)
+                                      .asEndpoint()
+                                      .withAttr(XdsAttributeKeys.LB_ENDPOINT_KEY, lbEndpoint)
+                                      .withAttr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
+                                      .withAttr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY, matchedTransport)
+                                      .withWeight(weight);
+        }
+
+        final SocketAddress socketAddress = address.getSocketAddress();
+        final String hostname = lbEndpoint.getEndpoint().getHostname();
         final Endpoint endpoint;
         if (!Strings.isNullOrEmpty(hostname)) {
             endpoint = Endpoint.of(hostname)
