@@ -466,7 +466,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         @Nullable
         private UpgradeEvent upgradeEvt;
         private boolean needsToClose;
-        private boolean upgradeResponseReceived;
 
         UpgradeRequestHandler(Http2ResponseDecoder responseDecoder) {
             this.responseDecoder = responseDecoder;
@@ -618,7 +617,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         private void onUpgradeResponse(ChannelHandlerContext ctx, boolean success) {
-            upgradeResponseReceived = true;
             final UpgradeEvent upgradeEvt = this.upgradeEvt;
             assert upgradeEvt != null : "received an upgrade response before an UpgradeEvent";
             final ChannelPipeline p = ctx.pipeline();

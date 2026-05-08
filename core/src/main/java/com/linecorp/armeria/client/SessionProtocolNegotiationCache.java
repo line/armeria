@@ -32,6 +32,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.LruMap;
 import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
@@ -85,6 +86,7 @@ public final class SessionProtocolNegotiationCache {
      * Returns {@code true} if the specified {@link HttpPreference} is known to be unsupported for the given
      * {@code remoteAddress}.
      */
+    @UnstableApi
     public static boolean isUnsupported(SocketAddress remoteAddress, HttpPreference preference) {
         requireNonNull(remoteAddress, "remoteAddress");
         requireNonNull(preference, "preference");
@@ -159,6 +161,7 @@ public final class SessionProtocolNegotiationCache {
      * Updates the cache with the information that the specified {@link HttpPreference} is not supported
      * by the given {@code remoteAddress}.
      */
+    @UnstableApi
     public static void setUnsupported(SocketAddress remoteAddress, HttpPreference preference) {
         requireNonNull(remoteAddress, "remoteAddress");
         requireNonNull(preference, "preference");
