@@ -87,7 +87,7 @@ public abstract class AbstractTlsSpec {
     /**
      * Returns the supported ALPN protocols.
      */
-    public Set<String> alpnProtocols() {
+    public final Set<String> alpnProtocols() {
         return alpnProtocols;
     }
 

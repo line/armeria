@@ -62,6 +62,7 @@ final class ServerSslContextUtil {
                     ClientTlsSpec.builder()
                                  .verifierFactories(TlsPeerVerifierFactory.noVerify())
                                  .engineType(tlsEngineType)
+                                 .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
                                  .build();
             final SslContext sslContextClient = SslContextUtil.toSslContext(clientTlsSpec, true);
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);

@@ -655,7 +655,10 @@ public final class Flags {
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
-            final SSLEngine engine = SslContextUtil.toSslContext(ClientTlsSpec.of(), false)
+            final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
+                                                       .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
+                                                       .build();
+            final SSLEngine engine = SslContextUtil.toSslContext(tlsSpec, false)
                                                    .newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));

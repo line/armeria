@@ -96,6 +96,7 @@ public final class SslContextUtil {
     private static boolean warnedBadCipherSuite;
 
     public static SslContext toSslContext(ClientTlsSpec clientTlsSpec, boolean allowUnsafeCiphers) {
+        checkArgument(!clientTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {
@@ -110,6 +111,7 @@ public final class SslContextUtil {
     }
 
     public static SslContext toSslContext(ServerTlsSpec serverTlsSpec, boolean allowUnsafeCiphers) {
+        checkArgument(!serverTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {

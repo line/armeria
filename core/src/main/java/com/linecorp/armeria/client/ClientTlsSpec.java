@@ -25,7 +25,6 @@ import javax.net.ssl.KeyManagerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AbstractTlsSpec;
 import com.linecorp.armeria.common.TlsKeyPair;
@@ -58,7 +57,6 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
         return new ClientTlsSpecBuilder();
     }
 
-    private final Set<String> overrideAlpnProtocols;
     private final String endpointIdentificationAlgorithm;
 
     ClientTlsSpec(Set<String> tlsVersions, Set<String> alpnProtocols, Set<String> ciphers,
@@ -67,27 +65,10 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
                   List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                   Consumer<? super SslContextBuilder> tlsCustomizer,
                   @Nullable KeyManagerFactory keyManagerFactory,
-                  Set<String> overrideAlpnProtocols, String endpointIdentificationAlgorithm) {
+                  String endpointIdentificationAlgorithm) {
         super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair,
               trustedCertificates, verifierFactories, engineType, tlsCustomizer, keyManagerFactory);
-        this.overrideAlpnProtocols = ImmutableSet.copyOf(overrideAlpnProtocols);
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
-    }
-
-    @Override
-    public Set<String> alpnProtocols() {
-        if (!overrideAlpnProtocols.isEmpty()) {
-            return overrideAlpnProtocols;
-        }
-        return super.alpnProtocols();
-    }
-
-    Set<String> baseAlpnProtocols() {
-        return super.alpnProtocols();
-    }
-
-    Set<String> overrideAlpnProtocols() {
-        return overrideAlpnProtocols;
     }
 
     /**
@@ -110,13 +91,12 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
             return false;
         }
         final ClientTlsSpec that = (ClientTlsSpec) o;
-        return Objects.equal(overrideAlpnProtocols, that.overrideAlpnProtocols) &&
-               Objects.equal(endpointIdentificationAlgorithm, that.endpointIdentificationAlgorithm);
+        return Objects.equal(endpointIdentificationAlgorithm, that.endpointIdentificationAlgorithm);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(super.hashCode(), overrideAlpnProtocols, endpointIdentificationAlgorithm);
+        return Objects.hashCode(super.hashCode(), endpointIdentificationAlgorithm);
     }
 
     @Override

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
@@ -40,8 +41,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 @UnstableApi
 public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTlsSpecBuilder, ClientTlsSpec> {
 
-    private Set<String> baseAlpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
-    private Set<String> overrideAlpnProtocols = ImmutableSet.of();
+    private Set<String> alpnProtocols = ImmutableSet.of();
     private Consumer<? super SslContextBuilder> tlsCustomizer = SslContextUtil.DEFAULT_NOOP_CUSTOMIZER;
     @Nullable
     private KeyManagerFactory keyManagerFactory;
@@ -52,8 +52,7 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
     ClientTlsSpecBuilder(ClientTlsSpec clientTlsSpec) {
         super(clientTlsSpec.ciphers(), clientTlsSpec.tlsKeyPair(), clientTlsSpec.trustedCertificates(),
               clientTlsSpec.verifierFactories(), clientTlsSpec.engineType());
-        baseAlpnProtocols = clientTlsSpec.baseAlpnProtocols();
-        overrideAlpnProtocols = clientTlsSpec.overrideAlpnProtocols();
+        alpnProtocols = clientTlsSpec.alpnProtocols();
         keyManagerFactory = clientTlsSpec.keyManagerFactory();
         tlsCustomizer = clientTlsSpec.tlsCustomizer();
         endpointIdentificationAlgorithm = clientTlsSpec.endpointIdentificationAlgorithm();
@@ -61,21 +60,21 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
 
     ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
         if (sessionProtocol.isExplicitHttp1()) {
-            baseAlpnProtocols = SslContextUtil.DEFAULT_HTTP1_ALPN_PROTOCOLS;
+            alpnProtocols = SslContextUtil.DEFAULT_HTTP1_ALPN_PROTOCOLS;
         } else {
-            baseAlpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
+            alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
         }
         return this;
     }
 
     /**
-     * Sets the ALPN protocol names that take precedence over the protocols
-     * derived from the {@link SessionProtocol}. If not empty, these are returned
-     * by {@link ClientTlsSpec#alpnProtocols()} instead of the default.
+     * Sets the ALPN protocol names for TLS negotiation. If not set (empty), the ALPN protocols
+     * are automatically derived from the {@link SessionProtocol} at connection time.
      */
     public ClientTlsSpecBuilder alpnProtocols(Collection<String> alpnProtocols) {
         requireNonNull(alpnProtocols, "alpnProtocols");
-        overrideAlpnProtocols = ImmutableSet.copyOf(alpnProtocols);
+        checkArgument(!alpnProtocols.isEmpty(), "alpnProtocols must not be empty");
+        this.alpnProtocols = ImmutableSet.copyOf(alpnProtocols);
         return this;
     }
 
@@ -107,9 +106,8 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
     @Override
     public ClientTlsSpec build() {
         return new ClientTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
-                                 baseAlpnProtocols, ciphers(), tlsKeyPair(),
+                                 alpnProtocols, ciphers(), tlsKeyPair(),
                                  trustedCertificates(), verifierFactories(), engineType(), tlsCustomizer,
-                                 keyManagerFactory, overrideAlpnProtocols,
-                                 endpointIdentificationAlgorithm);
+                                 keyManagerFactory, endpointIdentificationAlgorithm);
     }
 }

@@ -237,7 +237,13 @@ final class HttpClientDelegate implements HttpClient {
         endpoint = endpoint.withoutTrailingDot();
 
         final TlsProvider tlsProvider = factory.options().tlsProvider();
-        final ClientTlsSpec tlsSpec = determineTlsSpec(endpoint, protocol, tlsProvider, ctx);
+        final ClientTlsSpec tlsSpec;
+        try {
+            tlsSpec = determineTlsSpec(endpoint, protocol, tlsProvider, ctx);
+        } catch (IllegalArgumentException e) {
+            earlyCancelRequest(e, ctx, timingsBuilder);
+            return;
+        }
 
         final InetSocketAddress localBindAddress = ctx.localBindAddress();
         if (localBindAddress != null) {
@@ -285,7 +291,10 @@ final class HttpClientDelegate implements HttpClient {
                                            TlsProvider tlsProvider, ClientRequestContext ctx) {
         final ClientTlsSpec reqTlsSpec = ctx.clientTlsSpec();
         if (reqTlsSpec != null) {
-            return reqTlsSpec.toBuilder().alpnProtocols(sessionProtocol).build();
+            if (reqTlsSpec.alpnProtocols().isEmpty()) {
+                return reqTlsSpec.toBuilder().alpnProtocols(sessionProtocol).build();
+            }
+            return reqTlsSpec;
         }
         if (tlsProvider != NullTlsProvider.INSTANCE) {
             TlsKeyPair keyPair = null;

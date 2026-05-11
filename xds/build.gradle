@@ -12,6 +12,7 @@ dependencies {
 
     implementation libs.jackson.dataformat.yaml
     implementation libs.re2j
+    runtimeOnly libs.javassist
 
     testImplementation libs.controlplane.server
     testImplementation libs.controlplane.cache

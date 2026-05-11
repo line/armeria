@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -177,5 +178,19 @@ class ClientTlsSpecTest {
         assertThat(rebuilt.ciphers()).isEqualTo(original.ciphers());
         assertThat(rebuilt.tlsVersions()).isEqualTo(original.tlsVersions());
         assertThat(rebuilt.alpnProtocols()).isEqualTo(original.alpnProtocols());
+    }
+
+    @Test
+    void emptyAlpnProtocolsThrows() {
+        assertThatThrownBy(() -> ClientTlsSpec.builder()
+                                              .alpnProtocols(Collections.emptyList()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("alpnProtocols must not be empty");
+    }
+
+    @Test
+    void defaultAlpnProtocolsAreEmpty() {
+        final ClientTlsSpec spec = ClientTlsSpec.builder().build();
+        assertThat(spec.alpnProtocols()).isEmpty();
     }
 }
