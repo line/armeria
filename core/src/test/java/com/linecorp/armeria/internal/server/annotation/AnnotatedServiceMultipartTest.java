@@ -24,7 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -51,9 +53,11 @@ import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Part;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -211,6 +215,224 @@ class AnnotatedServiceMultipartTest {
         assertThat(response.contentUtf8()).contains("No closing MIME boundary");
     }
 
+    @Test
+    void testPartWithJsonBlob() {
+        // Simulates FormData.append("data", new Blob([JSON], { type: "application/json" }))
+        // which results in filename="blob" and Content-Type: application/json
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data", "blob"),
+                            MediaType.JSON, "{\"name\":\"test\",\"value\":42}")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partJson"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("{\"name\":\"test\",\"value\":42}");
+    }
+
+    @Test
+    void testPartWithJsonNoFilename_noContentType() {
+        // FormData.append("data", JSON.stringify(...)) — no filename, no content-type
+        // Should fail because Content-Type is not application/json.
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data"),
+                            "{\"name\":\"nofile\",\"value\":7}")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partJson"));
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void testPartWithJsonNoFilename_withContentType() {
+        // Part without filename but with explicit Content-Type: application/json
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data"),
+                            MediaType.JSON, "{\"name\":\"nofile\",\"value\":7}")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partJson"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("{\"name\":\"nofile\",\"value\":7}");
+    }
+
+    @Test
+    void testPartMixedWithParam() {
+        // JSON part + regular file upload + string param in the same request
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data", "blob"),
+                            MediaType.JSON, "{\"name\":\"mixed\",\"value\":123}"),
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "test.txt"), "file-content"),
+                BodyPart.of(ContentDisposition.of("form-data", "title"), "my-title")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partMixed"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("{\"name\":\"mixed\",\"value\":123," +
+                           "\"file\":\"file-content\",\"title\":\"my-title\"}");
+    }
+
+    @Test
+    void testPartWithString() {
+        // @Part String should return raw content
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "text"), "hello world")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partString"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("hello world");
+    }
+
+    @Test
+    void testPartWithMultipartFile() {
+        // @Part MultipartFile should work like @Param MultipartFile
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "doc.txt"), "doc-content")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partFile"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("doc.txt:doc-content");
+    }
+
+    @Test
+    void testPartWithFileAndPath() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo-content"),
+                BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar-content")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partFileAndPath"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("{\"file\":\"foo-content\",\"path\":\"bar-content\"}");
+    }
+
+    @Test
+    void testPartWithListOfBeans() {
+        // Multiple JSON parts with the same name → List<MyData>
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "items"),
+                            MediaType.JSON, "{\"name\":\"a\",\"value\":1}"),
+                BodyPart.of(ContentDisposition.of("form-data", "items"),
+                            MediaType.JSON, "{\"name\":\"b\",\"value\":2}"),
+                BodyPart.of(ContentDisposition.of("form-data", "items"),
+                            MediaType.JSON, "{\"name\":\"c\",\"value\":3}")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partList"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("[{\"name\":\"a\",\"value\":1}," +
+                           "{\"name\":\"b\",\"value\":2}," +
+                           "{\"name\":\"c\",\"value\":3}]");
+    }
+
+    @Test
+    void testPartWithBytes() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data"), "binary-content")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partBytes"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("14");
+    }
+
+    @Test
+    void testPartWithBytesAndFilename() {
+        // @Part byte[] on a part with filename — should still work via in-memory aggregation
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data", "blob"), "blob-content")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partBytes"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("12");
+    }
+
+    @Test
+    void testPartWithNullable() {
+        // @Part @Nullable MyData — part not sent, should return null
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "other"), "something")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partNullable"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("null");
+    }
+
+    @Test
+    void testPartWithNullable_present() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data"),
+                            MediaType.JSON, "{\"name\":\"present\",\"value\":1}")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partNullable"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("{\"name\":\"present\",\"value\":1}");
+    }
+
+    @Test
+    void testPartWithSetOfBeans() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "items"),
+                            MediaType.JSON, "{\"name\":\"x\",\"value\":1}"),
+                BodyPart.of(ContentDisposition.of("form-data", "items"),
+                            MediaType.JSON, "{\"name\":\"y\",\"value\":2}")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partSet"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("[{\"name\":\"x\",\"value\":1}," +
+                           "{\"name\":\"y\",\"value\":2}]");
+    }
+
+    @Test
+    void testPartWithListOfStrings() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "items"), "hello"),
+                BodyPart.of(ContentDisposition.of("form-data", "items"), "world"),
+                BodyPart.of(ContentDisposition.of("form-data", "items"), "armeria")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partListString"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("[\"hello\",\"world\",\"armeria\"]");
+    }
+
+    @Test
+    void testPartWithListOfFiles() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "files", "a.txt"), "aaa"),
+                BodyPart.of(ContentDisposition.of("form-data", "files", "b.txt"), "bbb")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partListFile"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .isEqualTo("[\"a.txt:aaa\",\"b.txt:bbb\"]");
+    }
+
+    @Test
+    void testPartWithUnsupportedContentType() {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "data"),
+                            MediaType.XML_UTF_8, "<data>value</data>")
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest("/partJson"));
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     @Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
     private static class MyAnnotatedService {
         @Blocking
@@ -339,6 +561,130 @@ class AnnotatedServiceMultipartTest {
                     ImmutableMap.of("files", fileData,
                                     "params", params);
             return HttpResponse.ofJson(content);
+        }
+
+        @Blocking
+        @Post
+        @Path("/partJson")
+        public HttpResponse partJson(@Part MyData data) {
+            return HttpResponse.ofJson(ImmutableMap.of("name", data.name, "value", data.value));
+        }
+
+        @Blocking
+        @Post
+        @Path("/partMixed")
+        public HttpResponse partMixed(@Part MyData data,
+                                      @Part MultipartFile file1,
+                                      @Param String title) throws IOException {
+            final String fileContent = Files.asCharSource(file1.file(), StandardCharsets.UTF_8).read();
+            return HttpResponse.ofJson(ImmutableMap.of("name", data.name, "value", data.value,
+                                                       "file", fileContent, "title", title));
+        }
+
+        @Blocking
+        @Post
+        @Path("/partString")
+        public HttpResponse partString(@Part String text) {
+            return HttpResponse.of(text);
+        }
+
+        @Blocking
+        @Post
+        @Path("/partFile")
+        public HttpResponse partFile(@Part MultipartFile file1) throws IOException {
+            final String content = Files.asCharSource(file1.file(), StandardCharsets.UTF_8).read();
+            return HttpResponse.of(file1.filename() + ':' + content);
+        }
+
+        @Blocking
+        @Post
+        @Path("/partFileAndPath")
+        public HttpResponse partFileAndPath(@Part File file1,
+                                            @Part java.nio.file.Path path1) throws IOException {
+            final String fileContent = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
+            final String pathContent = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8).read();
+            return HttpResponse.ofJson(ImmutableMap.of("file", fileContent, "path", pathContent));
+        }
+
+        @Blocking
+        @Post
+        @Path("/partList")
+        public HttpResponse partList(@Part List<MyData> items) {
+            final List<ImmutableMap<String, Object>> result = items.stream()
+                    .map(d -> ImmutableMap.<String, Object>of("name", d.name, "value", d.value))
+                    .collect(toImmutableList());
+            return HttpResponse.ofJson(result);
+        }
+
+        @Blocking
+        @Post
+        @Path("/partBytes")
+        public HttpResponse partBytes(@Part byte[] data) {
+            return HttpResponse.of(String.valueOf(data.length));
+        }
+
+        @Blocking
+        @Post
+        @Path("/partNullable")
+        public HttpResponse partNullable(@Part @Nullable MyData data) {
+            if (data == null) {
+                return HttpResponse.of("null");
+            }
+            return HttpResponse.ofJson(ImmutableMap.of("name", data.name, "value", data.value));
+        }
+
+        @Blocking
+        @Post
+        @Path("/partSet")
+        public HttpResponse partSet(@Part Set<MyData> items) {
+            final List<ImmutableMap<String, Object>> result = items.stream()
+                    .map(d -> ImmutableMap.<String, Object>of("name", d.name, "value", d.value))
+                    .collect(toImmutableList());
+            return HttpResponse.ofJson(result);
+        }
+
+        @Blocking
+        @Post
+        @Path("/partListString")
+        public HttpResponse partListString(@Part List<String> items) {
+            return HttpResponse.ofJson(items);
+        }
+
+        @Blocking
+        @Post
+        @Path("/partListFile")
+        public HttpResponse partListFile(@Part List<MultipartFile> files) {
+            final List<String> result = files.stream()
+                    .map(f -> {
+                        try {
+                            return f.filename() + ':' +
+                                   Files.asCharSource(f.file(), StandardCharsets.UTF_8).read();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).collect(toImmutableList());
+            return HttpResponse.ofJson(result);
+        }
+    }
+
+    static class MyData {
+        private String name;
+        private int value;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getValue() {
+            return value;
+        }
+
+        public void setValue(int value) {
+            this.value = value;
         }
     }
 }

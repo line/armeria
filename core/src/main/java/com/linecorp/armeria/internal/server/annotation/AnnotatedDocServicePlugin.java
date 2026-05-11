@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFuncti
 import static com.linecorp.armeria.internal.server.annotation.KotlinUtil.kFunctionReturnType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static com.linecorp.armeria.internal.server.docs.DocServiceTypeUtil.toTypeSignature;
+import static com.linecorp.armeria.server.docs.FieldLocation.BODY;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
@@ -65,6 +66,7 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Part;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ReturnDescription;
 import com.linecorp.armeria.server.annotation.ThrowsDescription;
@@ -271,7 +273,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                             .build();
         }
 
-        if (annotationType != Param.class && annotationType != Header.class) {
+        if (annotationType != Param.class && annotationType != Header.class &&
+            annotationType != Part.class) {
             return null;
         }
         final TypeSignature signature;
@@ -306,6 +309,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         }
         if (resolver.annotationType() == Header.class) {
             return HEADER;
+        }
+        if (resolver.annotationType() == Part.class) {
+            return BODY;
         }
         return UNSPECIFIED;
     }
@@ -571,7 +577,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                             .build();
         }
 
-        if (annotationType != Param.class && annotationType != Header.class) {
+        if (annotationType != Param.class && annotationType != Header.class &&
+            annotationType != Part.class) {
             return null;
         }
         final TypeSignature signature;

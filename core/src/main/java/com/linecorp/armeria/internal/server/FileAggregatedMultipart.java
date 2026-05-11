@@ -21,7 +21,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Maps;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.AggregatedBodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -46,11 +46,14 @@ public final class FileAggregatedMultipart {
 
     private final ListMultimap<String, String> params;
     private final ListMultimap<String, MultipartFile> files;
+    private final ListMultimap<String, AggregatedBodyPart> bodyParts;
 
     private FileAggregatedMultipart(ListMultimap<String, String> params,
-                                    ListMultimap<String, MultipartFile> files) {
+                                    ListMultimap<String, MultipartFile> files,
+                                    ListMultimap<String, AggregatedBodyPart> bodyParts) {
         this.params = params;
         this.files = files;
+        this.bodyParts = bodyParts;
     }
 
     public ListMultimap<String, String> params() {
@@ -61,8 +64,31 @@ public final class FileAggregatedMultipart {
         return files;
     }
 
-    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
-                                                                                HttpRequest req) {
+    /**
+     * Returns the non-file body parts with their headers preserved.
+     * Unlike {@link #params()} which only stores the string content,
+     * this map retains the full {@link AggregatedBodyPart} including headers
+     * such as {@code Content-Type}.
+     */
+    public ListMultimap<String, AggregatedBodyPart> bodyParts() {
+        return bodyParts;
+    }
+
+    /**
+     * Aggregates multipart, writing all parts with a filename to disk.
+     */
+    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
+            ServiceRequestContext ctx, HttpRequest req) {
+        return aggregateMultipart(ctx, req, null);
+    }
+
+    /**
+     * Aggregates multipart. Parts with a filename are written to disk only if their name
+     * is in {@code fileParamNames}. Other parts with a filename are aggregated in memory.
+     * If {@code fileParamNames} is {@code null}, all parts with a filename are written to disk.
+     */
+    public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
+            ServiceRequestContext ctx, HttpRequest req, @Nullable Set<String> fileParamNames) {
         final Path destination = ctx.config().multipartUploadsLocation();
         return Multipart.from(req).collect(bodyPart -> {
             final String name = bodyPart.name();
@@ -70,7 +96,10 @@ public final class FileAggregatedMultipart {
             final String filename = bodyPart.filename();
             final EventLoop eventLoop = ctx.eventLoop();
 
-            if (filename != null) {
+            if (filename != null &&
+                (fileParamNames == null || fileParamNames.contains(name))) {
+                // The part has a filename and is bound to a file-type parameter
+                // (@Param File, @Part MultipartFile, etc.) — write to disk.
                 final Path incompleteDir = destination.resolve("incomplete");
                 final ScheduledExecutorService executor = ctx.blockingTaskExecutor().withoutContext();
 
@@ -83,26 +112,33 @@ public final class FileAggregatedMultipart {
                 });
             }
 
-            return bodyPart.aggregateWithPooledObjects(eventLoop, ctx.alloc()).thenApply(aggregatedBodyPart -> {
-                try (HttpData httpData = aggregatedBodyPart.content()) {
-                    return Maps.<String, Object>immutableEntry(name, httpData.toStringUtf8());
-                }
-            });
+            // No filename, or bound to a non-file parameter (@Part MyBean, @Part String, etc.)
+            // — aggregate in memory only.
+            return bodyPart.aggregate(eventLoop);
         }).thenApply(results -> {
             final ImmutableListMultimap.Builder<String, String> params = ImmutableListMultimap.builder();
             final ImmutableListMultimap.Builder<String, MultipartFile> files =
+                    ImmutableListMultimap.builder();
+            final ImmutableListMultimap.Builder<String, AggregatedBodyPart> bodyParts =
                     ImmutableListMultimap.builder();
             for (Object result : results) {
                 if (result instanceof MultipartFile) {
                     final MultipartFile multipartFile = (MultipartFile) result;
                     files.put(multipartFile.name(), multipartFile);
+                } else if (result instanceof AggregatedBodyPart) {
+                    final AggregatedBodyPart part = (AggregatedBodyPart) result;
+                    final String partName = part.name();
+                    if (partName == null) {
+                        // A body part without a name in Content-Disposition is malformed; skip it.
+                        continue;
+                    }
+                    bodyParts.put(partName, part);
+                    params.put(partName, part.content().toStringUtf8());
                 } else {
-                    @SuppressWarnings("unchecked")
-                    final Entry<String, String> entry = (Entry<String, String>) result;
-                    params.put(entry.getKey(), entry.getValue());
+                    throw new IllegalStateException("Unexpected result type: " + result.getClass());
                 }
             }
-            return new FileAggregatedMultipart(params.build(), files.build());
+            return new FileAggregatedMultipart(params.build(), files.build(), bodyParts.build());
         });
     }
 

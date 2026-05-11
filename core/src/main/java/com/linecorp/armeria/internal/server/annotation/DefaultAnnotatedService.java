@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
@@ -28,6 +29,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -112,6 +114,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
     private final HttpHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
+    private final Set<String> fileParamNames;
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
     @Nullable
@@ -153,6 +156,10 @@ final class DefaultAnnotatedService implements AnnotatedService {
         responseConverter = newResponseConverter(
                 actualReturnType, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
+        fileParamNames = resolvers.stream()
+                .filter(r -> AnnotatedValueResolver.isFileType(r.elementType()))
+                .map(AnnotatedValueResolver::httpElementName)
+                .collect(toImmutableSet());
         this.route = requireNonNull(route, "route");
 
         this.defaultStatus = requireNonNull(defaultStatus, "defaultStatus");
@@ -379,7 +386,8 @@ final class DefaultAnnotatedService implements AnnotatedService {
         final CompletableFuture<AggregatedResult> f;
         switch (aggregationType) {
             case MULTIPART:
-                f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
+                f = FileAggregatedMultipart.aggregateMultipart(ctx, req, fileParamNames)
+                                           .thenApply(AggregatedResult::new);
                 break;
             case ALL:
                 f = req.aggregate().thenApply(AggregatedResult::new);

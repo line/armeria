@@ -155,3 +155,67 @@ Alternatively, you can disable the automatic deletion of the uploaded files by s
 sure the uploaded files are deleted once they are not in use to avoid the excessive consumption of disk space.
 
 :::
+
+## Using [@Part](type) annotation
+
+While [@Param](type) treats multipart parts as simple strings or files,
+the [@Part](type) annotation uses the `Content-Type` header of each part
+to determine how to deserialize the content. For example, a part with
+`Content-Type: application/json` will be deserialized into a Java object using Jackson.
+
+### Supported types
+
+| Target type | Behavior |
+|---|---|
+| `File`, `Path`, [MultipartFile](type) | File upload (same as [@Param](type)) |
+| `String` | Raw text content of the part |
+| `byte[]` | Raw binary content of the part |
+| Any other type | Deserialized from JSON via Jackson. The part must have `Content-Type: application/json`. |
+
+### Example
+
+```java
+import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.multipart.MultipartFile;
+import com.linecorp.armeria.server.annotation.Consumes;
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Part;
+import com.linecorp.armeria.server.annotation.Post;
+
+@Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
+@Post("/upload")
+public HttpResponse upload(
+    @Part MyBean metadata,
+    @Part MultipartFile file,
+    @Param String title) {
+    // 'metadata' is deserialized from a JSON part.
+    // 'file' is a file upload.
+    // 'title' is a plain text form field.
+    ...
+}
+```
+
+This is useful when a client sends structured data (e.g., JSON metadata) alongside
+file uploads in a single multipart request. For instance, a browser might use
+JavaScript's `FormData` API:
+
+```javascript
+const formData = new FormData();
+formData.append("metadata",
+    new Blob([JSON.stringify({name: "example"})],
+             {type: "application/json"}));
+formData.append("file", fileInput.files[0]);
+formData.append("title", "My Upload");
+```
+
+### Container types
+
+[@Part](type) also supports `List` and `Set` for receiving multiple parts with the same name:
+
+```java
+@Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
+@Post("/upload")
+public HttpResponse upload(@Part List<MyBean> items) {
+    ...
+}
+```

@@ -29,6 +29,7 @@ import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getS
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.AnnotatedType;
@@ -62,6 +63,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
@@ -83,9 +85,11 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.AggregatedBodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -98,6 +102,7 @@ import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Part;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
@@ -129,7 +134,13 @@ final class AnnotatedValueResolver {
 
     private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
 
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();
+
     private static final Set<Type> fileTypes = ImmutableSet.of(File.class, Path.class, MultipartFile.class);
+
+    static boolean isFileType(Class<?> type) {
+        return fileTypes.contains(type);
+    }
 
     static {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
@@ -473,6 +484,10 @@ final class AnnotatedValueResolver {
 
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
+            if (annotatedElement.isAnnotationPresent(Part.class)) {
+                logger.warn("Both @Param and @Part are present on '{}'. @Param will be used.",
+                            annotatedElement);
+            }
             final String name = findName(typeElement, param.value());
             // If the parameter is of type Map and the @Param annotation does not specify a value,
             // map all query parameters into the Map.
@@ -486,7 +501,7 @@ final class AnnotatedValueResolver {
                 }
                 return ofQueryParamMap(name, annotatedElement, typeElement, type, description);
             }
-            if (fileTypes.contains(type) || isListOfFiles(typeElement)) {
+            if (isFileType(type) || isListOfFiles(typeElement)) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -494,6 +509,15 @@ final class AnnotatedValueResolver {
             } else {
                 return ofQueryParam(name, annotatedElement, typeElement, type, description, queryDelimiter);
             }
+        }
+
+        final Part part = annotatedElement.getAnnotation(Part.class);
+        if (part != null) {
+            final String name = findName(typeElement, part.value());
+            if (isFileType(type) || isListOfFiles(typeElement)) {
+                return ofFilePart(name, annotatedElement, typeElement, type, description);
+            }
+            return ofPart(name, annotatedElement, typeElement, type, description);
         }
 
         final Header header = annotatedElement.getAnnotation(Header.class);
@@ -584,6 +608,7 @@ final class AnnotatedValueResolver {
 
     private static boolean isAnnotationPresent(AnnotatedElement element) {
         return element.isAnnotationPresent(Param.class) ||
+               element.isAnnotationPresent(Part.class) ||
                element.isAnnotationPresent(Attribute.class) ||
                element.isAnnotationPresent(Header.class) ||
                element.isAnnotationPresent(RequestObject.class);
@@ -703,14 +728,110 @@ final class AnnotatedValueResolver {
                                                       AnnotatedElement annotatedElement,
                                                       AnnotatedElement typeElement, Class<?> type,
                                                       DescriptionInfo description) {
+        return ofFileAnnotation(Param.class, name, annotatedElement, typeElement, type, description);
+    }
+
+    private static AnnotatedValueResolver ofFilePart(String name,
+                                                     AnnotatedElement annotatedElement,
+                                                     AnnotatedElement typeElement, Class<?> type,
+                                                     DescriptionInfo description) {
+        return ofFileAnnotation(Part.class, name, annotatedElement, typeElement, type, description);
+    }
+
+    private static AnnotatedValueResolver ofFileAnnotation(Class<? extends Annotation> annotationType,
+                                                           String name,
+                                                           AnnotatedElement annotatedElement,
+                                                           AnnotatedElement typeElement, Class<?> type,
+                                                           DescriptionInfo description) {
         return new Builder(annotatedElement, type, name)
-                .annotationType(Param.class)
+                .annotationType(annotationType)
                 .typeElement(typeElement)
                 .supportContainer(true)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
                 .resolver(fileResolver())
                 .build();
+    }
+
+    private static AnnotatedValueResolver ofPart(String name,
+                                                 AnnotatedElement annotatedElement,
+                                                 AnnotatedElement typeElement, Class<?> type,
+                                                 DescriptionInfo description) {
+        return new Builder(annotatedElement, type, name)
+                .annotationType(Part.class)
+                .typeElement(typeElement)
+                .supportDefault(true)
+                .supportContainer(true)
+                .description(description)
+                .aggregation(AggregationStrategy.ALWAYS)
+                .resolver(partResolver())
+                .build();
+    }
+
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object> partResolver() {
+        return (resolver, ctx) -> {
+            final String name = resolver.httpElementName();
+            final Class<?> targetType = resolver.elementType();
+            final FileAggregatedMultipart multipart = ctx.aggregatedMultipart();
+
+            if (multipart == null) {
+                return resolver.defaultOrException();
+            }
+
+            // All parts (with or without filename) are stored in bodyParts.
+            final List<AggregatedBodyPart> parts = multipart.bodyParts().get(name);
+            if (parts != null && !parts.isEmpty()) {
+                if (resolver.hasContainer()) {
+                    return resolveBodyPartsAsContainer(resolver, parts, name);
+                }
+                return resolveBodyPart(parts.get(0), targetType, name);
+            }
+
+            return resolver.defaultOrException();
+        };
+    }
+
+    private static Object resolveBodyPart(AggregatedBodyPart bodyPart,
+                                          Class<?> targetType, String name) {
+        if (targetType == byte[].class) {
+            return bodyPart.content().array();
+        }
+        final String content = bodyPart.content().toStringUtf8();
+        if (targetType == String.class) {
+            return content;
+        }
+        // TODO(minwoox): Support other Content-Types by using RequestConverterFunction chain.
+        final MediaType contentType = bodyPart.headers().contentType();
+        if (contentType != null && contentType.isJson()) {
+            try {
+                return defaultObjectMapper.readValue(content, targetType);
+            } catch (IOException e) {
+                throw new IllegalArgumentException(
+                        "Failed to deserialize JSON from multipart part: " + name, e);
+            }
+        }
+        throw new IllegalArgumentException(
+                "Unsupported Content-Type '" + contentType +
+                "' for @Part parameter '" + name + "' of type '" +
+                targetType.getSimpleName() + "'. Expected application/json.");
+    }
+
+    private static Object resolveBodyPartsAsContainer(AnnotatedValueResolver resolver,
+                                                      List<AggregatedBodyPart> parts, String name) {
+        try {
+            assert resolver.containerType() != null;
+            @SuppressWarnings("unchecked")
+            final Collection<Object> collection =
+                    (Collection<Object>) resolver.containerType().getDeclaredConstructor().newInstance();
+            for (AggregatedBodyPart part : parts) {
+                collection.add(resolveBodyPart(part, resolver.elementType(), name));
+            }
+            return collection;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Throwable cause) {
+            throw new IllegalArgumentException("Cannot resolve @Part container: " + name, cause);
+        }
     }
 
     private static AnnotatedValueResolver ofHeader(String name,
@@ -1353,6 +1474,7 @@ final class AnnotatedValueResolver {
          */
         private Builder annotationType(Class<? extends Annotation> annotationType) {
             assert annotationType == Param.class ||
+                   annotationType == Part.class ||
                    annotationType == Attribute.class ||
                    annotationType == Header.class ||
                    annotationType == RequestObject.class : annotationType.getSimpleName();
