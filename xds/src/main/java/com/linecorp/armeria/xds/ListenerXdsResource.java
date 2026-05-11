@@ -16,24 +16,16 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.protobuf.Any;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory.RouterXdsHttpFilter;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
-import io.envoyproxy.envoy.config.listener.v3.Filter;
-import io.envoyproxy.envoy.config.listener.v3.FilterChain;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * A resource object for a {@link Listener}.
@@ -41,37 +33,38 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 @UnstableApi
 public final class ListenerXdsResource extends AbstractXdsResource {
 
-    private static final Logger logger = LoggerFactory.getLogger(ListenerXdsResource.class);
-
-    private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
-            "type.googleapis.com/" +
-            "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager";
-    private static final String HTTP_CONNECTION_MANAGER_FILTER_NAME =
-            "envoy.filters.network.http_connection_manager";
-    private static final String ROUTER_TYPE_URL =
-            "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
-
     private final Listener listener;
     @Nullable
     private final HttpConnectionManager connectionManager;
+    private final List<XdsHttpFilter> downstreamFilters;
     @Nullable
     private final Router router;
 
-    ListenerXdsResource(Listener listener) {
-        this(listener, "");
+    ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
+                        List<XdsHttpFilter> downstreamFilters, String version) {
+        this(listener, connectionManager, downstreamFilters, version, 0);
     }
 
-    ListenerXdsResource(Listener listener, String version) {
-        this(listener, version, 0);
-    }
-
-    private ListenerXdsResource(Listener listener, String version, long revision) {
+    private ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
+                                List<XdsHttpFilter> downstreamFilters,
+                                String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(listener);
         this.listener = listener;
+        this.connectionManager = connectionManager;
+        this.downstreamFilters = downstreamFilters;
+        router = findRouter(downstreamFilters);
+    }
 
-        connectionManager = findHcm(listener);
-        router = router(connectionManager);
+    @Nullable
+    private static Router findRouter(List<XdsHttpFilter> filters) {
+        if (filters.isEmpty()) {
+            return null;
+        }
+        final XdsHttpFilter last = filters.get(filters.size() - 1);
+        if (last instanceof RouterXdsHttpFilter) {
+            return ((RouterXdsHttpFilter) last).router();
+        }
+        return null;
     }
 
     @Override
@@ -85,8 +78,7 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     }
 
     /**
-     * The {@link HttpConnectionManager} derived from the {@link Listener} intended for client-side.
-     * The lookup order is: api_listener, filter chains, default filter chain.
+     * The {@link HttpConnectionManager} contained in the {@link Listener#getListenerFiltersList()}.
      */
     @Nullable
     public HttpConnectionManager connectionManager() {
@@ -103,7 +95,8 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         if (revision == revision()) {
             return this;
         }
-        return new ListenerXdsResource(listener, version(), revision);
+        return new ListenerXdsResource(listener, connectionManager, downstreamFilters,
+                                       version(), revision);
     }
 
     /**
@@ -112,63 +105,5 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     @Nullable
     public Router router() {
         return router;
-    }
-
-    @Nullable
-    private static Router router(@Nullable HttpConnectionManager connectionManager) {
-        if (connectionManager == null) {
-            return null;
-        }
-        final List<HttpFilter> httpFilters = connectionManager.getHttpFiltersList();
-        if (httpFilters.isEmpty()) {
-            return null;
-        }
-        final HttpFilter lastHttpFilter = httpFilters.get(httpFilters.size() - 1);
-        if (!ROUTER_TYPE_URL.equals(lastHttpFilter.getTypedConfig().getTypeUrl())) {
-            // the router should be the last/terminal filter
-            return null;
-        }
-        checkArgument(lastHttpFilter.hasTypedConfig(), "Only typedConfig is supported for 'Router'.");
-        return XdsValidatorIndexRegistry.unpack(lastHttpFilter.getTypedConfig(), Router.class);
-    }
-
-    @Nullable
-    private static HttpConnectionManager findHcm(Listener listener) {
-        // 1. api_listener
-        if (listener.getApiListener().hasApiListener()) {
-            final Any apiListener = listener.getApiListener().getApiListener();
-            return XdsValidatorIndexRegistry.unpack(apiListener, HttpConnectionManager.class);
-        }
-        logger.warn("No api_listener set for listener {}; falling back to filter chains.", listener.getName());
-
-        // 2. filter chains
-        for (FilterChain fc : listener.getFilterChainsList()) {
-            final HttpConnectionManager hcm = findHcmInFilterChain(fc);
-            if (hcm != null) {
-                return hcm;
-            }
-        }
-        // 3. default filter chain
-        if (listener.hasDefaultFilterChain()) {
-            return findHcmInFilterChain(listener.getDefaultFilterChain());
-        }
-        return null;
-    }
-
-    @Nullable
-    private static HttpConnectionManager findHcmInFilterChain(FilterChain filterChain) {
-        final List<Filter> filters = filterChain.getFiltersList();
-        if (filters.isEmpty()) {
-            return null;
-        }
-        // HCM is a terminal network filter and should be the last in the chain.
-        final Filter last = filters.get(filters.size() - 1);
-        if (HTTP_CONNECTION_MANAGER_FILTER_NAME.equals(last.getName()) &&
-            last.hasTypedConfig() &&
-            HTTP_CONNECTION_MANAGER_TYPE_URL.equals(last.getTypedConfig().getTypeUrl())) {
-            return XdsValidatorIndexRegistry.unpack(
-                    last.getTypedConfig(), HttpConnectionManager.class);
-        }
-        return null;
     }
 }

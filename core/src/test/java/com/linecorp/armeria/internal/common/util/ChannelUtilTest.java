@@ -107,6 +107,18 @@ public class ChannelUtilTest {
         assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
     }
 
+    @ParameterizedTest
+    @MethodSource("tcpUserTimeout_arguments")
+    void tcpUserTimeoutWithMaxIdleTimeout(TransportType transportType, ChannelOption<?> option) {
+        final Map<ChannelOption<?>, Object> options = ImmutableMap.of(
+                ChannelOption.SO_LINGER, 1000);
+
+        final Map<ChannelOption<?>, Object> newOptions =
+                ChannelUtil.applyDefaultChannelOptions(
+                        true, transportType, options, Long.MAX_VALUE);
+        assertThat(newOptions).containsEntry(option, Integer.MAX_VALUE);
+    }
+
     @Test
     void tcpUserTimeoutUnsupportedTransport() {
         final Map<ChannelOption<?>, Object> options = ImmutableMap.of(

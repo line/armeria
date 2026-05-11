@@ -17,6 +17,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.core.v3";
 option java_outer_classname = "ConfigSourceProto";
 option java_multiple_files = true;
@@ -28,12 +30,14 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 // xDS API and non-xDS services version. This is used to describe both resource and transport
 // protocol versions (in distinct configuration fields).
 enum ApiVersion {
+  option (armeria.xds.supported.enum_value) = 0;
   // When not specified, we assume v3; it is the only supported version.
   AUTO = 0;
 
   // Use xDS v2 API. This is no longer supported.
   V2 = 1 [deprecated = true, (envoy.annotations.deprecated_at_minor_version_enum) = "3.0"];
 
+  option (armeria.xds.supported.enum_value) = 2;
   // Use xDS v3 API.
   V3 = 2;
 }
@@ -56,30 +60,36 @@ message ApiConfigSource {
     // the v2 protos is used.
     REST = 1;
 
+    option (armeria.xds.supported.enum_value) = 2;
     // SotW gRPC service.
     GRPC = 2;
 
+    option (armeria.xds.supported.enum_value) = 3;
     // Using the delta xDS gRPC service, i.e. DeltaDiscovery{Request,Response}
     // rather than Discovery{Request,Response}. Rather than sending Envoy the entire state
     // with every update, the xDS server only sends what has changed since the last update.
     DELTA_GRPC = 3;
 
+    option (armeria.xds.supported.enum_value) = 5;
     // SotW xDS gRPC with ADS. All resources which resolve to this configuration source will be
     // multiplexed on a single connection to an ADS endpoint.
     // [#not-implemented-hide:]
     AGGREGATED_GRPC = 5;
 
+    option (armeria.xds.supported.enum_value) = 6;
     // Delta xDS gRPC with ADS. All resources which resolve to this configuration source will be
     // multiplexed on a single connection to an ADS endpoint.
     // [#not-implemented-hide:]
     AGGREGATED_DELTA_GRPC = 6;
   }
 
+  option (armeria.xds.supported.field) = 1;
   // API type (gRPC, REST, delta gRPC)
   ApiType api_type = 1 [(validate.rules).enum = {defined_only: true}];
 
   // API version for xDS transport protocol. This describes the xDS gRPC/REST
   // endpoint and version of [Delta]DiscoveryRequest/Response used on the wire.
+  option (armeria.xds.supported.field) = 8;
   ApiVersion transport_api_version = 8 [(validate.rules).enum = {defined_only: true}];
 
   // Cluster names should be used only with REST. If > 1
@@ -94,6 +104,7 @@ message ApiConfigSource {
 
   // Multiple gRPC services be provided for GRPC. If > 1 cluster is defined,
   // services will be cycled through if any kind of failure occurs.
+  option (armeria.xds.supported.field) = 4;
   repeated GrpcService grpc_services = 4;
 
   // For REST APIs, the delay between successive polls.
@@ -157,6 +168,7 @@ message RateLimitSettings {
 
 // Local filesystem path configuration source.
 message PathConfigSource {
+  option (armeria.xds.supported.field) = 1;
   // Path on the filesystem to source and watch for configuration updates.
   // When sourcing configuration for a :ref:`secret <envoy_v3_api_msg_extensions.transport_sockets.tls.v3.Secret>`,
   // the certificate and key files are also watched for updates.
@@ -175,6 +187,7 @@ message PathConfigSource {
   //   this path. This is required in certain deployment scenarios. See below for more information.
   string path = 1 [(validate.rules).string = {min_len: 1}];
 
+  option (armeria.xds.supported.field) = 2;
   // If configured, this directory will be watched for *moves*. When an entry in this directory is
   // moved to, the ``path`` will be reloaded. This is required in certain deployment scenarios.
   //
@@ -214,13 +227,16 @@ message ConfigSource {
     string path = 1 [deprecated = true, (envoy.annotations.deprecated_at_minor_version) = "3.0"];
 
     // Local filesystem path configuration source.
+    option (armeria.xds.supported.oneof_field) = 8;
     PathConfigSource path_config_source = 8;
 
     // API configuration source.
+    option (armeria.xds.supported.oneof_field) = 2;
     ApiConfigSource api_config_source = 2;
 
     // When set, ADS will be used to fetch resources. The ADS API configuration
     // source in the bootstrap configuration is used.
+    option (armeria.xds.supported.oneof_field) = 3;
     AggregatedConfigSource ads = 3;
 
     // [#not-implemented-hide:]
@@ -234,7 +250,16 @@ message ConfigSource {
     // [#next-major-version: In xDS v3, consider replacing the ads field with this one, since
     // this field can implicitly mean to use the same stream in the case where the ConfigSource
     // is provided via ADS and the specified data can also be obtained via ADS.]
+    option (armeria.xds.supported.oneof_field) = 5;
     SelfConfigSource self = 5;
+
+    // Armeria extension: a custom config source implementation resolved via
+    // the extension registry by the Any's type URL. This allows plugging in
+    // non-standard config sources (e.g. CentralDogma, etcd, Consul) without
+    // modifying the upstream proto definition.
+    // The large field number avoids conflicts with future upstream additions.
+    option (armeria.xds.supported.oneof_field) = 1000;
+    google.protobuf.Any custom_config_source = 1000;
   }
 
   // When this timeout is specified, Envoy will wait no longer than the specified time for first
@@ -244,11 +269,13 @@ message ConfigSource {
   // when the xDS API subscription starts, and is disarmed on first config update or on error. 0
   // means no timeout - Envoy will wait indefinitely for the first xDS config (unless another
   // timeout applies). The default is 15s.
+  option (armeria.xds.supported.field) = 4;
   google.protobuf.Duration initial_fetch_timeout = 4;
 
   // API version for xDS resources. This implies the type URLs that the client
   // will request for resources and the resource type that the client will in
   // turn expect to be delivered.
+  option (armeria.xds.supported.field) = 6;
   ApiVersion resource_api_version = 6 [(validate.rules).enum = {defined_only: true}];
 }
 

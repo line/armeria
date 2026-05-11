@@ -24,18 +24,18 @@ jobs:
     timeout-minutes: 120
     if: github.repository == 'line/armeria'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - id: setup-jdk-25
         name: Setup Java 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'zulu'
           java-version: 25
 
       - name: Setup Minikube
         id: minikube
-        uses: medyagh/setup-minikube@latest
+        uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
 
       - name: Install Chaos Mesh
         run: |
@@ -44,7 +44,7 @@ jobs:
         shell: bash
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
 
       - name: Build Chaos test images
         run: |

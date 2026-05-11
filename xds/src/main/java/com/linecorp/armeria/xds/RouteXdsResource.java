@@ -34,7 +34,6 @@ public final class RouteXdsResource extends AbstractXdsResource {
 
     private RouteXdsResource(RouteConfiguration routeConfiguration, String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(routeConfiguration);
         this.routeConfiguration = routeConfiguration;
     }
 

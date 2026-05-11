@@ -15,6 +15,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.transport_sockets.tls.v3";
 option java_outer_classname = "TlsProto";
 option java_multiple_files = true;
@@ -36,9 +38,11 @@ message UpstreamTlsContext {
   //
   //   Server certificate verification is not enabled by default. To enable verification, configure
   //   :ref:`trusted_ca<envoy_v3_api_field_extensions.transport_sockets.tls.v3.CertificateValidationContext.trusted_ca>`.
+  option (armeria.xds.supported.field) = 1;
   CommonTlsContext common_tls_context = 1;
 
   // SNI string to use when creating TLS backend connections.
+  option (armeria.xds.supported.field) = 2;
   string sni = 2 [(validate.rules).string = {max_bytes: 255}];
 
   // If true, replaces the SNI for the connection with the hostname of the upstream host, if
@@ -244,11 +248,13 @@ message CommonTlsContext {
         "envoy.api.v2.auth.CommonTlsContext.CombinedCertificateValidationContext";
 
     // How to validate peer certificates.
+    option (armeria.xds.supported.field) = 1;
     CertificateValidationContext default_validation_context = 1
         [(validate.rules).message = {required: true}];
 
     // Config for fetching validation context via SDS API. Note SDS API allows certificates to be
     // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
+    option (armeria.xds.supported.field) = 2;
     SdsSecretConfig validation_context_sds_secret_config = 2
         [(validate.rules).message = {required: true}];
 
@@ -276,6 +282,7 @@ message CommonTlsContext {
   //
   // If ``tls_certificate_provider_instance`` is set, this field is ignored.
   // If this field is set, ``tls_certificate_sds_secret_configs`` is ignored.
+  option (armeria.xds.supported.field) = 2;
   repeated TlsCertificate tls_certificates = 2;
 
   // Configs for fetching TLS certificates via SDS API. Note SDS API allows certificates to be
@@ -286,6 +293,7 @@ message CommonTlsContext {
   //
   // If ``tls_certificates`` or ``tls_certificate_provider_instance`` are set, this field
   // is ignored.
+  option (armeria.xds.supported.field) = 6;
   repeated SdsSecretConfig tls_certificate_sds_secret_configs = 6;
 
   // Certificate provider instance for fetching TLS certs.
@@ -314,10 +322,12 @@ message CommonTlsContext {
 
   oneof validation_context_type {
     // How to validate peer certificates.
+    option (armeria.xds.supported.oneof_field) = 3;
     CertificateValidationContext validation_context = 3;
 
     // Config for fetching validation context via SDS API. Note SDS API allows certificates to be
     // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
+    option (armeria.xds.supported.oneof_field) = 7;
     SdsSecretConfig validation_context_sds_secret_config = 7;
 
     // Combines the default ``CertificateValidationContext`` with the SDS-provided dynamic context for certificate
@@ -331,6 +341,7 @@ message CommonTlsContext {
     // * **Boolean Fields:** Boolean fields are combined using a logical OR operation.
     //
     // The resulting ``CertificateValidationContext`` is used to perform certificate validation.
+    option (armeria.xds.supported.oneof_field) = 8;
     CombinedCertificateValidationContext combined_validation_context = 8;
 
     // Certificate provider for fetching validation context.

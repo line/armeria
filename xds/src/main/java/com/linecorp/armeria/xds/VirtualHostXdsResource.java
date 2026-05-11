@@ -31,7 +31,6 @@ public final class VirtualHostXdsResource extends AbstractXdsResource {
 
     VirtualHostXdsResource(VirtualHost virtualHost, String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(virtualHost);
         this.virtualHost = virtualHost;
     }
 

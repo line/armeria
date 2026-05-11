@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CONFIG;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -77,7 +75,6 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
             throw UnprocessedRequestException.of(
                     new TimeoutException("Couldn't select a snapshot for listener '" + listenerName + "'."));
         }
-        ctx.setAttr(ROUTE_CONFIG, routeConfig);
         return execute1(delegate, ctx, req, routeConfig);
     }
 

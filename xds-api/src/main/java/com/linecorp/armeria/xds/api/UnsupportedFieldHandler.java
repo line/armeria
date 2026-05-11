@@ -20,6 +20,7 @@ import static com.linecorp.armeria.xds.api.SupportedFieldValidator.unsupportedLo
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.validator.XdsValidationException;
 
 /**
  * A handler that is invoked when unsupported xDS fields are detected in a protobuf message.
@@ -59,11 +60,11 @@ public interface UnsupportedFieldHandler {
     }
 
     /**
-     * Returns a handler that throws an {@link IllegalArgumentException} on the first unsupported field.
+     * Returns a handler that throws an {@link XdsValidationException} on the first unsupported field.
      */
     static UnsupportedFieldHandler reject() {
         return (descriptorName, fieldPath, value) -> {
-            throw new IllegalArgumentException(
+            throw XdsValidationException.of(
                     "Unsupported xDS field detected in " + descriptorName + ": " + fieldPath);
         };
     }

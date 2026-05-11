@@ -43,4 +43,6 @@ interface SubscriptionContext {
     BootstrapSecrets bootstrapSecrets();
 
     ResourceNodeMeterBinderFactory meterBinderFactory();
+
+    XdsExtensionRegistry extensionRegistry();
 }

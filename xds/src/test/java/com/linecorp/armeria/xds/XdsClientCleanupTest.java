@@ -78,7 +78,7 @@ class XdsClientCleanupTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
-            final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
+            final Map<ConfigSource, ConfigSourceHandler> clientMap = xdsBootstrap.clientMap();
             await().until(() -> !clientMap.isEmpty());
 
             clusterRoot.close();
@@ -93,7 +93,7 @@ class XdsClientCleanupTest {
         try (XdsBootstrapImpl xdsBootstrap = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap)) {
             final SafeCloseable closeable1 = xdsBootstrap.clusterRoot(clusterName);
             final SafeCloseable closeable2 = xdsBootstrap.clusterRoot(clusterName);
-            final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
+            final Map<ConfigSource, ConfigSourceHandler> clientMap = xdsBootstrap.clientMap();
             await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
             closeable1.close();
@@ -112,7 +112,7 @@ class XdsClientCleanupTest {
         try (XdsBootstrapImpl xdsBootstrap = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot1 = xdsBootstrap.clusterRoot(clusterName);
             final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot(clusterName);
-            final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
+            final Map<ConfigSource, ConfigSourceHandler> clientMap = xdsBootstrap.clientMap();
             await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
             clusterRoot1.close();

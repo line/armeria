@@ -40,7 +40,6 @@ public final class SecretXdsResource extends AbstractXdsResource {
 
     private SecretXdsResource(Secret secret, String version, long revision) {
         super(version, revision);
-        XdsValidatorIndexRegistry.assertValid(secret);
         this.secret = secret;
     }
 

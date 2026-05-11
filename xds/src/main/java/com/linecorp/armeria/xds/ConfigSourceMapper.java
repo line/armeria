@@ -24,6 +24,21 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 final class ConfigSourceMapper {
 
+    // custom_config_source is an Armeria extension (field 1000) that may not exist
+    // when a different proto artifact (e.g. java-control-plane api) is used at runtime.
+    private static final boolean HAS_CUSTOM_CONFIG_SOURCE;
+
+    static {
+        boolean hasCustomConfigSource;
+        try {
+            ConfigSource.class.getMethod("hasCustomConfigSource");
+            hasCustomConfigSource = true;
+        } catch (NoSuchMethodException e) {
+            hasCustomConfigSource = false;
+        }
+        HAS_CUSTOM_CONFIG_SOURCE = hasCustomConfigSource;
+    }
+
     private final ConfigSource bootstrapCdsConfig;
     private final ConfigSource bootstrapLdsConfig;
     private final ApiConfigSource bootstrapAdsConfig;
@@ -36,7 +51,7 @@ final class ConfigSourceMapper {
 
     @Nullable
     ConfigSource configSource(ConfigSource configSource, @Nullable ConfigSource parentConfigSource) {
-        if (configSource.hasAds() || configSource.hasApiConfigSource()) {
+        if (hasExplicitConfigSource(configSource)) {
             return configSource;
         }
         if (configSource.hasSelf()) {
@@ -47,7 +62,7 @@ final class ConfigSourceMapper {
 
     @Nullable
     ConfigSource cdsConfigSource() {
-        if (!bootstrapCdsConfig.hasApiConfigSource() && !bootstrapCdsConfig.hasAds()) {
+        if (!hasExplicitConfigSource(bootstrapCdsConfig)) {
             return null;
         }
         return bootstrapCdsConfig;
@@ -55,10 +70,16 @@ final class ConfigSourceMapper {
 
     @Nullable
     ConfigSource ldsConfigSource() {
-        if (!bootstrapLdsConfig.hasApiConfigSource() && !bootstrapLdsConfig.hasAds()) {
+        if (!hasExplicitConfigSource(bootstrapLdsConfig)) {
             return null;
         }
         return bootstrapLdsConfig;
+    }
+
+    private static boolean hasExplicitConfigSource(ConfigSource configSource) {
+        return configSource.hasApiConfigSource() || configSource.hasAds() ||
+               configSource.hasPathConfigSource() ||
+               (HAS_CUSTOM_CONFIG_SOURCE && configSource.hasCustomConfigSource());
     }
 
     ApiConfigSource bootstrapAdsConfig() {

@@ -29,6 +29,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.config.bootstrap.v3";
 option java_outer_classname = "BootstrapProto";
 option java_multiple_files = true;
@@ -52,16 +54,19 @@ message Bootstrap {
 
     // Static :ref:`Listeners <envoy_v3_api_msg_config.listener.v3.Listener>`. These listeners are
     // available regardless of LDS configuration.
+    option (armeria.xds.supported.field) = 1;
     repeated listener.v3.Listener listeners = 1;
 
     // If a network based configuration source is specified for :ref:`cds_config
     // <envoy_v3_api_field_config.bootstrap.v3.Bootstrap.DynamicResources.cds_config>`, it's necessary
     // to have some initial cluster definitions available to allow Envoy to know
     // how to speak to the management server.
+    option (armeria.xds.supported.field) = 2;
     repeated cluster.v3.Cluster clusters = 2;
 
     // These static secrets can be used by :ref:`SdsSecretConfig
     // <envoy_v3_api_msg_extensions.transport_sockets.tls.v3.SdsSecretConfig>`
+    option (armeria.xds.supported.field) = 3;
     repeated envoy.extensions.transport_sockets.tls.v3.Secret secrets = 3;
   }
 
@@ -74,6 +79,7 @@ message Bootstrap {
 
     // All :ref:`Listeners <envoy_v3_api_msg_config.listener.v3.Listener>` are provided by a single
     // :ref:`LDS <arch_overview_dynamic_config_lds>` configuration source.
+    option (armeria.xds.supported.field) = 1;
     core.v3.ConfigSource lds_config = 1;
 
     // xdstp:// resource locator for listener collection.
@@ -83,6 +89,7 @@ message Bootstrap {
     // All post-bootstrap :ref:`Cluster <envoy_v3_api_msg_config.cluster.v3.Cluster>` definitions are
     // provided by a single :ref:`CDS <arch_overview_dynamic_config_cds>`
     // configuration source.
+    option (armeria.xds.supported.field) = 2;
     core.v3.ConfigSource cds_config = 2;
 
     // xdstp:// resource locator for cluster collection.
@@ -96,6 +103,7 @@ message Bootstrap {
     // :ref:`ConfigSources <envoy_v3_api_msg_config.core.v3.ConfigSource>` that have
     // the :ref:`ads <envoy_v3_api_field_config.core.v3.ConfigSource.ads>` field set will be
     // streamed on the ADS channel.
+    option (armeria.xds.supported.field) = 3;
     core.v3.ApiConfigSource ads_config = 3;
   }
 
@@ -147,6 +155,7 @@ message Bootstrap {
 
   // Node identity to present to the management server and for instance
   // identification purposes (e.g. in generated headers).
+  option (armeria.xds.supported.field) = 1;
   core.v3.Node node = 1;
 
   // A list of :ref:`Node <envoy_v3_api_msg_config.core.v3.Node>` field names
@@ -184,13 +193,16 @@ message Bootstrap {
   repeated string node_context_params = 26;
 
   // Statically specified resources.
+  option (armeria.xds.supported.field) = 2;
   StaticResources static_resources = 2;
 
   // xDS configuration sources.
+  option (armeria.xds.supported.field) = 3;
   DynamicResources dynamic_resources = 3;
 
   // Configuration for the cluster manager which owns all upstream clusters
   // within the server.
+  option (armeria.xds.supported.field) = 4;
   ClusterManager cluster_manager = 4;
 
   // Health discovery service config option.
@@ -485,6 +497,7 @@ message ClusterManager {
   // <envoy_v3_api_field_config.bootstrap.v3.Bootstrap.StaticResources.clusters>`. This is unrelated to
   // the :option:`--service-cluster` option which does not `affect zone aware
   // routing <https://github.com/envoyproxy/envoy/issues/774>`_.
+  option (armeria.xds.supported.field) = 1;
   string local_cluster_name = 1;
 
   // Optional global configuration for outlier detection.

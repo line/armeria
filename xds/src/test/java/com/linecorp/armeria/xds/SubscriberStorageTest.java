@@ -66,13 +66,15 @@ class SubscriberStorageTest {
         storage.register(XdsType.ROUTE, ROUTE_NAME, watcher);
 
         await().atMost(1, TimeUnit.SECONDS)
-               .untilAsserted(() -> assertThat(watcher.missingType).isEqualTo(XdsType.ROUTE));
-        assertThat(watcher.missingName).isEqualTo(ROUTE_NAME);
+               .untilAsserted(() -> {
+                   assertThat(watcher.missingType).isEqualTo(XdsType.ROUTE);
+                   assertThat(watcher.missingName).isEqualTo(ROUTE_NAME);
+               });
     }
 
     private static final class CapturingWatcher implements ResourceWatcher<XdsResource> {
-        private XdsType missingType;
-        private String missingName;
+        private volatile XdsType missingType;
+        private volatile String missingName;
 
         @Override
         public void onChanged(XdsResource update) {}

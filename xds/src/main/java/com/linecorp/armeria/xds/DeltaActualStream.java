@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.protobuf.Message;
 import com.google.rpc.Code;
 import com.google.rpc.Status;
 
@@ -48,7 +47,6 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
 
     private final StreamObserver<DeltaDiscoveryRequest> requestObserver;
     private final AdsXdsStream owner;
-    private final StateCoordinator stateCoordinator;
     private final EventExecutor eventLoop;
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Node node;
@@ -60,10 +58,10 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
     private boolean completed;
     private boolean draining;
 
-    DeltaActualStream(DeltaDiscoveryStub stub, AdsXdsStream owner, StateCoordinator stateCoordinator,
-                      EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver, Node node) {
+    DeltaActualStream(DeltaDiscoveryStub stub, AdsXdsStream owner,
+                      EventExecutor eventLoop, ConfigSourceLifecycleObserver lifecycleObserver,
+                      Node node) {
         this.owner = owner;
-        this.stateCoordinator = stateCoordinator;
         this.eventLoop = eventLoop;
         this.lifecycleObserver = lifecycleObserver;
         this.node = node;
@@ -147,11 +145,15 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
         return null;
     }
 
+    private StateCoordinator stateCoordinator() {
+        return owner.stateCoordinator();
+    }
+
     private void sendDeltaRequest(XdsType type, @Nullable String nonce, @Nullable String errorDetail) {
         if (completed) {
             return;
         }
-        final Set<String> current = stateCoordinator.interestedResources(type);
+        final Set<String> current = stateCoordinator().interestedResources(type);
 
         final Set<String> subscribe;
         final Set<String> unsubscribe;
@@ -162,7 +164,7 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
         } else {
             // activeResources may include entries retained after unsubscribing, which can cause
             // spurious unsubscribe requests. However, subsequent requests will converge to a stable state.
-            final Set<String> previous = stateCoordinator.activeResources(type);
+            final Set<String> previous = stateCoordinator().activeResources(type);
             subscribe = new HashSet<>(current);
             subscribe.removeAll(previous);
             unsubscribe = new HashSet<>(previous);
@@ -185,7 +187,7 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
                                          .build());
         }
         if (isFirstOnStream) {
-            builder.putAllInitialResourceVersions(stateCoordinator.resourceVersions(type));
+            builder.putAllInitialResourceVersions(stateCoordinator().resourceVersions(type));
             initialVersionsSent.add(type);
         }
         final DeltaDiscoveryRequest request = builder.build();
@@ -248,11 +250,13 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
         owner.retryOrClose(false);
     }
 
-    private <I extends Message, O extends XdsResource> void handleResponse(
-            ResourceParser<I, O> resourceParser, DeltaDiscoveryResponse response) {
+    private void handleResponse(ResourceParser<?, ?> resourceParser, DeltaDiscoveryResponse response) {
+        final StateCoordinator stateCoordinator = stateCoordinator();
         final XdsType type = resourceParser.type();
         final List<Resource> deltaResources = response.getResourcesList();
-        final ParsedResourcesHolder holder = resourceParser.parseDeltaResources(deltaResources);
+        final ParsedResourcesHolder holder =
+                resourceParser.parseDeltaResources(deltaResources,
+                                                   stateCoordinator.extensionRegistry());
 
         if (!holder.errors().isEmpty()) {
             holder.invalidResources().forEach((name, error) ->

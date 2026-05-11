@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package envoy.type.v3;
 
+import "armeria/xds/supported.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 
@@ -19,9 +20,11 @@ message Int64Range {
   option (udpa.annotations.versioning).previous_message_type = "envoy.type.Int64Range";
 
   // start of the range (inclusive)
+  option (armeria.xds.supported.field) = 1;
   int64 start = 1;
 
   // end of the range (exclusive)
+  option (armeria.xds.supported.field) = 2;
   int64 end = 2;
 }
 

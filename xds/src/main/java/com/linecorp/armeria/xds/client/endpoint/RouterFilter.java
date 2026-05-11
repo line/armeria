@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_CONFIG;
+import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.SELECTED_ROUTE;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
@@ -35,20 +35,12 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
 
     @Override
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
-        final RouteConfig routeConfig = ctx.attr(ROUTE_CONFIG);
-        if (routeConfig == null) {
-            final UnprocessedRequestException e = UnprocessedRequestException.of(
-                    new IllegalArgumentException(
-                            "RouteConfig is not set for the ctx. If a new ctx has been used, " +
-                            "please make sure to use ctx.newDerivedContext()."));
-            ctx.cancel(e);
-            throw e;
-        }
-        final RouteEntry selectedRoute = routeConfig.select(ctx);
+        final RouteEntry selectedRoute = ctx.attr(SELECTED_ROUTE);
         if (selectedRoute == null) {
             final UnprocessedRequestException e = UnprocessedRequestException.of(
-                    new IllegalArgumentException("No route has been selected for listener '" +
-                                                 routeConfig.listenerSnapshot() + '.'));
+                    new IllegalArgumentException(
+                            "SELECTED_ROUTE is not set for the ctx. If a new ctx has been used, " +
+                            "please make sure to use ctx.newDerivedContext()."));
             ctx.cancel(e);
             throw e;
         }

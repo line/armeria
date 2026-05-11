@@ -21,6 +21,7 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.XdsResourceValidator;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
@@ -39,14 +40,14 @@ public final class IstioFilterFactories {
     public abstract static class Base implements HttpFilterFactory {
         @Override
         @Nullable
-        public XdsHttpFilter create(HttpFilter httpFilter, Any config) {
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator) {
             return null;
         }
     }
 
     public static final class IstioStats extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "istio.stats";
         }
     }
@@ -56,12 +57,12 @@ public final class IstioFilterFactories {
         private static final AlpnFilter ALPN_FILTER = new AlpnFilter();
 
         @Override
-        public String filterName() {
+        public String name() {
             return "istio.alpn";
         }
 
         @Override
-        public XdsHttpFilter create(HttpFilter httpFilter, Any config) {
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator) {
             // we need to also generate istio proto configs to actually dynamically decide alpn
             // based on filter config, but for testing purposes we just assume h2 is always used
             return ALPN_FILTER;
@@ -81,49 +82,49 @@ public final class IstioFilterFactories {
 
     public static final class IstioMetadataExchange extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "istio.metadata_exchange";
         }
     }
 
     public static final class EnvoyFault extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "envoy.filters.http.fault";
         }
     }
 
     public static final class EnvoyCors extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "envoy.filters.http.cors";
         }
     }
 
     public static final class EnvoyGzipCompressor extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "envoy.filters.http.compressor.gzip";
         }
     }
 
     public static final class EnvoyZstdCompressor extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "envoy.filters.http.compressor.zstd";
         }
     }
 
     public static final class EnvoyBrotliCompressor extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "envoy.filters.http.compressor.brotli";
         }
     }
 
     public static final class EnvoyGrpcStats extends Base {
         @Override
-        public String filterName() {
+        public String name() {
             return "envoy.filters.http.grpc_stats";
         }
     }

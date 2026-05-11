@@ -16,6 +16,8 @@ updates:
           # Use Korea Standard Time (UTC +09:00)
           timezone: "Asia/Seoul"
       open-pull-requests-limit: 10
+      cooldown:
+          default-days: 7
       allow:
           - dependency-name: "com.gradle.develocity"
             dependency-type: "production"
@@ -29,9 +31,13 @@ updates:
           time: "10:00"
           # Use Korea Standard Time (UTC +09:00)
           timezone: "Asia/Seoul"
+      cooldown:
+          default-days: 7
 
     - package-ecosystem: "npm"
       directory: "/"
       schedule:
-        interval: "monthly"
+          interval: "monthly"
       versioning-strategy: increase
+      cooldown:
+          default-days: 7

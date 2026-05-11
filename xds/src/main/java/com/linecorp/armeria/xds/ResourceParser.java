@@ -31,9 +31,10 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
 
     abstract Class<I> clazz();
 
-    abstract O parse(I message, String version);
+    abstract O parse(I message, XdsExtensionRegistry extensionRegistry, String version);
 
-    ParsedResourcesHolder parseResources(List<Any> resources, String version) {
+    ParsedResourcesHolder parseResources(List<Any> resources, XdsExtensionRegistry extensionRegistry,
+                                         String version) {
         final ImmutableMap.Builder<String, Object> parsedResources = ImmutableMap.builder();
         final ImmutableMap.Builder<String, Throwable> invalidResources = ImmutableMap.builder();
 
@@ -51,7 +52,8 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
             final String name = name(unpackedMessage);
             final O resourceUpdate;
             try {
-                resourceUpdate = parse(unpackedMessage, version);
+                extensionRegistry.assertValid(unpackedMessage);
+                resourceUpdate = parse(unpackedMessage, extensionRegistry, version);
             } catch (Exception e) {
                 invalidResources.put(name, e);
                 continue;
@@ -65,7 +67,8 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
                                          invalidResources.buildKeepingLast());
     }
 
-    ParsedResourcesHolder parseDeltaResources(List<Resource> resources) {
+    ParsedResourcesHolder parseDeltaResources(List<Resource> resources,
+                                              XdsExtensionRegistry extensionRegistry) {
         final ImmutableMap.Builder<String, Object> parsedResources = ImmutableMap.builder();
         final ImmutableMap.Builder<String, Throwable> invalidResources = ImmutableMap.builder();
 
@@ -83,13 +86,13 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
             final String name = resource.getName();
             final O resourceUpdate;
             try {
-                resourceUpdate = parse(unpackedMessage, resource.getVersion());
+                extensionRegistry.assertValid(unpackedMessage);
+                resourceUpdate = parse(unpackedMessage, extensionRegistry, resource.getVersion());
             } catch (Exception e) {
                 invalidResources.put(name, e);
                 continue;
             }
 
-            // Resource parsed successfully.
             parsedResources.put(name, resourceUpdate);
         }
 

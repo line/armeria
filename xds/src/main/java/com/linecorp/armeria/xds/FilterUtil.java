@@ -30,11 +30,9 @@ import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
-import com.linecorp.armeria.xds.filter.HttpFilterFactoryRegistry;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter.ConfigTypeCase;
 
@@ -50,15 +48,16 @@ final class FilterUtil {
     }
 
     static ClientPreprocessors buildDownstreamFilter(
-            @Nullable HttpConnectionManager connectionManager) {
-        if (connectionManager == null) {
+            XdsExtensionRegistry extensionRegistry,
+            List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
+        if (httpFilters.isEmpty()) {
             return ClientPreprocessors.of();
         }
-        final List<HttpFilter> httpFilters = connectionManager.getHttpFiltersList();
         final ClientPreprocessorsBuilder builder = ClientPreprocessors.builder();
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
             final HttpFilter httpFilter = httpFilters.get(i);
-            final XdsHttpFilter instance = resolveInstance(httpFilter, null);
+            final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
+            final XdsHttpFilter instance = resolveInstance(extensionRegistry, httpFilter, perRouteConfig);
             if (instance == null) {
                 continue;
             }
@@ -69,13 +68,14 @@ final class FilterUtil {
     }
 
     static ClientDecoration buildUpstreamFilter(
+            XdsExtensionRegistry extensionRegistry,
             List<HttpFilter> httpFilters, Map<String, Any> filterConfigs,
             @Nullable RetryPolicy retryPolicy) {
         final ClientDecorationBuilder builder = ClientDecoration.builder();
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
             final HttpFilter httpFilter = httpFilters.get(i);
             final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
-            final XdsHttpFilter instance = resolveInstance(httpFilter, perRouteConfig);
+            final XdsHttpFilter instance = resolveInstance(extensionRegistry, httpFilter, perRouteConfig);
             if (instance == null) {
                 continue;
             }
@@ -90,15 +90,18 @@ final class FilterUtil {
     }
 
     @Nullable
-    private static XdsHttpFilter resolveInstance(
+    static XdsHttpFilter resolveInstance(
+            XdsExtensionRegistry extensionRegistry,
             HttpFilter httpFilter, @Nullable Any perRouteConfig) {
-        final HttpFilterFactory filterFactory =
-                HttpFilterFactoryRegistry.filterFactory(httpFilter.getName());
-        if (filterFactory == null) {
+        final Any defaultConfig = httpFilter.getTypedConfig();
+        final Any filterConfig = perRouteConfig != null ? perRouteConfig : defaultConfig;
+        final HttpFilterFactory factory = extensionRegistry.query(
+                filterConfig, httpFilter.getName(), HttpFilterFactory.class);
+        if (factory == null) {
             if (!httpFilter.getIsOptional()) {
                 throw new IllegalArgumentException(
                         "Unknown HTTP filter '" + httpFilter.getName() +
-                        "': no HttpFilterFactory registered. Register an SPI " +
+                        "': no HttpFilterFactory registered. Register an " +
                         "HttpFilterFactory implementation to handle this filter.");
             }
             return null;
@@ -107,9 +110,7 @@ final class FilterUtil {
                       httpFilter.getConfigTypeCase() == ConfigTypeCase.CONFIGTYPE_NOT_SET,
                       "Only 'typed_config' is supported, but '%s' was supplied",
                       httpFilter.getConfigTypeCase());
-        final Any effectiveConfig =
-                perRouteConfig != null ? perRouteConfig : httpFilter.getTypedConfig();
-        return filterFactory.create(httpFilter, effectiveConfig);
+        return factory.create(httpFilter, filterConfig, extensionRegistry.validator());
     }
 
     private FilterUtil() {}
