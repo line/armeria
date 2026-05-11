@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -123,8 +124,8 @@ class OutlierDetectingEndpointGroupIntegrationTest {
     }
 
     @Test
-    void customSuccessFunctionDrivesCircuitBreakerClassification() {
-        // server1 returns 500, but the custom SuccessFunction treats every response as a success, so the
+    void customRuleDrivesCircuitBreakerClassification() {
+        // server1 returns 500, but the custom CircuitBreakerRule reports every response as a success, so the
         // circuit breaker should never open and server1 should remain in the rotation.
         badServers.put(1, true);
 
@@ -132,7 +133,9 @@ class OutlierDetectingEndpointGroupIntegrationTest {
                 ImmutableList.of(endpoint(server1), endpoint(server2));
         try (OutlierDetectingEndpointGroup endpointGroup =
                      OutlierDetectingEndpointGroup.builder(EndpointGroup.of(endpoints))
-                                                  .successFunction((ctx, log) -> true)
+                                                  .circuitBreakerRule(CircuitBreakerRule.builder()
+                                                                                        .onException()
+                                                                                        .thenFailure())
                                                   .minimumRequestThreshold(1)
                                                   .counterUpdateIntervalMillis(1)
                                                   .failureRateThreshold(0.5)

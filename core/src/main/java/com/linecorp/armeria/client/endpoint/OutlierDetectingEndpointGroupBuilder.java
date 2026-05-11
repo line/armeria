@@ -24,7 +24,7 @@ import java.time.Duration;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
-import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -46,13 +46,14 @@ public final class OutlierDetectingEndpointGroupBuilder {
     static final String DEFAULT_NAME_PREFIX = "outlier-detecting";
 
     /**
-     * The default {@link SuccessFunction} treats responses with status codes 2xx-4xx as successful and
-     * everything else as a failure.
+     * The default {@link CircuitBreakerRule} reports 5xx responses and exceptions as failures, and treats
+     * everything else as a success.
      */
-    private static final SuccessFunction DEFAULT_SUCCESS_FUNCTION = (ctx, log) -> {
-        final int code = log.responseStatus().code();
-        return code >= 200 && code <= 499;
-    };
+    private static final CircuitBreakerRule DEFAULT_RULE =
+            CircuitBreakerRule.builder()
+                              .onServerErrorStatus()
+                              .onException()
+                              .thenFailure();
 
     // CircuitBreaker defaults — kept in sync with CircuitBreakerBuilder.
     private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
@@ -70,7 +71,7 @@ public final class OutlierDetectingEndpointGroupBuilder {
     // Outlier-specific (kept separate from CircuitBreakerConfig).
     private String namePrefix = DEFAULT_NAME_PREFIX;
     private boolean failFastOnAllCircuitOpen;
-    private SuccessFunction successFunction = DEFAULT_SUCCESS_FUNCTION;
+    private CircuitBreakerRule circuitBreakerRule = DEFAULT_RULE;
 
     // Per-endpoint CircuitBreaker settings.
     private double failureRateThreshold = DEFAULT_FAILURE_RATE_THRESHOLD;
@@ -273,12 +274,12 @@ public final class OutlierDetectingEndpointGroupBuilder {
     }
 
     /**
-     * Sets the {@link SuccessFunction} used to classify each response as a {@link CircuitBreaker} success or
-     * failure. By default, responses with status codes 2xx-4xx are treated as successful and everything else
-     * as a failure.
+     * Sets the {@link CircuitBreakerRule} used to classify each request outcome as a {@link CircuitBreaker}
+     * success or failure. By default, 5xx responses and exceptions are reported as failures and everything
+     * else as a success.
      */
-    public OutlierDetectingEndpointGroupBuilder successFunction(SuccessFunction successFunction) {
-        this.successFunction = requireNonNull(successFunction, "successFunction");
+    public OutlierDetectingEndpointGroupBuilder circuitBreakerRule(CircuitBreakerRule circuitBreakerRule) {
+        this.circuitBreakerRule = requireNonNull(circuitBreakerRule, "circuitBreakerRule");
         return this;
     }
 
@@ -304,7 +305,7 @@ public final class OutlierDetectingEndpointGroupBuilder {
                 circuitOpenWindow, trialRequestInterval,
                 counterSlidingWindow, counterUpdateInterval, ImmutableList.of());
         return new OutlierDetectingEndpointGroup(delegate, maxNumEndpoints, maxEndpointAgeMillis,
-                                                 namePrefix, failFastOnAllCircuitOpen, successFunction,
+                                                 namePrefix, failFastOnAllCircuitOpen, circuitBreakerRule,
                                                  circuitBreakerConfig, meterIdPrefix, meterRegistry);
     }
 }

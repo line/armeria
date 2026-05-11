@@ -467,7 +467,7 @@ class OutlierDetectingEndpointGroupTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> builder.counterUpdateIntervalMillis(0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> builder.successFunction(null))
+        assertThatThrownBy(() -> builder.circuitBreakerRule(null))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> builder.meterRegistry(null, new SimpleMeterRegistry()))
                 .isInstanceOf(NullPointerException.class);

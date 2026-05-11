@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -48,14 +49,17 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerDecision;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListenerAdapter;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitState;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -78,9 +82,10 @@ import io.micrometer.core.instrument.MeterRegistry;
  *       for {@code maxEndpointAge}. If an {@link Endpoint} exceeds its lifespan, it is automatically
  *       removed from the valid {@link Endpoint}s and a new {@link Endpoint} is added.</li>
  *   <li>Circuit breaker: This {@link EndpointGroup} uses {@link CircuitBreaker} to avoid sending requests to
- *       bad {@link Endpoint}s. Each response is classified by the configured {@link SuccessFunction} (by
- *       default, status codes 2xx-4xx are successful and everything else is a failure), and the per-endpoint
- *       {@link CircuitBreaker} updates its counts accordingly. If the failure rate exceeds the
+ *       bad {@link Endpoint}s. Each response is classified by the configured {@link CircuitBreakerRule} (by
+ *       default, 5xx responses and exceptions are reported as failures and everything else as a success),
+ *       and the per-endpoint {@link CircuitBreaker} updates its counts accordingly. If the failure rate
+ *       exceeds the
  *       {@linkplain OutlierDetectingEndpointGroupBuilder#failureRateThreshold(double) configured threshold},
  *       the {@link Endpoint} is removed from the valid {@link Endpoint}s and a new {@link Endpoint} is
  *       added automatically.</li>
@@ -146,7 +151,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
     private final int maxNumEndpoints;
     private final String namePrefix;
     private final boolean failFastOnAllCircuitOpen;
-    private final SuccessFunction successFunction;
+    private final CircuitBreakerRule circuitBreakerRule;
     private final CircuitBreakerConfig circuitBreakerConfig;
 
     private final ReentrantShortLock endpointsLock = new ReentrantShortLock();
@@ -180,7 +185,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                                   long maxEndpointAgeMillis,
                                   String namePrefix,
                                   boolean failFastOnAllCircuitOpen,
-                                  SuccessFunction successFunction,
+                                  CircuitBreakerRule circuitBreakerRule,
                                   CircuitBreakerConfig circuitBreakerConfig,
                                   @Nullable MeterIdPrefix meterIdPrefix,
                                   @Nullable MeterRegistry meterRegistry) {
@@ -188,7 +193,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         this.maxNumEndpoints = maxNumEndpoints;
         this.namePrefix = namePrefix;
         this.failFastOnAllCircuitOpen = failFastOnAllCircuitOpen;
-        this.successFunction = successFunction;
+        this.circuitBreakerRule = circuitBreakerRule;
         this.circuitBreakerConfig = circuitBreakerConfig;
 
         endpointGroupListeners = new OutlierEndpointGroupListener(this::endpoints);
@@ -519,7 +524,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
 
     /**
      * Returns a {@link DecoratingHttpClientFunction} that reports each HTTP response to the per-endpoint
-     * {@link CircuitBreaker}.
+     * {@link CircuitBreaker}, classified by the configured {@link CircuitBreakerRule}.
      *
      * <p><strong>Must be registered on the HTTP client</strong> via
      * {@code WebClientBuilder.decorator(...)}. Without it, circuit breakers never trip and outlier
@@ -527,32 +532,71 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
      */
     public DecoratingHttpClientFunction asDecorator() {
         return (delegate, ctx, req) -> {
-            reportResult(ctx);
-            return delegate.execute(ctx, req);
+            try {
+                final HttpResponse response = delegate.execute(ctx, req);
+                reportResult(ctx);
+                return response;
+            } catch (Throwable cause) {
+                reportException(ctx, cause);
+                throw cause;
+            }
         };
     }
 
-    /**
-     * Reports the result of the request to the {@link CircuitBreaker}, classifying the response via the
-     * configured {@link SuccessFunction}.
-     */
     private void reportResult(ClientRequestContext ctx) {
+        final CircuitBreaker circuitBreaker = circuitBreakerFor(ctx);
+        if (circuitBreaker == null) {
+            return;
+        }
+        final RequestLogProperty logProperty =
+                circuitBreakerRule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
+                                                              : RequestLogProperty.RESPONSE_HEADERS;
+        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+            final Throwable cause =
+                    log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+            applyDecision(circuitBreaker, circuitBreakerRule.shouldReportAsSuccess(ctx, cause));
+        });
+    }
+
+    private void reportException(ClientRequestContext ctx, Throwable cause) {
+        final CircuitBreaker circuitBreaker = circuitBreakerFor(ctx);
+        if (circuitBreaker == null) {
+            return;
+        }
+        applyDecision(circuitBreaker, circuitBreakerRule.shouldReportAsSuccess(ctx, cause));
+    }
+
+    @Nullable
+    private CircuitBreaker circuitBreakerFor(ClientRequestContext ctx) {
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
-            // Nothing to report.
-            return;
+            return null;
         }
         final EndpointContext endpointContext = endpointContexts.get(endpoint);
         if (endpointContext == null) {
-            return;
+            return null;
         }
-        final CircuitBreaker circuitBreaker = endpointContext.circuitBreaker();
-        ctx.log().whenComplete().thenAccept(log -> {
-            if (successFunction.isSuccess(ctx, log)) {
+        return endpointContext.circuitBreaker();
+    }
+
+    private static void applyDecision(CircuitBreaker circuitBreaker,
+                                      CompletionStage<CircuitBreakerDecision> decisionFuture) {
+        decisionFuture.handle((decision, cause) -> {
+            if (cause != null) {
+                logger.warn("Unexpected exception while applying circuit breaker decision.", cause);
+                return null;
+            }
+
+            if (decision == null) {
+                return null;
+            }
+            if (decision == CircuitBreakerDecision.success() || decision == CircuitBreakerDecision.next()) {
                 circuitBreaker.onSuccess();
-            } else {
+            } else if (decision == CircuitBreakerDecision.failure()) {
                 circuitBreaker.onFailure();
             }
+            // CircuitBreakerDecision.ignore() leaves the counters untouched.
+            return null;
         });
     }
 
