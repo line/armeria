@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -181,6 +182,8 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
     };
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::doCloseAsync);
+    @Nullable
+    private volatile ScheduledFuture<?> scheduledFuture;
 
     OutlierDetectingEndpointGroup(EndpointGroup delegate,
                                   int maxNumEndpoints,
@@ -261,7 +264,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         }
 
         final long nextDurationMillis = refreshEndpoints(true);
-        executor.schedule(this::scheduleEndpointUpdateTask, nextDurationMillis, MILLISECONDS);
+        scheduledFuture = executor.schedule(this::scheduleEndpointUpdateTask, nextDurationMillis, MILLISECONDS);
     }
 
     private long newExpirationNanoTime(long currentNanoTime) {
@@ -370,7 +373,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
             final List<Endpoint> newBadEndpoints = newBadEndpointsBuilder.build();
 
             if (!newBadEndpoints.isEmpty()) {
-                logger.info("Evicting endpoints from rotation due to open circuits: {}",
+                logger.warn("Evicting endpoints from rotation due to open circuits: {}",
                             toShortString(newBadEndpoints));
                 for (Endpoint badEndpoint : newBadEndpoints) {
                     badEndpoints.add(badEndpoint);
@@ -627,10 +630,21 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
     }
 
     private void doCloseAsync(CompletableFuture<?> future) {
+        final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(false);
+        }
         if (!initialCompletionFuture.isDone()) {
             initialCompletionFuture.cancel(false);
         }
-        delegate.closeAsync().handle((unused1, unused2) -> future.complete(null));
+        delegate.closeAsync().handle((unused1, cause) -> {
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            } else {
+                future.complete(null);
+            }
+            return null;
+        });
     }
 
     @Override

@@ -131,7 +131,9 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * {@code "outlier-detecting"}.
      */
     public OutlierDetectingEndpointGroupBuilder namePrefix(String namePrefix) {
-        this.namePrefix = requireNonNull(namePrefix, "namePrefix");
+        requireNonNull(namePrefix, "namePrefix");
+        checkArgument(!namePrefix.isEmpty(), "namePrefix cannot be empty");
+        this.namePrefix = namePrefix;
         return this;
     }
 
@@ -300,6 +302,10 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * Returns a newly created {@link OutlierDetectingEndpointGroup}.
      */
     public OutlierDetectingEndpointGroup build() {
+        if (counterSlidingWindow.compareTo(counterUpdateInterval) <= 0) {
+            throw new IllegalStateException(
+                    "counterSlidingWindow: " + counterSlidingWindow + " (expected: > counterUpdateInterval)");
+        }
         final CircuitBreakerConfig circuitBreakerConfig = new CircuitBreakerConfig(
                 null, failureRateThreshold, minimumRequestThreshold,
                 circuitOpenWindow, trialRequestInterval,
