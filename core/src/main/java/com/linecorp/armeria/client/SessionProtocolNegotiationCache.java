@@ -91,9 +91,10 @@ public final class SessionProtocolNegotiationCache {
         requireNonNull(remoteAddress, "remoteAddress");
         requireNonNull(preference, "preference");
         final CacheEntry e;
+        final String key = key(remoteAddress);
         final long stamp = lock.readLock();
         try {
-            e = cache.get(key(remoteAddress));
+            e = cache.get(key);
         } finally {
             lock.unlockRead(stamp);
         }
