@@ -1,0 +1,114 @@
+---
+date: 2026-05-13
+---
+
+# v1.39.0
+
+## 🌟 New features
+
+- **Proto Transcoding for HTTP/JSON-to-gRPC Proxy**: [DelegatingHttpJsonTranscodingService](type)
+  can now forward transcoded requests using protobuf binary encoding via
+  [DelegatingHttpJsonTranscodingServiceBuilder#protoSerialization(boolean)](type).
+  This enables interoperability with upstream gRPC services that only accept
+  `application/grpc+proto`. #6670
+  ```java
+  DelegatingHttpJsonTranscodingService.builder(delegate)
+      .serviceDescriptors(MyServiceGrpc.getServiceDescriptor())
+      .protoSerialization(true) // 👈👈👈
+      .build();
+  ```
+- **Multipart Body Part Deserialization via `@Part`**: You can now deserialize structured data
+  (e.g., JSON) from multipart body parts using the new [@Part](type) annotation. #6763
+  ```java
+  @Post("/upload")
+  @Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
+  public HttpResponse upload(@Part MyBean metadata, // 👈👈👈
+                             @Part MultipartFile file) { ... }
+  ```
+- **Custom Default ClientFactory via FlagsProvider**: You can now customize the built-in default
+  client factories through [FlagsProvider#defaultClientFactoryConfigurator()](type). #6425 #6671
+  ```java
+  public class MyFlagsProvider implements FlagsProvider {
+      @Override
+      public ClientFactoryConfigurator defaultClientFactoryConfigurator() {
+          return builder -> builder.maxNumEventLoopsPerEndpoint(8); // 👈👈👈
+      }
+  }
+  ```
+- **xDS File-Based Config Source**: You can now use `path_config_source` in your xDS bootstrap
+  to load xDS resources from local YAML or JSON files, with automatic file watching for
+  updates. #6747
+- **xDS Custom Config Source SPI**: You can implement [SotwConfigSourceSubscriptionFactory](type)
+  to plug in custom non-gRPC config sources (e.g., etcd, Consul, ZooKeeper) via the
+  ServiceLoader SPI. #6747
+- **xDS Resource Reader**: [XdsResourceReader](type) is now available as a public utility for
+  parsing Envoy protobuf types from YAML/JSON. #6747
+- **Delta xDS Protocol Support**: Armeria's xDS client now supports the incremental
+  (delta) xDS protocol (`DELTA_GRPC` / `AGGREGATED_DELTA_GRPC`), enabling compatibility with
+  control planes like Istiod that prefer the delta protocol. #6709
+- **xDS Pipe Address Support**: xDS endpoints using `pipe` (Unix domain socket) addresses are
+  now resolved correctly, converted to `DomainSocketAddress`. #6708
+
+## 📈 Improvements
+
+- The `useHttp2Preface` flag now controls the *order* of HTTP/2 strategies rather than being
+  an exclusive choice. Both preface and upgrade are tried before falling back to HTTP/1.1. #6731 #6738
+- [FileService](type) now includes the requested file path in 404 response bodies, making it
+  easier to debug which mapped path failed to resolve. #4797 #6744
+- You can now set `alpnProtocols` and `endpointIdentificationAlgorithm` to [ClientTlsSpec](type)
+  for fine-grained TLS control needed by xDS-based mTLS. #6730
+- Armeria's xDS client now validates unsupported xDS fields using proto field annotations. #6722 #6736
+
+## 🛠️ Bug fixes
+
+- `TCP_USER_TIMEOUT` no longer overflows when `idleTimeoutMillis` is near `Long.MAX_VALUE`.
+  Previously, adding the buffer to `Long.MAX_VALUE` caused a wrap to `Integer.MIN_VALUE`,
+  which Linux rejected. It now saturates to `Integer.MAX_VALUE`. #6711
+
+## 📃 Documentation
+
+- You can now search the site content from the global navigation bar via a search pop-up and
+  a dedicated search page. #6737
+- Added documentation for [GracefulShutdown](type) covering quiet period and timeout phases,
+  custom shutdown responses, and Spring Boot integration. #6345 #6713
+
+## ☢️ Breaking changes
+
+- [HttpFilterFactory](type) is no longer generic. #6710
+
+## ⛓ Dependencies
+
+- Apache HttpClient5 5.6 → 5.6.1
+- Athenz 1.12.37 → 1.12.40
+- Bouncy Castle 1.83 → 1.84
+- Brotli4j 1.22.0 → 1.23.0
+- gRPC-Java 1.80.0 → 1.81.0
+- Guava 33.5.0-jre → 33.6.0-jre
+- Jackson 2.21.2 → 2.21.3
+- java-jwt 4.5.1 → 4.5.2
+- Kotlin 2.3.20 → 2.3.21
+- MCP 1.1.1 → 1.1.2
+- Micrometer 1.16.4 → 1.16.5
+- Micrometer Tracing 1.6.4 → 1.6.5
+- Netty 4.2.12.Final → 4.2.13.Final
+- Prometheus 1.5.1 → 1.6.1
+- Reactor 3.8.4 → 3.8.5
+- Sangria 4.2.17 → 4.2.18
+- Scala 2.12.20 → 2.12.21
+- Spring Boot 4.0.5 → 4.0.6
+- Spring Framework 7.0.6 → 7.0.7
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'JAEKWANG97',
+  'KarboniteKream',
+  'PreAgile',
+  'distortionstack',
+  'haneepark',
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin',
+  'yzfeng2020'
+]} />
