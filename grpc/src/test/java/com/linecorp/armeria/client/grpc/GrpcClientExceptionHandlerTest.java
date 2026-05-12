@@ -89,21 +89,21 @@ class GrpcClientExceptionHandlerTest {
         final RuntimeException exception = new RuntimeException();
         final TestServiceBlockingStub stub =
                 GrpcClients.builder(server.httpUri())
-                           .exceptionHandler(((ctx, status, cause, metadata) -> {
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
                                stringDeque.add("1");
                                return null;
-                           }))
-                           .exceptionHandler(((ctx, status, cause, metadata) -> {
+                           })
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
                                stringDeque.add("2");
                                return null;
-                           }))
-                           .exceptionHandler(((ctx, status, cause, metadata) -> {
+                           })
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
                                if (cause == exception) {
                                    stringDeque.add("3");
                                    return Status.DATA_LOSS;
                                }
                                return null;
-                           }))
+                           })
                            .build(TestServiceBlockingStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> clientCall =
                 stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);

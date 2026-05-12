@@ -140,6 +140,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private O firstResponse;
     private boolean closed;
 
+    @Nullable
+    private Throwable closeCause;
+
     private int pendingRequests;
     private volatile int pendingMessages;
 
@@ -218,7 +221,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             if (compressor == null) {
                 final Status status = Status.INTERNAL
                         .withDescription("Unable to find compressor by name " + callOptions.getCompressor());
-                close(status, new Metadata());
+                close(status, new Metadata(), null);
                 return;
             }
         } else {
@@ -234,7 +237,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final Status status = Status.DEADLINE_EXCEEDED
                         .augmentDescription("ClientCall started after deadline exceeded: " +
                                             callOptions.getDeadline());
-                close(status, new Metadata());
+                close(status, new Metadata(), null);
                 return;
             } else {
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
@@ -319,7 +322,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (cause != null) {
             status = status.withCause(cause);
         }
-        close(status, new Metadata());
+        close(status, new Metadata(), null);
         if (cause == null) {
             req.abort();
         } else {
@@ -415,7 +418,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                     close(Status.INTERNAL.withDescription(serializationFormat.uriText() +
                                                           " trailers malformed: " +
                                                           buf.toString(StandardCharsets.UTF_8)),
-                          new Metadata());
+                          new Metadata(), null);
                 } else {
                     GrpcWebTrailers.set(ctx, trailers);
                     GrpcStatus.reportStatus(trailers, this);
@@ -447,8 +450,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
+            closeCause = t;
             exceptionHandler.handle(ctx, t).thenAccept(statusAndMetadata -> {
-                close(statusAndMetadata.status(), statusAndMetadata.metadata());
+                close(statusAndMetadata.status(), statusAndMetadata.metadata(), closeCause);
             });
         }
     }
@@ -468,7 +472,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         // This method is invoked in ctx.eventLoop and we need to bounce it through
         // CallOptions executor (in case it's configured) to serialize with closes
         // that were potentially triggered when Listener throws (closeWhenListenerThrows).
-        executor.execute(() -> closeWhenEos(status, metadata));
+        executor.execute(() -> closeWhenEos(status, metadata, null));
     }
 
     @Override
@@ -506,16 +510,17 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
+        closeCause = t;
         exceptionHandler.handle(ctx, t).thenAccept(statusAndMetadata -> {
-            closeWhenEos(statusAndMetadata.status(), statusAndMetadata.metadata());
+            closeWhenEos(statusAndMetadata.status(), statusAndMetadata.metadata(), closeCause);
         });
     }
 
-    private void closeWhenEos(Status status, @Nullable Metadata metadata) {
+    private void closeWhenEos(Status status, @Nullable Metadata metadata, @Nullable Throwable closeCause) {
         if (needsDirectInvocation()) {
-            close(status, metadata);
+            close(status, metadata, closeCause);
         } else {
-            execute(() -> close(status, metadata));
+            execute(() -> close(status, metadata, closeCause));
         }
     }
 
@@ -527,10 +532,15 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     // never do this concurrently: the abnormal call into close() from the caller thread happens in case
     // of early return, before event-loop is being assigned to this call. After event-loop is being
     // assigned, the driving call won't be able to trigger close() anymore.
-    private void close(Status status, @Nullable Metadata metadata) {
+    private void close(Status status, @Nullable Metadata metadata, @Nullable Throwable closeCause) {
         if (closed) {
             // 'close()' could be called twice if a call is closed with non-OK status.
             // See: https://github.com/line/armeria/issues/3799
+            return;
+        }
+        if (this.closeCause != closeCause) {
+            // If `this.closeCause` was set, ignore other close calls and wait for the original close
+            // to complete
             return;
         }
         closed = true;
@@ -594,7 +604,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private void runPendingTask() {
         // Visibility is guaranteed by the following CAS operation.
         endpointInitialized = true;
-        for (;;) {
+        for (; ; ) {
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {
                 if (pendingTask != null) {
@@ -611,7 +621,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void addPendingTask(Runnable pendingTask) {
         if (!pendingTaskUpdater.compareAndSet(this, null, pendingTask)) {
-            for (;;) {
+            for (; ; ) {
                 final Runnable oldPendingTask = this.pendingTask;
                 assert oldPendingTask != null;
                 if (oldPendingTask == NO_OP) {
