@@ -18,6 +18,8 @@ package com.linecorp.armeria.xds.internal;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.Set;
+
 import com.google.common.primitives.Ints;
 import com.google.protobuf.Duration;
 import com.google.protobuf.UInt32Value;
@@ -37,6 +39,14 @@ public final class XdsCommonUtil {
 
     public static final AttributeKey<TransportSocketSnapshot> TRANSPORT_SOCKET_SNAPSHOT_KEY =
             AttributeKey.valueOf(XdsCommonUtil.class, "TRANSPORT_SOCKET_SNAPSHOT_KEY");
+
+    /**
+     * An attribute key for overriding the ALPN protocols on upstream TLS connections.
+     * This mimics Envoy's {@code envoy.network.application_protocols} filter state,
+     * allowing HTTP filters to override the ALPN configured in {@code UpstreamTlsContext}.
+     */
+    public static final AttributeKey<Set<String>> ALPN_OVERRIDE_KEY =
+            AttributeKey.valueOf(XdsCommonUtil.class, "ALPN_OVERRIDE_KEY");
 
     public static long durationToMillis(Duration duration, long defaultValue) {
         if (duration == Duration.getDefaultInstance()) {
@@ -95,10 +105,14 @@ public final class XdsCommonUtil {
                 endpoint.attr(TRANSPORT_SOCKET_SNAPSHOT_KEY);
         checkArgument(transportSocket != null,
                       "TransportSocket not set for selected endpoint: %s", endpoint);
-        final ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
+        ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
         if (clientTlsSpec == null) {
             ctx.setSessionProtocol(SessionProtocol.HTTP);
             return;
+        }
+        final Set<String> alpnOverride = ctx.attr(ALPN_OVERRIDE_KEY);
+        if (alpnOverride != null && !alpnOverride.isEmpty()) {
+            clientTlsSpec = clientTlsSpec.toBuilder().alpnProtocols(alpnOverride).build();
         }
         ctx.setSessionProtocol(SessionProtocol.HTTPS);
         ctx.setClientTlsSpec(clientTlsSpec);

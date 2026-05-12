@@ -52,7 +52,9 @@ hibernate-validator8 = "8.0.3.Final"
 # used by :it:xds-istio
 istio = "1.29.1"
 j2objc = "3.1"
+json-path = "3.0.0"
 jackson = "2.21.3"
+javassist = "3.21.0-GA"
 jakarta-inject = "2.0.1"
 jakarta-validation = "3.1.1"
 jakarta-websocket = "2.2.0"
@@ -591,6 +593,10 @@ version.ref = "hibernate-validator8"
 module = "com.google.j2objc:j2objc-annotations"
 version.ref = "j2objc"
 
+[libraries.json-path]
+module = "com.jayway.jsonpath:json-path"
+version.ref = "json-path"
+
 [libraries.jakarta-inject]
 module = "jakarta.inject:jakarta.inject-api"
 version.ref = "jakarta-inject"
@@ -644,6 +650,10 @@ module = "javax.validation:validation-api"
 version.ref = "javax-validation"
 # Ensure that we use the same javax.ws.rs version as what eureka-client depends on.
 # See: https://github.com/Netflix/eureka/blob/master/eureka-client/build.gradle
+
+[libraries.javassist]
+module = "org.javassist:javassist"
+version.ref = "javassist"
 
 [libraries.jctools]
 module = "org.jctools:jctools-core"

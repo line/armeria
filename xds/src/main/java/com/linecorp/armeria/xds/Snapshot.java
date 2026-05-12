@@ -22,11 +22,15 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A snapshot of the resource.
  */
 @UnstableApi
-@FunctionalInterface
 public interface Snapshot<T> {
 
     /**
      * Returns the {@link XdsResource} of the current snapshot.
      */
     T xdsResource();
+
+    /**
+     * Returns a debug string including the full protobuf content of all resources.
+     */
+    String toDebugString();
 }

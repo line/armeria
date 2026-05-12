@@ -20,6 +20,7 @@ import java.util.concurrent.Executor;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -29,7 +30,7 @@ import io.netty.buffer.ByteBufAllocator;
 
 final class NonExistentHttpFile implements HttpFile {
 
-    static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile(null);
+    static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile(null, null);
 
     private static final CompletableFuture<AggregatedHttpFile> AGGREGATED_FUTURE =
             UnmodifiableFuture.completedFuture(NonExistentAggregatedHttpFile.INSTANCE);
@@ -37,8 +38,17 @@ final class NonExistentHttpFile implements HttpFile {
     @Nullable
     private final String location;
 
+    @Nullable
+    private final String pathHint;
+
     NonExistentHttpFile(@Nullable String location) {
         this.location = location;
+        this.pathHint = null;
+    }
+
+    NonExistentHttpFile(@Nullable String location, @Nullable String pathHint) {
+        this.location = location;
+        this.pathHint = pathHint;
     }
 
     @Override
@@ -61,12 +71,20 @@ final class NonExistentHttpFile implements HttpFile {
         return (ctx, req) -> {
             switch (req.method()) {
                 case HEAD:
-                case GET:
-                    if (location == null) {
-                        return HttpResponse.of(HttpStatus.NOT_FOUND);
-                    } else {
+                    if (location != null) {
                         return HttpResponse.ofRedirect(location);
                     }
+                    return HttpResponse.of(HttpStatus.NOT_FOUND);
+                case GET:
+                    if (location != null) {
+                        return HttpResponse.ofRedirect(location);
+                    }
+                    if (pathHint != null) {
+                        return HttpResponse.of(HttpStatus.NOT_FOUND,
+                                               MediaType.PLAIN_TEXT_UTF_8,
+                                               "File not found: " + pathHint);
+                    }
+                    return HttpResponse.of(HttpStatus.NOT_FOUND);
                 default:
                     return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
@@ -86,6 +104,7 @@ final class NonExistentHttpFile implements HttpFile {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName();
+        return getClass().getSimpleName() +
+               "(location: " + location + ", pathHint: " + pathHint + ")";
     }
 }

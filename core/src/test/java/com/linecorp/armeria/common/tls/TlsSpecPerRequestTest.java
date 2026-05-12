@@ -56,7 +56,6 @@ import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsPeerVerifier;
 import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.TlsProvider;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerTlsConfig;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
@@ -268,9 +267,6 @@ class TlsSpecPerRequestTest {
                                                          .tlsKeyPair(clientTlsKeyPair)
                                                          .trustedCertificates(serverRootCert.certificate())
                                                          .build();
-        assertThat(clientTlsSpec.alpnProtocols())
-                .containsExactlyElementsOf(SslContextUtil.DEFAULT_ALPN_PROTOCOLS);
-        // if alpn isn't set, this test will fail as the negotiated alpn will be h2
         final AggregatedHttpResponse res = WebClient.of(SessionProtocol.H1, server.httpsEndpoint())
                                                     .blocking()
                                                     .prepare()

@@ -1,0 +1,133 @@
+/*
+ * Copyright 2025 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.it.xds.filter;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Any;
+
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.XdsResourceValidator;
+import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
+
+/**
+ * {@link HttpFilterFactory} implementations for Istio/Envoy-specific HTTP filters
+ * that Armeria has no built-in factory for. Registered via SPI so they are picked up
+ * automatically by {@link com.linecorp.armeria.xds.filter.HttpFilterFactoryRegistry}.
+ * Most factories return {@code null} from {@code create()} so the filter is silently skipped,
+ * except for {@link IstioAlpn} which overrides the ALPN protocols per-request.
+ */
+public final class IstioFilterFactories {
+
+    public abstract static class Base implements HttpFilterFactory {
+        @Override
+        @Nullable
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator) {
+            return null;
+        }
+    }
+
+    public static final class IstioStats extends Base {
+        @Override
+        public String name() {
+            return "istio.stats";
+        }
+    }
+
+    public static final class IstioAlpn implements HttpFilterFactory {
+
+        private static final AlpnFilter ALPN_FILTER = new AlpnFilter();
+
+        @Override
+        public String name() {
+            return "istio.alpn";
+        }
+
+        @Override
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator) {
+            // we need to also generate istio proto configs to actually dynamically decide alpn
+            // based on filter config, but for testing purposes we just assume h2 is always used
+            return ALPN_FILTER;
+        }
+
+        private static class AlpnFilter implements XdsHttpFilter {
+
+            @Override
+            public HttpPreprocessor httpPreprocessor() {
+                return (delegate, ctx, req) -> {
+                    ctx.setAttr(XdsCommonUtil.ALPN_OVERRIDE_KEY, ImmutableSet.of("istio-h2", "istio", "h2"));
+                    return delegate.execute(ctx, req);
+                };
+            }
+        }
+    }
+
+    public static final class IstioMetadataExchange extends Base {
+        @Override
+        public String name() {
+            return "istio.metadata_exchange";
+        }
+    }
+
+    public static final class EnvoyFault extends Base {
+        @Override
+        public String name() {
+            return "envoy.filters.http.fault";
+        }
+    }
+
+    public static final class EnvoyCors extends Base {
+        @Override
+        public String name() {
+            return "envoy.filters.http.cors";
+        }
+    }
+
+    public static final class EnvoyGzipCompressor extends Base {
+        @Override
+        public String name() {
+            return "envoy.filters.http.compressor.gzip";
+        }
+    }
+
+    public static final class EnvoyZstdCompressor extends Base {
+        @Override
+        public String name() {
+            return "envoy.filters.http.compressor.zstd";
+        }
+    }
+
+    public static final class EnvoyBrotliCompressor extends Base {
+        @Override
+        public String name() {
+            return "envoy.filters.http.compressor.brotli";
+        }
+    }
+
+    public static final class EnvoyGrpcStats extends Base {
+        @Override
+        public String name() {
+            return "envoy.filters.http.grpc_stats";
+        }
+    }
+
+    private IstioFilterFactories() {}
+}

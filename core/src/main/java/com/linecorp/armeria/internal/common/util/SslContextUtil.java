@@ -72,15 +72,6 @@ public final class SslContextUtil {
             ImmutableSet.of(ApplicationProtocolNames.HTTP_1_1);
     public static final Consumer<? super SslContextBuilder> DEFAULT_NOOP_CUSTOMIZER = ignored -> {};
 
-    private static final ApplicationProtocolConfig ALPN_CONFIG = new ApplicationProtocolConfig(
-            Protocol.ALPN,
-            // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
-            SelectorFailureBehavior.NO_ADVERTISE,
-            // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
-            SelectedListenerFailureBehavior.ACCEPT,
-            ApplicationProtocolNames.HTTP_2,
-            ApplicationProtocolNames.HTTP_1_1);
-
     // OpenSSL's default enabled TLSv1.3 ciphers as documented at https://wiki.openssl.org/index.php/TLS1.3
     private static final List<String> TLS_V13_CIPHERS = ImmutableList.of("TLS_AES_256_GCM_SHA384",
                                                                          "TLS_CHACHA20_POLY1305_SHA256",
@@ -105,6 +96,7 @@ public final class SslContextUtil {
     private static boolean warnedBadCipherSuite;
 
     public static SslContext toSslContext(ClientTlsSpec clientTlsSpec, boolean allowUnsafeCiphers) {
+        checkArgument(!clientTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {
@@ -119,6 +111,7 @@ public final class SslContextUtil {
     }
 
     public static SslContext toSslContext(ServerTlsSpec serverTlsSpec, boolean allowUnsafeCiphers) {
+        checkArgument(!serverTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {
@@ -139,7 +132,7 @@ public final class SslContextUtil {
         if (keyPair != null) {
             builder.keyManager(keyPair.privateKey(), keyPair.certificateChain());
         }
-        builder.endpointIdentificationAlgorithm("HTTPS");
+        builder.endpointIdentificationAlgorithm(clientTlsSpec.endpointIdentificationAlgorithm());
 
         applyCommonConfigs(clientTlsSpec, builder);
 

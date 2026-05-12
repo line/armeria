@@ -16,12 +16,16 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AbstractTlsSpecBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -37,10 +41,11 @@ import io.netty.handler.ssl.SslContextBuilder;
 @UnstableApi
 public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTlsSpecBuilder, ClientTlsSpec> {
 
-    private Set<String> alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
+    private Set<String> alpnProtocols = ImmutableSet.of();
     private Consumer<? super SslContextBuilder> tlsCustomizer = SslContextUtil.DEFAULT_NOOP_CUSTOMIZER;
     @Nullable
     private KeyManagerFactory keyManagerFactory;
+    private String endpointIdentificationAlgorithm = "HTTPS";
 
     ClientTlsSpecBuilder() {}
 
@@ -50,6 +55,7 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
         alpnProtocols = clientTlsSpec.alpnProtocols();
         keyManagerFactory = clientTlsSpec.keyManagerFactory();
         tlsCustomizer = clientTlsSpec.tlsCustomizer();
+        endpointIdentificationAlgorithm = clientTlsSpec.endpointIdentificationAlgorithm();
     }
 
     ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
@@ -58,6 +64,17 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
         } else {
             alpnProtocols = SslContextUtil.DEFAULT_ALPN_PROTOCOLS;
         }
+        return this;
+    }
+
+    /**
+     * Sets the ALPN protocol names for TLS negotiation. If not set (empty), the ALPN protocols
+     * are automatically derived from the {@link SessionProtocol} at connection time.
+     */
+    public ClientTlsSpecBuilder alpnProtocols(Collection<String> alpnProtocols) {
+        requireNonNull(alpnProtocols, "alpnProtocols");
+        checkArgument(!alpnProtocols.isEmpty(), "alpnProtocols must not be empty");
+        this.alpnProtocols = ImmutableSet.copyOf(alpnProtocols);
         return this;
     }
 
@@ -72,12 +89,25 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
     }
 
     /**
+     * Sets the endpoint identification algorithm for JSSE hostname verification.
+     * Use {@code "HTTPS"} (the default) for standard hostname verification, or {@code ""}
+     * to disable JSSE hostname verification (e.g. when peer identity is verified by a
+     * custom {@link com.linecorp.armeria.common.TlsPeerVerifierFactory}).
+     */
+    public ClientTlsSpecBuilder endpointIdentificationAlgorithm(String algorithm) {
+        requireNonNull(algorithm, "algorithm");
+        endpointIdentificationAlgorithm = algorithm;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link ClientTlsSpec} with the properties set so far.
      */
     @Override
     public ClientTlsSpec build() {
         return new ClientTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
-                                 alpnProtocols, ciphers(), tlsKeyPair(), trustedCertificates(),
-                                 verifierFactories(), engineType(), tlsCustomizer, keyManagerFactory);
+                                 alpnProtocols, ciphers(), tlsKeyPair(),
+                                 trustedCertificates(), verifierFactories(), engineType(), tlsCustomizer,
+                                 keyManagerFactory, endpointIdentificationAlgorithm);
     }
 }

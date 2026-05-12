@@ -110,7 +110,7 @@ final class UpstreamTlsTransportSocketFactory implements TransportSocketFactory 
         }
 
         return SnapshotStream.combineLatest(tlsCertStream, validationStream, (cert, validation) -> {
-            return new TransportSocketSnapshot(transportSocket, cert, validation);
+            return new TransportSocketSnapshot(transportSocket, tlsContext, cert, validation);
         });
     }
 }

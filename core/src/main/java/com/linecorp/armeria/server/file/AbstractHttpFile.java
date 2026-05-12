@@ -196,9 +196,14 @@ public abstract class AbstractHttpFile implements HttpFile {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
         requireNonNull(alloc, "alloc");
 
-        return readAttributes(fileReadExecutor)
-                .thenApply(attrs -> read(fileReadExecutor, alloc, attrs))
-                .exceptionally(cause -> HttpResponse.ofFailure(Exceptions.peel(cause)));
+        return readAttributes(fileReadExecutor).thenApply(attrs -> {
+            final HttpResponse res = read(fileReadExecutor, alloc, attrs);
+            if (res != null) {
+                return res;
+            }
+
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        }).exceptionally(cause -> HttpResponse.ofFailure(Exceptions.peel(cause)));
     }
 
     @Nullable

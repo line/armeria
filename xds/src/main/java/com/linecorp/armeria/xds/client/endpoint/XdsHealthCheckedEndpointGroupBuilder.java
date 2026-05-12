@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHttpHealthChecker;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -102,7 +103,11 @@ final class XdsHealthCheckedEndpointGroupBuilder
             endpoint = endpoint.withPort(port);
         }
         if (healthCheckConfig.hasAddress()) {
-            return endpoint.withHost(healthCheckConfig.getAddress().getSocketAddress().getAddress());
+            final io.envoyproxy.envoy.config.core.v3.Address addr = healthCheckConfig.getAddress();
+            if (addr.hasPipe()) {
+                return DomainSocketAddress.of(addr.getPipe().getPath()).asEndpoint();
+            }
+            return endpoint.withHost(addr.getSocketAddress().getAddress());
         }
         return endpoint;
     }

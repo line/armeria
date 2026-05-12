@@ -165,6 +165,7 @@ final class MinifiedAuthZpeClient {
             builder.trustedCertificates(trustedCertificates);
         }
         builder.engineType(TlsEngineType.JDK);
+        builder.alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS);
         return builder.build();
     }
 

@@ -4,6 +4,11 @@ dependencies {
     implementation libs.junit5.platform.launcher
     implementation libs.testcontainers.k3s
     implementation libs.testcontainers.junit.jupiter
+
+    testImplementation project(':xds')
+    testImplementation(libs.json.path) {
+        exclude group: 'org.slf4j'
+    }
 }
 
 def kubeconfigEnvValue =
@@ -81,7 +86,10 @@ tasks.register('prepareIstioWorkdir') {
 
 tasks.register('copyTestRuntimeJars', Sync) {
     dependsOn tasks.named('prepareIstioWorkdir')
-    from(sourceSets.test.runtimeClasspath)
+    dependsOn tasks.named('copyShadedTestClasses')
+    from(configurations.shadedJarTestRuntime)
+    from(sourceSets.main.output)
+    from(files(tasks.copyShadedTestClasses.destinationDir))
     into(testRuntimeDir)
 }
 

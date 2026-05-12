@@ -86,4 +86,13 @@ public final class VirtualHostSnapshot implements Snapshot<VirtualHostXdsResourc
                           .add("routeEntries", routeEntries)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("virtualHost", virtualHostXdsResource.resource())
+                          .add("routeEntries",
+                               SnapshotUtil.debugStrings(routeEntries, RouteEntry::toDebugString))
+                          .toString();
+    }
 }

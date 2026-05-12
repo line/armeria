@@ -78,4 +78,14 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
                           .add("virtualHostSnapshots", virtualHostSnapshots)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("route", routeXdsResource.resource())
+                          .add("virtualHostSnapshots",
+                               SnapshotUtil.debugStrings(virtualHostSnapshots,
+                                                         VirtualHostSnapshot::toDebugString))
+                          .toString();
+    }
 }

@@ -18,10 +18,14 @@ package com.linecorp.armeria.server.file;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnJre;
@@ -30,6 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -37,8 +42,15 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ServerCacheControl;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
+
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 
 class HttpFileTest {
 
@@ -78,10 +90,114 @@ class HttpFileTest {
     @Test
     void redirect() throws Exception {
         final HttpFile file = HttpFile.ofRedirect("/foo/bar?a=b");
-        final HttpResponse response = file.asService().serve(null, HttpRequest.of(HttpMethod.GET, "/foo"));
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/foo");
+        final HttpResponse response = file.asService().serve(ServiceRequestContext.of(request), request);
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(agg.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo/bar?a=b");
+    }
+
+    @Test
+    void nonExistentWithPathHintContainsDecodedMappedPath() throws Exception {
+        final HttpFile file = HttpFile.nonExistent("/missing.txt");
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/missing.txt");
+        final AggregatedHttpResponse agg =
+                file.asService().serve(ServiceRequestContext.of(request), request)
+                    .aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(agg.contentUtf8()).contains("/missing.txt");
+    }
+
+    @Test
+    void nonExistentWithPathHintForHead() throws Exception {
+        final HttpFile file = HttpFile.nonExistent("/missing.txt");
+        final HttpRequest request = HttpRequest.of(HttpMethod.HEAD, "/missing.txt");
+        final AggregatedHttpResponse agg =
+                file.asService().serve(ServiceRequestContext.of(request), request)
+                    .aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void nonExistentWithUnsupportedMethod() throws Exception {
+        final HttpFile file = HttpFile.nonExistent("/missing.txt");
+        final HttpRequest request = HttpRequest.of(HttpMethod.POST, "/missing.txt");
+        final AggregatedHttpResponse agg =
+                file.asService().serve(ServiceRequestContext.of(request), request)
+                    .aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @Test
+    void redirectWithHead() throws Exception {
+        final HttpFile file = HttpFile.ofRedirect("/foo/bar?a=b");
+        final HttpRequest request = HttpRequest.of(HttpMethod.HEAD, "/foo");
+        final HttpResponse response = file.asService().serve(ServiceRequestContext.of(request), request);
+        final AggregatedHttpResponse agg = response.aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+        assertThat(agg.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo/bar?a=b");
+    }
+
+    @Test
+    void toStringIncludesPathHint() {
+        final HttpFile file = HttpFile.nonExistent("/missing.txt");
+        assertThat(file.toString()).contains("pathHint: /missing.txt");
+    }
+
+    @Test
+    void read() {
+        final HttpFile file = HttpFile.of(HttpData.ofUtf8("hello"));
+        final HttpResponse res = file.read(CommonPools.blockingTaskExecutor(),
+                                           UnpooledByteBufAllocator.DEFAULT).join();
+        assertThat(res).isNotNull();
+        final AggregatedHttpResponse agg = res.aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(agg.contentUtf8()).isEqualTo("hello");
+    }
+
+    @Test
+    void readWhenDoReadReturnsNull() {
+        // A custom AbstractHttpFile subclass where readAttributes returns non-null
+        // but doRead returns null, simulating a file disappearing between attribute
+        // read and content read.
+        final AbstractHttpFile file = new AbstractHttpFile(
+                null, Clock.systemUTC(), false, false, null, HttpHeaders.of()) {
+            @Override
+            protected String pathOrUri() {
+                return "/vanishing-file";
+            }
+
+            @Override
+            public CompletableFuture<HttpFileAttributes> readAttributes(Executor fileReadExecutor) {
+                return UnmodifiableFuture.completedFuture(new HttpFileAttributes(10, 0));
+            }
+
+            @Nullable
+            @Override
+            protected HttpResponse doRead(ResponseHeaders headers, long length,
+                                          Executor fileReadExecutor,
+                                          ByteBufAllocator alloc) throws IOException {
+                // Simulate the file disappearing after attributes were read.
+                return null;
+            }
+
+            @Override
+            public CompletableFuture<AggregatedHttpFile> aggregate(Executor fileReadExecutor) {
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            @Override
+            public CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(
+                    Executor fileReadExecutor, ByteBufAllocator alloc) {
+                return UnmodifiableFuture.completedFuture(null);
+            }
+        };
+
+        final HttpResponse res = file.read(CommonPools.blockingTaskExecutor(),
+                                           UnpooledByteBufAllocator.DEFAULT).join();
+        assertThat(res).isNotNull();
+        final AggregatedHttpResponse agg = res.aggregate().join();
+        assertThat(agg.status()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

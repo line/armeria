@@ -104,6 +104,12 @@ class FileServiceTest {
                                .build());
 
             sb.serviceUnder(
+                    "/cached/no-autoindex/fs/",
+                    FileService.builder(tmpDir)
+                               .autoIndex(false)
+                               .build());
+
+            sb.serviceUnder(
                     "/cached/compressed/",
                     FileService.builder(classLoader, baseResourceDir + "foo")
                                .serveCompressedFiles(true)
@@ -685,6 +691,35 @@ class FileServiceTest {
 
         res = server.blockingWebClient().head("/cached/fs/missing.html");
         assertThat(res.status().code()).isEqualTo(404);
+    }
+
+    @Test
+    void missingFileResponseContainsDecodedMappedPath() {
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/cached/fs/missing.html");
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).contains("/missing.html").doesNotContain(tmpDir.toString());
+    }
+
+    @Test
+    void missingDirectoryResponseContainsDecodedMappedPath() {
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/cached/fs/missing-dir/");
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).contains("/missing-dir/").doesNotContain(tmpDir.toString());
+    }
+
+    @Test
+    void missingDirectoryResponseContainsDecodedMappedPathWhenAutoIndexDisabled() {
+        final AggregatedHttpResponse res = server.blockingWebClient()
+                                                 .get("/cached/no-autoindex/fs/missing-dir/");
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).contains("/missing-dir/").doesNotContain(tmpDir.toString());
+    }
+
+    @Test
+    void missingFileResponseContainsDecodedMappedPathWhenFallbackExtensionConfigured() {
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/extension/missing");
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).contains("/missing").doesNotContain(tmpDir.toString());
     }
 
     private static void writeFile(Path path, String content) throws Exception {

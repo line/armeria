@@ -18,35 +18,34 @@ package com.linecorp.armeria.xds;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
+import io.envoyproxy.envoy.config.listener.v3.Filter;
+import io.envoyproxy.envoy.config.listener.v3.FilterChain;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsResource> {
 
+    private static final Logger logger = LoggerFactory.getLogger(ListenerResourceParser.class);
+
+    private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
+            "type.googleapis.com/" +
+            "envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager";
+    private static final String HTTP_CONNECTION_MANAGER_FILTER_NAME =
+            "envoy.filters.network.http_connection_manager";
+
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 
     private ListenerResourceParser() {}
-
-    @Nullable
-    private static HttpConnectionManager unpackConnectionManager(Listener listener,
-                                                         XdsExtensionRegistry registry) {
-        if (listener.getApiListener().hasApiListener()) {
-            final Any apiListener = listener.getApiListener().getApiListener();
-            final HttpConnectionManagerFactory factory =
-                    registry.queryByTypeUrl(apiListener.getTypeUrl(),
-                                            HttpConnectionManagerFactory.class);
-            assert factory != null;
-            return factory.create(apiListener, registry.validator());
-        }
-        return null;
-    }
 
     private static List<XdsHttpFilter> resolveDownstreamFilters(
             @Nullable HttpConnectionManager connectionManager,
@@ -65,12 +64,50 @@ final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsR
         return builder.build();
     }
 
+    @Nullable
+    private static HttpConnectionManager findHcm(Listener listener, XdsExtensionRegistry registry) {
+        // 1. api_listener
+        if (listener.getApiListener().hasApiListener()) {
+            final Any apiListener = listener.getApiListener().getApiListener();
+            return registry.unpack(apiListener, HttpConnectionManager.class);
+        }
+        logger.warn("No api_listener set for listener {}; falling back to filter chains.", listener.getName());
+
+        // 2. filter chains
+        for (FilterChain fc : listener.getFilterChainsList()) {
+            final HttpConnectionManager hcm = findHcmInFilterChain(fc, registry);
+            if (hcm != null) {
+                return hcm;
+            }
+        }
+        // 3. default filter chain
+        if (listener.hasDefaultFilterChain()) {
+            return findHcmInFilterChain(listener.getDefaultFilterChain(), registry);
+        }
+        return null;
+    }
+
+    @Nullable
+    private static HttpConnectionManager findHcmInFilterChain(FilterChain filterChain,
+                                                              XdsExtensionRegistry registry) {
+        final List<Filter> filters = filterChain.getFiltersList();
+        if (filters.isEmpty()) {
+            return null;
+        }
+        // HCM is a terminal network filter and should be the last in the chain.
+        final Filter last = filters.get(filters.size() - 1);
+        if (HTTP_CONNECTION_MANAGER_FILTER_NAME.equals(last.getName()) &&
+            last.hasTypedConfig() &&
+            HTTP_CONNECTION_MANAGER_TYPE_URL.equals(last.getTypedConfig().getTypeUrl())) {
+            return registry.unpack(last.getTypedConfig(), HttpConnectionManager.class);
+        }
+        return null;
+    }
+
     @Override
     ListenerXdsResource parse(Listener message, XdsExtensionRegistry registry, String version) {
-        final HttpConnectionManager connectionManager =
-                unpackConnectionManager(message, registry);
-        final List<XdsHttpFilter> downstreamFilters =
-                resolveDownstreamFilters(connectionManager, registry);
+        final HttpConnectionManager connectionManager = findHcm(message, registry);
+        final List<XdsHttpFilter> downstreamFilters = resolveDownstreamFilters(connectionManager, registry);
         return new ListenerXdsResource(message, connectionManager, downstreamFilters, version);
     }
 

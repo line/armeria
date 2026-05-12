@@ -82,4 +82,14 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
                           .add("routeSnapshot", routeSnapshot)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("listener", listenerXdsResource.resource())
+                          .add("routeSnapshot",
+                               SnapshotUtil.debugString(routeSnapshot, RouteSnapshot::toDebugString))
+                          .toString();
+    }
 }

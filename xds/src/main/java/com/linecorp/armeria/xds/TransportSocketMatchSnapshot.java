@@ -77,4 +77,12 @@ public final class TransportSocketMatchSnapshot implements Snapshot<TransportSoc
                           .add("transportSocketSnapshot", transportSocketSnapshot)
                           .toString();
     }
+
+    @Override
+    public String toDebugString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("transportSocketMatch", transportSocketMatch)
+                          .add("transportSocket", transportSocketSnapshot.toDebugString())
+                          .toString();
+    }
 }

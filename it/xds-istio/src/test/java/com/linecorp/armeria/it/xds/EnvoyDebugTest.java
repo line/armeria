@@ -30,6 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.it.istio.testing.EnabledIfDockerAvailable;
@@ -58,9 +60,15 @@ class EnvoyDebugTest {
     static IstioServerExtension echo = new IstioServerExtension(
             "echo-server", PORT, EchoConfigurator.class);
 
+    private static WebClient webClient(String uri) {
+        return WebClient.builder(uri)
+                        .decorator(RetryingClient.newDecorator(RetryRule.failsafe()))
+                        .build();
+    }
+
     @IstioPodTest
     void serverIsReachable() {
-        final WebClient client = WebClient.of("http://" + echo.serviceName() + ':' + echo.port());
+        final WebClient client = webClient("http://" + echo.serviceName() + ':' + echo.port());
         final AggregatedHttpResponse response = client.get("/echo").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("hello");
@@ -68,7 +76,7 @@ class EnvoyDebugTest {
 
     @IstioPodTest
     void envoyStatsAreReachable() {
-        final WebClient envoyAdmin = WebClient.of("http://localhost:15000");
+        final WebClient envoyAdmin = webClient("http://localhost:15000");
         final AggregatedHttpResponse response = envoyAdmin.get("/stats").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).contains("server.state");
@@ -76,8 +84,8 @@ class EnvoyDebugTest {
 
     @IstioPodTest
     void envoyConfigDump() {
-        final WebClient envoyAdmin = WebClient.of("http://localhost:15000");
-        final AggregatedHttpResponse response = envoyAdmin.get("/config_dump").aggregate().join();
+        final WebClient envoyAdmin = webClient("http://localhost:15000");
+        final AggregatedHttpResponse response = envoyAdmin.get("/config_dump?include_eds").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         logger.info("Envoy config dump: {}", response.contentUtf8());
     }

@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientFactoryConfigurator;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.Endpoint;
@@ -654,7 +655,10 @@ public final class Flags {
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
-            final SSLEngine engine = SslContextUtil.toSslContext(ClientTlsSpec.of(), false)
+            final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
+                                                       .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
+                                                       .build();
+            final SSLEngine engine = SslContextUtil.toSslContext(tlsSpec, false)
                                                    .newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
@@ -1632,6 +1636,22 @@ public final class Flags {
     @UnstableApi
     public static MeterRegistry meterRegistry() {
         return METER_REGISTRY;
+    }
+
+    /**
+     * Returns the {@link ClientFactoryConfigurator} that customizes the built-in default
+     * {@link com.linecorp.armeria.client.ClientFactory}s.
+     *
+     * <p>This value is consulted while initializing the built-in default client factories.
+     *
+     * @see ClientFactoryConfigurator
+     */
+    @UnstableApi
+    public static ClientFactoryConfigurator defaultClientFactoryConfigurator() {
+        final ClientFactoryConfigurator configurator =
+                getValue(FlagsProvider::defaultClientFactoryConfigurator,
+                         "defaultClientFactoryConfigurator");
+        return configurator != null ? configurator : ClientFactoryConfigurator.noop();
     }
 
     /**
