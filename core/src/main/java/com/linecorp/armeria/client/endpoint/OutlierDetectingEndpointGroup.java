@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.endpoint;
 import static com.linecorp.armeria.client.endpoint.DynamicEndpointGroup.UNINITIALIZED_ENDPOINTS;
 import static com.linecorp.armeria.internal.client.endpoint.EndpointToStringUtil.toShortString;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.util.Collections;
 import java.util.List;
@@ -31,7 +33,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -64,6 +65,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -200,9 +202,8 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         selectionStrategy = new CircuitBreakerEndpointSelectionStrategy();
         endpointSelector = selectionStrategy.newSelector(this);
 
-        maxEndpointAgeNanoTime = maxEndpointAgeMillis > 0
-                                 ? TimeUnit.MILLISECONDS.toNanos(maxEndpointAgeMillis)
-                                 : -1;   // Sentinel: age-based rotation disabled.
+        maxEndpointAgeNanoTime = maxEndpointAgeMillis > 0 ? MILLISECONDS.toNanos(maxEndpointAgeMillis)
+                                                          : -1;
         badEndpointExpirationMillis = circuitBreakerConfig.circuitOpenWindow().toMillis();
 
         delegate.addListener(unused -> {
@@ -260,7 +261,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         }
 
         final long nextDurationMillis = refreshEndpoints(true);
-        executor.schedule(this::scheduleEndpointUpdateTask, nextDurationMillis, TimeUnit.MILLISECONDS);
+        executor.schedule(this::scheduleEndpointUpdateTask, nextDurationMillis, MILLISECONDS);
     }
 
     private long newExpirationNanoTime(long currentNanoTime) {
@@ -388,7 +389,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                     }
                     // Bad endpoints are removed. Make the endpoint available if there are not enough endpoints.
                     refreshEndpoints(false);
-                }, badEndpointExpirationMillis, TimeUnit.MILLISECONDS);
+                }, badEndpointExpirationMillis, MILLISECONDS);
             }
 
             // Remove old endpoints (only meaningful in keep-alive mode — endpoints never age out
@@ -494,7 +495,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                 return 100;
             }
             // Clamp the min interval to 500 ms to avoid too frequent updates.
-            return Math.max(TimeUnit.NANOSECONDS.toMillis(minRemainingNanoTime), 500);
+            return Math.max(NANOSECONDS.toMillis(minRemainingNanoTime), 500);
         } catch (Throwable e) {
             logger.error("Unexpected exception while updating endpoints.", e);
             return 500;
@@ -669,9 +670,8 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                           .add("delegate", delegate)
                           .add("maxNumEndpoints", maxNumEndpoints)
                           .add("maxEndpointAge",
-                               maxEndpointAgeNanoTime > 0
-                               ? TimeUnit.NANOSECONDS.toMillis(maxEndpointAgeNanoTime) + "ms"
-                               : "disabled")
+                               maxEndpointAgeNanoTime > 0 ? NANOSECONDS.toMillis(maxEndpointAgeNanoTime) + "ms"
+                                                          : "disabled")
                           .add("namePrefix", namePrefix)
                           .add("failFastOnAllCircuitOpen", failFastOnAllCircuitOpen)
                           .add("initialized", initialCompletionFuture.isDone())
@@ -768,16 +768,17 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
             if (endpoints.isEmpty() && numBadEndpoints > 0 && !failFastOnAllCircuitOpen) {
                 // All endpoints are bad — likely a local/network issue. Fall back to a bad endpoint
                 // rather than failing until the underlying group refreshes.
-                final CompletableFuture<Endpoint> fallback = selectNowFromBadEndpoints(numBadEndpoints);
+                final Endpoint fallback = selectNowFromBadEndpoints(numBadEndpoints);
                 if (fallback != null) {
-                    return fallback;
+                    return UnmodifiableFuture.completedFuture(fallback);
                 }
+                // Concurrently emptied. Let the caller fall back to the regular selector.
             }
             return selector.select(ctx, executor);
         }
 
         @Nullable
-        private CompletableFuture<Endpoint> selectNowFromBadEndpoints(int numBadEndpoints) {
+        private Endpoint selectNowFromBadEndpoints(int numBadEndpoints) {
             int target = ThreadLocalRandom.current().nextInt(numBadEndpoints);
             Endpoint badEndpoint = null;
             for (Endpoint endpoint : badEndpoints) {
@@ -786,11 +787,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                     break;
                 }
             }
-            if (badEndpoint != null) {
-                return CompletableFuture.completedFuture(badEndpoint);
-            }
-            // Concurrently emptied. Let the caller fall back to the regular selector.
-            return null;
+            return badEndpoint;
         }
     }
 
