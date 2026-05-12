@@ -604,7 +604,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private void runPendingTask() {
         // Visibility is guaranteed by the following CAS operation.
         endpointInitialized = true;
-        for (; ; ) {
+        for (;;) {
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {
                 if (pendingTask != null) {
@@ -621,7 +621,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void addPendingTask(Runnable pendingTask) {
         if (!pendingTaskUpdater.compareAndSet(this, null, pendingTask)) {
-            for (; ; ) {
+            for (;;) {
                 final Runnable oldPendingTask = this.pendingTask;
                 assert oldPendingTask != null;
                 if (oldPendingTask == NO_OP) {
