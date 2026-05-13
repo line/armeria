@@ -122,7 +122,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 @UnstableApi
 public final class OutlierDetectingEndpointGroup implements EndpointGroup, ListenableAsyncCloseable {
 
-    // Forked from https://github.com/line/pushsphere/blob/main/client/src/main/kotlin/com/linecorp/pushsphere/client/OutlierDetectingEndpointGroup.kt
+    // Forked from https://github.com/line/pushsphere/blob/b641332f69d2dd4247b7cba4c24957739cdb27c8/client/src/main/kotlin/com/linecorp/pushsphere/client/OutlierDetectingEndpointGroup.kt
     // and migrated to Java and adapted for Armeria.
 
     private static final Logger logger = LoggerFactory.getLogger(OutlierDetectingEndpointGroup.class);

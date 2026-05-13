@@ -40,10 +40,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 @UnstableApi
 public final class OutlierDetectingEndpointGroupBuilder {
 
-    static final int DEFAULT_MAX_NUM_ENDPOINTS = 1024;
-    /** Sentinel meaning the periodic age-based rotation is disabled by default. */
-    static final long DEFAULT_MAX_ENDPOINT_AGE_MILLIS = -1;
-    static final String DEFAULT_NAME_PREFIX = "outlier-detecting";
+    private static final int DEFAULT_MAX_NUM_ENDPOINTS = 1024;
+    private static final long DEFAULT_MAX_ENDPOINT_AGE_MILLIS = -1;
+    private static final String DEFAULT_NAME_PREFIX = "outlier-detecting";
 
     /**
      * The default {@link CircuitBreakerRule} reports 5xx responses and exceptions as failures, and treats
@@ -94,7 +93,7 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * Sets the maximum number of endpoints kept in the rotation. Defaults to
      * {@value #DEFAULT_MAX_NUM_ENDPOINTS}, which is large enough for typical large-scale deployments
      * and avoids accidentally truncating the underlying group when this builder is used without
-     * explicit configuration. Increase only when more concurrent endpoints are actually needed.
+     * explicit configuration. Increase when more concurrent endpoints are actually needed.
      */
     public OutlierDetectingEndpointGroupBuilder maxNumEndpoints(int maxNumEndpoints) {
         checkArgument(maxNumEndpoints > 0,
@@ -170,7 +169,6 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * Sets the interval at which a single trial request is allowed through while the per-endpoint
      * {@link CircuitBreaker} is in the {@code HALF_OPEN} state. Defaults to {@code 3} seconds.
      *
-     * @throws NullPointerException if {@code trialRequestInterval} is {@code null}.
      * @throws IllegalArgumentException if {@code trialRequestInterval} is not positive.
      */
     public OutlierDetectingEndpointGroupBuilder trialRequestInterval(Duration trialRequestInterval) {
@@ -195,7 +193,6 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * value is also used as the cool-down before a bad endpoint becomes selectable again. Defaults to
      * {@code 10} seconds.
      *
-     * @throws NullPointerException if {@code circuitOpenWindow} is {@code null}.
      * @throws IllegalArgumentException if {@code circuitOpenWindow} is not positive.
      */
     public OutlierDetectingEndpointGroupBuilder circuitOpenWindow(Duration circuitOpenWindow) {
@@ -219,7 +216,6 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * Sets the size of the rolling window over which the per-endpoint {@link CircuitBreaker} counts
      * successes and failures. Defaults to {@code 20} seconds.
      *
-     * @throws NullPointerException if {@code counterSlidingWindow} is {@code null}.
      * @throws IllegalArgumentException if {@code counterSlidingWindow} is not positive.
      */
     public OutlierDetectingEndpointGroupBuilder counterSlidingWindow(Duration counterSlidingWindow) {
@@ -243,7 +239,6 @@ public final class OutlierDetectingEndpointGroupBuilder {
      * Sets the interval at which the per-endpoint {@link CircuitBreaker} re-evaluates its counters and
      * may trip. Defaults to {@code 1} second.
      *
-     * @throws NullPointerException if {@code counterUpdateInterval} is {@code null}.
      * @throws IllegalArgumentException if {@code counterUpdateInterval} is not positive.
      */
     public OutlierDetectingEndpointGroupBuilder counterUpdateInterval(Duration counterUpdateInterval) {
