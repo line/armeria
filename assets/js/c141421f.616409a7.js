@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkarmeria_site=self.webpackChunkarmeria_site||[]).push([["8366"],{40936(e){e.exports=JSON.parse('{"name":"docusaurus-theme-search-algolia","id":"default"}')}}]);

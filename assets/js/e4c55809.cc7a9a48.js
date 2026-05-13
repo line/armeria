@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkarmeria_site=self.webpackChunkarmeria_site||[]).push([["2099"],{38265(e){e.exports=JSON.parse('{"name":"short-url-plugin","id":"default"}')}}]);

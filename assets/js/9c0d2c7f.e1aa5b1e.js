@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkarmeria_site=self.webpackChunkarmeria_site||[]).push([["5334"],{35431(e){e.exports=JSON.parse('{"metadata":{"permalink":"/blog/page/2","page":2,"postsPerPage":10,"totalPages":2,"totalCount":14,"previousPage":"/blog","blogDescription":"Blog","blogTitle":"Armeria Blog"}}')}}]);
