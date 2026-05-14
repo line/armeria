@@ -17,6 +17,12 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_FAILURE_RATE_THRESHOLD;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_MINIMUM_REQUEST_THRESHOLD;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -54,13 +60,6 @@ public final class OutlierDetectingEndpointGroupBuilder {
                               .onException()
                               .thenFailure();
 
-    // CircuitBreaker defaults — kept in sync with CircuitBreakerBuilder.
-    private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
-    private static final long DEFAULT_MINIMUM_REQUEST_THRESHOLD = 10;
-    private static final Duration DEFAULT_TRIAL_REQUEST_INTERVAL = Duration.ofSeconds(3);
-    private static final Duration DEFAULT_CIRCUIT_OPEN_WINDOW = Duration.ofSeconds(10);
-    private static final Duration DEFAULT_COUNTER_SLIDING_WINDOW = Duration.ofSeconds(20);
-    private static final Duration DEFAULT_COUNTER_UPDATE_INTERVAL = Duration.ofSeconds(1);
 
     private final EndpointGroup delegate;
 
@@ -75,10 +74,10 @@ public final class OutlierDetectingEndpointGroupBuilder {
     // Per-endpoint CircuitBreaker settings.
     private double failureRateThreshold = DEFAULT_FAILURE_RATE_THRESHOLD;
     private long minimumRequestThreshold = DEFAULT_MINIMUM_REQUEST_THRESHOLD;
-    private Duration trialRequestInterval = DEFAULT_TRIAL_REQUEST_INTERVAL;
-    private Duration circuitOpenWindow = DEFAULT_CIRCUIT_OPEN_WINDOW;
-    private Duration counterSlidingWindow = DEFAULT_COUNTER_SLIDING_WINDOW;
-    private Duration counterUpdateInterval = DEFAULT_COUNTER_UPDATE_INTERVAL;
+    private Duration trialRequestInterval = Duration.ofSeconds(DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS);
+    private Duration circuitOpenWindow = Duration.ofSeconds(DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS);
+    private Duration counterSlidingWindow = Duration.ofSeconds(DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS);
+    private Duration counterUpdateInterval = Duration.ofSeconds(DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS);
 
     @Nullable
     private MeterIdPrefix meterIdPrefix;

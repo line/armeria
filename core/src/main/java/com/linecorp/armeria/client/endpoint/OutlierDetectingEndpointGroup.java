@@ -746,6 +746,8 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                 return endpoint;
             }
 
+            // The maximum number of attempts is mostly based on a rule of thumb.
+            // Three should be a reasonable default for now, but we can make it configurable later if needed.
             for (int i = 0; i < 3; i++) {
                 RequestLogAccess duplicated = null;
                 for (RequestLogAccess child : parent.children()) {

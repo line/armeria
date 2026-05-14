@@ -29,6 +29,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class CircuitBreakerConfig {
 
+    public static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
+    public static final long DEFAULT_MINIMUM_REQUEST_THRESHOLD = 10;
+    public static final int DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS = 3;
+    public static final int DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS = 10;
+    public static final int DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS = 20;
+    public static final int DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS = 1;
+
     @Nullable
     private final String name;
 
