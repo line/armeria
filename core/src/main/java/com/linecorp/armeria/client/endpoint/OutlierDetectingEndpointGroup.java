@@ -433,6 +433,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
             if (maxEndpointAgeNanoTime <= 0) {
                 final Set<Endpoint> candidateSet = ImmutableSet.copyOf(candidates);
                 endpointContexts.keySet().removeIf(e -> !candidateSet.contains(e));
+                badEndpoints.removeIf(e -> !candidateSet.contains(e));
             }
 
             int remainingSlots = maxNumEndpoints - endpointContexts.size();
