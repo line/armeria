@@ -21,8 +21,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Deque;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
@@ -30,7 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -85,21 +89,21 @@ class GrpcClientExceptionHandlerTest {
         final RuntimeException exception = new RuntimeException();
         final TestServiceBlockingStub stub =
                 GrpcClients.builder(server.httpUri())
-                           .exceptionHandler(((ctx, status, cause, metadata) -> {
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
                                stringDeque.add("1");
                                return null;
-                           }))
-                           .exceptionHandler(((ctx, status, cause, metadata) -> {
+                           })
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
                                stringDeque.add("2");
                                return null;
-                           }))
-                           .exceptionHandler(((ctx, status, cause, metadata) -> {
+                           })
+                           .exceptionHandler((ctx, status, cause, metadata) -> {
                                if (cause == exception) {
                                    stringDeque.add("3");
                                    return Status.DATA_LOSS;
                                }
                                return null;
-                           }))
+                           })
                            .build(TestServiceBlockingStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> clientCall =
                 stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
@@ -123,5 +127,56 @@ class GrpcClientExceptionHandlerTest {
         await().untilAtomic(statusRef, Matchers.notNullValue());
         assertThat(statusRef.get().getCode()).isEqualTo(Code.DATA_LOSS);
         assertThat(stringDeque).containsExactly("1", "2", "3");
+    }
+
+    @Test
+    void asyncHandlerIsUsedOnClientPath() {
+        final AtomicInteger asyncInvocations = new AtomicInteger();
+        final RuntimeException exception = new RuntimeException();
+        final GrpcExceptionHandlerFunction asyncHandler = new GrpcExceptionHandlerFunction() {
+            @Override
+            public Status apply(RequestContext ctx, Status status, Throwable cause,
+                                Metadata metadata) {
+                return null;
+            }
+
+            @Override
+            public CompletableFuture<Status> applyAsync(RequestContext ctx,
+                                                        Status status,
+                                                        Throwable cause,
+                                                        Metadata metadata) {
+                asyncInvocations.incrementAndGet();
+                return UnmodifiableFuture.completedFuture(
+                        Status.INTERNAL.withDescription("async"));
+            }
+        };
+        final TestServiceBlockingStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .exceptionHandler(asyncHandler)
+                           .build(TestServiceBlockingStub.class);
+        final ClientCall<SimpleRequest, SimpleResponse> clientCall =
+                stub.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
+
+        final AtomicReference<Status> statusRef = new AtomicReference<>();
+        clientCall.start(new Listener<SimpleResponse>() {
+            @Override
+            public void onHeaders(Metadata headers) {
+                throw exception;
+            }
+
+            @Override
+            public void onClose(Status status, Metadata trailers) {
+                statusRef.set(status);
+            }
+        }, new Metadata());
+
+        clientCall.sendMessage(SimpleRequest.getDefaultInstance());
+        clientCall.halfClose();
+        clientCall.request(Integer.MAX_VALUE);
+        await().untilAtomic(statusRef, Matchers.notNullValue());
+        // With async migration, the async handler is now fully used on client paths too.
+        assertThat(statusRef.get().getCode()).isEqualTo(Code.INTERNAL);
+        assertThat(statusRef.get().getDescription()).isEqualTo("async");
+        assertThat(asyncInvocations).hasValue(1);
     }
 }

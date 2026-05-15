@@ -18,9 +18,12 @@ package com.linecorp.armeria.common.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -48,14 +51,51 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
-     * Maps the specified {@link Throwable} to a gRPC {@link Status} and mutates the specified {@link Metadata}.
+     * Maps the specified {@link Throwable} to a gRPC {@link Status} synchronously
+     * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
      *
      * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable)}.
      * You can return the {@link Status} or any other {@link Status} as needed.
+     *
+     * <p>Implement {@link #applyAsync(RequestContext, Status, Throwable, Metadata)} instead when your
+     * handler needs to perform asynchronous work.
      */
     @Nullable
     Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata);
+
+    /**
+     * Maps the specified {@link Throwable} to a gRPC {@link Status} asynchronously
+     * and mutates the specified {@link Metadata}.
+     *
+     * <p>If this method returns {@code null} or the returned {@link CompletableFuture} is completed with
+     * {@code null}, {@link #apply(RequestContext, Status, Throwable, Metadata)} will be called as a fallback.
+     *
+     * <pre>{@code
+     * class MyAsyncExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+     *
+     *    @Override
+     *    public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+     *        return null;
+     *    }
+     *
+     *    @Override
+     *    public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
+     *                                                          Throwable cause, Metadata metadata) {
+     *        return CompletableFuture.supplyAsync(() -> {
+     *            // Perform asynchronous work and return the Status.
+     *            return Status.INTERNAL;
+     *        })
+     *    }
+     * }
+     * }</pre>
+     */
+    @UnstableApi
+    @Nullable
+    default CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
+                                                           Throwable cause, Metadata metadata) {
+        return null;
+    }
 
     /**
      * Returns a {@link GrpcExceptionHandlerFunction} that returns the result of this function
@@ -68,12 +108,43 @@ public interface GrpcExceptionHandlerFunction {
         if (this == next) {
             return this;
         }
-        return (ctx, status, cause, metadata) -> {
-            final Status newStatus = apply(ctx, status, cause, metadata);
-            if (newStatus != null) {
-                return newStatus;
+
+        return new GrpcExceptionHandlerFunction() {
+
+            @Override
+            public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause,
+                                          Metadata metadata) {
+                final Status newStatus =
+                        GrpcExceptionHandlerFunction.this.apply(ctx, status, cause, metadata);
+                if (newStatus != null) {
+                    return newStatus;
+                }
+                return next.apply(ctx, status, cause, metadata);
             }
-            return next.apply(ctx, status, cause, metadata);
+
+            @Override
+            @Nullable
+            public CompletableFuture<@Nullable Status> applyAsync(RequestContext ctx, Status status,
+                                                                  Throwable cause,
+                                                                  Metadata metadata) {
+                final CompletableFuture<@Nullable Status> future =
+                        GrpcExceptionHandlerFunction.this.applyAsync(ctx, status, cause, metadata);
+                if (future == null) {
+                    return next.applyAsync(ctx, status, cause, metadata);
+                }
+
+                return future.thenCompose(newStatus -> {
+                    if (newStatus != null) {
+                        return UnmodifiableFuture.completedFuture(newStatus);
+                    }
+                    final CompletableFuture<@Nullable Status> nextFuture =
+                            next.applyAsync(ctx, status, cause, metadata);
+                    if (nextFuture == null) {
+                        return UnmodifiableFuture.completedFuture(null);
+                    }
+                    return nextFuture;
+                });
+            }
         };
     }
 }

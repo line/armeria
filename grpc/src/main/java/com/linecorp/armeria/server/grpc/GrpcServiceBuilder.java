@@ -1056,9 +1056,7 @@ public final class GrpcServiceBuilder {
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
                                               entry.additionalDecorators());
             }
-            if (grpcExceptionHandler != null) {
-                newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
-            }
+            newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
             handlerRegistry = newRegistryBuilder.build();
         } else {
             handlerRegistry = registryBuilder.build();

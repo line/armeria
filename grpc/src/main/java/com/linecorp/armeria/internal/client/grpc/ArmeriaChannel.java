@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toE
 import java.net.URI;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import com.google.common.base.Strings;
@@ -55,7 +56,6 @@ import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.TailPreClient;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;
@@ -174,12 +174,15 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
                 (unused, cause) -> {
-                    final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, cause);
-                    Status status = statusAndMetadata.status();
-                    if (status.getDescription() == null) {
-                        status = status.withDescription(cause.getMessage());
-                    }
-                    return HttpResponse.ofFailure(status.asRuntimeException());
+                    final CompletableFuture<HttpResponse> future =
+                            exceptionHandler.handle(ctx, cause).thenApply(statusAndMetadata -> {
+                                Status status = statusAndMetadata.status();
+                                if (status.getDescription() == null) {
+                                    status = status.withDescription(cause.getMessage());
+                                }
+                                return HttpResponse.ofFailure(status.asRuntimeException());
+                            });
+                    return HttpResponse.of(future);
                 };
         final HttpPreClient preClient =
                 options().clientPreprocessors()
