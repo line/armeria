@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2025-2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,8 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Proxy;
 import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.protocol.TProtocolDecorator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,7 +39,10 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -71,6 +78,48 @@ class ThriftClientTest {
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.exchangeType()).isEqualTo(ExchangeType.UNARY);
         }
+    }
+
+    @Test
+    void protocolDecorator() throws TException {
+        final AtomicInteger writeMessageBeginCount = new AtomicInteger();
+        final AtomicInteger readMessageBeginCount = new AtomicInteger();
+
+        final ThriftProtocolDecorator protocolDecorator = new ThriftProtocolDecorator() {
+            @Override
+            public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
+                                                SerializationFormat serializationFormat) {
+                return new TProtocolDecorator(tProtocol) {
+                    @Override
+                    public void writeMessageBegin(TMessage tMessage) throws TException {
+                        writeMessageBeginCount.incrementAndGet();
+                        super.writeMessageBegin(tMessage);
+                    }
+                };
+            }
+
+            @Override
+            public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
+                                                 SerializationFormat serializationFormat) {
+                return new TProtocolDecorator(tProtocol) {
+                    @Override
+                    public TMessage readMessageBegin() throws TException {
+                        readMessageBeginCount.incrementAndGet();
+                        return super.readMessageBegin();
+                    }
+                };
+            }
+        };
+
+        final HelloService.Iface client =
+                ThriftClients.builder(server.httpUri())
+                             .path("/hello")
+                             .protocolDecorator(protocolDecorator)
+                             .build(HelloService.Iface.class);
+
+        assertThat(client.hello("Armeria")).isEqualTo("Hello, Armeria!");
+        assertThat(writeMessageBeginCount).hasValue(1);
+        assertThat(readMessageBeginCount).hasValue(1);
     }
 
     private static Stream<Arguments> preprocessors_args() {

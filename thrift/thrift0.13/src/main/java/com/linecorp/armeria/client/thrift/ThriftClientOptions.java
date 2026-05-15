@@ -1,7 +1,7 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2022-2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import org.apache.thrift.protocol.TProtocol;
+
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 
 /**
  * {@link ClientOption}s to control Thrift-specific behavior.
@@ -40,6 +43,13 @@ public final class ThriftClientOptions {
      */
     public static final ClientOption<Integer> MAX_RESPONSE_CONTAINER_LENGTH =
             ClientOption.define("THRIFT_MAX_CONTAINER_LENGTH", -1);
+
+    /**
+     * The decorator that customizes the {@link TProtocol} used for
+     * Thrift message serialization and deserialization.
+     */
+    public static final ClientOption<ThriftProtocolDecorator> PROTOCOL_DECORATOR =
+            ClientOption.define("THRIFT_PROTOCOL_DECORATOR", ThriftProtocolDecorator.ofDefault());
 
     private ThriftClientOptions() {}
 }

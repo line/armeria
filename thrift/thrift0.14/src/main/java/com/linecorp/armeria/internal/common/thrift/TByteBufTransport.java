@@ -1,7 +1,7 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2021-2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.common.thrift;
 import org.apache.thrift.TConfiguration;
 import org.apache.thrift.transport.TTransportException;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 import io.netty.buffer.ByteBuf;
 
 public final class TByteBufTransport extends AbstractTByteBufTransport {
@@ -28,10 +26,9 @@ public final class TByteBufTransport extends AbstractTByteBufTransport {
         super(buf);
     }
 
-    @Nullable
     @Override
     public TConfiguration getConfiguration() {
-        return null;
+        return new TConfiguration();
     }
 
     @Override

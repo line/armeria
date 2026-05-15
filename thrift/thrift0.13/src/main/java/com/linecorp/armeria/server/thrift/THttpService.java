@@ -1,7 +1,7 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2016-2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -290,6 +291,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private int maxRequestContainerLength;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
+    private final ThriftProtocolDecorator protocolDecorator;
     private Map<ThriftFunction, HttpService> decoratedTHttpServices;
 
     @Nullable
@@ -299,7 +301,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                  Set<SerializationFormat> supportedSerializationFormats,
                  int maxRequestStringLength, int maxRequestContainerLength,
                  BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
-                         exceptionHandler) {
+                         exceptionHandler,
+                 ThriftProtocolDecorator protocolDecorator) {
         super(delegate);
         thriftService = findThriftService(delegate);
         this.defaultSerializationFormat = defaultSerializationFormat;
@@ -314,6 +317,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         format -> ThriftSerializationFormats.protocolFactory(format, 0, 0)));
         // The actual requestProtocolFactories will be set when this service is added.
         requestProtocolFactories = responseProtocolFactories;
+        this.protocolDecorator = protocolDecorator;
         // The actual decoratedTHttpServices will be set when this service is added.
         decoratedTHttpServices = ImmutableMap.of();
     }
@@ -507,7 +511,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             final TByteBufTransport inTransport = new TByteBufTransport(buf);
             final TProtocolFactory protocolFactory = requestProtocolFactories.get(serializationFormat);
             assert protocolFactory != null;
-            final TProtocol inProto = protocolFactory.getProtocol(inTransport);
+            final TProtocol inProto = protocolDecorator.decorateForRequest(
+                    ctx, protocolFactory.getProtocol(inTransport), serializationFormat);
 
             final TMessage header;
             final TBase<?, ?> args;
@@ -778,7 +783,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             final TTransport transport = new TByteBufTransport(buf);
             final TProtocolFactory protocolFactory = responseProtocolFactories.get(serializationFormat);
             assert protocolFactory != null;
-            final TProtocol outProto = protocolFactory.getProtocol(transport);
+            final TProtocol outProto = protocolDecorator.decorateForResponse(
+                    ctx, protocolFactory.getProtocol(transport), serializationFormat);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
@@ -827,7 +833,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             final TTransport transport = new TByteBufTransport(buf);
             final TProtocolFactory protocolFactory = responseProtocolFactories.get(serializationFormat);
             assert protocolFactory != null;
-            final TProtocol outProto = protocolFactory.getProtocol(transport);
+            final TProtocol outProto = protocolDecorator.decorateForResponse(
+                    ctx, protocolFactory.getProtocol(transport), serializationFormat);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);

@@ -1,7 +1,7 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2019-2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -38,6 +38,7 @@ import com.google.common.collect.Multimaps;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.RpcService;
@@ -81,6 +82,7 @@ public final class THttpServiceBuilder {
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
     private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler = defaultExceptionHandler;
+    private ThriftProtocolDecorator protocolDecorator = ThriftProtocolDecorator.ofDefault();
 
     // -1 means to use the default request length of the Server.
     private int maxRequestStringLength = -1;
@@ -235,6 +237,16 @@ public final class THttpServiceBuilder {
     }
 
     /**
+     * Sets the {@link ThriftProtocolDecorator} that customizes the Thrift protocol.
+     *
+     * @param protocolDecorator the protocol decorator
+     */
+    public THttpServiceBuilder protocolDecorator(ThriftProtocolDecorator protocolDecorator) {
+        this.protocolDecorator = requireNonNull(protocolDecorator, "protocolDecorator");
+        return this;
+    }
+
+    /**
      * Builds a new instance of {@link THttpService}.
      */
     public THttpService build() {
@@ -260,7 +272,8 @@ public final class THttpServiceBuilder {
 
         return new THttpService(
                 decorate(tcs), defaultSerializationFormat, builder.build(),
-                maxRequestStringLength, maxRequestContainerLength, exceptionHandler
+                maxRequestStringLength, maxRequestContainerLength, exceptionHandler,
+                protocolDecorator
         );
     }
 }

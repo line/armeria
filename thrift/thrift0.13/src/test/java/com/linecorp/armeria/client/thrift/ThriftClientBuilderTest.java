@@ -1,7 +1,7 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2020-2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.endpoint.UndefinedEndpointGroup;
@@ -159,6 +160,18 @@ class ThriftClientBuilderTest {
                          .maxResponseContainerLength(-1);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("maxResponseContainerLength: -1 (expected: >= 0)");
+    }
+
+    @Test
+    void protocolDecorator() {
+        final ThriftProtocolDecorator PROTOCOL_DECORATOR = ThriftProtocolDecorator.ofDefault();
+        final HelloService.Iface client = ThriftClients.builder("https://armeria.dev/")
+                                                       .protocolDecorator(PROTOCOL_DECORATOR)
+                                                       .build(HelloService.Iface.class);
+        final ThriftProtocolDecorator protocolDecorator =
+                Clients.unwrap(client, ClientBuilderParams.class).options()
+                       .get(ThriftClientOptions.PROTOCOL_DECORATOR);
+        assertThat(protocolDecorator).isEqualTo(PROTOCOL_DECORATOR);
     }
 
     @Test

@@ -1,7 +1,7 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2021-2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.thrift;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_STRING_LENGTH;
+import static com.linecorp.armeria.client.thrift.ThriftClientOptions.PROTOCOL_DECORATOR;
 import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.preprocessorToUri;
 import static java.util.Objects.requireNonNull;
 
@@ -60,6 +61,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
 /**
@@ -190,6 +192,15 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
         checkArgument(maxResponseContainerLength >= 0, "maxResponseContainerLength: %s (expected: >= 0)",
                       maxResponseContainerLength);
         return option(MAX_RESPONSE_CONTAINER_LENGTH.newValue(maxResponseContainerLength));
+    }
+
+    /**
+     * Sets the {@link ThriftProtocolDecorator} that customizes the Thrift protocol.
+     *
+     * @param protocolDecorator the protocol decorator
+     */
+    public ThriftClientBuilder protocolDecorator(ThriftProtocolDecorator protocolDecorator) {
+        return option(PROTOCOL_DECORATOR, requireNonNull(protocolDecorator, "protocolDecorator"));
     }
 
     /**
