@@ -60,7 +60,6 @@ public final class OutlierDetectingEndpointGroupBuilder {
                               .onException()
                               .thenFailure();
 
-
     private final EndpointGroup delegate;
 
     private int maxNumEndpoints = DEFAULT_MAX_NUM_ENDPOINTS;
