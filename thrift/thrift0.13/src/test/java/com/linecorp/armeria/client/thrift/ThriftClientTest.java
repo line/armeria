@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 LY Corporation
+ * Copyright 2025 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,8 +19,8 @@ package com.linecorp.armeria.client.thrift;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Proxy;
-import java.util.stream.Stream;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;

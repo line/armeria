@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2026 LY Corporation
+ * Copyright 2016 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance

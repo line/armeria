@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2026 LY Corporation
+ * Copyright 2019 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -38,6 +38,7 @@ import com.google.common.collect.Multimaps;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -241,6 +242,7 @@ public final class THttpServiceBuilder {
      *
      * @param protocolDecorator the protocol decorator
      */
+    @UnstableApi
     public THttpServiceBuilder protocolDecorator(ThriftProtocolDecorator protocolDecorator) {
         this.protocolDecorator = requireNonNull(protocolDecorator, "protocolDecorator");
         return this;
