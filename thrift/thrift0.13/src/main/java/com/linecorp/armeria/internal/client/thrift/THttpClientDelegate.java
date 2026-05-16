@@ -139,8 +139,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
 
             try {
                 final TByteBufTransport outTransport = new TByteBufTransport(buf);
-                final TProtocol tProtocol = protocolDecorator.decorateForRequest(
-                        ctx, requestProtocolFactory.getProtocol(outTransport), serializationFormat);
+                final TProtocol tProtocol = getRequestProtocol(ctx, outTransport);
                 tProtocol.writeMessageBegin(header);
                 @SuppressWarnings("rawtypes")
                 final TBase tArgs = func.newArgs(args);
@@ -240,8 +239,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         ThriftProtocolUtil.maybeCheckMessageLength(serializationFormat, buf, maxStringLength);
 
         final TTransport inputTransport = new TByteBufTransport(buf);
-        final TProtocol inputProtocol = protocolDecorator.decorateForResponse(
-                ctx, responseProtocolFactory.getProtocol(inputTransport), serializationFormat);
+        final TProtocol inputProtocol = getResponseProtocol(ctx, inputTransport);
         final TMessage header = inputProtocol.readMessageBegin();
         final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);
         if (appEx != null) {
@@ -279,6 +277,28 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 ctx, reply, rawResponseContent,
                 new TApplicationException(TApplicationException.MISSING_RESULT,
                                           result.getClass().getName() + '.' + successField.getFieldName()));
+    }
+
+    private TProtocol getRequestProtocol(ClientRequestContext ctx, TTransport tTransport)
+            throws TTransportException {
+        final TProtocol tProtocol = requestProtocolFactory.getProtocol(tTransport);
+
+        try {
+            return protocolDecorator.decorateForRequest(ctx, tProtocol, serializationFormat);
+        } catch (Exception e) {
+            throw new TTransportException("Failed to decorate the request protocol", e);
+        }
+    }
+
+    private TProtocol getResponseProtocol(ClientRequestContext ctx, TTransport tTransport)
+            throws TTransportException {
+        final TProtocol tProtocol = responseProtocolFactory.getProtocol(tTransport);
+
+        try {
+            return protocolDecorator.decorateForResponse(ctx, tProtocol, serializationFormat);
+        } catch (Exception e) {
+            throw new TTransportException("Failed to decorate the response protocol", e);
+        }
     }
 
     @Nullable
