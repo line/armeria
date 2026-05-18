@@ -80,13 +80,13 @@ public interface ThriftProtocolDecorator {
     }
 
     /**
-     * Returns the {@link TProtocol} used for request deserialization.
+     * Returns the {@link TProtocol} used for request serialization and deserialization.
      */
     TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
                                  SerializationFormat serializationFormat);
 
     /**
-     * Returns the {@link TProtocol} used for response serialization.
+     * Returns the {@link TProtocol} used for response serialization and deserialization.
      */
     TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
                                   SerializationFormat serializationFormat);
