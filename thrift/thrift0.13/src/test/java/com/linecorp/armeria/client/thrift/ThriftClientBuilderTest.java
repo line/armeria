@@ -164,7 +164,7 @@ class ThriftClientBuilderTest {
 
     @Test
     void protocolDecorator() {
-        final ThriftProtocolDecorator PROTOCOL_DECORATOR = ThriftProtocolDecorator.ofDefault();
+        final ThriftProtocolDecorator PROTOCOL_DECORATOR = ThriftProtocolDecorator.noop();
         final HelloService.Iface client = ThriftClients.builder("https://armeria.dev/")
                                                        .protocolDecorator(PROTOCOL_DECORATOR)
                                                        .build(HelloService.Iface.class);

@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.client.thrift;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_STRING_LENGTH;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.PROTOCOL_DECORATOR;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.thrift.TProtocolDecorationException;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -284,9 +286,11 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         final TProtocol tProtocol = requestProtocolFactory.getProtocol(tTransport);
 
         try {
-            return protocolDecorator.decorateForRequest(ctx, tProtocol, serializationFormat);
+            final TProtocol decoratedProtocol =
+                    protocolDecorator.decorateForRequest(ctx, tProtocol, serializationFormat);
+            return requireNonNull(decoratedProtocol, "protocolDecorator.decorateForRequest() returned null");
         } catch (Exception e) {
-            throw new TTransportException("Failed to decorate the request protocol", e);
+            throw new TProtocolDecorationException(true, e);
         }
     }
 
@@ -295,9 +299,11 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         final TProtocol tProtocol = responseProtocolFactory.getProtocol(tTransport);
 
         try {
-            return protocolDecorator.decorateForResponse(ctx, tProtocol, serializationFormat);
+            final TProtocol decoratedProtocol =
+                    protocolDecorator.decorateForResponse(ctx, tProtocol, serializationFormat);
+            return requireNonNull(decoratedProtocol, "protocolDecorator.decorateForResponse() returned null");
         } catch (Exception e) {
-            throw new TTransportException("Failed to decorate the response protocol", e);
+            throw new TProtocolDecorationException(false, e);
         }
     }
 

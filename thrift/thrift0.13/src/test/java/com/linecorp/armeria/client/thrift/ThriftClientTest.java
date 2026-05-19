@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.thrift.TProtocolDecorationException;
 import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -120,6 +122,35 @@ class ThriftClientTest {
         assertThat(client.hello("Armeria")).isEqualTo("Hello, Armeria!");
         assertThat(writeMessageBeginCount).hasValue(1);
         assertThat(readMessageBeginCount).hasValue(1);
+    }
+
+    @Test
+    void protocolDecorator_exception() {
+        final RuntimeException exception = new RuntimeException("REQUEST");
+        final ThriftProtocolDecorator protocolDecorator = new ThriftProtocolDecorator() {
+            @Override
+            public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
+                                                SerializationFormat serializationFormat) {
+                throw exception;
+            }
+
+            @Override
+            public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
+                                                 SerializationFormat serializationFormat) {
+                return tProtocol;
+            }
+        };
+
+        final HelloService.Iface client =
+                ThriftClients.builder(server.httpUri())
+                             .path("/hello")
+                             .protocolDecorator(protocolDecorator)
+                             .build(HelloService.Iface.class);
+
+        assertThatThrownBy(() -> client.hello("Armeria"))
+                .hasCauseInstanceOf(TProtocolDecorationException.class)
+                .hasMessageContaining("Failed to decorate the request protocol")
+                .hasRootCause(exception);
     }
 
     private static Stream<Arguments> preprocessors_args() {

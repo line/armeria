@@ -83,7 +83,7 @@ public final class THttpServiceBuilder {
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
     private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler = defaultExceptionHandler;
-    private ThriftProtocolDecorator protocolDecorator = ThriftProtocolDecorator.ofDefault();
+    private ThriftProtocolDecorator protocolDecorator = ThriftProtocolDecorator.noop();
 
     // -1 means to use the default request length of the Server.
     private int maxRequestStringLength = -1;

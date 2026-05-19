@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.thrift.TProtocolDecorationException;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
@@ -516,8 +517,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             try {
                 inProto = getRequestProtocol(ctx, inTransport, serializationFormat);
-            } catch (ProtocolDecorationException e) {
-                handleProtocolDecorationException(ctx, httpRes, e);
+            } catch (TProtocolDecorationException e) {
+                httpRes.complete(HttpResponse.ofFailure(e));
                 return;
             }
 
@@ -711,8 +712,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final HttpData content;
         try {
             content = encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, wrappedResult);
-        } catch (ProtocolDecorationException e) {
-            handleProtocolDecorationException(ctx, httpRes, e);
+        } catch (TProtocolDecorationException e) {
+            httpRes.complete(HttpResponse.ofFailure(e));
             return;
         }
         respond(serializationFormat, content, httpRes);
@@ -765,8 +766,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             } else {
                 content = encodeException(ctx, rpcRes, serializationFormat, seqId, func.name(), cause);
             }
-        } catch (ProtocolDecorationException e) {
-            handleProtocolDecorationException(ctx, httpRes, e);
+        } catch (TProtocolDecorationException e) {
+            httpRes.complete(HttpResponse.ofFailure(e));
             return;
         }
 
@@ -780,8 +781,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         try {
             content = encodeException(
                     ctx, RpcResponse.ofFailure(cause), serializationFormat, seqId, methodName, cause);
-        } catch (ProtocolDecorationException e) {
-            handleProtocolDecorationException(ctx, httpRes, e);
+        } catch (TProtocolDecorationException e) {
+            httpRes.complete(HttpResponse.ofFailure(e));
             return;
         }
         respond(serializationFormat, content, httpRes);
@@ -874,9 +875,11 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final TProtocol tProtocol = protocolFactory.getProtocol(tTransport);
 
         try {
-            return protocolDecorator.decorateForRequest(ctx, tProtocol, serializationFormat);
+            final TProtocol decoratedProtocol =
+                    protocolDecorator.decorateForRequest(ctx, tProtocol, serializationFormat);
+            return requireNonNull(decoratedProtocol, "protocolDecorator.decorateForRequest() returned null");
         } catch (Exception e) {
-            throw new ProtocolDecorationException(true, e);
+            throw new TProtocolDecorationException(true, e);
         }
     }
 
@@ -887,18 +890,12 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final TProtocol tProtocol = protocolFactory.getProtocol(tTransport);
 
         try {
-            return protocolDecorator.decorateForResponse(ctx, tProtocol, serializationFormat);
+            final TProtocol decoratedProtocol =
+                    protocolDecorator.decorateForResponse(ctx, tProtocol, serializationFormat);
+            return requireNonNull(decoratedProtocol, "protocolDecorator.decorateForResponse() returned null");
         } catch (Exception e) {
-            throw new ProtocolDecorationException(false, e);
+            throw new TProtocolDecorationException(false, e);
         }
-    }
-
-    private static void handleProtocolDecorationException(
-            ServiceRequestContext ctx, CompletableFuture<HttpResponse> httpRes,
-            ProtocolDecorationException cause) {
-        logger.error("{} Failed to decorate the {} protocol:",
-                     ctx, cause.isRequest ? "request" : "response", cause.getCause());
-        httpRes.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
     private static final class DecodedRequest {
@@ -914,17 +911,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             this.seqId = seqId;
             this.thriftFunction = thriftFunction;
             this.decodedReq = decodedReq;
-        }
-    }
-
-    private static final class ProtocolDecorationException extends RuntimeException {
-
-        private static final long serialVersionUID = -5734593879633758514L;
-        private final boolean isRequest;
-
-        private ProtocolDecorationException(boolean isRequest, Throwable cause) {
-            super(cause);
-            this.isRequest = isRequest;
         }
     }
 }

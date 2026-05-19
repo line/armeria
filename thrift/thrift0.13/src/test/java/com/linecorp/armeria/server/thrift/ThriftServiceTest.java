@@ -43,6 +43,7 @@ import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.TProtocolDecorationException;
 import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -761,6 +763,43 @@ class ThriftServiceTest {
 
         assertThat(readMessageBeginCount).hasValue(1);
         assertThat(writeMessageBeginCount).hasValue(1);
+    }
+
+    @Test
+    void testProtocolDecorator_exception() throws Exception {
+        final SerializationFormat defaultSerializationFormat = ThriftSerializationFormats.BINARY;
+
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
+        client.send_hello(FOO);
+        assertThat(out.length()).isGreaterThan(0);
+
+        final RuntimeException exception = new RuntimeException("REQUEST");
+        final ThriftProtocolDecorator protocolDecorator = new ThriftProtocolDecorator() {
+            @Override
+            public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
+                                                SerializationFormat serializationFormat) {
+                throw exception;
+            }
+
+            @Override
+            public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
+                                                 SerializationFormat serializationFormat) {
+                return tProtocol;
+            }
+        };
+
+        final THttpService service =
+                THttpService.builder()
+                            .addService((HelloService.Iface) name -> "Hello, " + name + '!')
+                            .defaultSerializationFormat(defaultSerializationFormat)
+                            .protocolDecorator(protocolDecorator)
+                            .build();
+
+        assertThatThrownBy(() -> invoke(service))
+                .hasCauseInstanceOf(TProtocolDecorationException.class)
+                .hasMessageContaining("Failed to decorate the request protocol")
+                .hasRootCause(exception);
     }
 
     // NB: By making this interface functional, we can use lambda expression to implement

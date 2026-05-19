@@ -33,23 +33,25 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public interface ThriftProtocolDecorator {
 
-    /**
-     * Returns the default {@link ThriftProtocolDecorator} without any customization.
-     */
-    static ThriftProtocolDecorator ofDefault() {
-        return new ThriftProtocolDecorator() {
-            @Override
-            public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
-                                                SerializationFormat serializationFormat) {
-                return tProtocol;
-            }
+    ThriftProtocolDecorator NOOP = new ThriftProtocolDecorator() {
+        @Override
+        public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
+                                            SerializationFormat serializationFormat) {
+            return tProtocol;
+        }
 
-            @Override
-            public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
-                                                 SerializationFormat serializationFormat) {
-                return tProtocol;
-            }
-        };
+        @Override
+        public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
+                                             SerializationFormat serializationFormat) {
+            return tProtocol;
+        }
+    };
+
+    /**
+     * Returns a no-op {@link ThriftProtocolDecorator} that does not do any decoration.
+     */
+    static ThriftProtocolDecorator noop() {
+        return NOOP;
     }
 
     /**

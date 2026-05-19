@@ -49,7 +49,7 @@ public final class ThriftClientOptions {
      * Thrift message serialization and deserialization.
      */
     public static final ClientOption<ThriftProtocolDecorator> PROTOCOL_DECORATOR =
-            ClientOption.define("THRIFT_PROTOCOL_DECORATOR", ThriftProtocolDecorator.ofDefault());
+            ClientOption.define("THRIFT_PROTOCOL_DECORATOR", ThriftProtocolDecorator.noop());
 
     private ThriftClientOptions() {}
 }
