@@ -28,7 +28,7 @@ public final class TByteBufTransport extends AbstractTByteBufTransport {
 
     @Override
     public TConfiguration getConfiguration() {
-        return TConfiguration.DEFAULT;
+        return new TConfiguration();
     }
 
     @Override
