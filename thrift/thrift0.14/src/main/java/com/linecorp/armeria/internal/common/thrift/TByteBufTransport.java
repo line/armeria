@@ -22,13 +22,15 @@ import io.netty.buffer.ByteBuf;
 
 public final class TByteBufTransport extends AbstractTByteBufTransport {
 
+    private final TConfiguration configuration = new TConfiguration();
+
     public TByteBufTransport(ByteBuf buf) {
         super(buf);
     }
 
     @Override
     public TConfiguration getConfiguration() {
-        return new TConfiguration();
+        return configuration;
     }
 
     @Override
