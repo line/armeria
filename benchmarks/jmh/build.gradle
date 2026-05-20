@@ -32,6 +32,7 @@ configurations.named('jmhCompileProtoPath').configure {
 
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
+    zip64 = true
     jmhVersion = libs.versions.jmh.core.get()
 
     def jmhIncludes = rootProject.findProperty('jmh.includes')
@@ -90,4 +91,12 @@ jmh {
 // Disable output caching so that benchmarks are not skipped on the second run.
 tasks.jmh.outputs.upToDateWhen {
     false
+}
+
+tasks.jmh.doLast {
+    def branch = 'git rev-parse --abbrev-ref HEAD'.execute().text.trim()
+    def commit = 'git rev-parse --short HEAD'.execute().text.trim()
+    def dirty = !'git status --porcelain'.execute().text.trim().isEmpty()
+    logger.lifecycle('')
+    logger.lifecycle("Git: branch=${branch}, commit=${commit}${dirty ? ' (dirty)' : ''}")
 }
