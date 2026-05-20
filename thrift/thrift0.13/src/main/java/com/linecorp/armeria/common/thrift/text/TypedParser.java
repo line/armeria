@@ -192,7 +192,7 @@ abstract class TypedParser<T> {
 
         @Override
         public void writeValue(JsonGenerator jw, ByteBuffer val) throws IOException {
-            jw.writeBinary(val.array());
+            jw.writeBinary(val.array(), val.arrayOffset() + val.position(), val.remaining());
         }
     };
 

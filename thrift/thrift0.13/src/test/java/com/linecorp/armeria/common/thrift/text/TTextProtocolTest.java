@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.EnumSet;
@@ -52,7 +53,6 @@ import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -502,12 +502,36 @@ class TTextProtocolTest {
         assertThatThrownBy(prot::readMessageBegin).isInstanceOf(TException.class);
     }
 
+    @Test
+    void writeBinaryUsesByteBufferPositionAndLimit() throws Exception {
+        final String data = "Hello, Armeria!";
+        final String expected = Base64.getEncoder().encodeToString(data.getBytes(StandardCharsets.UTF_8));
+
+        final byte[] bytes = ("||" + data + "123").getBytes(StandardCharsets.UTF_8);
+        final ByteBuffer binary = ByteBuffer.wrap(bytes);
+        binary.position(2);
+        binary.limit(bytes.length - 3);
+
+        final TTextProtocolTestMsg msg = testMsg();
+        // Use direct assignment to avoid buffer normalization in setters.
+        msg.l = binary;
+        assertThat(msg.l.array()).isSameAs(bytes);
+
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        msg.write(new TTextProtocol(new TIOStreamTransport(baos)));
+
+        assertThatJson(new String(baos.toByteArray(), StandardCharsets.UTF_8))
+                .node("l").isEqualTo(expected);
+        assertThat(binary.position()).isEqualTo(2);
+        assertThat(binary.limit()).isEqualTo(bytes.length - 3);
+    }
+
     private static String readFile(String filename) throws IOException {
         return Resources.toString(
                 Resources.getResource(
                         TTextProtocolTest.class,
                         "/testing/thrift/text/" + filename),
-                Charsets.UTF_8
+                StandardCharsets.UTF_8
         );
     }
 }
