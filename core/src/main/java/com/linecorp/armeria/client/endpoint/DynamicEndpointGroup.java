@@ -66,7 +66,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     }
 
     // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
-    private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
+    static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
             new ArrayList<>());
 
     private final EndpointSelectionStrategy selectionStrategy;
@@ -288,7 +288,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         notifyListeners(newEndpoints);
     }
 
-    private static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
+    static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
         if (oldEndpoints == UNINITIALIZED_ENDPOINTS) {
             return true;
         }
