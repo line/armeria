@@ -18,9 +18,6 @@ package com.linecorp.armeria.it.xds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Order;
@@ -130,10 +127,7 @@ class XdsGrpcProxylessTest {
     }
 
     private static Bootstrap loadParsedBootstrap() throws Exception {
-        final Path bootstrapPath = Paths.get("/etc/istio/proxy/envoy-rev.json");
-        await().untilAsserted(() -> assertThat(bootstrapPath).exists());
-        logger.info("Using Istio bootstrap file: {}", bootstrapPath);
-        final String bootstrapJson = Files.readString(bootstrapPath);
+        final String bootstrapJson = XdsTestUtil.awaitAndReadBootstrapJson("envoy-rev.json");
         final String rewritten = XdsResourceReader.rewriteXdsGrpcBootstrap(bootstrapJson);
         // Set GENERATOR=grpc in node metadata to enable gRPC proxyless mode.
         final String withGenerator = JsonPath.parse(rewritten)

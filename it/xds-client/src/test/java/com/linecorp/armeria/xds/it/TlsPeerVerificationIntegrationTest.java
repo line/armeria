@@ -59,7 +59,8 @@ class TlsPeerVerificationIntegrationTest {
     private static final Instant NOT_AFTER = Instant.now().plus(365, ChronoUnit.DAYS);
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension serverCert = new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension serverCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -71,7 +72,8 @@ class TlsPeerVerificationIntegrationTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension ipCert = new SelfSignedCertificateExtension("127.0.0.1");
+    static final XdsCertificateExtension ipCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("127.0.0.1"));
 
     @RegisterExtension
     static final ServerExtension ipServer = new ServerExtension() {
@@ -83,14 +85,14 @@ class TlsPeerVerificationIntegrationTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension wildcardCert =
-            new SelfSignedCertificateExtension(
+    static final XdsCertificateExtension wildcardCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension(
                     "localhost",
                     new SecureRandom(),
                     2048,
                     NOT_BEFORE,
                     NOT_AFTER,
-                    ImmutableList.of("*.example.com"));
+                    ImmutableList.of("*.example.com")));
 
     @RegisterExtension
     static final ServerExtension wildcardServer = new ServerExtension() {
@@ -102,14 +104,14 @@ class TlsPeerVerificationIntegrationTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension uriCert =
-            new SelfSignedCertificateExtension(
+    static final XdsCertificateExtension uriCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension(
                     "localhost",
                     new SecureRandom(),
                     2048,
                     NOT_BEFORE,
                     NOT_AFTER,
-                    ImmutableList.of("spiffe://example.com/service"));
+                    ImmutableList.of("spiffe://example.com/service")));
 
     @RegisterExtension
     static final ServerExtension uriServer = new ServerExtension() {

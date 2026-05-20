@@ -39,6 +39,7 @@ import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.CertificateValidationContextSnapshot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
@@ -68,10 +69,11 @@ class CertificateValidationContextTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate1 = new SelfSignedCertificateExtension();
-
+    static final XdsCertificateExtension certificate1 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate2 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate2 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     //language=YAML
     private static final String sdsBootstrapYaml =
@@ -172,12 +174,14 @@ class CertificateValidationContextTest {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
 
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
-                if (t != null) {
-                    errorRef.set(t);
-                }
-            });
+        final SnapshotWatcher<Object> watcher = (snapshot, t) -> {
+            if (t != null) {
+                errorRef.set(t);
+            }
+        };
+        try (XdsBootstrap xdsBootstrap =
+                     XdsBootstrap.builder(bootstrap).defaultSnapshotWatcher(watcher).build()) {
+            xdsBootstrap.listenerRoot("my-listener");
 
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
             assertThat(errorRef.get()).isInstanceOf(CertificateException.class);
@@ -207,12 +211,14 @@ class CertificateValidationContextTest {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
 
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
-                if (t != null) {
-                    errorRef.set(t);
-                }
-            });
+        final SnapshotWatcher<Object> watcher = (snapshot, t) -> {
+            if (t != null) {
+                errorRef.set(t);
+            }
+        };
+        try (XdsBootstrap xdsBootstrap =
+                     XdsBootstrap.builder(bootstrap).defaultSnapshotWatcher(watcher).build()) {
+            xdsBootstrap.listenerRoot("my-listener");
 
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
             assertThat(errorRef.get()).hasRootCauseInstanceOf(ValidationException.class);
@@ -242,12 +248,14 @@ class CertificateValidationContextTest {
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
 
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            xdsBootstrap.listenerRoot("my-listener").addSnapshotWatcher((snapshot, t) -> {
-                if (t != null) {
-                    errorRef.set(t);
-                }
-            });
+        final SnapshotWatcher<Object> watcher = (snapshot, t) -> {
+            if (t != null) {
+                errorRef.set(t);
+            }
+        };
+        try (XdsBootstrap xdsBootstrap =
+                     XdsBootstrap.builder(bootstrap).defaultSnapshotWatcher(watcher).build()) {
+            xdsBootstrap.listenerRoot("my-listener");
 
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
             assertThat(errorRef.get()).hasRootCauseInstanceOf(ValidationException.class);

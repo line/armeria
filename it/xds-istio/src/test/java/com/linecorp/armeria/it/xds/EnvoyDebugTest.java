@@ -17,13 +17,6 @@ package com.linecorp.armeria.it.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -92,20 +85,7 @@ class EnvoyDebugTest {
 
     @IstioPodTest
     void envoyBootstrapFile() throws Exception {
-        final Path dir = Paths.get("/etc/istio/proxy");
-        final List<String> filenames;
-        try (Stream<Path> stream = Files.list(dir)) {
-            filenames = stream.map(p -> p.getFileName().toString())
-                              .collect(Collectors.toList());
-        }
-        logger.info("/etc/istio/proxy contents: {}", filenames);
-        assertThat(filenames).anyMatch(name -> name.endsWith(".json"));
-
-        for (String name : filenames) {
-            if (name.endsWith(".json")) {
-                logger.info("Istio bootstrap file ('{}'):\n{}", name,
-                            Files.readString(dir.resolve(name)));
-            }
-        }
+        final String envoyBootstrap = XdsTestUtil.awaitAndReadBootstrapJson("envoy-rev.json");
+        logger.info("Istio bootstrap file ('envoy-rev.json'):\n{}", envoyBootstrap);
     }
 }

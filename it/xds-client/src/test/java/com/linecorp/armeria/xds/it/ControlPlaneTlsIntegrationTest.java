@@ -69,13 +69,13 @@ class ControlPlaneTlsIntegrationTest {
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension controlPlaneCert =
-            new SelfSignedCertificateExtension("127.0.0.1");
+    static final XdsCertificateExtension controlPlaneCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("127.0.0.1"));
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension clientCert =
-            new SelfSignedCertificateExtension("client.example.com");
+    static final XdsCertificateExtension clientCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("client.example.com"));
 
     @RegisterExtension
     @Order(1)

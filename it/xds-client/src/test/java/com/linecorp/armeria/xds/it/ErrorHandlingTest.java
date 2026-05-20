@@ -86,7 +86,8 @@ class ErrorHandlingTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     //language=YAML
     private static final String listenerYaml =

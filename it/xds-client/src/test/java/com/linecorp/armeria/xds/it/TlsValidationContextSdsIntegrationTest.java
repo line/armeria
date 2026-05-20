@@ -72,7 +72,8 @@ class TlsValidationContextSdsIntegrationTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension serverCert = new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension serverCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     static final ServerExtension backendServer = new ServerExtension() {
@@ -84,7 +85,8 @@ class TlsValidationContextSdsIntegrationTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension otherCert = new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension otherCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     //language=YAML
     private static final String bootstrapTemplate =
