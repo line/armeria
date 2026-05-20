@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.util.EventCount;
 import com.linecorp.armeria.common.util.EventCounter;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig;
 
 /**
  * A non-blocking implementation of circuit breaker pattern.

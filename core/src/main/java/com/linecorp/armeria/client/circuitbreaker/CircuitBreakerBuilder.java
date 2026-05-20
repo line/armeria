@@ -16,6 +16,12 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_FAILURE_RATE_THRESHOLD;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_MINIMUM_REQUEST_THRESHOLD;
+import static com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig.DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -27,18 +33,13 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.internal.client.circuitbreaker.CircuitBreakerConfig;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.
  */
 public final class CircuitBreakerBuilder {
 
-    private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
-    private static final long DEFAULT_MINIMUM_REQUEST_THRESHOLD = 10;
-    private static final int DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS = 3;
-    private static final int DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS = 10;
-    private static final int DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS = 20;
-    private static final int DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS = 1;
     private static final Ticker DEFAULT_TICKER = Ticker.systemTicker();
 
     @Nullable
@@ -74,7 +75,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the threshold of failure rate to detect a remote service fault.
-     * Defaults to {@value #DEFAULT_FAILURE_RATE_THRESHOLD} if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_FAILURE_RATE_THRESHOLD} if unspecified.
      *
      * @param failureRateThreshold The rate between 0 (exclusive) and 1 (inclusive)
      */
@@ -89,7 +90,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the minimum number of requests within a time window necessary to detect a remote service fault.
-     * Defaults to {@value #DEFAULT_MINIMUM_REQUEST_THRESHOLD} if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_MINIMUM_REQUEST_THRESHOLD} if unspecified.
      */
     public CircuitBreakerBuilder minimumRequestThreshold(long minimumRequestThreshold) {
         if (minimumRequestThreshold < 0) {
@@ -102,7 +103,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the trial request interval in HALF_OPEN state.
-     * Defaults to {@value #DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS} seconds if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS} seconds if unspecified.
      */
     public CircuitBreakerBuilder trialRequestInterval(Duration trialRequestInterval) {
         requireNonNull(trialRequestInterval, "trialRequestInterval");
@@ -116,7 +117,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the trial request interval in HALF_OPEN state in milliseconds.
-     * Defaults to {@value #DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS} seconds if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_TRIAL_REQUEST_INTERVAL_SECONDS} seconds if unspecified.
      */
     public CircuitBreakerBuilder trialRequestIntervalMillis(long trialRequestIntervalMillis) {
         trialRequestInterval(Duration.ofMillis(trialRequestIntervalMillis));
@@ -125,7 +126,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the duration of OPEN state.
-     * Defaults to {@value #DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS} seconds if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS} seconds if unspecified.
      */
     public CircuitBreakerBuilder circuitOpenWindow(Duration circuitOpenWindow) {
         requireNonNull(circuitOpenWindow, "circuitOpenWindow");
@@ -139,7 +140,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the duration of OPEN state in milliseconds.
-     * Defaults to {@value #DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS} seconds if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_CIRCUIT_OPEN_WINDOW_SECONDS} seconds if unspecified.
      */
     public CircuitBreakerBuilder circuitOpenWindowMillis(long circuitOpenWindowMillis) {
         circuitOpenWindow(Duration.ofMillis(circuitOpenWindowMillis));
@@ -148,7 +149,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the time length of sliding window to accumulate the count of events.
-     * Defaults to {@value #DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS} seconds if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS} seconds if unspecified.
      */
     public CircuitBreakerBuilder counterSlidingWindow(Duration counterSlidingWindow) {
         requireNonNull(counterSlidingWindow, "counterSlidingWindow");
@@ -162,7 +163,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the time length of sliding window to accumulate the count of events, in milliseconds.
-     * Defaults to {@value #DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS} seconds if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS} seconds if unspecified.
      */
     public CircuitBreakerBuilder counterSlidingWindowMillis(long counterSlidingWindowMillis) {
         counterSlidingWindow(Duration.ofMillis(counterSlidingWindowMillis));
@@ -171,7 +172,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the interval that a circuit breaker can see the latest accumulated count of events.
-     * Defaults to {@value #DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS} second if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS} second if unspecified.
      */
     public CircuitBreakerBuilder counterUpdateInterval(Duration counterUpdateInterval) {
         requireNonNull(counterUpdateInterval, "counterUpdateInterval");
@@ -185,7 +186,7 @@ public final class CircuitBreakerBuilder {
 
     /**
      * Sets the interval that a circuit breaker can see the latest accumulated count of events, in milliseconds.
-     * Defaults to {@value #DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS} second if unspecified.
+     * Defaults to {@value CircuitBreakerConfig#DEFAULT_COUNTER_UPDATE_INTERVAL_SECONDS} second if unspecified.
      */
     public CircuitBreakerBuilder counterUpdateIntervalMillis(long counterUpdateIntervalMillis) {
         counterUpdateInterval(Duration.ofMillis(counterUpdateIntervalMillis));
