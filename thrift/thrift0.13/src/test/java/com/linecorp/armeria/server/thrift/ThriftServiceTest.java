@@ -1,7 +1,7 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2015 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.nio.ByteBuffer;
@@ -27,17 +28,22 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
 import org.apache.thrift.TApplicationException;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.protocol.TProtocolDecorator;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,7 +56,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.TProtocolDecorationException;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -694,6 +703,103 @@ class ThriftServiceTest {
 
         in.reset(res2.array());
         assertThat(nameClient.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testProtocolDecorator(SerializationFormat defaultSerializationFormat) throws Exception {
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
+        client.send_hello(FOO);
+        assertThat(out.length()).isGreaterThan(0);
+
+        final AtomicInteger readMessageBeginCount = new AtomicInteger();
+        final AtomicInteger writeMessageBeginCount = new AtomicInteger();
+
+        final ThriftProtocolDecorator protocolDecorator = new ThriftProtocolDecorator() {
+            @Override
+            public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
+                                                SerializationFormat serializationFormat) {
+                return new TProtocolDecorator(tProtocol) {
+                    @Override
+                    public TMessage readMessageBegin() throws TException {
+                        readMessageBeginCount.incrementAndGet();
+                        return super.readMessageBegin();
+                    }
+                };
+            }
+
+            @Override
+            public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
+                                                 SerializationFormat serializationFormat) {
+                return new TProtocolDecorator(tProtocol) {
+                    @Override
+                    public void writeMessageBegin(TMessage tMessage) throws TException {
+                        writeMessageBeginCount.incrementAndGet();
+                        super.writeMessageBegin(tMessage);
+                    }
+                };
+            }
+        };
+
+        final THttpService service =
+                THttpService.builder()
+                            .addService((HelloService.Iface) name -> "Hello, " + name + '!')
+                            .defaultSerializationFormat(defaultSerializationFormat)
+                            .protocolDecorator(protocolDecorator)
+                            .build();
+
+        invoke(service);
+
+        if ("ttuple".equals(defaultSerializationFormat.uriText())) {
+            // As of Thrift 0.23, TProtocolDecorator is not correctly delegating getScheme(),
+            // which breaks for some protocols like TTupleProtocol.
+            assertThatThrownBy(client::recv_hello)
+                    .isInstanceOf(TApplicationException.class)
+                    .hasMessageContaining("TProtocolException: don't know what type: 15");
+        } else {
+            assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
+        }
+
+        assertThat(readMessageBeginCount).hasValue(1);
+        assertThat(writeMessageBeginCount).hasValue(1);
+    }
+
+    @Test
+    void testProtocolDecorator_exception() throws Exception {
+        final SerializationFormat defaultSerializationFormat = ThriftSerializationFormats.BINARY;
+
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
+        client.send_hello(FOO);
+        assertThat(out.length()).isGreaterThan(0);
+
+        final RuntimeException exception = new RuntimeException("REQUEST");
+        final ThriftProtocolDecorator protocolDecorator = new ThriftProtocolDecorator() {
+            @Override
+            public TProtocol decorateForRequest(RequestContext ctx, TProtocol tProtocol,
+                                                SerializationFormat serializationFormat) {
+                throw exception;
+            }
+
+            @Override
+            public TProtocol decorateForResponse(RequestContext ctx, TProtocol tProtocol,
+                                                 SerializationFormat serializationFormat) {
+                return tProtocol;
+            }
+        };
+
+        final THttpService service =
+                THttpService.builder()
+                            .addService((HelloService.Iface) name -> "Hello, " + name + '!')
+                            .defaultSerializationFormat(defaultSerializationFormat)
+                            .protocolDecorator(protocolDecorator)
+                            .build();
+
+        assertThatThrownBy(() -> invoke(service))
+                .hasCauseInstanceOf(TProtocolDecorationException.class)
+                .hasMessageContaining("Failed to decorate the request protocol")
+                .hasRootCause(exception);
     }
 
     // NB: By making this interface functional, we can use lambda expression to implement

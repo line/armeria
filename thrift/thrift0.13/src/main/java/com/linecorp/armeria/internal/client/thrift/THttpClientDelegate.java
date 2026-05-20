@@ -1,7 +1,7 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2016 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.client.thrift;
 
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH;
 import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_STRING_LENGTH;
+import static com.linecorp.armeria.client.thrift.ThriftClientOptions.PROTOCOL_DECORATOR;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
@@ -61,7 +63,9 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.thrift.TProtocolDecorationException;
 import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftProtocolDecorator;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -83,6 +87,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
     private final SerializationFormat serializationFormat;
     private final TProtocolFactory requestProtocolFactory;
     private final TProtocolFactory responseProtocolFactory;
+    private final ThriftProtocolDecorator protocolDecorator;
     private final int maxStringLength;
 
     private final MediaType mediaType;
@@ -104,6 +109,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         responseProtocolFactory =
                 ThriftSerializationFormats.protocolFactory(serializationFormat,
                                                            maxStringLength, maxContainerLength);
+        protocolDecorator = options.get(PROTOCOL_DECORATOR);
         this.maxStringLength = maxStringLength;
         mediaType = serializationFormat.mediaType();
     }
@@ -135,7 +141,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
 
             try {
                 final TByteBufTransport outTransport = new TByteBufTransport(buf);
-                final TProtocol tProtocol = requestProtocolFactory.getProtocol(outTransport);
+                final TProtocol tProtocol = getRequestProtocol(ctx, outTransport);
                 tProtocol.writeMessageBegin(header);
                 @SuppressWarnings("rawtypes")
                 final TBase tArgs = func.newArgs(args);
@@ -235,7 +241,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         ThriftProtocolUtil.maybeCheckMessageLength(serializationFormat, buf, maxStringLength);
 
         final TTransport inputTransport = new TByteBufTransport(buf);
-        final TProtocol inputProtocol = responseProtocolFactory.getProtocol(inputTransport);
+        final TProtocol inputProtocol = getResponseProtocol(ctx, inputTransport);
         final TMessage header = inputProtocol.readMessageBegin();
         final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);
         if (appEx != null) {
@@ -273,6 +279,32 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 ctx, reply, rawResponseContent,
                 new TApplicationException(TApplicationException.MISSING_RESULT,
                                           result.getClass().getName() + '.' + successField.getFieldName()));
+    }
+
+    private TProtocol getRequestProtocol(ClientRequestContext ctx, TTransport tTransport)
+            throws TTransportException {
+        final TProtocol tProtocol = requestProtocolFactory.getProtocol(tTransport);
+
+        try {
+            final TProtocol decoratedProtocol =
+                    protocolDecorator.decorateForRequest(ctx, tProtocol, serializationFormat);
+            return requireNonNull(decoratedProtocol, "protocolDecorator.decorateForRequest() returned null");
+        } catch (Exception e) {
+            throw new TProtocolDecorationException(true, e);
+        }
+    }
+
+    private TProtocol getResponseProtocol(ClientRequestContext ctx, TTransport tTransport)
+            throws TTransportException {
+        final TProtocol tProtocol = responseProtocolFactory.getProtocol(tTransport);
+
+        try {
+            final TProtocol decoratedProtocol =
+                    protocolDecorator.decorateForResponse(ctx, tProtocol, serializationFormat);
+            return requireNonNull(decoratedProtocol, "protocolDecorator.decorateForResponse() returned null");
+        } catch (Exception e) {
+            throw new TProtocolDecorationException(false, e);
+        }
     }
 
     @Nullable
