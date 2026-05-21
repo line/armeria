@@ -83,7 +83,7 @@ final class AggregatedResponseAs {
             AggregatedHttpResponse response) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " (expect: the success class (2xx). response: " + response, null);
+                          " (expect: the success class (2xx)). response: " + response, null);
     }
 
     @FunctionalInterface
