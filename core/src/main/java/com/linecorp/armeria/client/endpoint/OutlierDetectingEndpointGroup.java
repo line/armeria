@@ -280,12 +280,6 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         return endpointContexts.get(endpoint);
     }
 
-    /**
-     * Updates {@code endpoints} if the sorted input differs from the current value. Sorting stabilizes the
-     * round-robin sequence since {@code endpointContexts} is unordered. Returns {@code true} if the
-     * endpoints changed; the caller is responsible for notifying listeners after releasing
-     * {@link #endpointsLock} so the callbacks never run while the lock is held.
-     */
     private boolean setEndpoints(Iterable<Endpoint> endpoints) {
         final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
         if (!DynamicEndpointGroup.hasChanges(this.endpoints, newEndpoints)) {
@@ -490,7 +484,7 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
             endpointsLock.unlock();
         }
 
-        if (newEndpoints != null && !closeable.isClosing()) {
+        if (newEndpoints != null) {
             if (!initialCompletionFuture.isDone()) {
                 initialCompletionFuture.complete(newEndpoints);
             }
