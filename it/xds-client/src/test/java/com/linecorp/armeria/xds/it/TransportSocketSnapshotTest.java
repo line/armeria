@@ -54,7 +54,8 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 class TransportSocketSnapshotTest {
 
     @RegisterExtension
-    static SelfSignedCertificateExtension certificate = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     //language=YAML
     private static final String tlsCertBootstrap =

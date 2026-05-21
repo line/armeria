@@ -18,13 +18,7 @@ package com.linecorp.armeria.it.xds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -76,21 +70,8 @@ class XdsNativeGrpcProxylessTest {
 
     @IstioPodTest(podCustomizer = GrpcProxylessPodCustomizer.class)
     void bootstrapFile() throws Exception {
-        final Path dir = Paths.get("/etc/istio/proxy");
-        final List<String> filenames;
-        try (Stream<Path> stream = Files.list(dir)) {
-            filenames = stream.map(p -> p.getFileName().toString())
-                              .collect(Collectors.toList());
-        }
-        logger.info("/etc/istio/proxy contents: {}", filenames);
-        assertThat(filenames).anyMatch(name -> name.endsWith(".json"));
-
-        for (String name : filenames) {
-            if (name.endsWith(".json")) {
-                logger.info("gRPC proxyless bootstrap file ('{}'):\n{}", name,
-                            Files.readString(dir.resolve(name)));
-            }
-        }
+        final String grpcBootstrap = XdsTestUtil.awaitAndReadBootstrapJson("grpc-bootstrap.json");
+        logger.info("gRPC proxyless bootstrap file ('grpc-bootstrap.json'):\n{}", grpcBootstrap);
     }
 
     @IstioPodTest(podCustomizer = GrpcProxylessPodCustomizer.class)
@@ -162,9 +143,7 @@ class XdsNativeGrpcProxylessTest {
      * can consume.
      */
     private static Bootstrap loadParsedBootstrap() throws Exception {
-        final Path bootstrapPath = Paths.get("/etc/istio/proxy/grpc-bootstrap.json");
-        assertThat(bootstrapPath).exists();
-        final String bootstrapJson = Files.readString(bootstrapPath);
+        final String bootstrapJson = XdsTestUtil.awaitAndReadBootstrapJson("grpc-bootstrap.json");
         logger.info("gRPC bootstrap:\n{}", bootstrapJson);
 
         final DocumentContext ctx = JsonPath.parse(bootstrapJson);
