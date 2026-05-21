@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
 
 import com.linecorp.armeria.common.Cancellable;
 import com.linecorp.armeria.common.CommonPools;
@@ -29,6 +28,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.file.PathWatcher;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.xds.configsource.InterestedResources;
+import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
+import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.PathConfigSource;
@@ -58,30 +63,26 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
     }
 
     @Override
-    public ConfigSourceSubscription create(ConfigSource configSource,
-                                           SotwSubscriptionCallbacks callbacks,
-                                           EventExecutor eventLoop) {
-        return new PathConfigSourceSubscription(
-                configSource.getPathConfigSource(), watchService,
-                callbacks, eventLoop, meterRegistry, meterIdPrefix);
+    public SnapshotStream<DiscoveryResponse> create(ConfigSource configSource,
+                                                    FactoryContext factoryContext,
+                                                    SnapshotStream<InterestedResources> interestedResources) {
+        return new PathConfigSourceSubscription(configSource.getPathConfigSource(), watchService,
+                                                factoryContext.eventLoop(), meterRegistry, meterIdPrefix);
     }
 
-    static final class PathConfigSourceSubscription implements ConfigSourceSubscription {
+    static final class PathConfigSourceSubscription extends RefCountedStream<DiscoveryResponse> {
 
         private final Path filePath;
         private final Path watchDir;
         private final DirectoryWatchService watchService;
-        private final SotwSubscriptionCallbacks callbacks;
         private final EventExecutor eventLoop;
         private final PathConfigSourceLifecycleObserver lifecycleObserver;
-
         @Nullable
         private Cancellable watchCancellable;
         private boolean closed;
 
         PathConfigSourceSubscription(PathConfigSource pathConfigSource,
                                      DirectoryWatchService watchService,
-                                     SotwSubscriptionCallbacks callbacks,
                                      EventExecutor eventLoop, MeterRegistry meterRegistry,
                                      MeterIdPrefix meterIdPrefix) {
             filePath = Paths.get(pathConfigSource.getPath()).toAbsolutePath();
@@ -91,11 +92,8 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
                 watchDir = requireNonNull(filePath.getParent(), "filePath.getParent()");
             }
             this.watchService = watchService;
-            this.callbacks = callbacks;
             this.eventLoop = eventLoop;
             lifecycleObserver = new PathConfigSourceLifecycleObserver(filePath, meterRegistry, meterIdPrefix);
-
-            startWatching();
         }
 
         private void startWatching() {
@@ -104,10 +102,11 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
                 try {
                     cancellable = watchService.register(
                             watchDir, PathWatcher.ofFile(filePath, bytes -> {
-                                eventLoop.execute(() -> parseAndPush(bytes));
+                                eventLoop.execute(() -> parseAndEmit(bytes));
                             }));
                 } catch (Exception e) {
                     lifecycleObserver.fileParseError(e);
+                    emit(null, e);
                     lifecycleObserver.close();
                     return;
                 }
@@ -121,7 +120,7 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
             });
         }
 
-        private void parseAndPush(byte[] bytes) {
+        private void parseAndEmit(byte[] bytes) {
             if (closed) {
                 return;
             }
@@ -131,23 +130,22 @@ final class PathSotwConfigSourceSubscriptionFactory implements SotwConfigSourceS
                 response = XdsResourceReader.from(content, DiscoveryResponse.class);
             } catch (Exception e) {
                 lifecycleObserver.fileParseError(e);
+                emit(null, e);
                 return;
             }
             lifecycleObserver.fileLoaded();
-            callbacks.onDiscoveryResponse(response);
+            emit(response, null);
         }
 
         @Override
-        public void updateInterests(XdsType type, Set<String> resourceNames) {
-            // Path config source pushes all resources on every file change regardless of interests.
-        }
-
-        @Override
-        public void close() {
-            closed = true;
-            if (watchCancellable != null) {
-                close0(watchCancellable);
-            }
+        protected Subscription onStart(SnapshotWatcher<DiscoveryResponse> watcher) {
+            startWatching();
+            return () -> {
+                closed = true;
+                if (watchCancellable != null) {
+                    close0(watchCancellable);
+                }
+            };
         }
 
         private void close0(Cancellable watchCancellable) {

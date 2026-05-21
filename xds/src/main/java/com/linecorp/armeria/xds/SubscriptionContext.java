@@ -40,6 +40,13 @@ interface SubscriptionContext extends FactoryContext {
                 .checkSubscribeOn(eventLoop());
     }
 
+    @Override
+    default SnapshotStream<ClusterSnapshot> clusterStream(String clusterName) {
+        final SnapshotStream<ClusterSnapshot> stream =
+                watcher -> clusterManager().register(clusterName, this, watcher);
+        return stream.checkSubscribeOn(eventLoop());
+    }
+
     void subscribe(ResourceNode<?> node);
 
     void unsubscribe(ResourceNode<?> node);

@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 
@@ -33,8 +34,9 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
 
     abstract O parse(I message, XdsExtensionRegistry extensionRegistry, String version);
 
-    ParsedResourcesHolder parseResources(List<Any> resources, XdsExtensionRegistry extensionRegistry,
-                                         String version) {
+    ParsedResources.SotwParsedResources parseResources(List<Any> resources,
+                                                       XdsExtensionRegistry extensionRegistry,
+                                                       String version) {
         final ImmutableMap.Builder<String, Object> parsedResources = ImmutableMap.builder();
         final ImmutableMap.Builder<String, Throwable> invalidResources = ImmutableMap.builder();
 
@@ -63,12 +65,14 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder(parsedResources.buildKeepingLast(),
-                                         invalidResources.buildKeepingLast());
+        return new ParsedResources.SotwParsedResources(type(), parsedResources.buildKeepingLast(),
+                                                       invalidResources.buildKeepingLast(),
+                                                       isFullStateOfTheWorld());
     }
 
-    ParsedResourcesHolder parseDeltaResources(List<Resource> resources,
-                                              XdsExtensionRegistry extensionRegistry) {
+    ParsedResources.DeltaParsedResources parseDeltaResources(List<Resource> resources,
+                                                             XdsExtensionRegistry extensionRegistry,
+                                                             List<String> removedResources) {
         final ImmutableMap.Builder<String, Object> parsedResources = ImmutableMap.builder();
         final ImmutableMap.Builder<String, Throwable> invalidResources = ImmutableMap.builder();
 
@@ -96,8 +100,9 @@ abstract class ResourceParser<I extends Message, O extends XdsResource> {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder(parsedResources.buildKeepingLast(),
-                                         invalidResources.buildKeepingLast());
+        return new ParsedResources.DeltaParsedResources(type(), parsedResources.buildKeepingLast(),
+                                                        invalidResources.buildKeepingLast(),
+                                                        ImmutableSet.copyOf(removedResources));
     }
 
     // Do not confuse with the SotW approach: it is the mechanism in which the client must specify all

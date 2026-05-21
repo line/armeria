@@ -16,12 +16,17 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableMap;
 
-final class CompositeXdsStream implements XdsStream {
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.Subscription;
+
+final class CompositeXdsStream extends RefCountedStream<ParsedResources> implements XdsStream {
 
     private final Map<XdsType, XdsStream> streamMap;
 
@@ -34,14 +39,13 @@ final class CompositeXdsStream implements XdsStream {
     }
 
     @Override
-    public void close() {
-        streamMap.values().forEach(XdsStream::close);
-    }
-
-    @Override
-    public void resourcesUpdated(XdsType type) {
-        final XdsStream stream = streamMap.get(type);
-        assert stream != null;
-        stream.resourcesUpdated(type);
+    protected Subscription onStart(SnapshotWatcher<ParsedResources> watcher) {
+        final List<Subscription> subscriptions = new ArrayList<>();
+        for (XdsStream stream : streamMap.values()) {
+            subscriptions.add(stream.subscribe(watcher));
+        }
+        return () -> {
+            subscriptions.forEach(Subscription::close);
+        };
     }
 }

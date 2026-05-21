@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
 
@@ -39,7 +40,8 @@ class XdsExtensionRegistryTest {
         return XdsExtensionRegistry.of(new XdsResourceValidator(),
                                        watchService,
                                        meterRegistry,
-                                       new MeterIdPrefix("test"));
+                                       new MeterIdPrefix("test"),
+                                       ImmutableList.of());
     }
 
     private static final DirectoryWatchService watchService = new DirectoryWatchService();

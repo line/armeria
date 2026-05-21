@@ -131,7 +131,7 @@ class RefCountedStreamTest {
     }
 
     @Test
-    void emitNotifiesWatchersInSubscriptionOrder() {
+    void emitNotifiesWatchersInStreamSubscriptionOrder() {
         final TestRefCountedStream stream = new TestRefCountedStream(Subscription::noop);
         final List<String> order = new ArrayList<>();
 
@@ -200,7 +200,7 @@ class RefCountedStreamTest {
     }
 
     @Test
-    void lastUnsubscribeClosesUpstreamSubscription() {
+    void lastUnsubscribeClosesUpstreamStreamSubscription() {
         final AtomicBoolean upstreamClosed = new AtomicBoolean(false);
         final TestRefCountedStream stream = new TestRefCountedStream(() -> () -> upstreamClosed.set(true));
 

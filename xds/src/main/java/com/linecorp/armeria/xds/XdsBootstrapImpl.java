@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -43,7 +44,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
-                     SnapshotWatcher<Object> defaultWatcher) {
+                     SnapshotWatcher<Object> defaultWatcher,
+                     List<XdsExtensionFactory> extensionFactories) {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
@@ -51,7 +53,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         final XdsResourceValidator resourceValidator = new XdsResourceValidator();
         final XdsExtensionRegistry extensionRegistry =
                 XdsExtensionRegistry.of(resourceValidator, watchService,
-                                        meterRegistry, meterIdPrefix);
+                                        meterRegistry, meterIdPrefix,
+                                        extensionFactories);
         extensionRegistry.assertValid(bootstrap);
         clusterManager = new XdsClusterManager(eventLoop, bootstrap, meterIdPrefix, meterRegistry);
         final BootstrapClusters bootstrapClusters =
@@ -60,7 +63,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
-                bootstrap, eventLoop, bootstrapClusters, configSourceMapper, extensionRegistry);
+                bootstrap, eventLoop, bootstrapClusters, configSourceMapper, extensionRegistry, defaultWatcher);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
                 meterRegistry, meterIdPrefix, watchService, bootstrapSecrets, extensionRegistry);
