@@ -210,16 +210,11 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         badEndpointExpirationMillis = circuitBreakerConfig.circuitOpenWindow().toMillis();
 
         delegate.addListener(unused -> {
-            endpointsLock.lock();
-            try {
-                // Strict mode (age disabled): always refresh so the pool mirrors the delegate.
-                // Keep-alive mode (age enabled): only refresh when there are slots to fill — cached
-                // endpoints stay in the pool until they age out.
-                if (maxEndpointAgeNanoTime <= 0 || endpointContexts.size() < maxNumEndpoints) {
-                    refreshEndpoints(false);
-                }
-            } finally {
-                endpointsLock.unlock();
+            // Strict mode (age disabled): always refresh so the pool mirrors the delegate.
+            // Keep-alive mode (age enabled): only refresh when there are slots to fill — cached
+            // endpoints stay in the pool until they age out.
+            if (maxEndpointAgeNanoTime <= 0 || endpointContexts.size() < maxNumEndpoints) {
+                refreshEndpoints(false);
             }
         });
 
@@ -285,29 +280,14 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
         return endpointContexts.get(endpoint);
     }
 
-    /**
-     * Updates {@code endpoints} if the sorted input differs from the current value, then offloads
-     * listener notification (and the initial-readiness future) to {@link #executor} so the callbacks
-     * never run while {@code endpointsLock} is held by the calling thread. Sorting stabilizes the
-     * round-robin sequence since {@code endpointContexts} is unordered.
-     */
-    private void setEndpoints(Iterable<Endpoint> endpoints) {
+    private boolean setEndpoints(Iterable<Endpoint> endpoints) {
         final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
         if (!DynamicEndpointGroup.hasChanges(this.endpoints, newEndpoints)) {
-            return;
+            return false;
         }
         this.endpoints = newEndpoints;
         logger.info("New endpoints have been set: {}", toShortString(newEndpoints));
-        executor.execute(() -> {
-            if (closeable.isClosing()) {
-                return;
-            }
-
-            if (!initialCompletionFuture.isDone()) {
-                initialCompletionFuture.complete(newEndpoints);
-            }
-            endpointGroupListeners.notifyListeners0(newEndpoints);
-        });
+        return true;
     }
 
     private CircuitBreaker newCircuitBreaker(Endpoint endpoint) {
@@ -330,20 +310,15 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
      * to evict the now-bad endpoint.
      */
     private void handleCircuitBreakerStateChanged(String circuitBreakerName) {
-        endpointsLock.lock();
-        try {
-            boolean needsUpdate = false;
-            for (EndpointContext context : endpointContexts.values()) {
-                if (context.circuitBreaker().name().equals(circuitBreakerName)) {
-                    needsUpdate = true;
-                    break;
-                }
+        boolean needsUpdate = false;
+        for (EndpointContext context : endpointContexts.values()) {
+            if (context.circuitBreaker().name().equals(circuitBreakerName)) {
+                needsUpdate = true;
+                break;
             }
-            if (needsUpdate) {
-                refreshEndpoints(false);
-            }
-        } finally {
-            endpointsLock.unlock();
+        }
+        if (needsUpdate) {
+            refreshEndpoints(false);
         }
     }
 
@@ -361,6 +336,8 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
             return 0;
         }
 
+        List<Endpoint> newEndpoints = null;
+        long delayMillis = 0;
         endpointsLock.lock();
         try {
             // Remove bad endpoints.
@@ -433,7 +410,6 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
             if (maxEndpointAgeNanoTime <= 0) {
                 final Set<Endpoint> candidateSet = ImmutableSet.copyOf(candidates);
                 endpointContexts.keySet().removeIf(e -> !candidateSet.contains(e));
-                badEndpoints.removeIf(e -> !candidateSet.contains(e));
             }
 
             int remainingSlots = maxNumEndpoints - endpointContexts.size();
@@ -478,34 +454,43 @@ public final class OutlierDetectingEndpointGroup implements EndpointGroup, Liste
                 }
             }
 
-            setEndpoints(endpointContexts.keySet());
-
-            if (!isScheduledJob) {
-                return 0;
+            if (setEndpoints(endpointContexts.keySet())) {
+                newEndpoints = endpoints;
             }
 
-            // Compute the next update interval.
-            long minRemainingNanoTime = Long.MAX_VALUE;
-            boolean hasContext = false;
-            for (EndpointContext context : endpointContexts.values()) {
-                hasContext = true;
-                final long remaining = context.expirationNanoTime() - currentNanoTime;
-                if (remaining < minRemainingNanoTime) {
-                    minRemainingNanoTime = remaining;
+            if (isScheduledJob) {
+                // Compute the next update interval.
+                long minRemainingNanoTime = Long.MAX_VALUE;
+                boolean hasContext = false;
+                for (EndpointContext context : endpointContexts.values()) {
+                    hasContext = true;
+                    final long remaining = context.expirationNanoTime() - currentNanoTime;
+                    if (remaining < minRemainingNanoTime) {
+                        minRemainingNanoTime = remaining;
+                    }
+                }
+                if (!hasContext) {
+                    // No endpoints. Retry after 100 ms to quickly fetch the next endpoints.
+                    delayMillis = 100;
+                } else {
+                    // Clamp the min interval to 500 ms to avoid too frequent updates.
+                    delayMillis = Math.max(NANOSECONDS.toMillis(minRemainingNanoTime), 500);
                 }
             }
-            if (!hasContext) {
-                // No endpoints. Retry after 100 ms to quickly fetch the next endpoints.
-                return 100;
-            }
-            // Clamp the min interval to 500 ms to avoid too frequent updates.
-            return Math.max(NANOSECONDS.toMillis(minRemainingNanoTime), 500);
         } catch (Throwable e) {
             logger.error("Unexpected exception while updating endpoints.", e);
-            return 500;
+            delayMillis = 500;
         } finally {
             endpointsLock.unlock();
         }
+
+        if (newEndpoints != null) {
+            if (!initialCompletionFuture.isDone()) {
+                initialCompletionFuture.complete(newEndpoints);
+            }
+            endpointGroupListeners.notifyListeners0(newEndpoints);
+        }
+        return delayMillis;
     }
 
     @Nullable
