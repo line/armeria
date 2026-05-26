@@ -40,7 +40,8 @@ import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 class TransportSocketMatchesIntegrationTest {
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension serverCert = new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension serverCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -52,7 +53,8 @@ class TransportSocketMatchesIntegrationTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension otherCert = new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension otherCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     //language=YAML
     private static final String bootstrapTemplate =

@@ -41,6 +41,8 @@ def istioEnv = [
 
 tasks.register('downloadIstioctl') {
     outputs.file istioArchive
+    outputs.cacheIf { true }
+
     inputs.property 'istioVersion', istioVersion
     inputs.property 'istioOs', istioOs
     inputs.property 'istioArch', istioArch

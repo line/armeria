@@ -21,6 +21,8 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.Base64;
@@ -28,6 +30,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -68,10 +72,12 @@ class DataSourceTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate1 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate1 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate2 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate2 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     @Test
     void tlsCertificateWithPrivateKeyAndCertificateChain() throws Exception {
@@ -1030,6 +1036,151 @@ class DataSourceTest {
             });
 
             await().untilAsserted(() -> assertThat(errorRef.get()).isNotNull());
+        }
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS) // Symbolic links require elevated privileges on Windows.
+    void symlinkRotation(@TempDir File tempDir) throws Exception {
+        final Path actualDir = tempDir.toPath().resolve("actual");
+        final File privateKeyFile = new File(actualDir.toFile(), "private_key.pem");
+        final File certificateFile = new File(actualDir.toFile(), "certificate.pem");
+
+        //language=YAML
+        final String tlsCertYaml =
+                """
+                name: my-cert
+                tls_certificate:
+                  watched_directory:
+                    path: %s
+                  private_key:
+                    filename: %s
+                  certificate_chain:
+                    filename: %s
+                """.formatted(tempDir.getAbsolutePath(),
+                              privateKeyFile.getAbsolutePath(),
+                              certificateFile.getAbsolutePath());
+        final Secret secret = XdsResourceReader.fromYaml(tlsCertYaml, Secret.class);
+        version.incrementAndGet();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                                 ImmutableList.of(), ImmutableList.of(secret),
+                                                 version.toString()));
+
+        //language=YAML
+        final String bootstrapStr =
+                """
+                dynamic_resources:
+                  ads_config:
+                    api_type: GRPC
+                    grpc_services:
+                      - envoy_grpc:
+                          cluster_name: bootstrap-cluster
+                static_resources:
+                  clusters:
+                    - name: bootstrap-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: bootstrap-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
+                              address:
+                                socket_address:
+                                  address: 127.0.0.1
+                                  port_value: %s
+                    - name: my-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: my-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
+                              address:
+                                socket_address:
+                                  address: 127.0.0.1
+                                  port_value: 8080
+                      transport_socket:
+                        name: envoy.transport_sockets.tls
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.UpstreamTlsContext
+                          common_tls_context:
+                            tls_certificate_sds_secret_configs:
+                              - name: my-cert
+                                sds_config:
+                                  ads: {}
+                  listeners:
+                    - name: my-listener
+                      api_listener:
+                        api_listener:
+                          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                .v3.HttpConnectionManager
+                          stat_prefix: http
+                          route_config:
+                            name: local_route
+                            virtual_hosts:
+                            - name: local_service1
+                              domains: [ "*" ]
+                              routes:
+                                - match:
+                                    prefix: /
+                                  route:
+                                    cluster: my-cluster
+                          http_filters:
+                          - name: envoy.filters.http.router
+                            typed_config:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                """.formatted(server.httpPort());
+
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("my-listener");
+            final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
+            listenerRoot.addSnapshotWatcher((snapshot, t) -> {
+                if (snapshot != null) {
+                    snapshotRef.set(snapshot);
+                }
+            });
+
+            // 'actual' symlink doesn't exist yet — no snapshot should arrive.
+            await().during(Duration.ofSeconds(2))
+                   .untilAsserted(() -> assertThat(snapshotRef.get()).isNull());
+
+            // Write certificate1 to staging_v1, then atomically create the 'actual' symlink.
+            final Path stagingV1 = tempDir.toPath().resolve("staging_v1");
+            Files.createDirectory(stagingV1);
+            Files.copy(certificate1.privateKeyFile().toPath(), stagingV1.resolve("private_key.pem"));
+            Files.copy(certificate1.certificateFile().toPath(), stagingV1.resolve("certificate.pem"));
+            final Path tmpLink = tempDir.toPath().resolve("actual_tmp");
+            Files.createSymbolicLink(tmpLink, Paths.get("staging_v1"));
+            Files.move(tmpLink, actualDir, StandardCopyOption.ATOMIC_MOVE);
+
+            await().untilAsserted(() -> assertThat(snapshotRef.get()).isNotNull());
+            final ListenerSnapshot snapshot1 = snapshotRef.get();
+            final TlsCertificateSnapshot cert1 =
+                    snapshot1.routeSnapshot().virtualHostSnapshots().get(0)
+                             .routeEntries().get(0).clusterSnapshot().transportSocket().tlsCertificate();
+            assertThat(cert1).isNotNull();
+            assertThat(cert1.tlsKeyPair()).isEqualTo(certificate1.tlsKeyPair());
+
+            // Rotate to certificate2: write to staging_v2, then atomically swap the 'actual' symlink.
+            final Path stagingV2 = tempDir.toPath().resolve("staging_v2");
+            Files.createDirectory(stagingV2);
+            Files.copy(certificate2.privateKeyFile().toPath(), stagingV2.resolve("private_key.pem"));
+            Files.copy(certificate2.certificateFile().toPath(), stagingV2.resolve("certificate.pem"));
+            final Path tmpLink2 = tempDir.toPath().resolve("actual_tmp");
+            Files.createSymbolicLink(tmpLink2, Paths.get("staging_v2"));
+            Files.move(tmpLink2, actualDir, StandardCopyOption.ATOMIC_MOVE);
+
+            await().untilAsserted(() -> {
+                final ListenerSnapshot current = snapshotRef.get();
+                assertThat(current).isNotNull();
+                final TlsCertificateSnapshot cert =
+                        current.routeSnapshot().virtualHostSnapshots().get(0)
+                               .routeEntries().get(0).clusterSnapshot().transportSocket().tlsCertificate();
+                assertThat(cert).isNotNull();
+                assertThat(cert.tlsKeyPair()).isEqualTo(certificate2.tlsKeyPair());
+            });
         }
     }
 }

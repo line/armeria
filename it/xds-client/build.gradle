@@ -2,6 +2,10 @@ dependencies {
     api project(':xds')
     api libs.jackson.dataformat.yaml
     api libs.protobuf.java.util
-    api libs.controlplane.server
-    api libs.controlplane.cache
+    api(libs.controlplane.server) {
+        exclude group: 'io.envoyproxy.controlplane', module: 'api'
+    }
+    api(libs.controlplane.cache) {
+        exclude group: 'io.envoyproxy.controlplane', module: 'api'
+    }
 }

@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -62,8 +63,8 @@ class XdsPreprocessorTest {
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension controlPlaneCert =
-            new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension controlPlaneCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     @Order(1)
@@ -86,8 +87,8 @@ class XdsPreprocessorTest {
 
     @RegisterExtension
     @Order(2)
-    static final SelfSignedCertificateExtension helloCert =
-            new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension helloCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     @Order(3)
@@ -177,7 +178,7 @@ class XdsPreprocessorTest {
         }
     }
 
-    private static Cluster clusterYaml(String name, File trustedCaFile) {
+    private static Cluster clusterYaml(String name, @Nullable File trustedCaFile) {
         final String yaml;
         if (trustedCaFile == null) {
             //language=YAML
@@ -267,7 +268,7 @@ class XdsPreprocessorTest {
     }
 
     private static Bootstrap bootstrapYaml(String clusterName, String address, int port,
-                                           File trustedCaFile) {
+                                           @Nullable File trustedCaFile) {
         final String yaml;
         if (trustedCaFile == null) {
             //language=YAML

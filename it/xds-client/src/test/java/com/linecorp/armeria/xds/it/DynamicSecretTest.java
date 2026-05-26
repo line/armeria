@@ -66,13 +66,17 @@ class DynamicSecretTest {
     };
 
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate1 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate1 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate2 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate2 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate3 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate3 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
     @RegisterExtension
-    static final SelfSignedCertificateExtension certificate4 = new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension certificate4 =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     //language=YAML
     private static final String tlsCertYaml =

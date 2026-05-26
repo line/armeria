@@ -71,13 +71,13 @@ class PipeEndpointTest {
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension serverCert =
-            new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension serverCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension clientCert =
-            new SelfSignedCertificateExtension();
+    static final XdsCertificateExtension clientCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     @RegisterExtension
     @Order(1)
@@ -326,7 +326,7 @@ class PipeEndpointTest {
         }
     }
 
-    private static Secret tlsCertSecret(String name, SelfSignedCertificateExtension cert) {
+    private static Secret tlsCertSecret(String name, XdsCertificateExtension cert) {
         final String yaml = """
                 name: %s
                 tls_certificate:
@@ -341,7 +341,7 @@ class PipeEndpointTest {
     }
 
     private static Secret validationContextSecret(String name,
-                                                   SelfSignedCertificateExtension cert)
+                                                   XdsCertificateExtension cert)
             throws Exception {
         final byte[] caBytes = Files.readAllBytes(cert.certificateFile().toPath());
         final String yaml = """

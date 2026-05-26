@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
@@ -64,8 +65,8 @@ class XdsEndpointGroupTest {
 
     @RegisterExtension
     @Order(0)
-    static final SelfSignedCertificateExtension controlPlaneCert =
-            new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension controlPlaneCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     @Order(1)
@@ -88,8 +89,8 @@ class XdsEndpointGroupTest {
 
     @RegisterExtension
     @Order(2)
-    static final SelfSignedCertificateExtension helloCert =
-            new SelfSignedCertificateExtension("localhost");
+    static final XdsCertificateExtension helloCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
 
     @RegisterExtension
     @Order(3)
@@ -179,7 +180,7 @@ class XdsEndpointGroupTest {
         }
     }
 
-    private static Cluster clusterYaml(String name, File trustedCaFile) {
+    private static Cluster clusterYaml(String name, @Nullable File trustedCaFile) {
         final String yaml;
         if (trustedCaFile == null) {
             //language=YAML
@@ -269,7 +270,7 @@ class XdsEndpointGroupTest {
     }
 
     private static Bootstrap bootstrapYaml(String clusterName, String address, int port,
-                                           File trustedCaFile) {
+                                           @Nullable File trustedCaFile) {
         final String yaml;
         if (trustedCaFile == null) {
             //language=YAML
