@@ -15,3 +15,4 @@
 #
 
 com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory
+com.linecorp.armeria.xds.filter.CredentialInjectorFilterFactory

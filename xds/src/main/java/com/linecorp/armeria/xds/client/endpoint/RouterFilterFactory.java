@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.xds.XdsResourceValidator;
+import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
@@ -59,12 +59,12 @@ public final class RouterFilterFactory implements HttpFilterFactory {
     }
 
     @Override
-    public XdsHttpFilter create(HttpFilter filter, Any config, XdsResourceValidator validator) {
+    public XdsHttpFilter create(HttpFilter filter, Any config, FactoryContext context) {
         final Router router;
         if (config == Any.getDefaultInstance()) {
             router = Router.getDefaultInstance();
         } else {
-            router = validator.unpack(config, Router.class);
+            router = context.validator().unpack(config, Router.class);
         }
         return new RouterXdsHttpFilter(router);
     }

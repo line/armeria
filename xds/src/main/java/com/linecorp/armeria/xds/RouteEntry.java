@@ -16,12 +16,10 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
@@ -37,7 +35,6 @@ import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
-import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
@@ -60,50 +57,16 @@ public final class RouteEntry {
     private final RouteEntryMatcher matcher;
 
     RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
-               @Nullable ListenerXdsResource listenerResource, RouteXdsResource routeResource,
-               VirtualHostXdsResource vhostResource, XdsExtensionRegistry extensionRegistry) {
+               Map<String, Any> filterConfigs,
+               ClientPreprocessors downstreamPreprocessors, ClientDecoration upstreamDecoration) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
         this.index = index;
+        this.filterConfigs = filterConfigs;
         matcher = new RouteEntryMatcher(route.getMatch());
 
-        // Merge per_filter_config: route-config level < vhost level < route level
-        final Map<String, Any> routeConfigFilterConfigs =
-                routeResource.resource().getTypedPerFilterConfigMap();
-        final Map<String, Any> vhostFilterConfigs =
-                vhostResource.resource().getTypedPerFilterConfigMap();
-        final Map<String, Any> routeFilterConfigs =
-                route.getTypedPerFilterConfigMap();
-        filterConfigs = FilterUtil.mergeFilterConfigs(
-                FilterUtil.mergeFilterConfigs(routeConfigFilterConfigs, vhostFilterConfigs),
-                routeFilterConfigs);
-
-        // Extract upstream HTTP filters from the Router (last filter in HCM filter chain)
-        final List<HttpFilter> upstreamFilters;
-        if (listenerResource != null && listenerResource.router() != null) {
-            upstreamFilters = listenerResource.router().getUpstreamHttpFiltersList();
-        } else {
-            upstreamFilters = ImmutableList.of();
-        }
-
-        // Determine retry policy
-        final RetryPolicy retryPolicy = route.getRoute().getRetryPolicy();
-        final RetryPolicy effectiveRetryPolicy =
-                retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
-        final ClientDecoration clientDecoration = FilterUtil.buildUpstreamFilter(
-                extensionRegistry, upstreamFilters, filterConfigs, effectiveRetryPolicy);
-        httpClient = clientDecoration.decorate(DelegatingHttpClient.of());
-        rpcClient = clientDecoration.rpcDecorate(DelegatingRpcClient.of());
-
-        // Build downstream filters (HCM http_filters) with per-route config
-        final List<HttpFilter> hcmHttpFilters;
-        if (listenerResource != null && listenerResource.connectionManager() != null) {
-            hcmHttpFilters = listenerResource.connectionManager().getHttpFiltersList();
-        } else {
-            hcmHttpFilters = ImmutableList.of();
-        }
-        final ClientPreprocessors downstreamPreprocessors = FilterUtil.buildDownstreamFilter(
-                extensionRegistry, hcmHttpFilters, filterConfigs);
+        httpClient = upstreamDecoration.decorate(DelegatingHttpClient.of());
+        rpcClient = upstreamDecoration.rpcDecorate(DelegatingRpcClient.of());
         httpPreClient = downstreamPreprocessors.decorate(DelegatingHttpClient.of());
         rpcPreClient = downstreamPreprocessors.rpcDecorate(DelegatingRpcClient.of());
     }

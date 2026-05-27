@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Any;
 
@@ -29,8 +30,10 @@ import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
@@ -47,51 +50,77 @@ final class FilterUtil {
                            .buildKeepingLast();
     }
 
-    static ClientPreprocessors buildDownstreamFilter(
-            XdsExtensionRegistry extensionRegistry,
+    static SnapshotStream<ClientPreprocessors> buildDownstreamFilter(
+            XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
             List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
         if (httpFilters.isEmpty()) {
-            return ClientPreprocessors.of();
+            return SnapshotStream.just(ClientPreprocessors.of());
         }
-        final ClientPreprocessorsBuilder builder = ClientPreprocessors.builder();
+        final ImmutableList.Builder<SnapshotStream<XdsHttpFilter>> streams = ImmutableList.builder();
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
             final HttpFilter httpFilter = httpFilters.get(i);
             final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
-            final XdsHttpFilter instance = resolveInstance(extensionRegistry, httpFilter, perRouteConfig);
-            if (instance == null) {
-                continue;
+            final SnapshotStream<XdsHttpFilter> stream =
+                    resolveInstance(extensionRegistry, factoryContext, httpFilter, perRouteConfig);
+            if (stream != null) {
+                streams.add(stream);
             }
-            builder.add(instance.httpPreprocessor());
-            builder.addRpc(instance.rpcPreprocessor());
         }
-        return builder.build();
+        final ImmutableList<SnapshotStream<XdsHttpFilter>> streamList = streams.build();
+        if (streamList.isEmpty()) {
+            return SnapshotStream.just(ClientPreprocessors.of());
+        }
+        return SnapshotStream.combineNLatest(streamList).map(filters -> {
+            final ClientPreprocessorsBuilder builder = ClientPreprocessors.builder();
+            for (XdsHttpFilter f : filters) {
+                builder.add(f.httpPreprocessor());
+                builder.addRpc(f.rpcPreprocessor());
+            }
+            return builder.build();
+        });
     }
 
-    static ClientDecoration buildUpstreamFilter(
-            XdsExtensionRegistry extensionRegistry,
+    static SnapshotStream<ClientDecoration> buildUpstreamFilter(
+            XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
             List<HttpFilter> httpFilters, Map<String, Any> filterConfigs,
             @Nullable RetryPolicy retryPolicy) {
-        final ClientDecorationBuilder builder = ClientDecoration.builder();
+        final ImmutableList.Builder<SnapshotStream<XdsHttpFilter>> streams = ImmutableList.builder();
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
             final HttpFilter httpFilter = httpFilters.get(i);
             final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
-            final XdsHttpFilter instance = resolveInstance(extensionRegistry, httpFilter, perRouteConfig);
-            if (instance == null) {
-                continue;
+            final SnapshotStream<XdsHttpFilter> stream =
+                    resolveInstance(extensionRegistry, factoryContext, httpFilter, perRouteConfig);
+            if (stream != null) {
+                streams.add(stream);
             }
-            builder.add(instance.httpDecorator());
-            builder.addRpc(instance.rpcDecorator());
+        }
+        final ImmutableList<SnapshotStream<XdsHttpFilter>> streamList = streams.build();
+        if (streamList.isEmpty()) {
+            return SnapshotStream.just(buildDecoration(null, retryPolicy));
+        }
+        return SnapshotStream.combineNLatest(streamList).map(filters -> {
+            return buildDecoration(filters, retryPolicy);
+        });
+    }
+
+    private static ClientDecoration buildDecoration(@Nullable List<XdsHttpFilter> filters,
+                                                    @Nullable RetryPolicy retryPolicy) {
+        final ClientDecorationBuilder builder = ClientDecoration.builder();
+        if (filters != null) {
+            for (XdsHttpFilter f : filters) {
+                builder.add(f.httpDecorator());
+                builder.addRpc(f.rpcDecorator());
+            }
         }
         if (retryPolicy != null) {
-            // add the retrying decorator as the first (outermost) decorator if exists
             builder.add(new RetryStateFactory(retryPolicy).retryingDecorator());
         }
         return builder.build();
     }
 
     @Nullable
-    static XdsHttpFilter resolveInstance(
-            XdsExtensionRegistry extensionRegistry,
+    static SnapshotStream<XdsHttpFilter> resolveInstance(
+            XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
             HttpFilter httpFilter, @Nullable Any perRouteConfig) {
         final Any defaultConfig = httpFilter.getTypedConfig();
         final Any filterConfig = perRouteConfig != null ? perRouteConfig : defaultConfig;
@@ -110,7 +139,8 @@ final class FilterUtil {
                       httpFilter.getConfigTypeCase() == ConfigTypeCase.CONFIGTYPE_NOT_SET,
                       "Only 'typed_config' is supported, but '%s' was supplied",
                       httpFilter.getConfigTypeCase());
-        return factory.create(httpFilter, filterConfig, extensionRegistry.validator());
+        return factory.createStream(httpFilter, filterConfig, factoryContext)
+                      .rescheduleEventsOn(factoryContext.eventLoop());
     }
 
     private FilterUtil() {}

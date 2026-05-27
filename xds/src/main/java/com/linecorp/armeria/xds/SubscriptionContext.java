@@ -17,18 +17,25 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.file.DirectoryWatchService;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.util.concurrent.EventExecutor;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig;
 
-interface SubscriptionContext {
+interface SubscriptionContext extends FactoryContext {
 
-    EventExecutor eventLoop();
+    @Override
+    default XdsResourceValidator validator() {
+        return extensionRegistry().validator();
+    }
 
-    MeterRegistry meterRegistry();
-
-    MeterIdPrefix meterIdPrefix();
+    @Override
+    default SnapshotStream<GenericSecretSnapshot> genericSecretStream(
+            SdsSecretConfig sdsSecretConfig) {
+        return new SecretStream(sdsSecretConfig, null, this)
+                .switchMapEager(resource -> new GenericSecretStream(this, resource))
+                .checkSubscribeOn(eventLoop());
+    }
 
     void subscribe(ResourceNode<?> node);
 

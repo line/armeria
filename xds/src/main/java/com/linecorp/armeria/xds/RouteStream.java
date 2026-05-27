@@ -18,17 +18,25 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.ROUTE;
 
-import com.google.common.collect.ImmutableList;
+import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.Any;
+
+import com.linecorp.armeria.client.ClientDecoration;
+import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.stream.RefCountedStream;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 final class RouteStream extends RefCountedStream<RouteSnapshot> {
 
@@ -167,22 +175,65 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         @Override
         protected Subscription onStart(SnapshotWatcher<RouteEntry> watcher) {
             final XdsExtensionRegistry extensionRegistry = context.extensionRegistry();
+
+            // Merge per_filter_config: route-config level < vhost level < route level
+            final Map<String, Any> routeConfigFilterConfigs =
+                    routeResource.resource().getTypedPerFilterConfigMap();
+            final Map<String, Any> vhostFilterConfigs =
+                    vhostResource.resource().getTypedPerFilterConfigMap();
+            final Map<String, Any> routeFilterConfigs =
+                    route.getTypedPerFilterConfigMap();
+            final Map<String, Any> filterConfigs = FilterUtil.mergeFilterConfigs(
+                    FilterUtil.mergeFilterConfigs(routeConfigFilterConfigs, vhostFilterConfigs),
+                    routeFilterConfigs);
+
+            // Extract HCM downstream filters
+            final List<HttpFilter> hcmHttpFilters;
+            if (listenerResource != null && listenerResource.connectionManager() != null) {
+                hcmHttpFilters = listenerResource.connectionManager().getHttpFiltersList();
+            } else {
+                hcmHttpFilters = ImmutableList.of();
+            }
+
+            // Extract upstream HTTP filters from the Router
+            final List<HttpFilter> upstreamFilters;
+            if (listenerResource != null && listenerResource.router() != null) {
+                upstreamFilters = listenerResource.router().getUpstreamHttpFiltersList();
+            } else {
+                upstreamFilters = ImmutableList.of();
+            }
+
+            // Determine retry policy
+            final RetryPolicy retryPolicy = route.getRoute().getRetryPolicy();
+            final RetryPolicy effectiveRetryPolicy =
+                    retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
+
+            // Build filter streams
+            final SnapshotStream<ClientPreprocessors> downstreamStream =
+                    FilterUtil.buildDownstreamFilter(extensionRegistry, context,
+                                                     hcmHttpFilters, filterConfigs);
+            final SnapshotStream<ClientDecoration> upstreamStream =
+                    FilterUtil.buildUpstreamFilter(extensionRegistry, context,
+                                                   upstreamFilters, filterConfigs,
+                                                   effectiveRetryPolicy);
+
             if (!route.getRoute().hasCluster()) {
-                return SnapshotStream.just(new RouteEntry(route, null, index,
-                                                          listenerResource, routeResource, vhostResource,
-                                                          extensionRegistry))
+                return SnapshotStream.combineLatest(
+                        downstreamStream, upstreamStream,
+                        (down, up) -> new RouteEntry(
+                                route, null, index, filterConfigs, down, up))
                                      .subscribe(watcher);
             }
-            final SnapshotWatcher<ClusterSnapshot> mapped = (snapshot, t) -> {
-                if (snapshot == null) {
-                    watcher.onUpdate(null, t);
-                    return;
-                }
-                watcher.onUpdate(new RouteEntry(route, snapshot, index,
-                                                listenerResource, routeResource, vhostResource,
-                                                extensionRegistry), null);
-            };
-            return context.clusterManager().register(clusterName, context, mapped);
+
+            // Wrap cluster registration as SnapshotStream
+            final SnapshotStream<ClusterSnapshot> clusterStream =
+                    w -> context.clusterManager().register(clusterName, context, w);
+
+            return SnapshotStream.combineLatest(
+                    clusterStream, downstreamStream, upstreamStream,
+                    (cluster, down, up) -> new RouteEntry(
+                            route, cluster, index, filterConfigs, down, up))
+                                 .subscribe(watcher);
         }
     }
 }

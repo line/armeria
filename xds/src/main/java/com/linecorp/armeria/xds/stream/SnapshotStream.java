@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds.stream;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -28,6 +29,8 @@ import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.SnapshotWatcher;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A reactive stream that delivers snapshot values to {@link SnapshotWatcher} subscribers.
@@ -178,5 +181,46 @@ public interface SnapshotStream<T> {
     static <T> SnapshotStream<T> error(Throwable error) {
         requireNonNull(error, "error");
         return new StaticSnapshotStream<>(null, error);
+    }
+
+    /**
+     * Returns a new stream that asserts {@link #subscribe} and {@link Subscription#close()}
+     * are called from the given event loop. Throws {@link IllegalStateException} if called
+     * from a different thread.
+     *
+     * @param eventLoop the event loop that subscribe and close must be called from
+     */
+    @UnstableApi
+    default SnapshotStream<T> checkSubscribeOn(EventExecutor eventLoop) {
+        requireNonNull(eventLoop, "eventLoop");
+        final SnapshotStream<T> self = this;
+        return watcher -> {
+            checkState(eventLoop.inEventLoop(),
+                       "subscribe must be called from the event loop: %s", eventLoop);
+            final Subscription sub = self.subscribe(watcher);
+            return () -> {
+                checkState(eventLoop.inEventLoop(),
+                           "close must be called from the event loop: %s", eventLoop);
+                sub.close();
+            };
+        };
+    }
+
+    /**
+     * Returns a new stream that reschedules all {@link SnapshotWatcher#onUpdate} emissions
+     * to the given event loop. Emissions are always rescheduled (no {@code inEventLoop()}
+     * shortcut) to guarantee strict FIFO ordering with respect to other event loop tasks.
+     *
+     * @param eventLoop the event loop to deliver emissions on
+     */
+    @UnstableApi
+    default SnapshotStream<T> rescheduleEventsOn(EventExecutor eventLoop) {
+        requireNonNull(eventLoop, "eventLoop");
+        final SnapshotStream<T> self = this;
+        return watcher -> {
+            final RescheduleSubscription<T> sub = new RescheduleSubscription<>(watcher, eventLoop);
+            sub.setUpstream(self.subscribe(sub));
+            return sub;
+        };
     }
 }
