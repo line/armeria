@@ -97,51 +97,81 @@ option go_package = "go.opentelemetry.io/proto/otlp/profiles/v1development";
 //
 
 // ProfilesDictionary represents the profiles data shared across the
-// entire message being sent.
+// entire message being sent. The following applies to all fields in this
+// message:
 //
-// Note that all fields in this message MUST have a zero value encoded as the first element.
-// This allows for _index fields pointing into the dictionary to use a 0 pointer value
-// to indicate 'null' / 'not set'. Unless otherwise defined, a 'zero value' message value
-// is one with all default field values, so as to minimize wire encoded size.
+// - A dictionary is an array of dictionary items. Users of the dictionary
+//   compactly reference the items using the index within the array.
+//
+// - A dictionary MUST have a zero value encoded as the first element. This
+//   allows for _index fields pointing into the dictionary to use a 0 pointer
+//   value to indicate 'null' / 'not set'. Unless otherwise defined, a 'zero
+//   value' message value is one with all default field values, so as to
+//   minimize wire encoded size.
+//
+// - There SHOULD NOT be dupes in a dictionary. The identity of dictionary
+//   items is based on their value, recursively as needed. If a particular
+//   implementation does emit duplicated items, it MUST NOT attempt to give them
+//   meaning based on the index or order. A profile processor may remove
+//   duplicate items and this MUST NOT have any observable effects for
+//   consumers.
+//
+// - There SHOULD NOT be orphaned (unreferenced) items in a dictionary. A
+//   profile processor may remove ("garbage-collect") orphaned items and this
+//   MUST NOT have any observable effects for consumers.
+//
 message ProfilesDictionary {
   // Mappings from address ranges to the image/binary/library mapped
   // into that address range referenced by locations via Location.mapping_index.
+  //
+  // mapping_table[0] must always be zero value (Mapping{}) and present.
   repeated Mapping mapping_table = 1;
 
   // Locations referenced by samples via Stack.location_indices.
+  //
+  // location_table[0] must always be zero value (Location{}) and present.
   repeated Location location_table = 2;
 
   // Functions referenced by locations via Line.function_index.
+  //
+  // function_table[0] must always be zero value (Function{}) and present.
   repeated Function function_table = 3;
 
   // Links referenced by samples via Sample.link_index.
+  //
+  // link_table[0] must always be zero value (Link{}) and present.
   repeated Link link_table = 4;
 
   // A common table for strings referenced by various messages.
-  // string_table[0] must always be "".
+  //
+  // string_table[0] must always be "" and present.
   repeated string string_table = 5;
 
-  // A common table for attributes referenced by various messages.
-  // It is a collection of key/value pairs. Note, global attributes
-  // like server name can be set using the resource API. Examples of attributes:
+  // A common table for attributes referenced by the Profile, Sample, Mapping
+  // and Location messages below through attribute_indices field. Each entry is
+  // a key/value pair with an optional unit. Since this is a dictionary table,
+  // multiple entries with the same key may be present, unlike direct attribute
+  // tables like Resource.attributes. The referencing attribute_indices fields,
+  // though, do maintain the key uniqueness requirement.
   //
+  // It's recommended to use attributes for variables with bounded cardinality,
+  // such as categorical variables
+  // (https://en.wikipedia.org/wiki/Categorical_variable). Using an attribute of
+  // a floating point type (e.g., CPU time) in a sample can quickly make every
+  // attribute value unique, defeating the purpose of the dictionary and
+  // impractically increasing the profile size.
+  //
+  // Examples of attributes:
   //     "/http/user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36"
-  //     "/http/server_latency": 300
   //     "abc.com/myattribute": true
-  //     "abc.com/score": 10.239
+  //     "allocation_size": 128 bytes
   //
-  // The attribute values SHOULD NOT contain empty values.
-  // The attribute values SHOULD NOT contain bytes values.
-  // The attribute values SHOULD NOT contain array values different than array of string values, bool values, int values,
-  // double values.
-  // The attribute values SHOULD NOT contain kvlist values.
-  // The behavior of software that receives attributes containing such values can be unpredictable.
-  // These restrictions can change in a minor release.
-  // The restrictions take origin from the OpenTelemetry specification:
-  // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.47.0/specification/common/README.md#attribute.
+  // attribute_table[0] must always be zero value (KeyValueAndUnit{}) and present.
   repeated KeyValueAndUnit attribute_table = 6;
 
   // Stacks referenced by samples via Sample.stack_index.
+  //
+  // stack_table[0] must always be zero value (Stack{}) and present.
   repeated Stack stack_table = 7;
 }
 
@@ -206,7 +236,8 @@ message ScopeProfiles {
   // is recorded in. Notably, the last part of the URL path is the version number of the
   // schema: http[s]://server[:port]/path/<version>. To learn more about Schema URL see
   // https://opentelemetry.io/docs/specs/otel/schemas/#schema-url
-  // This schema_url applies to all profiles in the "profiles" field.
+  // This schema_url applies to the data in the "scope" field and all profiles in the
+  // "profiles" field.
   string schema_url = 3;
 }
 
@@ -248,7 +279,7 @@ message Profile {
   //   ["allocated_objects","count"] or ["allocated_space","bytes"],
   ValueType sample_type = 1;
   // The set of samples recorded in this profile.
-  repeated Sample sample = 2;
+  repeated Sample samples = 2;
 
   // The following fields 3-12 are informational, do not affect
   // interpretation of results.
@@ -262,12 +293,6 @@ message Profile {
   ValueType period_type = 5;
   // The number of events between sampled occurrences.
   int64 period = 6;
-  // Free-form text associated with the profile. The text is displayed as is
-  // to the user by the tools that read profiles (e.g. by pprof). This field
-  // should not be used to store any machine-readable information, it is only
-  // for human-friendly content. The profile must stay functional if this field
-  // is cleaned.
-  repeated int32 comment_strindices = 7; // Indices into ProfilesDictionary.string_table.
 
   // A globally unique identifier for a profile. The ID is a 16-byte array. An ID with
   // all zeroes is considered invalid. It may be used for deduplication and signal
@@ -275,26 +300,39 @@ message Profile {
   // in this field as not equal, even if they represented the same object at an earlier
   // time.
   // This field is optional; an ID may be assigned to an ID-less profile in a later step.
-  bytes profile_id = 8;
+  bytes profile_id = 7;
 
-  // dropped_attributes_count is the number of attributes that were discarded. Attributes
+  // The number of attributes that were discarded. Attributes
   // can be discarded because their keys are too long or because there are too many
   // attributes. If this value is 0, then no attributes were dropped.
-  uint32 dropped_attributes_count = 9;
+  uint32 dropped_attributes_count = 8;
 
-  // Specifies format of the original payload. Common values are defined in semantic conventions. [required if original_payload is present]
-  string original_payload_format = 10;
-
-  // Original payload can be stored in this field. This can be useful for users who want to get the original payload.
-  // Formats such as JFR are highly extensible and can contain more information than what is defined in this spec.
-  // Inclusion of original payload should be configurable by the user. Default behavior should be to not include the original payload.
-  // If the original payload is in pprof format, it SHOULD not be included in this field.
-  // The field is optional, however if it is present then equivalent converted data should be populated in other fields
-  // of this message as far as is practicable.
-  bytes original_payload = 11;
+  // The original payload format. See also original_payload. Optional, but the
+  // format and the bytes must be set or unset together.
+  //
+  // The allowed values for the format string are defined by the OpenTelemetry
+  // specification. Some examples are "jfr", "pprof", "linux_perf".
+  //
+  // The original payload may be optionally provided when the conversion to the
+  // OLTP format was done from a different format with some loss of the fidelity
+  // and the receiver may want to store the original payload to allow future
+  // lossless export or reinterpretation. Some examples of the original format
+  // are JFR (Java Flight Recorder), pprof, Linux perf.
+  //
+  // Even when the original payload is in a format that is semantically close to
+  // OTLP, such as pprof, a conversion may still be lossy in some cases (e.g. if
+  // the pprof file contains custom extensions or conventions).
+  //
+  // The original payload can be large in size, so including the original
+  // payload should be configurable by the profiler or collector options. The
+  // default behavior should be to not include the original payload.
+  string original_payload_format = 9;
+  // The original payload bytes. See also original_payload_format. Optional, but
+  // format and the bytes must be set or unset together.
+  bytes original_payload = 10;
 
   // References to attributes in attribute_table. [optional]
-  repeated int32 attribute_indices = 12;
+  repeated int32 attribute_indices = 11;
 }
 
 // A pointer from a profile Sample to a trace Span.
@@ -308,80 +346,13 @@ message Link {
   bytes span_id = 2;
 }
 
-// Specifies the method of aggregating metric values, either DELTA (change since last report)
-// or CUMULATIVE (total since a fixed start time).
-enum AggregationTemporality {
-  /* UNSPECIFIED is the default AggregationTemporality, it MUST not be used. */
-  AGGREGATION_TEMPORALITY_UNSPECIFIED = 0;
-
-  /** DELTA is an AggregationTemporality for a profiler which reports
-  changes since last report time. Successive metrics contain aggregation of
-  values from continuous and non-overlapping intervals.
-
-  The values for a DELTA metric are based only on the time interval
-  associated with one measurement cycle. There is no dependency on
-  previous measurements like is the case for CUMULATIVE metrics.
-
-  For example, consider a system measuring the number of requests that
-  it receives and reports the sum of these requests every second as a
-  DELTA metric:
-
-  1. The system starts receiving at time=t_0.
-  2. A request is received, the system measures 1 request.
-  3. A request is received, the system measures 1 request.
-  4. A request is received, the system measures 1 request.
-  5. The 1 second collection cycle ends. A metric is exported for the
-      number of requests received over the interval of time t_0 to
-      t_0+1 with a value of 3.
-  6. A request is received, the system measures 1 request.
-  7. A request is received, the system measures 1 request.
-  8. The 1 second collection cycle ends. A metric is exported for the
-      number of requests received over the interval of time t_0+1 to
-      t_0+2 with a value of 2. */
-  AGGREGATION_TEMPORALITY_DELTA = 1;
-
-  /** CUMULATIVE is an AggregationTemporality for a profiler which
-  reports changes since a fixed start time. This means that current values
-  of a CUMULATIVE metric depend on all previous measurements since the
-  start time. Because of this, the sender is required to retain this state
-  in some form. If this state is lost or invalidated, the CUMULATIVE metric
-  values MUST be reset and a new fixed start time following the last
-  reported measurement time sent MUST be used.
-
-  For example, consider a system measuring the number of requests that
-  it receives and reports the sum of these requests every second as a
-  CUMULATIVE metric:
-
-  1. The system starts receiving at time=t_0.
-  2. A request is received, the system measures 1 request.
-  3. A request is received, the system measures 1 request.
-  4. A request is received, the system measures 1 request.
-  5. The 1 second collection cycle ends. A metric is exported for the
-      number of requests received over the interval of time t_0 to
-      t_0+1 with a value of 3.
-  6. A request is received, the system measures 1 request.
-  7. A request is received, the system measures 1 request.
-  8. The 1 second collection cycle ends. A metric is exported for the
-      number of requests received over the interval of time t_0 to
-      t_0+2 with a value of 5.
-  9. The system experiences a fault and loses state.
-  10. The system recovers and resumes receiving at time=t_1.
-  11. A request is received, the system measures 1 request.
-  12. The 1 second collection cycle ends. A metric is exported for the
-      number of requests received over the interval of time t_1 to
-      t_1+1 with a value of 1.
-
-  Note: Even though, when reporting changes since last report time, using
-  CUMULATIVE is valid, it is not recommended. */
-  AGGREGATION_TEMPORALITY_CUMULATIVE = 2;
-}
-
-// ValueType describes the type and units of a value, with an optional aggregation temporality.
+// ValueType describes the type and units of a value.
 message ValueType {
-  int32 type_strindex = 1; // Index into ProfilesDictionary.string_table.
-  int32 unit_strindex = 2; // Index into ProfilesDictionary.string_table.
+  // Index into ProfilesDictionary.string_table.
+  int32 type_strindex = 1;
 
-  AggregationTemporality aggregation_temporality = 3;
+  // Index into ProfilesDictionary.string_table.
+  int32 unit_strindex = 2;
 }
 
 // Each Sample records values encountered in some program context. The program
@@ -464,9 +435,9 @@ message Location {
   // preceding entries were inlined.
   //
   // E.g., if memcpy() is inlined into printf:
-  //    line[0].function_name == "memcpy"
-  //    line[1].function_name == "printf"
-  repeated Line line = 3;
+  //    lines[0].function_name == "memcpy"
+  //    lines[1].function_name == "printf"
+  repeated Line lines = 3;
   // References to attributes in ProfilesDictionary.attribute_table. [optional]
   repeated int32 attribute_indices = 4;
 }
@@ -484,7 +455,7 @@ message Line {
 // Describes a function, including its human-readable name, system name,
 // source file, and starting line number in the source.
 message Function {
-  // Function name. Empty string if not available.
+  // The function name. Empty string if not available.
   int32 name_strindex = 1;
   // Function name, as identified by the system. For instance,
   // it can be a C++ mangled name. Empty string if not available.
@@ -499,7 +470,11 @@ message Function {
 // for profiles than opentelemetry.proto.common.v1.KeyValue
 // Specifically, uses the string table for keys and allows optional unit information.
 message KeyValueAndUnit {
+  // The index into the string table for the attribute's key.
   int32 key_strindex  = 1;
+  // The value of the attribute.
   opentelemetry.proto.common.v1.AnyValue value = 2;
-  int32 unit_strindex = 3; // zero indicates implicit (by semconv) or non-defined unit.
+  // The index into the string table for the attribute's unit.
+  // zero indicates implicit (by semconv) or non-defined unit.
+  int32 unit_strindex = 3;
 }
