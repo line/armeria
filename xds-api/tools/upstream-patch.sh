@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Generate (and optionally apply) the upstream protobuf delta between two Envoy versions
 # Usage:
-#   tools/make-upstream-delta.sh --target v1.33.1 [--dryrun]
+#   ./upstream-patch.sh --target v1.33.1 [--dryrun]
+#   GITHUB_TOKEN=ghp_xxx ./upstream-patch.sh --target v1.33.1
 
 set -euo pipefail
 
@@ -113,6 +114,8 @@ if ! $DRYRUN; then
       git diff "$file" | head -20  # Show first 20 lines of conflict
       echo ""
     done
+    echo "Resolve the conflicts above, then run:"
+    echo "  git add -A && git commit -m 'vendor: Envoy $BASE_VER → $TARGET_VER'"
     exit 2
   fi
 else
