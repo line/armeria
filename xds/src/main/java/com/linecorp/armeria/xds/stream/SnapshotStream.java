@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -65,6 +67,7 @@ public interface SnapshotStream<T> {
      * @param <R> the type of the mapped values
      */
     default <R> SnapshotStream<R> map(Function<? super T, ? extends R> mapper) {
+        requireNonNull(mapper, "mapper");
         return new MapStream<>(this, mapper);
     }
 
@@ -79,6 +82,7 @@ public interface SnapshotStream<T> {
      */
     default <R, O extends SnapshotStream<? extends R>> SnapshotStream<R> switchMapEager(
             Function<? super T, ? extends O> mapper) {
+        requireNonNull(mapper, "mapper");
         return new SwitchMapEagerStream<>(this, mapper);
     }
 
@@ -92,6 +96,7 @@ public interface SnapshotStream<T> {
      * @param <I> the element type of each source stream
      */
     static <S extends SnapshotStream<I>, I> SnapshotStream<List<I>> combineNLatest(List<S> streams) {
+        requireNonNull(streams, "streams");
         return new CombineNLatestStream<>(ImmutableList.copyOf(streams));
     }
 
@@ -111,6 +116,9 @@ public interface SnapshotStream<T> {
             SnapshotStream<A> a,
             SnapshotStream<B> b,
             BiFunction<? super A, ? super B, ? extends O> combiner) {
+        requireNonNull(a, "a");
+        requireNonNull(b, "b");
+        requireNonNull(combiner, "combiner");
         return new CombineLatest2Stream<>(a, b, combiner);
     }
 
@@ -133,6 +141,10 @@ public interface SnapshotStream<T> {
             SnapshotStream<B> b,
             SnapshotStream<C> c,
             TriFunction<? super A, ? super B, ? super C, ? extends O> combiner) {
+        requireNonNull(a, "a");
+        requireNonNull(b, "b");
+        requireNonNull(c, "c");
+        requireNonNull(combiner, "combiner");
         return new CombineLatest3Stream<>(a, b, c, combiner);
     }
 
@@ -143,6 +155,7 @@ public interface SnapshotStream<T> {
      * @param <T> the type of the value
      */
     static <T> SnapshotStream<T> just(T value) {
+        requireNonNull(value, "value");
         return new StaticSnapshotStream<>(value, null);
     }
 
@@ -163,6 +176,7 @@ public interface SnapshotStream<T> {
      * @param <T> the nominal value type
      */
     static <T> SnapshotStream<T> error(Throwable error) {
+        requireNonNull(error, "error");
         return new StaticSnapshotStream<>(null, error);
     }
 }
