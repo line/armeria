@@ -27,7 +27,8 @@ import java.util.Optional;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.SnapshotStream.Subscription;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -73,7 +74,9 @@ final class XdsClusterManager implements SafeCloseable {
                   List<SnapshotWatcher<? super ClusterSnapshot>> watchers) {
         checkArgument(!nodes.containsKey(cluster.getName()),
                       "Cluster with name '%s' already registered", cluster.getName());
-        final ClusterStream node = new ClusterStream(new ClusterXdsResource(cluster), context,
+        final ClusterXdsResource resource =
+                ClusterResourceParser.INSTANCE.parse(cluster, context.extensionRegistry(), "");
+        final ClusterStream node = new ClusterStream(resource, context,
                                                      loadBalancerFactoryPool);
         nodes.put(cluster.getName(), node);
         for (SnapshotWatcher<? super ClusterSnapshot> watcher : watchers) {
@@ -86,7 +89,8 @@ final class XdsClusterManager implements SafeCloseable {
         }
     }
 
-    Subscription register(String name, SubscriptionContext context, SnapshotWatcher<ClusterSnapshot> watcher) {
+    Subscription register(String name, SubscriptionContext context,
+                                SnapshotWatcher<? super ClusterSnapshot> watcher) {
         if (closed) {
             return Subscription.noop();
         }

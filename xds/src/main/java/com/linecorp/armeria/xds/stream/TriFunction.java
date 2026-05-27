@@ -14,17 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.core.v3.TransportSocket;
-
-interface TransportSocketFactory extends XdsExtensionFactory {
-
-    SnapshotStream<TransportSocketSnapshot> create(SubscriptionContext context,
-                                                   @Nullable ConfigSource configSource,
-                                                   TransportSocket transportSocket);
+/**
+ * A function that accepts three arguments and produces a result.
+ *
+ * @param <A> the type of the first argument
+ * @param <B> the type of the second argument
+ * @param <C> the type of the third argument
+ * @param <O> the type of the result
+ */
+@UnstableApi
+@FunctionalInterface
+public interface TriFunction<A, B, C, O> {
+    /**
+     * Applies this function to the given arguments.
+     */
+    O apply(A a, B b, C c);
 }

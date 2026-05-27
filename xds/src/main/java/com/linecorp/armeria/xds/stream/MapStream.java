@@ -14,9 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import java.util.function.Function;
+
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
 final class MapStream<I, O> extends RefCountedStream<O> {
 

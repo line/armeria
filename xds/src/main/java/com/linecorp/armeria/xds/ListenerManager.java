@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.SnapshotStream.Subscription;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;

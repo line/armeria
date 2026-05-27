@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.Subscription;
+
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<T> implements ResourceNode<T> {
@@ -59,13 +62,13 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
 
     @Override
     public void onError(XdsType type, String resourceName, Throwable t) {
-        resourceNodeMeterBinder.onError(type, resourceName, t);
+        resourceNodeMeterBinder.onError();
         emit(null, XdsResourceException.maybeWrap(type, resourceName, t));
     }
 
     @Override
     public void onResourceDoesNotExist(XdsType type, String resourceName) {
-        resourceNodeMeterBinder.onResourceDoesNotExist(type, resourceName);
+        resourceNodeMeterBinder.onResourceDoesNotExist();
         emit(null, new MissingXdsResourceException(type, resourceName));
     }
 

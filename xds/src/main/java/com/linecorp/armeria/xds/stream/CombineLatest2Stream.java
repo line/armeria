@@ -14,47 +14,36 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
+
+import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
-final class CombineLatest3Stream<A, B, C, O> extends RefCountedStream<O> {
-
-    @FunctionalInterface
-    interface TriFunction<A, B, C, O> {
-        O apply(A a, B b, C c);
-    }
+final class CombineLatest2Stream<A, B, O> extends RefCountedStream<O> {
 
     private final SnapshotStream<A> streamA;
     private final SnapshotStream<B> streamB;
-    private final SnapshotStream<C> streamC;
-    private final TriFunction<? super A, ? super B, ? super C, ? extends O> combiner;
+    private final BiFunction<? super A, ? super B, ? extends O> combiner;
 
     @Nullable
     private Subscription subA;
     @Nullable
     private Subscription subB;
-    @Nullable
-    private Subscription subC;
 
     private boolean aReady;
     private boolean bReady;
-    private boolean cReady;
-
     @Nullable
     private A latestA;
     @Nullable
     private B latestB;
-    @Nullable
-    private C latestC;
 
-    CombineLatest3Stream(SnapshotStream<A> streamA,
+    CombineLatest2Stream(SnapshotStream<A> streamA,
                          SnapshotStream<B> streamB,
-                         SnapshotStream<C> streamC,
-                         TriFunction<? super A, ? super B, ? super C, ? extends O> combiner) {
+                         BiFunction<? super A, ? super B, ? extends O> combiner) {
         this.streamA = streamA;
         this.streamB = streamB;
-        this.streamC = streamC;
         this.combiner = combiner;
     }
 
@@ -62,7 +51,6 @@ final class CombineLatest3Stream<A, B, C, O> extends RefCountedStream<O> {
     protected Subscription onStart(SnapshotWatcher<O> watcher) {
         subA = streamA.subscribe(this::onA);
         subB = streamB.subscribe(this::onB);
-        subC = streamC.subscribe(this::onC);
 
         return () -> {
             if (subA != null) {
@@ -71,12 +59,8 @@ final class CombineLatest3Stream<A, B, C, O> extends RefCountedStream<O> {
             if (subB != null) {
                 subB.close();
             }
-            if (subC != null) {
-                subC.close();
-            }
             subA = null;
             subB = null;
-            subC = null;
         };
     }
 
@@ -85,6 +69,7 @@ final class CombineLatest3Stream<A, B, C, O> extends RefCountedStream<O> {
             emit(null, t);
             return;
         }
+
         latestA = v;
         aReady = true;
         maybeEmit();
@@ -95,30 +80,18 @@ final class CombineLatest3Stream<A, B, C, O> extends RefCountedStream<O> {
             emit(null, t);
             return;
         }
+
         latestB = v;
         bReady = true;
         maybeEmit();
     }
 
-    private void onC(@Nullable C v, @Nullable Throwable t) {
-        if (v == null) {
-            emit(null, t);
-            return;
-        }
-        latestC = v;
-        cReady = true;
-        maybeEmit();
-    }
-
     private void maybeEmit() {
-        if (!aReady || !bReady || !cReady) {
+        if (!aReady || !bReady) {
             return;
         }
-        assert latestA != null;
-        assert latestB != null;
-        assert latestC != null;
         try {
-            emit(combiner.apply(latestA, latestB, latestC), null);
+            emit(combiner.apply(latestA, latestB), null);
         } catch (Throwable t) {
             emit(null, t);
         }

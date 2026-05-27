@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
 @SuppressWarnings("CheckReturnValue")
 class CombineNLatestStreamTest {
@@ -69,11 +69,6 @@ class CombineNLatestStreamTest {
         @Override
         protected Subscription onStart(SnapshotWatcher<T> watcher) {
             return Subscription.noop();
-        }
-
-        @Override
-        public void emit(@Nullable T value, @Nullable Throwable error) {
-            super.emit(value, error);
         }
     }
 }
