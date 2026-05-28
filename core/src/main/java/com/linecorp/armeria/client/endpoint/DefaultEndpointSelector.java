@@ -52,6 +52,12 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
                 }
             });
         }
+        // Eagerly initialize if the endpoint group is already ready (e.g., StaticEndpointGroup).
+        // This avoids a race in AbstractEndpointSelector.tryInitialize() where concurrent
+        // selectNow() calls can see initialized==1 but loadBalancer still null.
+        if (endpointGroup.whenReady().isDone()) {
+            initialize();
+        }
     }
 
     @Override
