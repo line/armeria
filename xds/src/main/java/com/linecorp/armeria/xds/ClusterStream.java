@@ -27,6 +27,9 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerFactory;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;

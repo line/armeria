@@ -14,13 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
 final class CombineNLatestStream<T> extends RefCountedStream<List<T>> {
 

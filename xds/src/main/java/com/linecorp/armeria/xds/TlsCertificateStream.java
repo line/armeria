@@ -22,6 +22,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.core.v3.WatchedDirectory;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.TlsCertificate;

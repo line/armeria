@@ -30,6 +30,9 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.common.Cancellable;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.file.PathWatcher;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.core.v3.DataSource;
 import io.envoyproxy.envoy.config.core.v3.DataSource.SpecifierCase;

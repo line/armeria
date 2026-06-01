@@ -56,7 +56,7 @@ class ResourceNodeMeterBinderFactory {
      * This is not done at the user-exposed {@link SnapshotWatcher} level so that users can
      * observe the internal state/lifecycle of {@link ResourceNode}s via metrics.
      */
-    final class ResourceNodeMeterBinder implements ResourceWatcher<XdsResource> {
+    final class ResourceNodeMeterBinder {
 
         private final Key key;
         private boolean closed;
@@ -98,18 +98,15 @@ class ResourceNodeMeterBinderFactory {
             }
         }
 
-        @Override
-        public void onError(XdsType type, String resourceName, Throwable t) {
+        void onError() {
             errorCounter.increment();
         }
 
-        @Override
-        public void onResourceDoesNotExist(XdsType type, String resourceName) {
+        void onResourceDoesNotExist() {
             missingCounter.increment();
         }
 
-        @Override
-        public void onChanged(XdsResource update) {
+        void onChanged(XdsResource update) {
             updatedRevision.set(update.revision());
         }
     }

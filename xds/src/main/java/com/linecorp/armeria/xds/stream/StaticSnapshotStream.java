@@ -14,11 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import java.util.Optional;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
 final class StaticSnapshotStream<T> implements SnapshotStream<T> {
 

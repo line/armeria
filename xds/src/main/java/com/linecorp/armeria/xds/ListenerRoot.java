@@ -18,7 +18,7 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.xds.SnapshotStream.Subscription;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 

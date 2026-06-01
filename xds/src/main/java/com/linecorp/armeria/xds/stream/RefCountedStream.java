@@ -14,14 +14,27 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
-abstract class RefCountedStream<T> implements SnapshotStream<T> {
+/**
+ * A {@link SnapshotStream} that manages subscriber reference counting.
+ * The upstream subscription is started when the first watcher subscribes
+ * and stopped when the last watcher unsubscribes.
+ *
+ * <p>Subclasses implement {@link #onStart} to set up the upstream data source
+ * and optionally override {@link #onStop} for cleanup.
+ *
+ * @param <T> the type of snapshot values delivered by this stream
+ */
+@UnstableApi
+public abstract class RefCountedStream<T> implements SnapshotStream<T> {
 
     private final Set<SnapshotWatcher<? super T>> watchers = new LinkedHashSet<>();
 
@@ -63,12 +76,25 @@ abstract class RefCountedStream<T> implements SnapshotStream<T> {
         };
     }
 
+    /**
+     * Called when the first watcher subscribes. Implementations should set up the upstream
+     * data source and deliver values to the given watcher.
+     *
+     * @param watcher the watcher to deliver upstream values to
+     * @return a subscription to close when the upstream should be stopped
+     */
     protected abstract Subscription onStart(SnapshotWatcher<T> watcher);
 
+    /**
+     * Called when the last watcher unsubscribes. Override to perform cleanup.
+     */
     protected void onStop() {
     }
 
-    protected void emit(@Nullable T value, @Nullable Throwable error) {
+    /**
+     * Emits a value or error to all current watchers.
+     */
+    public final void emit(@Nullable T value, @Nullable Throwable error) {
         if (value != null) {
             latestValue = value;
         }
@@ -81,7 +107,10 @@ abstract class RefCountedStream<T> implements SnapshotStream<T> {
         }
     }
 
-    boolean hasWatchers() {
+    /**
+     * Returns whether this stream currently has any active watchers.
+     */
+    public boolean hasWatchers() {
         return !watchers.isEmpty();
     }
 }

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,8 +29,7 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.SnapshotStream.Subscription;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
 @SuppressWarnings("CheckReturnValue")
 class StreamSwitchMapEagerTest {
@@ -382,11 +381,6 @@ class StreamSwitchMapEagerTest {
         @Override
         protected Subscription onStart(SnapshotWatcher<T> watcher) {
             return onStartFunction.apply(watcher);
-        }
-
-        @Override
-        protected void emit(@Nullable T value, @Nullable Throwable error) {
-            super.emit(value, error);
         }
     }
 }

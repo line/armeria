@@ -18,9 +18,12 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 /**
- * A watcher implementation which waits for updates on an xDS snapshot.
+ * A callback interface for receiving snapshot updates from a {@link SnapshotStream}.
+ *
+ * @param <T> the type of snapshot values received by this watcher
  */
 @UnstableApi
 @FunctionalInterface
@@ -28,7 +31,10 @@ public interface SnapshotWatcher<T> {
 
     /**
      * Invoked when a snapshot is updated or an error occurs.
-     * Either snapshot or error will be non-null.
+     * Exactly one of {@code snapshot} or {@code error} will be non-null.
+     *
+     * @param snapshot the updated snapshot value, or {@code null} if an error occurred
+     * @param error the error, or {@code null} if a snapshot was delivered
      */
-    void onUpdate(@Nullable T snapshot, @Nullable Throwable t);
+    void onUpdate(@Nullable T snapshot, @Nullable Throwable error);
 }

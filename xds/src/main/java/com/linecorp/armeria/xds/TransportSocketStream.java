@@ -17,6 +17,9 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
