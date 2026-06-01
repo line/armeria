@@ -526,7 +526,7 @@ class CredentialInjectorFilterTest {
                   - name: my-credential
                     generic_secret:
                       secret:
-                        filename: "%s"
+                        filename: '%s'
                 """.formatted(BOOTSTRAP_CLUSTER_NAME,
                               BOOTSTRAP_CLUSTER_NAME, BOOTSTRAP_CLUSTER_NAME,
                               controlPlane.httpSocketAddress().getHostString(),
