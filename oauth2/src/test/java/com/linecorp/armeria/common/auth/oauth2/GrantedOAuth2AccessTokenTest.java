@@ -155,12 +155,13 @@ public class GrantedOAuth2AccessTokenTest {
         final String refreshToken = "tGzv3JOkF0XG5Qx2TlKWIA";
         final String[] scope = { "read", "write" };
         final Map<String, String> extras = Collections.singletonMap("example_parameter", "example_value");
+        // The access token and refresh token must be masked to avoid leaking credentials via logs.
         final String toString =
-                "{\"access_token\":\"2YotnFZFEjr1zCsicMWpAA\"," +
+                "{\"access_token\":\"****\"," +
                 "\"token_type\":\"bearer\"," +
                 "\"issued_at\":\"2010-01-01T10:15:30Z\"," +
                 "\"expires_in\":3600," +
-                "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
+                "\"refresh_token\":\"****\"," +
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
 
