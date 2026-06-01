@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Tests that concurrent {@link EndpointGroup#selectNow} calls on a {@code StaticEndpointGroup}
