@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
@@ -32,6 +34,7 @@ interface SubscriptionContext extends FactoryContext {
     @Override
     default SnapshotStream<GenericSecretSnapshot> genericSecretStream(
             SdsSecretConfig sdsSecretConfig) {
+        requireNonNull(sdsSecretConfig, "sdsSecretConfig");
         return new SecretStream(sdsSecretConfig, null, this)
                 .switchMapEager(resource -> new GenericSecretStream(this, resource))
                 .checkSubscribeOn(eventLoop());
