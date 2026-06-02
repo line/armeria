@@ -75,7 +75,7 @@ public interface HttpFilterFactory extends XdsExtensionFactory {
                                                        FactoryContext context) {
         final XdsHttpFilter filter = create(httpFilter, config, context);
         if (filter == null) {
-            return SnapshotStream.just(XdsHttpFilter.NOOP);
+            return SnapshotStream.just(XdsHttpFilter.noop());
         }
         return SnapshotStream.just(filter);
     }

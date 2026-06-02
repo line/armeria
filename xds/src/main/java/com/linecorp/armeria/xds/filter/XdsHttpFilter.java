@@ -32,9 +32,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface XdsHttpFilter {
 
     /**
-     * A no-op filter that passes through all operations unchanged.
+     * Returns a no-op filter that passes through all operations unchanged.
      */
-    XdsHttpFilter NOOP = new XdsHttpFilter() {};
+    static XdsHttpFilter noop() {
+        return NoopXdsHttpFilter.INSTANCE;
+    }
 
     /**
      * Returns the {@link HttpPreprocessor} for downstream filter usage.
