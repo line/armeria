@@ -40,7 +40,7 @@ public final class InvalidHttpResponseException extends InvalidResponseException
      * @throws IllegalArgumentException if the {@link AggregatedHttpResponse} has a pooled content.
      */
     public InvalidHttpResponseException(AggregatedHttpResponse response) {
-        this(response, null);
+        this(response, (Throwable) null);
     }
 
     /**
@@ -52,6 +52,15 @@ public final class InvalidHttpResponseException extends InvalidResponseException
         super(requireNonNull(response, "response").toString(), cause);
         ensureNonPooledObject(response);
         this.response = response;
+    }
+
+    /**
+     * Creates a new instance with the specified {@link AggregatedHttpResponse}, {@code message}.
+     *
+     * @throws IllegalArgumentException if the {@link AggregatedHttpResponse} has a pooled content.
+     */
+    public InvalidHttpResponseException(AggregatedHttpResponse response, String message) {
+        this(response, message, null);
     }
 
     /**
