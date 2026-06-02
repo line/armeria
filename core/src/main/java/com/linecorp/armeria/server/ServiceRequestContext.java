@@ -201,6 +201,14 @@ public interface ServiceRequestContext extends RequestContext {
     InetSocketAddress localAddress();
 
     /**
+     * Returns the {@link ConnectionContext} for the connection handling this request.
+     * The connection context provides connection-level properties such as SNI hostname
+     * and ALPN protocols.
+     */
+    @UnstableApi
+    ConnectionContext connectionContext();
+
+    /**
      * Returns the address of the client who initiated this request.
      */
     InetAddress clientAddress();
