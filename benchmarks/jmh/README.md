@@ -17,7 +17,7 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
 - `-Pjmh.iterations=<integer>`
   - The number of iterations. JMH default if unspecified.
 - `-Pjmh.warmupIterations`
-  - The number of iterations. Uses the value of `jmh.iterations` if unspecified.
+  - The number of warmup iterations. Uses the value of `jmh.iterations` if unspecified.
 - `-Pjmh.profilers=<spec>`
   - The profiler settings. Profiler disabled if unspecified.
     - `async:libPath=...;output=flamegraph`
