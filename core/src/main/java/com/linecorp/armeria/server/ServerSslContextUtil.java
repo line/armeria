@@ -64,7 +64,8 @@ final class ServerSslContextUtil {
                                  .engineType(tlsEngineType)
                                  .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
                                  .build();
-            final SslContext sslContextClient = SslContextUtil.toSslContext(clientTlsSpec, true);
+            final SslContext sslContextClient = SslContextUtil.toSslContext(
+                    clientTlsSpec.toBuilder().allowUnsafeCiphers(true).build());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
             clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());

@@ -170,9 +170,11 @@ final class HttpClientFactory implements ClientFactory {
             meterIdPrefix = options.tlsConfig().meterIdPrefix();
             allowUnsafeCiphers = options.tlsConfig().allowsUnsafeCiphers();
         }
-        sslContextFactory = new SslContextFactory(meterIdPrefix, options.meterRegistry(),
-                                                  allowUnsafeCiphers);
-        bootstrapSslContexts = new BootstrapSslContexts(baseClientTlsSpec, options, sslContextFactory);
+        final ClientTlsSpec resolvedTlsSpec = baseClientTlsSpec.toBuilder()
+                                                                .allowUnsafeCiphers(allowUnsafeCiphers)
+                                                                .build();
+        sslContextFactory = new SslContextFactory(meterIdPrefix, options.meterRegistry());
+        bootstrapSslContexts = new BootstrapSslContexts(resolvedTlsSpec, options, sslContextFactory);
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();

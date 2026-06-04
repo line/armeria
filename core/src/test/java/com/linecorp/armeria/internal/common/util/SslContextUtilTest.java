@@ -89,14 +89,15 @@ class SslContextUtilTest {
             SslContextUtil.toSslContext(ClientTlsSpec.builder()
                                                      .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
                                                      .ciphers(BAD_HTTP2_CIPHERS)
-                                                     .build(), false);
+                                                     .build());
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
 
         final SslContext sslContext = SslContextUtil.toSslContext(
                 ClientTlsSpec.builder().ciphers(BAD_HTTP2_CIPHERS)
                              .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
-                             .build(), true);
+                             .allowUnsafeCiphers(true)
+                             .build());
         ReferenceCountUtil.release(sslContext);
     }
 

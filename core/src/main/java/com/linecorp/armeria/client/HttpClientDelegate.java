@@ -318,6 +318,7 @@ final class HttpClientDelegate implements HttpClient {
                     ClientTlsSpec.builder()
                                  .tlsCustomizer(config.tlsCustomizer())
                                  .engineType(factory.options().tlsEngineType())
+                                 .allowUnsafeCiphers(config.allowsUnsafeCiphers())
                                  .alpnProtocols(sessionProtocol);
             if (keyPair != null) {
                 builder.tlsKeyPair(keyPair);

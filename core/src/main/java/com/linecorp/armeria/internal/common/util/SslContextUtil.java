@@ -95,13 +95,13 @@ public final class SslContextUtil {
     private static boolean warnedMissingEssentialCipherSuite;
     private static boolean warnedBadCipherSuite;
 
-    public static SslContext toSslContext(ClientTlsSpec clientTlsSpec, boolean allowUnsafeCiphers) {
+    public static SslContext toSslContext(ClientTlsSpec clientTlsSpec) {
         checkArgument(!clientTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(clientTlsSpec);
-                validateSslContext(allowUnsafeCiphers, sslContext);
+                validateSslContext(clientTlsSpec.allowUnsafeCiphers(), sslContext);
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
                 return Exceptions.throwUnsafely(e);
@@ -110,13 +110,13 @@ public final class SslContextUtil {
         });
     }
 
-    public static SslContext toSslContext(ServerTlsSpec serverTlsSpec, boolean allowUnsafeCiphers) {
+    public static SslContext toSslContext(ServerTlsSpec serverTlsSpec) {
         checkArgument(!serverTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
         return MinifiedBouncyCastleProvider.call(() -> {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(serverTlsSpec);
-                validateSslContext(allowUnsafeCiphers, sslContext);
+                validateSslContext(serverTlsSpec.allowUnsafeCiphers(), sslContext);
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
                 return Exceptions.throwUnsafely(e);
