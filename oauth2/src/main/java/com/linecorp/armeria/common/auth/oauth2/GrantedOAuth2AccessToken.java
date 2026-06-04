@@ -92,6 +92,8 @@ public class GrantedOAuth2AccessToken implements Serializable {
     @VisibleForTesting
     static final char AUTHORIZATION_SEPARATOR = ' ';
 
+    private static final String MASKED = "****";
+
     /**
      * {@value OAuth2Constants#ACCESS_TOKEN} Access Token response field,
      * REQUIRED. The access token issued by the authorization server.
@@ -352,9 +354,11 @@ public class GrantedOAuth2AccessToken implements Serializable {
     @Override
     public String toString() {
         if (toString == null) {
+            // Mask the access and refresh tokens so that credentials are not leaked via logs.
+            // Note that the full values are still available through rawResponse().
             // include {@code issuedAt()} to toString()
-            toString = composeRawResponse(accessToken, tokenType, issuedAt, expiresIn,
-                                          refreshToken, scope, extras);
+            toString = composeRawResponse(MASKED, tokenType, issuedAt, expiresIn,
+                                          refreshToken == null ? null : MASKED, scope, extras);
         }
         return toString;
     }
