@@ -120,20 +120,25 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
 
         final Promise<SslContext> promise = ctx.executor().newPromise();
 
+        ctx.channel().closeFuture().addListener(f -> {
+            promise.tryFailure(new IllegalStateException(
+                    "ConnectionAcceptor.accept(ctx) timed out for: " + connectionCtx));
+        });
+
         if (connectionAcceptor.isNoop()) {
             resolveSslContext(ctx, connectionCtx, promise);
         } else {
             connectionAcceptor.accept(connectionCtx, ctx.channel().eventLoop())
                               .whenComplete((accepted, t) -> {
                                   if (t != null) {
-                                      promise.setFailure(t);
+                                      promise.tryFailure(t);
                                       return;
                                   }
                                   if (accepted) {
                                       resolveSslContext(ctx, connectionCtx, promise);
                                   } else {
-                                      promise.setFailure(new IllegalArgumentException(
-                                              "Connection rejected by ConnectionAcceptor: " + connectionCtx));
+                                      promise.tryFailure(new IllegalArgumentException(
+                                              "Connection rejected for: " + connectionCtx));
                                   }
                               });
         }
@@ -146,7 +151,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
                                    Promise<SslContext> promise) {
         final SslContext sslContext = sslContextMapping.map(connectionCtx.sniHostname());
         if (sslContext == null) {
-            promise.setFailure(new IllegalArgumentException(
+            promise.tryFailure(new IllegalArgumentException(
                     "No SslContext found for hostname: " + connectionCtx.sniHostname()));
             return;
         }
@@ -154,7 +159,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
             ctx.channel().closeFuture().addListener(
                     f -> ((TlsProviderMapping) sslContextMapping).release(sslContext));
         }
-        promise.setSuccess(sslContext);
+        promise.trySuccess(sslContext);
     }
 
     @Override
