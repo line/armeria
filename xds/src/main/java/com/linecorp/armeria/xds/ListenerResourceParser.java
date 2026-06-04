@@ -21,15 +21,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
 import io.envoyproxy.envoy.config.listener.v3.Filter;
 import io.envoyproxy.envoy.config.listener.v3.FilterChain;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
@@ -43,25 +42,36 @@ final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsR
     private static final String HTTP_CONNECTION_MANAGER_FILTER_NAME =
             "envoy.filters.network.http_connection_manager";
 
+    private static final String ROUTER_FILTER_NAME = "envoy.filters.http.router";
+    private static final String ROUTER_TYPE_URL =
+            "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
+
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 
     private ListenerResourceParser() {}
 
-    private static List<XdsHttpFilter> resolveDownstreamFilters(
-            @Nullable HttpConnectionManager connectionManager,
-            XdsExtensionRegistry registry) {
+    @Nullable
+    private static Router findRouter(@Nullable HttpConnectionManager connectionManager,
+                                     XdsExtensionRegistry registry) {
         if (connectionManager == null) {
-            return ImmutableList.of();
+            return null;
         }
         final List<HttpFilter> httpFilters = connectionManager.getHttpFiltersList();
-        final ImmutableList.Builder<XdsHttpFilter> builder = ImmutableList.builder();
-        for (HttpFilter httpFilter : httpFilters) {
-            final XdsHttpFilter instance = FilterUtil.resolveInstance(registry, httpFilter, null);
-            if (instance != null) {
-                builder.add(instance);
-            }
+        if (httpFilters.isEmpty()) {
+            return null;
         }
-        return builder.build();
+        final HttpFilter last = httpFilters.get(httpFilters.size() - 1);
+        if (!ROUTER_FILTER_NAME.equals(last.getName())) {
+            return null;
+        }
+        final Any typedConfig = last.getTypedConfig();
+        if (typedConfig == Any.getDefaultInstance()) {
+            return Router.getDefaultInstance();
+        }
+        if (!ROUTER_TYPE_URL.equals(typedConfig.getTypeUrl())) {
+            return null;
+        }
+        return registry.unpack(typedConfig, Router.class);
     }
 
     @Nullable
@@ -107,8 +117,8 @@ final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsR
     @Override
     ListenerXdsResource parse(Listener message, XdsExtensionRegistry registry, String version) {
         final HttpConnectionManager connectionManager = findHcm(message, registry);
-        final List<XdsHttpFilter> downstreamFilters = resolveDownstreamFilters(connectionManager, registry);
-        return new ListenerXdsResource(message, connectionManager, downstreamFilters, version);
+        final Router router = findRouter(connectionManager, registry);
+        return new ListenerXdsResource(message, connectionManager, router, version);
     }
 
     @Override

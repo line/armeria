@@ -71,7 +71,8 @@ final class ListenerManager implements SafeCloseable {
         }, t -> watcher.onUpdate(null, maybeWrap(XdsType.LISTENER, listener.getName(), t))));
     }
 
-    Subscription register(String name, SubscriptionContext context, SnapshotWatcher<ListenerSnapshot> watcher) {
+    Subscription register(String name, SubscriptionContext context,
+                          SnapshotWatcher<ListenerSnapshot> watcher) {
         if (closed) {
             return Subscription.noop();
         }

@@ -21,7 +21,7 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.XdsResourceValidator;
+import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
@@ -40,7 +40,7 @@ public final class IstioFilterFactories {
     public abstract static class Base implements HttpFilterFactory {
         @Override
         @Nullable
-        public XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator) {
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config, FactoryContext context) {
             return null;
         }
     }
@@ -62,7 +62,7 @@ public final class IstioFilterFactories {
         }
 
         @Override
-        public XdsHttpFilter create(HttpFilter httpFilter, Any config, XdsResourceValidator validator) {
+        public XdsHttpFilter create(HttpFilter httpFilter, Any config, FactoryContext context) {
             // we need to also generate istio proto configs to actually dynamically decide alpn
             // based on filter config, but for testing purposes we just assume h2 is always used
             return ALPN_FILTER;

@@ -16,12 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.List;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory.RouterXdsHttpFilter;
-import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
@@ -36,35 +32,21 @@ public final class ListenerXdsResource extends AbstractXdsResource {
     private final Listener listener;
     @Nullable
     private final HttpConnectionManager connectionManager;
-    private final List<XdsHttpFilter> downstreamFilters;
     @Nullable
     private final Router router;
 
     ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
-                        List<XdsHttpFilter> downstreamFilters, String version) {
-        this(listener, connectionManager, downstreamFilters, version, 0);
+                        @Nullable Router router, String version) {
+        this(listener, connectionManager, router, version, 0);
     }
 
     private ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
-                                List<XdsHttpFilter> downstreamFilters,
+                                @Nullable Router router,
                                 String version, long revision) {
         super(version, revision);
         this.listener = listener;
         this.connectionManager = connectionManager;
-        this.downstreamFilters = downstreamFilters;
-        router = findRouter(downstreamFilters);
-    }
-
-    @Nullable
-    private static Router findRouter(List<XdsHttpFilter> filters) {
-        if (filters.isEmpty()) {
-            return null;
-        }
-        final XdsHttpFilter last = filters.get(filters.size() - 1);
-        if (last instanceof RouterXdsHttpFilter) {
-            return ((RouterXdsHttpFilter) last).router();
-        }
-        return null;
+        this.router = router;
     }
 
     @Override
@@ -95,7 +77,7 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         if (revision == revision()) {
             return this;
         }
-        return new ListenerXdsResource(listener, connectionManager, downstreamFilters,
+        return new ListenerXdsResource(listener, connectionManager, router,
                                        version(), revision);
     }
 
