@@ -1,0 +1,16 @@
+---
+date: 2026-06-04
+---
+
+# v1.38.1
+
+## 🛠️ Bug fixes
+
+- Fixed a race condition in [AbstractEndpointSelector](type) where
+  [EndpointGroup#selectNow(ClientRequestContext)](type) could return `null` even when endpoints were available. #6786
+  - This bug has been present since 1.35.0 and could cause xDS integrations to throw
+    an [EndpointSelectionTimeoutException](type) on snapshot update.
+
+## 🙇 Thank you
+
+<ThankYou usernames={['ikhoon', 'jrhee17', 'minwoox', 'trustin']} />
