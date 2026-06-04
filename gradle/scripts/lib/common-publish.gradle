@@ -62,6 +62,8 @@ if (publishToStaging) {
             }
         }
 
+        clientTimeout.set(Duration.ofMinutes(30))
+
         transitionCheckOptions {
             maxRetries.set(100)
             delayBetween.set(Duration.ofSeconds(20))
