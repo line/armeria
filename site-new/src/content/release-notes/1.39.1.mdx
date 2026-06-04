@@ -1,0 +1,16 @@
+---
+date: 2026-06-04
+---
+
+# v1.39.1
+
+## 🛠️ Bug fixes
+
+- Fixed a race condition in `AbstractEndpointSelector.tryInitialize()` where
+  `StaticEndpointGroup#selectNow()` could return `null` even when endpoints were available. #6786
+  - This bug has been present since 1.35.0 and could cause xDS integrations to throw
+    an `EndpointSelectionTimeoutException` on snapshot update.
+
+## 🙇 Thank you
+
+<ThankYou usernames={['ikhoon', 'jrhee17', 'minwoox', 'trustin']} />
