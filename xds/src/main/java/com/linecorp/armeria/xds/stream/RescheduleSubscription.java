@@ -49,6 +49,7 @@ final class RescheduleSubscription<T> implements SnapshotWatcher<T>, Subscriptio
 
     @Override
     public void close() {
+        assert eventLoop.inEventLoop();
         closed = true;
         if (upstream != null) {
             upstream.close();

@@ -24,6 +24,7 @@ import com.google.protobuf.Any;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -52,7 +53,7 @@ public final class CredentialInjectorFilterFactory implements HttpFilterFactory 
     private static final String GENERIC_TYPE_URL =
             "type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
-    private static final String DEFAULT_HEADER = "authorization";
+    private static final String DEFAULT_HEADER = HttpHeaderNames.AUTHORIZATION.toString();
 
     @Override
     public String name() {

@@ -190,7 +190,6 @@ public interface SnapshotStream<T> {
      *
      * @param eventLoop the event loop that subscribe and close must be called from
      */
-    @UnstableApi
     default SnapshotStream<T> checkSubscribeOn(EventExecutor eventLoop) {
         requireNonNull(eventLoop, "eventLoop");
         final SnapshotStream<T> self = this;
@@ -213,7 +212,6 @@ public interface SnapshotStream<T> {
      *
      * @param eventLoop the event loop to deliver emissions on
      */
-    @UnstableApi
     default SnapshotStream<T> rescheduleEventsOn(EventExecutor eventLoop) {
         requireNonNull(eventLoop, "eventLoop");
         final SnapshotStream<T> self = this;
