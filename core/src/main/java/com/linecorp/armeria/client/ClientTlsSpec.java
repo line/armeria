@@ -114,6 +114,7 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
                           .add("tlsCustomizer", tlsCustomizer())
                           .add("keyManagerFactory", keyManagerFactory())
                           .add("endpointIdentificationAlgorithm", endpointIdentificationAlgorithm())
+                          .add("allowUnsafeCiphers", allowUnsafeCiphers())
                           .toString();
     }
 

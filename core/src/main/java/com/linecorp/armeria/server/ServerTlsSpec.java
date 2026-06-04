@@ -116,6 +116,7 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
                           .add("keyManagerFactory", keyManagerFactory())
                           .add("clientAuth", clientAuth)
                           .add("hostnamePattern", hostnamePattern)
+                          .add("allowUnsafeCiphers", allowUnsafeCiphers())
                           .toString();
     }
 

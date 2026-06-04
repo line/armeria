@@ -203,6 +203,7 @@ public abstract class AbstractTlsSpec {
                           .add("engineType", engineType)
                           .add("tlsCustomizer", tlsCustomizer)
                           .add("keyManagerFactory", keyManagerFactory)
+                          .add("allowUnsafeCiphers", allowUnsafeCiphers)
                           .toString();
     }
 }
