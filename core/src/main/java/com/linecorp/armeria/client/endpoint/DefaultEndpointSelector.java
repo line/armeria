@@ -52,6 +52,7 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
                 }
             });
         }
+        initialize();
     }
 
     @Override
