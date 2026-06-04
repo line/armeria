@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkarmeria_site=self.webpackChunkarmeria_site||[]).push([["1668"],{86569(e,r,s){s.r(r),s.d(r,{default:()=>l});var a=s(74848);s(96540);var t=s(34164),u=s(34308),c=s(88287),i=s(22831),n=s(93654);function l(e){return(0,a.jsx)(u.e3,{className:(0,t.A)(c.G.wrapper.docsPages),children:(0,a.jsx)(n.A,{children:(0,i.v)(e.route.routes)})})}}}]);
