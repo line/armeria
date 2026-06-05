@@ -18,11 +18,12 @@ package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -49,19 +50,51 @@ class StateCoordinatorTest {
     }
 
     @Test
-    void lateSubscriberReceivesCachedResource() {
+    void dataDeliveredToSubscribedWatcher() {
         final XdsExtensionRegistry extensionRegistry = extensionRegistry();
         final StateCoordinator coordinator = new StateCoordinator(
                 eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
         final ClusterXdsResource resource =
                 new ClusterXdsResource(createCluster(CLUSTER_NAME), "1").withRevision(1);
-        coordinator.onResourceUpdated(XdsType.CLUSTER, CLUSTER_NAME, resource);
 
-        final CapturingWatcher watcher = new CapturingWatcher();
+        final AtomicReference<XdsResource> changed = new AtomicReference<>();
+        final SnapshotWatcher<XdsResource> watcher = (value, error) -> {
+            if (value != null) {
+                changed.set(value);
+            }
+        };
         coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher);
 
-        assertThat(watcher.changed).isSameAs(resource);
-        assertThat(watcher.missingType).isNull();
+        // onResourceUpdated stores and notifies the subscribed watcher
+        coordinator.onResourceUpdated(XdsType.CLUSTER, CLUSTER_NAME, resource);
+
+        assertThat(changed.get()).isNotNull();
+        assertThat(changed.get().resource()).isEqualTo(resource.resource());
+    }
+
+    @Test
+    void registerDeliversCachedResource() {
+        final XdsExtensionRegistry extensionRegistry = extensionRegistry();
+        final StateCoordinator coordinator = new StateCoordinator(
+                eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
+        final ClusterXdsResource resource =
+                new ClusterXdsResource(createCluster(CLUSTER_NAME), "1").withRevision(1);
+
+        // First register + store a resource
+        final SnapshotWatcher<XdsResource> noopWatcher = (value, error) -> {};
+        coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, noopWatcher);
+        coordinator.onResourceUpdated(XdsType.CLUSTER, CLUSTER_NAME, resource);
+
+        // A late watcher registered to the same resource gets the cached value
+        final AtomicReference<XdsResource> replayed = new AtomicReference<>();
+        final SnapshotWatcher<XdsResource> lateWatcher = (value, error) -> {
+            if (value != null) {
+                replayed.set(value);
+            }
+        };
+        coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, lateWatcher);
+        assertThat(replayed.get()).isNotNull();
+        assertThat(replayed.get().resource()).isEqualTo(resource.resource());
     }
 
     @Test
@@ -69,20 +102,27 @@ class StateCoordinatorTest {
         final XdsExtensionRegistry extensionRegistry = extensionRegistry();
         final StateCoordinator coordinator = new StateCoordinator(
                 eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
-        final CapturingWatcher watcher1 = new CapturingWatcher();
-        coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
+        final SnapshotWatcher<XdsResource> noopWatcher = (value, error) -> {};
+        coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, noopWatcher);
 
         coordinator.onResourceMissing(XdsType.CLUSTER, CLUSTER_NAME);
-        coordinator.unregister(XdsType.CLUSTER, CLUSTER_NAME, watcher1);
+        coordinator.unregister(XdsType.CLUSTER, CLUSTER_NAME, noopWatcher);
 
-        // After missing + unregister, the state is removed from stateStore.
-        // A new watcher should not get a replay — it waits for the server.
-        final CapturingWatcher watcher2 = new CapturingWatcher();
-        coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, watcher2);
+        // After missing + unregister, a new register should not deliver anything
+        final AtomicReference<XdsResource> changed = new AtomicReference<>();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
+        final SnapshotWatcher<XdsResource> newWatcher = (value, err) -> {
+            if (value != null) {
+                changed.set(value);
+            }
+            if (err != null) {
+                error.set(err);
+            }
+        };
+        coordinator.register(XdsType.CLUSTER, CLUSTER_NAME, newWatcher);
 
-        assertThat(watcher2.changed).isNull();
-        assertThat(watcher2.missingType).isNull();
-        assertThat(watcher2.missingName).isNull();
+        assertThat(changed.get()).isNull();
+        assertThat(error.get()).isNull();
     }
 
     @Test
@@ -93,20 +133,32 @@ class StateCoordinatorTest {
         final RouteXdsResource resource =
                 new RouteXdsResource(RouteConfiguration.newBuilder().setName(ROUTE_NAME).build(), "1")
                         .withRevision(1);
-        coordinator.onResourceUpdated(XdsType.ROUTE, ROUTE_NAME, resource);
 
-        final CapturingWatcher watcher1 = new CapturingWatcher();
+        final AtomicReference<XdsResource> changed1 = new AtomicReference<>();
+        final SnapshotWatcher<XdsResource> watcher1 = (value, err) -> {
+            if (value != null) {
+                changed1.set(value);
+            }
+        };
         coordinator.register(XdsType.ROUTE, ROUTE_NAME, watcher1);
-        assertThat(watcher1.changed).isSameAs(resource);
 
-        // Unregister does not touch stateStore, so the cached resource remains.
-        coordinator.unregister(XdsType.ROUTE, ROUTE_NAME, watcher1);
+        coordinator.onResourceUpdated(XdsType.ROUTE, ROUTE_NAME, resource);
+        assertThat(changed1.get()).isNotNull();
 
-        final CapturingWatcher watcher2 = new CapturingWatcher();
+        // Unregister removes the watcher and the subscriber slot.
+        assertThat(coordinator.unregister(XdsType.ROUTE, ROUTE_NAME, watcher1)).isTrue();
+
+        // stateStore retains the resource even after subscriber is removed.
+        // Re-register with a new watcher delivers the cached value.
+        final AtomicReference<XdsResource> changed2 = new AtomicReference<>();
+        final SnapshotWatcher<XdsResource> watcher2 = (value, err) -> {
+            if (value != null) {
+                changed2.set(value);
+            }
+        };
         coordinator.register(XdsType.ROUTE, ROUTE_NAME, watcher2);
-
-        assertThat(watcher2.changed).isSameAs(resource);
-        assertThat(watcher2.missingType).isNull();
+        assertThat(changed2.get()).isNotNull();
+        assertThat(changed2.get().resource()).isEqualTo(resource.resource());
     }
 
     private static XdsExtensionRegistry extensionRegistry() {
@@ -119,25 +171,5 @@ class StateCoordinatorTest {
 
     private static Cluster createCluster(String name) {
         return Cluster.newBuilder().setName(name).build();
-    }
-
-    private static final class CapturingWatcher implements ResourceWatcher<XdsResource> {
-        @Nullable
-        private XdsResource changed;
-        @Nullable
-        private XdsType missingType;
-        @Nullable
-        private String missingName;
-
-        @Override
-        public void onChanged(XdsResource update) {
-            changed = update;
-        }
-
-        @Override
-        public void onResourceDoesNotExist(XdsType type, String resourceName) {
-            missingType = type;
-            missingName = resourceName;
-        }
     }
 }

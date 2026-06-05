@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.stream.RefCountedStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
@@ -55,21 +56,15 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
     }
 
     @Override
-    public void onChanged(T update) {
-        resourceNodeMeterBinder.onChanged(update);
-        emit(update, null);
-    }
-
-    @Override
-    public void onError(XdsType type, String resourceName, Throwable t) {
-        resourceNodeMeterBinder.onError();
-        emit(null, XdsResourceException.maybeWrap(type, resourceName, t));
-    }
-
-    @Override
-    public void onResourceDoesNotExist(XdsType type, String resourceName) {
-        resourceNodeMeterBinder.onResourceDoesNotExist();
-        emit(null, new MissingXdsResourceException(type, resourceName));
+    public void onUpdate(@Nullable T value, @Nullable Throwable error) {
+        if (value != null) {
+            resourceNodeMeterBinder.onChanged(value);
+        } else if (error instanceof MissingXdsResourceException) {
+            resourceNodeMeterBinder.onResourceDoesNotExist();
+        } else if (error != null) {
+            resourceNodeMeterBinder.onError();
+        }
+        emit(value, error);
     }
 
     @Override

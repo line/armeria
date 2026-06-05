@@ -33,7 +33,7 @@ final class SubscriberStorage implements SafeCloseable {
     private final EventExecutor eventLoop;
     private final long timeoutMillis;
     private final boolean delta;
-    private final Map<XdsType, Map<String, XdsStreamSubscriber<?>>> subscriberMap =
+    private final Map<XdsType, Map<String, CompositeSnapshotWatcher<?>>> subscriberMap =
             new EnumMap<>(XdsType.class);
 
     SubscriberStorage(EventExecutor eventLoop, long timeoutMillis, boolean delta) {
@@ -45,37 +45,37 @@ final class SubscriberStorage implements SafeCloseable {
     /**
      * Returns {@code true} if a new subscriber is added.
      */
-    <T extends XdsResource> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+    <T extends XdsResource> boolean register(XdsType type, String resourceName, SnapshotWatcher<T> watcher) {
         //noinspection unchecked
-        XdsStreamSubscriber<T> subscriber = (XdsStreamSubscriber<T>) subscriberMap.computeIfAbsent(
+        CompositeSnapshotWatcher<T> subscriber = (CompositeSnapshotWatcher<T>) subscriberMap.computeIfAbsent(
                 type, key -> new HashMap<>()).get(resourceName);
         boolean updated = false;
         if (subscriber == null) {
             final boolean enableAbsentOnTimeout = !delta && timeoutMillis > 0;
-            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis,
-                                                   enableAbsentOnTimeout);
+            subscriber = new CompositeSnapshotWatcher<>(type, resourceName, eventLoop, timeoutMillis,
+                                                        enableAbsentOnTimeout);
             subscriberMap.get(type).put(resourceName, subscriber);
             updated = true;
         }
-        subscriber.registerWatcher(watcher);
+        subscriber.addWatcher(watcher);
         return updated;
     }
 
     /**
      * Returns {@code true} if a subscriber is removed.
      */
-    <T extends XdsResource> boolean unregister(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+    <T extends XdsResource> boolean unregister(XdsType type, String resourceName, SnapshotWatcher<T> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
         }
-        final Map<String, XdsStreamSubscriber<?>> resourceToSubscriber = subscriberMap.get(type);
+        final Map<String, CompositeSnapshotWatcher<?>> resourceToSubscriber = subscriberMap.get(type);
         if (!resourceToSubscriber.containsKey(resourceName)) {
             return false;
         }
         //noinspection unchecked
-        final XdsStreamSubscriber<T> subscriber =
-                (XdsStreamSubscriber<T>) resourceToSubscriber.get(resourceName);
-        subscriber.unregisterWatcher(watcher);
+        final CompositeSnapshotWatcher<T> subscriber =
+                (CompositeSnapshotWatcher<T>) resourceToSubscriber.get(resourceName);
+        subscriber.removeWatcher(watcher);
         if (subscriber.isEmpty()) {
             resourceToSubscriber.remove(resourceName);
             subscriber.close();
@@ -88,7 +88,7 @@ final class SubscriberStorage implements SafeCloseable {
     }
 
     @Nullable
-    <T extends XdsResource> XdsStreamSubscriber<T> subscriber(XdsType type, String resourceName) {
+    <T extends XdsResource> CompositeSnapshotWatcher<T> subscriber(XdsType type, String resourceName) {
         return unsafeCast(subscriberMap.getOrDefault(type, ImmutableMap.of()).get(resourceName));
     }
 
@@ -109,7 +109,7 @@ final class SubscriberStorage implements SafeCloseable {
     @Override
     public void close() {
         subscriberMap.values().forEach(subscribers -> {
-            subscribers.values().forEach(XdsStreamSubscriber::close);
+            subscribers.values().forEach(CompositeSnapshotWatcher::close);
         });
         subscriberMap.clear();
     }
