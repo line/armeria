@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
  * An {@link HttpPreprocessor} implementation which allows clients to execute requests based on
@@ -68,7 +69,7 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
                     new IllegalArgumentException("No route for listener '" +
                                                  routeConfig.listenerSnapshot() + "'."));
         }
-        ctx.setAttr(XdsAttributeKeys.SELECTED_ROUTE, selectedRoute);
+        ctx.setAttr(XdsCommonUtil.SELECTED_ROUTE, selectedRoute);
         DelegatingHttpClient.setDelegate(ctx, delegate);
         return selectedRoute.httpPreClient().execute(ctx, req);
     }

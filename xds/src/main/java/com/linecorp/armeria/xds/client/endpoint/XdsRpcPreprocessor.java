@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
  * An {@link RpcPreprocessor} implementation which allows clients to execute requests based on
@@ -68,7 +69,7 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
                     new IllegalArgumentException("No route for listener '" +
                                                  routeConfig.listenerSnapshot() + "'."));
         }
-        ctx.setAttr(XdsAttributeKeys.SELECTED_ROUTE, selectedRoute);
+        ctx.setAttr(XdsCommonUtil.SELECTED_ROUTE, selectedRoute);
         DelegatingRpcClient.setDelegate(ctx, delegate);
         return selectedRoute.rpcPreClient().execute(ctx, req);
     }

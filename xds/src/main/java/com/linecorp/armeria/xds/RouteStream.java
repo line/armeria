@@ -208,20 +208,23 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final RetryPolicy effectiveRetryPolicy =
                     retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
 
+            final ClientDecoration retryDecoration =
+                    FilterUtil.buildRetryDecoration(effectiveRetryPolicy);
+
             // Build filter streams
             final SnapshotStream<ClientPreprocessors> downstreamStream =
                     FilterUtil.buildDownstreamFilter(extensionRegistry, context,
                                                      hcmHttpFilters, filterConfigs);
             final SnapshotStream<ClientDecoration> upstreamStream =
                     FilterUtil.buildUpstreamFilter(extensionRegistry, context,
-                                                   upstreamFilters, filterConfigs,
-                                                   effectiveRetryPolicy);
+                                                        upstreamFilters, filterConfigs);
 
             if (!route.getRoute().hasCluster()) {
                 return SnapshotStream.combineLatest(
                         downstreamStream, upstreamStream,
                         (down, up) -> new RouteEntry(
-                                route, null, index, filterConfigs, down, up))
+                                route, null, index, filterConfigs, down,
+                                retryDecoration, up))
                                      .subscribe(watcher);
             }
 
@@ -232,7 +235,8 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             return SnapshotStream.combineLatest(
                     clusterStream, downstreamStream, upstreamStream,
                     (cluster, down, up) -> new RouteEntry(
-                            route, cluster, index, filterConfigs, down, up))
+                            route, cluster, index, filterConfigs, down,
+                            retryDecoration, up))
                                  .subscribe(watcher);
         }
     }

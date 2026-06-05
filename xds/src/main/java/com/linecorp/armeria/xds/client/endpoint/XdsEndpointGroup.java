@@ -44,7 +44,6 @@ import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
-import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
@@ -85,13 +84,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
     }
 
     /**
-     * Creates a {@link XdsEndpointGroup} based on the specified {@link ClusterSnapshot}.
-     * This may be useful if one would like to create an {@link EndpointGroup} based on
-     * a {@link GrpcService}.
+     * Creates a {@link XdsEndpointGroup} based on the specified {@link XdsLoadBalancer}.
      */
     @UnstableApi
-    public static XdsEndpointGroup of(ClusterSnapshot clusterSnapshot) {
-        throw new UnsupportedOperationException("Use ClusterSnapshot.loadBalancer() to select endpoints.");
+    public static XdsEndpointGroup of(XdsLoadBalancer loadBalancer) {
+        return new XdsEndpointGroup(loadBalancer);
     }
 
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
@@ -104,7 +101,9 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
     private final EndpointSelector selector;
     @Nullable
     private volatile XdsLoadBalancer loadBalancer;
+    @Nullable
     private final ListenerRoot listenerRoot;
+    private final long selectionTimeoutMillis;
     private List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
 
     XdsEndpointGroup(String listenerName, XdsBootstrap xdsBootstrap, boolean allowEmptyEndpoints) {
@@ -113,6 +112,18 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
         selector = selectionStrategy.newSelector(this);
         listenerRoot = xdsBootstrap.listenerRoot(listenerName);
         listenerRoot.addSnapshotWatcher(this);
+        selectionTimeoutMillis = Flags.defaultConnectTimeoutMillis();
+    }
+
+    private XdsEndpointGroup(XdsLoadBalancer loadBalancer) {
+        allowEmptyEndpoints = false;
+        selectionStrategy = new XdsEndpointSelectionStrategy();
+        selector = selectionStrategy.newSelector(this);
+        listenerRoot = null;
+        this.loadBalancer = loadBalancer;
+        endpoints = loadBalancer.allEndpoints();
+        initialEndpointsFuture.complete(endpoints);
+        selectionTimeoutMillis = 0;
     }
 
     @Override
@@ -194,7 +205,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
 
     @Override
     public long selectionTimeoutMillis() {
-        return Flags.defaultConnectTimeoutMillis();
+        return selectionTimeoutMillis;
     }
 
     @Override
@@ -204,7 +215,9 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        listenerRoot.close();
+        if (listenerRoot != null) {
+            listenerRoot.close();
+        }
         return UnmodifiableFuture.completedFuture(null);
     }
 

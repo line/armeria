@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
@@ -45,8 +46,10 @@ public final class RouterFilterFactory implements HttpFilterFactory {
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
-    private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter = new RouterFilter<>();
-    private static final RouterFilter<HttpRequest, HttpResponse> httpFilter = new RouterFilter<>();
+    private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter =
+            new RouterFilter<>(ClusterSnapshot::rpcPreprocessor);
+    private static final RouterFilter<HttpRequest, HttpResponse> httpFilter =
+            new RouterFilter<>(ClusterSnapshot::preprocessor);
 
     @Override
     public String name() {

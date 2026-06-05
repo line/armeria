@@ -22,9 +22,12 @@ import static org.assertj.core.api.Assertions.withinPercentage;
 
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -32,6 +35,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RefusedStreamException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
@@ -772,6 +776,94 @@ class RetryTest {
                 ctx = captor.get();
             }
             assertThat(ctx.log().children()).hasSize(expectedRetries + 1);
+        }
+    }
+
+    //language=YAML
+    private static final String multiEndpointBootstrap =
+            """
+                static_resources:
+                  listeners:
+                  - name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.\
+                http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                                  retry_policy:
+                                    retry_on: "5xx"
+                                    num_retries: 3
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  clusters:
+                  - name: my-cluster
+                    type: STATIC
+                    load_assignment:
+                      cluster_name: my-cluster
+                      endpoints:
+                      - lb_endpoints:
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: 8080
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: 8081
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: 8082
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: 8083
+                """;
+
+    @Test
+    void retrySelectsDifferentEndpoints() {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(multiEndpointBootstrap));
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+            final ArrayDeque<Endpoint> selectedEndpoints = new ArrayDeque<>();
+            final ClientRequestContext ctx;
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final AggregatedHttpResponse res =
+                        WebClient.builder(preprocessor)
+                                 .decorator((delegate, ctx0, req) -> {
+                                     selectedEndpoints.add(ctx0.endpoint());
+                                     return HttpResponse.of(ResponseHeaders.of(503));
+                                 })
+                                 .build()
+                                 .blocking()
+                                 .execute(HttpRequest.of(HttpMethod.GET, "/"));
+                assertThat(res.status().code()).isEqualTo(503);
+                ctx = captor.get();
+            }
+            // 1 original + 3 retries = 4 total attempts
+            assertThat(ctx.log().children()).hasSize(4);
+            assertThat(selectedEndpoints).hasSize(4);
+
+            // Verify that not all attempts used the same endpoint
+            final Set<Integer> uniquePorts = selectedEndpoints.stream()
+                                                              .map(Endpoint::port)
+                                                              .collect(Collectors.toSet());
+            assertThat(uniquePorts).hasSizeGreaterThan(1);
         }
     }
 }

@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
@@ -58,15 +57,25 @@ public final class RouteEntry {
 
     RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
                Map<String, Any> filterConfigs,
-               ClientPreprocessors downstreamPreprocessors, ClientDecoration upstreamDecoration) {
+               ClientPreprocessors downstreamPreprocessors,
+               @Nullable ClientDecoration retryDecoration,
+               ClientDecoration upstreamDecoration) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
         this.index = index;
         this.filterConfigs = filterConfigs;
         matcher = new RouteEntryMatcher(route.getMatch());
 
-        httpClient = upstreamDecoration.decorate(DelegatingHttpClient.of());
-        rpcClient = upstreamDecoration.rpcDecorate(DelegatingRpcClient.of());
+        // Pre-build the full cluster chain: retry → ClusterFilter → upstream filters → delegate
+        HttpClient clusterHttp = ClusterFilterFactory.DECORATION.decorate(
+                upstreamDecoration.decorate(DelegatingHttpClient.of()));
+        if (retryDecoration != null) {
+            clusterHttp = retryDecoration.decorate(clusterHttp);
+        }
+        httpClient = clusterHttp;
+        rpcClient = ClusterFilterFactory.DECORATION.rpcDecorate(
+                upstreamDecoration.rpcDecorate(DelegatingRpcClient.of()));
+
         httpPreClient = downstreamPreprocessors.decorate(DelegatingHttpClient.of());
         rpcPreClient = downstreamPreprocessors.rpcDecorate(DelegatingRpcClient.of());
     }
@@ -115,29 +124,28 @@ public final class RouteEntry {
     }
 
     /**
+     * Returns the pre-built {@link HttpClient} chain for this route. This chain includes
+     * retry, cluster filter, and upstream HTTP filters ending with a {@link DelegatingHttpClient}.
+     */
+    @UnstableApi
+    public HttpClient httpClient() {
+        return httpClient;
+    }
+
+    /**
+     * Returns the pre-built {@link RpcClient} chain for this route. This chain includes
+     * cluster filter and upstream RPC filters ending with a {@link DelegatingRpcClient}.
+     */
+    @UnstableApi
+    public RpcClient rpcClient() {
+        return rpcClient;
+    }
+
+    /**
      * Returns whether this route matches the specified {@link ClientRequestContext}.
      */
     public boolean matches(ClientRequestContext ctx) {
         return matcher.matches(ctx);
-    }
-
-    /**
-     * Applies upstream filters to a request corresponding to the supplied {@link ClientRequestContext}.
-     */
-    @UnstableApi
-    public void applyUpstreamFilter(ClientRequestContext ctx) {
-        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
-        if (ctxExt == null) {
-            return;
-        }
-        ctxExt.httpClientCustomizer(actualClient -> {
-            DelegatingHttpClient.setDelegate(ctx, actualClient);
-            return httpClient;
-        });
-        ctxExt.rpcClientCustomizer(actualClient -> {
-            DelegatingRpcClient.setDelegate(ctx, actualClient);
-            return rpcClient;
-        });
     }
 
     /**

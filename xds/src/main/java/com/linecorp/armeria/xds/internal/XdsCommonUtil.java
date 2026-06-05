@@ -16,26 +16,24 @@
 
 package com.linecorp.armeria.xds.internal;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.Set;
 
 import com.google.common.primitives.Ints;
 import com.google.protobuf.Duration;
 import com.google.protobuf.UInt32Value;
 
-import com.linecorp.armeria.client.ClientTlsSpec;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 
 import io.netty.util.AttributeKey;
 
 public final class XdsCommonUtil {
+
+    public static final AttributeKey<RouteEntry> SELECTED_ROUTE =
+            AttributeKey.valueOf(XdsCommonUtil.class, "SELECTED_ROUTE");
 
     public static final AttributeKey<TransportSocketSnapshot> TRANSPORT_SOCKET_SNAPSHOT_KEY =
             AttributeKey.valueOf(XdsCommonUtil.class, "TRANSPORT_SOCKET_SNAPSHOT_KEY");
@@ -98,24 +96,6 @@ public final class XdsCommonUtil {
         }
         final String subtype = contentType.subtype();
         return "grpc".equals(subtype) || subtype.startsWith("grpc+");
-    }
-
-    public static void setTlsParams(PreClientRequestContext ctx, Endpoint endpoint) {
-        final TransportSocketSnapshot transportSocket =
-                endpoint.attr(TRANSPORT_SOCKET_SNAPSHOT_KEY);
-        checkArgument(transportSocket != null,
-                      "TransportSocket not set for selected endpoint: %s", endpoint);
-        ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
-        if (clientTlsSpec == null) {
-            ctx.setSessionProtocol(SessionProtocol.HTTP);
-            return;
-        }
-        final Set<String> alpnOverride = ctx.attr(ALPN_OVERRIDE_KEY);
-        if (alpnOverride != null && !alpnOverride.isEmpty()) {
-            clientTlsSpec = clientTlsSpec.toBuilder().alpnProtocols(alpnOverride).build();
-        }
-        ctx.setSessionProtocol(SessionProtocol.HTTPS);
-        ctx.setClientTlsSpec(clientTlsSpec);
     }
 
     private XdsCommonUtil() {}

@@ -24,6 +24,8 @@ import com.google.common.base.Objects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
@@ -43,6 +45,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     private final List<TransportSocketMatchSnapshot> transportSocketMatches;
     @Nullable
     private final XdsLoadBalancer loadBalancer;
+    private final HttpPreprocessor httpPreprocessor;
+    private final RpcPreprocessor rpcPreprocessor;
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource,
                     Optional<XdsLoadBalancer> loadBalancer,
@@ -53,6 +57,10 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         this.loadBalancer = loadBalancer.orElse(null);
         endpointSnapshot = loadBalancer.map(XdsLoadBalancer::endpointSnapshot).orElse(null);
         this.transportSocketMatches = transportSocketMatches;
+        final ClusterFilterFactory factory = new ClusterFilterFactory(
+                clusterXdsResource, this.loadBalancer, transportSocket);
+        httpPreprocessor = factory.httpPreprocessor();
+        rpcPreprocessor = factory.rpcPreprocessor();
     }
 
     @Override
@@ -102,6 +110,24 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @Nullable
     public XdsLoadBalancer loadBalancer() {
         return loadBalancer;
+    }
+
+    /**
+     * Returns an {@link HttpPreprocessor} that sets the endpoint group, session protocol,
+     * and installs cluster-level decoration (retry + per-endpoint TLS) on the context.
+     */
+    @UnstableApi
+    public HttpPreprocessor preprocessor() {
+        return httpPreprocessor;
+    }
+
+    /**
+     * Returns an {@link RpcPreprocessor} that sets the endpoint group, session protocol,
+     * and installs cluster-level decoration (retry + per-endpoint TLS) on the context.
+     */
+    @UnstableApi
+    public RpcPreprocessor rpcPreprocessor() {
+        return rpcPreprocessor;
     }
 
     /**
