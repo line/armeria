@@ -100,13 +100,15 @@ final class VirtualHostTlsSetter {
         return new VirtualHostTlsSetter(tlsKeyPair, tlsCustomizer, keyManagerFactory, tlsSelfSigned);
     }
 
-    ServerTlsSpec toServerTlsSpec(TlsEngineType tlsEngineType, String hostnamePattern) {
+    ServerTlsSpec toServerTlsSpec(TlsEngineType tlsEngineType, String hostnamePattern,
+                                  boolean allowUnsafeCiphers) {
         if (tlsKeyPair == null && keyManagerFactory == null) {
             throw new IllegalStateException("Cannot call tlsCustomizer() without tls() or tlsSelfSigned()");
         }
         assert keyManagerFactory == null || tlsKeyPair == null;
         final ServerTlsSpecBuilder tlsSpecBuilder = ServerTlsSpec.builder()
-                                                                 .engineType(tlsEngineType);
+                                                                 .engineType(tlsEngineType)
+                                                                 .allowUnsafeCiphers(allowUnsafeCiphers);
         if (tlsKeyPair != null) {
             tlsSpecBuilder.tlsKeyPair(tlsKeyPair);
         } else if (keyManagerFactory != null) {

@@ -51,7 +51,8 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
 
     ClientTlsSpecBuilder(ClientTlsSpec clientTlsSpec) {
         super(clientTlsSpec.ciphers(), clientTlsSpec.tlsKeyPair(), clientTlsSpec.trustedCertificates(),
-              clientTlsSpec.verifierFactories(), clientTlsSpec.engineType());
+              clientTlsSpec.verifierFactories(), clientTlsSpec.engineType(),
+              clientTlsSpec.allowUnsafeCiphers());
         alpnProtocols = clientTlsSpec.alpnProtocols();
         keyManagerFactory = clientTlsSpec.keyManagerFactory();
         tlsCustomizer = clientTlsSpec.tlsCustomizer();
@@ -108,6 +109,6 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
         return new ClientTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
                                  alpnProtocols, ciphers(), tlsKeyPair(),
                                  trustedCertificates(), verifierFactories(), engineType(), tlsCustomizer,
-                                 keyManagerFactory, endpointIdentificationAlgorithm);
+                                 keyManagerFactory, endpointIdentificationAlgorithm, allowUnsafeCiphers());
     }
 }

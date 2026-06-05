@@ -147,14 +147,14 @@ final class MinifiedAuthZpeClient {
         }
         final ClientFactory clientFactory = ztsBaseClient.clientFactory();
         final TlsProvider tlsProvider = clientFactory.options().tlsProvider();
-        final ClientTlsSpec clientTlsSpec = toTlsSpec(tlsProvider);
         final boolean allowUnsafeCiphers = clientFactory.options().tlsConfig().allowsUnsafeCiphers();
+        final ClientTlsSpec clientTlsSpec = toTlsSpec(tlsProvider, allowUnsafeCiphers);
         final JdkSslContext sslContext =
-                (JdkSslContext) SslContextUtil.toSslContext(clientTlsSpec, allowUnsafeCiphers);
+                (JdkSslContext) SslContextUtil.toSslContext(clientTlsSpec);
         return new JwtsSigningKeyResolver(ztsUri + oauth2KeysPath, sslContext.context(), proxyUriStr);
     }
 
-    private static ClientTlsSpec toTlsSpec(TlsProvider tlsProvider) {
+    private static ClientTlsSpec toTlsSpec(TlsProvider tlsProvider, boolean allowUnsafeCiphers) {
         final ClientTlsSpecBuilder builder = ClientTlsSpec.builder();
         final TlsKeyPair tlsKeyPair = tlsProvider.keyPair("*");
         if (tlsKeyPair != null) {
@@ -166,6 +166,7 @@ final class MinifiedAuthZpeClient {
         }
         builder.engineType(TlsEngineType.JDK);
         builder.alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS);
+        builder.allowUnsafeCiphers(allowUnsafeCiphers);
         return builder.build();
     }
 

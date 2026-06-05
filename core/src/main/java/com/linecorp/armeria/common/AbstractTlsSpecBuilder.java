@@ -43,6 +43,7 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
     private List<X509Certificate> trustedCertificates = ImmutableList.of();
     private List<TlsPeerVerifierFactory> verifierFactories = ImmutableList.of();
     private TlsEngineType engineType = Flags.tlsEngineType();
+    private boolean allowUnsafeCiphers;
 
     /**
      * Creates a new builder with default settings.
@@ -54,12 +55,15 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      */
     protected AbstractTlsSpecBuilder(Set<String> ciphers, @Nullable TlsKeyPair tlsKeyPair,
                                      List<X509Certificate> trustedCertificates,
-                                     List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType) {
+                                     List<TlsPeerVerifierFactory> verifierFactories,
+                                     TlsEngineType engineType,
+                                     boolean allowUnsafeCiphers) {
         this.ciphers = ciphers;
         this.tlsKeyPair = tlsKeyPair;
         this.trustedCertificates = trustedCertificates;
         this.verifierFactories = verifierFactories;
         this.engineType = engineType;
+        this.allowUnsafeCiphers = allowUnsafeCiphers;
     }
 
     /**
@@ -170,6 +174,23 @@ public abstract class AbstractTlsSpecBuilder<SELF extends AbstractTlsSpecBuilder
      */
     protected final TlsEngineType engineType() {
         return engineType;
+    }
+
+    /**
+     * Sets whether to allow unsafe ciphers.
+     * @deprecated will be removed
+     */
+    @Deprecated
+    public final SELF allowUnsafeCiphers(boolean allowUnsafeCiphers) {
+        this.allowUnsafeCiphers = allowUnsafeCiphers;
+        return self();
+    }
+
+    /**
+     * Returns whether unsafe ciphers are allowed.
+     */
+    protected final boolean allowUnsafeCiphers() {
+        return allowUnsafeCiphers;
     }
 
     @SuppressWarnings("unchecked")

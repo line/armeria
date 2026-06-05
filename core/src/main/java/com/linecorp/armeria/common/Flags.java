@@ -658,7 +658,7 @@ public final class Flags {
             final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
                                                        .alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS)
                                                        .build();
-            final SSLEngine engine = SslContextUtil.toSslContext(tlsSpec, false)
+            final SSLEngine engine = SslContextUtil.toSslContext(tlsSpec)
                                                    .newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));

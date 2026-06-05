@@ -1516,7 +1516,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         if (serverTlsSpec != null && tlsProvider != null) {
             throw new IllegalStateException("Cannot configure TLS settings with a TlsProvider");
         }
-        final SslContext sslContext = sslContext(template, sslContextFactory, serverTlsSpec);
+        final SslContext sslContext = sslContext(sslContextFactory, serverTlsSpec);
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port, serverPort,
@@ -1553,7 +1553,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     @Nullable
-    private SslContext sslContext(VirtualHostBuilder template, SslContextFactory sslContextFactory,
+    private SslContext sslContext(SslContextFactory sslContextFactory,
                                   @Nullable ServerTlsSpec serverTlsSpec) {
         if (portBased || serverTlsSpec == null) {
             return null;
@@ -1562,12 +1562,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = true;
         try {
-            assert template.tlsAllowUnsafeCiphers != null;
-            final boolean tlsAllowUnsafeCiphers =
-                    this.tlsAllowUnsafeCiphers != null ?
-                    this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
-
-            sslContext = sslContextFactory.getOrCreate(serverTlsSpec, tlsAllowUnsafeCiphers);
+            sslContext = sslContextFactory.getOrCreate(serverTlsSpec);
             validateSslContext(sslContext, serverTlsSpec.engineType());
             checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
 
@@ -1606,7 +1601,12 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             tlsSetter.tlsKeyPair(TlsKeyPair.of(ssc.key(), ssc.cert()));
         }
 
-        return tlsSetter.toServerTlsSpec(tlsEngineType, hostnamePattern);
+        assert template.tlsAllowUnsafeCiphers != null;
+        final boolean allowUnsafeCiphers =
+                this.tlsAllowUnsafeCiphers != null ?
+                this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
+
+        return tlsSetter.toServerTlsSpec(tlsEngineType, hostnamePattern, allowUnsafeCiphers);
     }
 
     private SelfSignedCertificate selfSignedCertificate() throws CertificateException {

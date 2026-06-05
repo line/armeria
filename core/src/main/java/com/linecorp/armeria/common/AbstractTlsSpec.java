@@ -54,6 +54,7 @@ public abstract class AbstractTlsSpec {
     private final Consumer<? super SslContextBuilder> tlsCustomizer;
     @Nullable
     private final KeyManagerFactory keyManagerFactory;
+    private final boolean allowUnsafeCiphers;
 
     /**
      * Creates a new instance with the specified TLS configuration.
@@ -62,7 +63,8 @@ public abstract class AbstractTlsSpec {
                               @Nullable TlsKeyPair tlsKeyPair, List<X509Certificate> trustedCertificates,
                               List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                               Consumer<? super SslContextBuilder> tlsCustomizer,
-                              @Nullable KeyManagerFactory keyManagerFactory) {
+                              @Nullable KeyManagerFactory keyManagerFactory,
+                              boolean allowUnsafeCiphers) {
         checkArgument(tlsKeyPair == null || keyManagerFactory == null,
                       "'tlsKeyPair' and 'keyManagerFactory' cannot both be set");
         SslContextUtil.checkVersionsSupported(tlsVersions, engineType.sslProvider());
@@ -75,6 +77,7 @@ public abstract class AbstractTlsSpec {
         this.engineType = engineType;
         this.tlsCustomizer = tlsCustomizer;
         this.keyManagerFactory = keyManagerFactory;
+        this.allowUnsafeCiphers = allowUnsafeCiphers;
     }
 
     /**
@@ -147,6 +150,15 @@ public abstract class AbstractTlsSpec {
     }
 
     /**
+     * Returns whether unsafe ciphers are allowed for this TLS configuration.
+     * @deprecated will be removed
+     */
+    @Deprecated
+    public final boolean allowUnsafeCiphers() {
+        return allowUnsafeCiphers;
+    }
+
+    /**
      * Returns {@code true} if this is a server-side TLS specification, {@code false} otherwise.
      */
     public abstract boolean isServer();
@@ -168,13 +180,15 @@ public abstract class AbstractTlsSpec {
                Objects.equal(verifierFactories, tlsSpec.verifierFactories()) &&
                engineType == tlsSpec.engineType() &&
                Objects.equal(tlsCustomizer, tlsSpec.tlsCustomizer()) &&
-               Objects.equal(keyManagerFactory, tlsSpec.keyManagerFactory());
+               Objects.equal(keyManagerFactory, tlsSpec.keyManagerFactory()) &&
+               allowUnsafeCiphers == tlsSpec.allowUnsafeCiphers;
     }
 
     @Override
     public int hashCode() {
         return Objects.hashCode(tlsVersions, alpnProtocols(), ciphers, tlsKeyPair, trustedCertificates,
-                                verifierFactories, engineType, tlsCustomizer, keyManagerFactory);
+                                verifierFactories, engineType, tlsCustomizer, keyManagerFactory,
+                                allowUnsafeCiphers);
     }
 
     @Override
@@ -189,6 +203,7 @@ public abstract class AbstractTlsSpec {
                           .add("engineType", engineType)
                           .add("tlsCustomizer", tlsCustomizer)
                           .add("keyManagerFactory", keyManagerFactory)
+                          .add("allowUnsafeCiphers", allowUnsafeCiphers)
                           .toString();
     }
 }

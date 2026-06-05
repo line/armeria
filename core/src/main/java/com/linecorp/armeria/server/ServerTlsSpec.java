@@ -55,9 +55,10 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
                   List<X509Certificate> trustedCertificates,
                   List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                   Consumer<? super SslContextBuilder> tlsCustomizer, ClientAuth clientAuth,
+                  boolean allowUnsafeCiphers,
                   @Nullable KeyManagerFactory keyManagerFactory, String hostnamePattern) {
         super(protocols, alpnProtocols, ciphers, tlsKeyPair, trustedCertificates, verifierFactories, engineType,
-              tlsCustomizer, keyManagerFactory);
+              tlsCustomizer, keyManagerFactory, allowUnsafeCiphers);
         this.clientAuth = clientAuth;
         this.hostnamePattern = hostnamePattern;
     }
@@ -115,6 +116,7 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
                           .add("keyManagerFactory", keyManagerFactory())
                           .add("clientAuth", clientAuth)
                           .add("hostnamePattern", hostnamePattern)
+                          .add("allowUnsafeCiphers", allowUnsafeCiphers())
                           .toString();
     }
 
@@ -157,7 +159,7 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
             return new ServerTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
                                      SslContextUtil.DEFAULT_ALPN_PROTOCOLS, ciphers(), tlsKeyPair(),
                                      trustedCertificates(), verifierFactories(), engineType(), tlsCustomizer,
-                                     clientAuth, keyManagerFactory, hostnamePattern);
+                                     clientAuth, allowUnsafeCiphers(), keyManagerFactory, hostnamePattern);
         }
     }
 }

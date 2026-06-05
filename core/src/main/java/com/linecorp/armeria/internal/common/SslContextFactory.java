@@ -50,7 +50,6 @@ public final class SslContextFactory {
     private final Map<SslContext, AbstractTlsSpec> reverseCache = new HashMap<>();
 
     private final MeterRegistry meterRegistry;
-    private final boolean allowUnsafeCiphers;
     @Nullable
     private final MeterIdPrefix meterIdPrefix;
 
@@ -61,23 +60,17 @@ public final class SslContextFactory {
     }
 
     public SslContextFactory(@Nullable MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry) {
-        this(meterIdPrefix, meterRegistry, false);
-    }
-
-    public SslContextFactory(@Nullable MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
-                             boolean allowUnsafeCiphers) {
         this.meterIdPrefix = meterIdPrefix;
         this.meterRegistry = meterRegistry;
-        this.allowUnsafeCiphers = allowUnsafeCiphers;
     }
 
-    public SslContext getOrCreate(ServerTlsSpec serverTlsSpec, boolean allowsUnsafeCiphers) {
+    public SslContext getOrCreate(ServerTlsSpec serverTlsSpec) {
         lock.lock();
         try {
             final SslContextHolder contextHolder =
                     cache.computeIfAbsent(serverTlsSpec, unused -> {
                         final SslContext sslContext =
-                                SslContextUtil.toSslContext(serverTlsSpec, allowsUnsafeCiphers);
+                                SslContextUtil.toSslContext(serverTlsSpec);
                         return toContextHolder(serverTlsSpec, sslContext);
                     });
             contextHolder.retain();
@@ -94,7 +87,7 @@ public final class SslContextFactory {
             final SslContextHolder contextHolder =
                     cache.computeIfAbsent(clientTlsSpec, unused -> {
                         final SslContext sslContext =
-                                SslContextUtil.toSslContext(clientTlsSpec, allowUnsafeCiphers);
+                                SslContextUtil.toSslContext(clientTlsSpec);
                         return toContextHolder(clientTlsSpec, sslContext);
                     });
             contextHolder.retain();

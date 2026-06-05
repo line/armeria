@@ -65,9 +65,11 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
                   List<TlsPeerVerifierFactory> verifierFactories, TlsEngineType engineType,
                   Consumer<? super SslContextBuilder> tlsCustomizer,
                   @Nullable KeyManagerFactory keyManagerFactory,
-                  String endpointIdentificationAlgorithm) {
+                  String endpointIdentificationAlgorithm,
+                  boolean allowUnsafeCiphers) {
         super(tlsVersions, alpnProtocols, ciphers, tlsKeyPair,
-              trustedCertificates, verifierFactories, engineType, tlsCustomizer, keyManagerFactory);
+              trustedCertificates, verifierFactories, engineType, tlsCustomizer, keyManagerFactory,
+              allowUnsafeCiphers);
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
     }
 
@@ -112,6 +114,7 @@ public final class ClientTlsSpec extends AbstractTlsSpec {
                           .add("tlsCustomizer", tlsCustomizer())
                           .add("keyManagerFactory", keyManagerFactory())
                           .add("endpointIdentificationAlgorithm", endpointIdentificationAlgorithm())
+                          .add("allowUnsafeCiphers", allowUnsafeCiphers())
                           .toString();
     }
 

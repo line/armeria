@@ -69,11 +69,12 @@ final class TlsProviderMapping implements Mapping<String, SslContext> {
                                                           .tlsKeyPair(keyPair)
                                                           .engineType(tlsEngineType)
                                                           .tlsCustomizer(tlsCustomizer)
-                                                          .clientAuth(clientAuth);
+                                                          .clientAuth(clientAuth)
+                                                          .allowUnsafeCiphers(allowUnsafeCiphers);
         if (trustedCertificates != null) {
             builder.trustedCertificates(trustedCertificates);
         }
-        return sslContextFactory.getOrCreate(builder.build(), allowUnsafeCiphers);
+        return sslContextFactory.getOrCreate(builder.build());
     }
 
     void release(SslContext sslContext) {
