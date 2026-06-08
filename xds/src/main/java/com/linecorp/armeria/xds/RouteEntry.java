@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
 import java.util.Objects;
 
@@ -145,6 +147,7 @@ public final class RouteEntry {
      * Returns whether this route matches the specified {@link ClientRequestContext}.
      */
     public boolean matches(ClientRequestContext ctx) {
+        requireNonNull(ctx, "ctx");
         return matcher.matches(ctx);
     }
 

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -88,6 +90,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
      */
     @UnstableApi
     public static XdsEndpointGroup of(XdsLoadBalancer loadBalancer) {
+        requireNonNull(loadBalancer, "loadBalancer");
         return new XdsEndpointGroup(loadBalancer);
     }
 
