@@ -99,23 +99,23 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
                         public void checkClientTrusted(X509Certificate[] chain, String authType) {}
 
                         @Override
-                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                            actualKeyName.set(chain[0].getSubjectX500Principal().getName());
-                        }
+                        public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                                       Socket socket) {}
 
                         @Override
                         public void checkClientTrusted(X509Certificate[] chain, String authType,
-                                                       Socket socket) {}
+                                                       SSLEngine engine) {}
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                            actualKeyName.set(chain[0].getSubjectX500Principal().getName());
+                        }
 
                         @Override
                         public void checkServerTrusted(X509Certificate[] chain, String authType,
                                                        Socket socket) throws CertificateException {
                             checkServerTrusted(chain, authType);
                         }
-
-                        @Override
-                        public void checkClientTrusted(X509Certificate[] chain, String authType,
-                                                       SSLEngine engine) {}
 
                         @Override
                         public void checkServerTrusted(X509Certificate[] chain, String authType,
