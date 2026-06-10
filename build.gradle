@@ -27,7 +27,7 @@ plugins {
 
 allprojects {
     repositories {
-        def mavenCentralMirror = System.getProperty('mavenCentralMirror')
+        def mavenCentralMirror = providers.gradleProperty('mavenCentralMirror').getOrNull()
         if (mavenCentralMirror) {
             maven { url = mavenCentralMirror }
         } else {
