@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import java.util.function.Function;
-
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.Preprocessor;
@@ -28,21 +26,17 @@ import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
-import io.netty.util.AttributeKey;
-
 final class RouterFilter<I extends Request, O extends Response> implements Preprocessor<I, O> {
 
-    private static final AttributeKey<RouteEntry> SELECTED_ROUTE = XdsCommonUtil.SELECTED_ROUTE;
+    private final boolean isRpc;
 
-    private final Function<ClusterSnapshot, Preprocessor<I, O>> preprocessorMapper;
-
-    RouterFilter(Function<ClusterSnapshot, Preprocessor<I, O>> preprocessorMapper) {
-        this.preprocessorMapper = preprocessorMapper;
+    RouterFilter(boolean isRpc) {
+        this.isRpc = isRpc;
     }
 
     @Override
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
-        final RouteEntry selectedRoute = ctx.attr(SELECTED_ROUTE);
+        final RouteEntry selectedRoute = ctx.attr(XdsCommonUtil.SELECTED_ROUTE);
         if (selectedRoute == null) {
             final UnprocessedRequestException e = UnprocessedRequestException.of(
                     new IllegalArgumentException(
@@ -66,6 +60,9 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
             ctx.setResponseTimeoutMillis(responseTimeoutMillis);
         }
 
-        return preprocessorMapper.apply(clusterSnapshot).execute(delegate, ctx, req);
+        @SuppressWarnings("unchecked")
+        final Preprocessor<I, O> preprocessor = (Preprocessor<I, O>) (isRpc ?
+                clusterSnapshot.rpcPreprocessor() : clusterSnapshot.preprocessor());
+        return preprocessor.execute(delegate, ctx, req);
     }
 }

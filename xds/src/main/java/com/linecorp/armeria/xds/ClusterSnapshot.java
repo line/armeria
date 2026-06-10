@@ -86,22 +86,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         return transportSocketMatches;
     }
 
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final ClusterSnapshot that = (ClusterSnapshot) object;
-        return Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
-               Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
-               Objects.equal(loadBalancer, that.loadBalancer) &&
-               Objects.equal(transportSocket, that.transportSocket) &&
-               Objects.equal(transportSocketMatches, that.transportSocketMatches);
-    }
-
     /**
      * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
      * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
@@ -139,6 +123,22 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     }
 
     @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final ClusterSnapshot that = (ClusterSnapshot) object;
+        return Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
+               Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
+               Objects.equal(loadBalancer, that.loadBalancer) &&
+               Objects.equal(transportSocket, that.transportSocket) &&
+               Objects.equal(transportSocketMatches, that.transportSocketMatches);
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hashCode(clusterXdsResource, endpointSnapshot, loadBalancer,
                                 transportSocket, transportSocketMatches);
@@ -168,6 +168,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .add("transportSocketMatches",
                                SnapshotUtil.debugStrings(transportSocketMatches,
                                                          TransportSocketMatchSnapshot::toDebugString))
+                          .add("httpPreprocessor", httpPreprocessor)
+                          .add("rpcPreprocessor", rpcPreprocessor)
                           .toString();
     }
 }
