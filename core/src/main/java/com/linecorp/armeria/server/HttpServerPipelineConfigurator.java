@@ -58,6 +58,7 @@ import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.server.HttpsConnectionAcceptHandler.NotAFailureException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Tag;
@@ -335,6 +336,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             if (acceptTimeoutMillis > 0) {
                 timeoutFuture = ch.eventLoop().schedule(() -> {
                     if (ch.isActive()) {
+                        logger.warn("{} ConnectionAcceptor timed out after {}ms",
+                                    ch, acceptTimeoutMillis);
                         ch.close();
                     }
                 }, acceptTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -352,6 +355,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                   if (accepted) {
                                       ch.pipeline().remove(this);
                                   } else {
+                                      logger.trace("Connection rejected by ConnectionAcceptor: {}",
+                                                   connectionContext);
                                       ch.close();
                                   }
                               });
@@ -673,6 +678,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     loggedHandshakeFailure = true;
                     final SSLHandshakeException handshakeException = (SSLHandshakeException) cause.getCause();
                     recordHandshakeFailure(ctx, handshakeException);
+                    return;
+                } else if (cause.getCause() instanceof NotAFailureException) {
                     return;
                 }
             }

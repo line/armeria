@@ -21,9 +21,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
@@ -72,6 +76,20 @@ class ConnectionAcceptorTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension throwingServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.http(0)
+              .https(0)
+              .tls(TlsKeyPair.ofSelfSigned())
+              .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
+                  throw new RuntimeException("acceptor failed");
+              }))
+              .service("/", (ctx, req) -> HttpResponse.of("should not reach"));
+        }
+    };
+
     private static HttpResponse connectionContextJson(ServiceRequestContext ctx) {
         final ConnectionContext connCtx = ctx.connectionContext();
         final Map<String, Object> map = new HashMap<>();
@@ -101,18 +119,6 @@ class ConnectionAcceptorTest {
     }
 
     @Test
-    void httpsAcceptorRejectsConnection() {
-        try (ClientFactory factory = ClientFactory.builder().tlsNoVerify().build()) {
-            final BlockingWebClient client = WebClient.builder(rejectServer.uri(SessionProtocol.HTTPS))
-                                                      .factory(factory)
-                                                      .build()
-                                                      .blocking();
-            assertThatThrownBy(() -> client.get("/"))
-                    .isInstanceOf(UnprocessedRequestException.class);
-        }
-    }
-
-    @Test
     void httpAcceptorAcceptsConnection() {
         try (ClientFactory factory = ClientFactory.builder().build()) {
             final BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTP))
@@ -128,18 +134,6 @@ class ConnectionAcceptorTest {
     }
 
     @Test
-    void httpAcceptorRejectsConnection() {
-        try (ClientFactory factory = ClientFactory.builder().build()) {
-            final BlockingWebClient client = WebClient.builder(rejectServer.uri(SessionProtocol.HTTP))
-                                                      .factory(factory)
-                                                      .build()
-                                                      .blocking();
-            assertThatThrownBy(() -> client.get("/"))
-                    .isInstanceOf(UnprocessedRequestException.class);
-        }
-    }
-
-    @Test
     void requestContextAttrOverridesConnectionAttr() {
         try (ClientFactory factory = ClientFactory.builder().tlsNoVerify().build()) {
             final BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTPS))
@@ -149,6 +143,28 @@ class ConnectionAcceptorTest {
             final String body = client.get("/override").contentUtf8();
             assertThatJson(body).node("ctxAttr").isEqualTo("from-request");
             assertThatJson(body).node("connAttr").isEqualTo("from-connection");
+        }
+    }
+
+    static Stream<Arguments> rejectAndThrowServers() {
+        return Stream.of(
+                Arguments.of(rejectServer, SessionProtocol.HTTP),
+                Arguments.of(rejectServer, SessionProtocol.HTTPS),
+                Arguments.of(throwingServer, SessionProtocol.HTTP),
+                Arguments.of(throwingServer, SessionProtocol.HTTPS)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("rejectAndThrowServers")
+    void acceptorRejectsOrThrows(ServerExtension server, SessionProtocol protocol) {
+        try (ClientFactory factory = ClientFactory.builder().tlsNoVerify().build()) {
+            final BlockingWebClient client = WebClient.builder(server.uri(protocol))
+                                                      .factory(factory)
+                                                      .build()
+                                                      .blocking();
+            assertThatThrownBy(() -> client.get("/"))
+                    .isInstanceOf(UnprocessedRequestException.class);
         }
     }
 }

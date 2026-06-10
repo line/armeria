@@ -1,7 +1,7 @@
 /*
- * Copyright 2025 LINE Corporation
+ * Copyright 2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -22,6 +22,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLHandshakeException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -32,6 +37,7 @@ import io.netty.handler.ssl.SniCompletionEvent;
 import io.netty.handler.ssl.SslClientHelloHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
@@ -44,6 +50,8 @@ import io.netty.util.concurrent.ScheduledFuture;
  * runs the {@link ConnectionAcceptor} during the TLS lookup phase.
  */
 final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContext> {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpsConnectionAcceptHandler.class);
 
     // TLS extension types
     private static final int EXT_SERVER_NAME = 0x0000;
@@ -93,7 +101,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
         }
         timeoutFuture = ctx.executor().schedule(() -> {
             if (ctx.channel().isActive()) {
-                ctx.fireExceptionCaught(new DecoderException(
+                ctx.fireExceptionCaught(new SslHandshakeTimeoutException(
                         "handshake timed out after " + handshakeTimeoutMillis + "ms"));
                 ctx.close();
             }
@@ -121,8 +129,8 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
         final Promise<SslContext> promise = ctx.executor().newPromise();
 
         ctx.channel().closeFuture().addListener(f -> {
-            promise.tryFailure(new IllegalStateException(
-                    "ConnectionAcceptor.accept(ctx) timed out for: " + connectionCtx));
+            // complete the promise so the clientHello is released
+            promise.tryFailure(NotAFailureException.INSTANCE);
         });
 
         if (connectionAcceptor.isNoop()) {
@@ -137,8 +145,8 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
                                   if (accepted) {
                                       resolveSslContext(ctx, connectionCtx, promise);
                                   } else {
-                                      promise.tryFailure(new IllegalArgumentException(
-                                              "Connection rejected for: " + connectionCtx));
+                                      logger.trace("Connection for '{}' rejected", connectionCtx);
+                                      promise.tryFailure(NotAFailureException.INSTANCE);
                                   }
                               });
         }
@@ -151,7 +159,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
                                    Promise<SslContext> promise) {
         final SslContext sslContext = sslContextMapping.map(connectionCtx.sniHostname());
         if (sslContext == null) {
-            promise.tryFailure(new IllegalArgumentException(
+            promise.tryFailure(new SSLHandshakeException(
                     "No SslContext found for hostname: " + connectionCtx.sniHostname()));
             return;
         }
@@ -169,19 +177,18 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
             timeoutFuture.cancel(false);
         }
 
-        try {
-            if (!future.isSuccess()) {
-                throw new DecoderException(future.cause());
+        final Throwable cause = future.cause();
+        if (cause != null) {
+            ctx.fireUserEventTriggered(new SniCompletionEvent(sniHostname, cause));
+            if (!(cause instanceof NotAFailureException)) {
+                ctx.fireExceptionCaught(new DecoderException(cause));
             }
-            replaceHandler(ctx, future.getNow());
-        } finally {
-            final Throwable cause = future.cause();
-            if (cause == null) {
-                ctx.fireUserEventTriggered(new SniCompletionEvent(sniHostname));
-            } else {
-                ctx.fireUserEventTriggered(new SniCompletionEvent(sniHostname, cause));
-            }
+            ctx.pipeline().remove(this);
+            ctx.close();
+            return;
         }
+        replaceHandler(ctx, future.getNow());
+        ctx.fireUserEventTriggered(new SniCompletionEvent(sniHostname));
     }
 
     private void replaceHandler(ChannelHandlerContext ctx, SslContext sslContext) {
@@ -339,5 +346,11 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
             this.sniHostname = sniHostname;
             this.alpnProtocols = alpnProtocols;
         }
+    }
+
+    static final class NotAFailureException extends RuntimeException {
+        private static final long serialVersionUID = -1272562527562139704L;
+
+        static final NotAFailureException INSTANCE = new NotAFailureException();
     }
 }
