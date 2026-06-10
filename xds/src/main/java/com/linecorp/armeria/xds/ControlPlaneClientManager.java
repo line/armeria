@@ -23,30 +23,38 @@ import java.util.Map;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
+import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.Node;
+import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ControlPlaneClientManager implements SafeCloseable {
+
     private final Node bootstrapNode;
     private final EventExecutor eventLoop;
     private final BootstrapClusters bootstrapClusters;
     private final ConfigSourceMapper configSourceMapper;
     private final XdsExtensionRegistry extensionRegistry;
+    private final SnapshotWatcher<Object> defaultWatcher;
     private final Map<ConfigSource, ConfigSourceHandler> clientMap = new HashMap<>();
     private boolean closed;
 
     ControlPlaneClientManager(Bootstrap bootstrap, EventExecutor eventLoop,
                               BootstrapClusters bootstrapClusters,
                               ConfigSourceMapper configSourceMapper,
-                              XdsExtensionRegistry extensionRegistry) {
+                              XdsExtensionRegistry extensionRegistry,
+                              SnapshotWatcher<Object> defaultWatcher) {
         bootstrapNode = bootstrap.getNode();
         this.eventLoop = eventLoop;
         this.bootstrapClusters = bootstrapClusters;
         this.configSourceMapper = configSourceMapper;
         this.extensionRegistry = extensionRegistry;
+        this.defaultWatcher = defaultWatcher;
     }
 
     void subscribe(ResourceNode<?> node) {
@@ -59,7 +67,8 @@ final class ControlPlaneClientManager implements SafeCloseable {
         final ConfigSource configSource = node.configSource();
         checkArgument(configSource != null, "Cannot subscribe to a node without a configSource");
 
-        final ConfigSourceHandler client = clientMap.computeIfAbsent(configSource, this::createClient);
+        final ConfigSourceHandler client =
+                clientMap.computeIfAbsent(configSource, cs -> createClient(cs, node.factoryContext()));
         client.addSubscriber(type, name, node);
     }
 
@@ -77,7 +86,8 @@ final class ControlPlaneClientManager implements SafeCloseable {
         }
     }
 
-    private ConfigSourceHandler createClient(ConfigSource configSource) {
+    private ConfigSourceHandler createClient(ConfigSource configSource, FactoryContext factoryContext) {
+        final InterestPublisher interestPublisher = new InterestPublisher();
         switch (configSource.getConfigSourceSpecifierCase()) {
             case PATH_CONFIG_SOURCE:
             case CUSTOM_CONFIG_SOURCE:
@@ -86,9 +96,11 @@ final class ControlPlaneClientManager implements SafeCloseable {
                               "No SotwConfigSourceSubscriptionFactory found for: %s", configSource);
                 final StateCoordinator stateCoordinator =
                         new StateCoordinator(eventLoop, configSource, false, extensionRegistry);
-                final ConfigSourceSubscription stream =
-                        streamFactory.create(configSource, stateCoordinator, eventLoop);
-                return new ConfigSourceHandler(stateCoordinator, stream);
+                final SnapshotStream<DiscoveryResponse> stream =
+                        streamFactory.create(configSource, factoryContext,
+                                             interestPublisher.checkSubscribeOn(eventLoop))
+                                     .rescheduleEventsOn(eventLoop);
+                return ConfigSourceHandler.of(stateCoordinator, interestPublisher, stream, defaultWatcher);
             case ADS:
             case API_CONFIG_SOURCE:
                 final GrpcConfigSourceStreamFactory grpcFactory =
@@ -97,7 +109,7 @@ final class ControlPlaneClientManager implements SafeCloseable {
                 checkArgument(grpcFactory != null, "No GrpcConfigSourceStreamFactory registered");
                 return grpcFactory.create(
                         configSource, eventLoop, bootstrapNode, bootstrapClusters,
-                        configSourceMapper, extensionRegistry);
+                        configSourceMapper, extensionRegistry, interestPublisher, defaultWatcher);
             default:
                 throw new IllegalArgumentException("Unsupported config source: " + configSource);
         }

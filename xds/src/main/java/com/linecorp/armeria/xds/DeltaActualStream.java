@@ -21,7 +21,6 @@ import static com.linecorp.armeria.xds.XdsResourceParserUtil.fromTypeUrl;
 import java.util.ArrayDeque;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -37,7 +36,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.envoyproxy.envoy.config.core.v3.Node;
 import io.envoyproxy.envoy.service.discovery.v3.DeltaDiscoveryRequest;
 import io.envoyproxy.envoy.service.discovery.v3.DeltaDiscoveryResponse;
-import io.envoyproxy.envoy.service.discovery.v3.Resource;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -251,33 +249,21 @@ final class DeltaActualStream implements StreamObserver<DeltaDiscoveryResponse>,
     }
 
     private void handleResponse(ResourceParser<?, ?> resourceParser, DeltaDiscoveryResponse response) {
-        final StateCoordinator stateCoordinator = stateCoordinator();
         final XdsType type = resourceParser.type();
-        final List<Resource> deltaResources = response.getResourcesList();
-        final ParsedResourcesHolder holder =
-                resourceParser.parseDeltaResources(deltaResources,
-                                                   stateCoordinator.extensionRegistry());
+        final ParsedResources holder =
+                resourceParser.parseDeltaResources(response.getResourcesList(),
+                                                   stateCoordinator().extensionRegistry(),
+                                                   response.getRemovedResourcesList());
 
         if (!holder.errors().isEmpty()) {
-            holder.invalidResources().forEach((name, error) ->
-                                                      stateCoordinator.onResourceError(type, name, error));
+            owner.emit(holder, null);
             lifecycleObserver.resourceRejected(type, response, holder.invalidResources());
             nackResponse(type, response.getNonce(), String.join("\n", holder.errors()));
             return;
         }
         lifecycleObserver.resourceUpdated(type, response, holder.parsedResources());
-
-        holder.parsedResources().forEach((name, resource) -> {
-            if (resource instanceof XdsResource) {
-                stateCoordinator.onResourceUpdated(type, name, (XdsResource) resource);
-            }
-        });
-
-        for (String removedName : response.getRemovedResourcesList()) {
-            stateCoordinator.onResourceMissing(type, removedName);
-        }
-
-        // ack after processing so that the diff between interested - state is computed correctly
+        owner.emit(holder, null);
+        // ack after emit so that storage in ConfigSourceHandler completes first
         ackResponse(type, response.getNonce());
     }
 }

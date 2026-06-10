@@ -90,7 +90,7 @@ final class XdsClusterManager implements SafeCloseable {
     }
 
     Subscription register(String name, SubscriptionContext context,
-                                SnapshotWatcher<? super ClusterSnapshot> watcher) {
+                          SnapshotWatcher<? super ClusterSnapshot> watcher) {
         if (closed) {
             return Subscription.noop();
         }

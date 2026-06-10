@@ -21,13 +21,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
@@ -57,130 +57,98 @@ final class GrpcConfigSourceStreamFactory implements XdsExtensionFactory {
 
     ConfigSourceHandler create(ConfigSource configSource,
                                EventExecutor eventLoop,
-                               Node bootstrapNode,
+                               Node node,
                                BootstrapClusters bootstrapClusters,
                                ConfigSourceMapper configSourceMapper,
-                               XdsExtensionRegistry extensionRegistry) {
-        final GrpcConfigSourceSubscription stream = new GrpcConfigSourceSubscription(
-                configSource, eventLoop, bootstrapNode, bootstrapClusters,
-                configSourceMapper, meterRegistry, meterIdPrefix, extensionRegistry);
-        return new ConfigSourceHandler(stream.stateCoordinator(), stream);
-    }
+                               XdsExtensionRegistry extensionRegistry,
+                               InterestPublisher interestedStream,
+                               SnapshotWatcher<Object> defaultWatcher) {
+        final ApiConfigSource apiConfigSource;
+        if (configSource.hasAds()) {
+            apiConfigSource = configSourceMapper.bootstrapAdsConfig();
+        } else if (configSource.hasApiConfigSource()) {
+            apiConfigSource = configSource.getApiConfigSource();
+        } else {
+            throw new IllegalArgumentException("Unsupported config source: " + configSource);
+        }
 
-    /**
-     * A {@link ConfigSourceSubscription} backed by a gRPC {@link XdsStream}.
-     * gRPC streams fetch interests from {@link StateCoordinator} directly,
-     * so the resource names parameter in {@link ConfigSourceSubscription#updateInterests} is ignored.
-     */
-    static final class GrpcConfigSourceSubscription implements ConfigSourceSubscription {
+        final List<GrpcService> grpcServices = apiConfigSource.getGrpcServicesList();
+        checkArgument(!grpcServices.isEmpty(),
+                      "At least one GrpcService should be specified for '%s'", configSource);
+        final GrpcService firstGrpcService = grpcServices.get(0);
+        checkArgument(firstGrpcService.hasEnvoyGrpc(),
+                      "Only envoyGrpc is supported for '%s'", configSource);
+        final EnvoyGrpc envoyGrpc = firstGrpcService.getEnvoyGrpc();
 
-        private final StateCoordinator stateCoordinator;
-        private final XdsStream xdsStream;
+        final GrpcClientBuilder builder =
+                GrpcClients.builder(new GrpcServicesPreprocessor(grpcServices, bootstrapClusters));
+        builder.responseTimeoutMillis(Long.MAX_VALUE);
+        builder.maxResponseLength(0);
 
-        GrpcConfigSourceSubscription(ConfigSource configSource,
-                                     EventExecutor eventLoop,
-                                     Node node,
-                                     BootstrapClusters bootstrapClusters,
-                                     ConfigSourceMapper configSourceMapper,
-                                     MeterRegistry meterRegistry,
-                                     MeterIdPrefix meterIdPrefix,
-                                     XdsExtensionRegistry registry) {
-            final ApiConfigSource apiConfigSource;
-            if (configSource.hasAds()) {
-                apiConfigSource = configSourceMapper.bootstrapAdsConfig();
-            } else if (configSource.hasApiConfigSource()) {
-                apiConfigSource = configSource.getApiConfigSource();
+        final ApiType apiType = apiConfigSource.getApiType();
+        checkArgument(apiType == ApiType.GRPC || apiType == ApiType.DELTA_GRPC ||
+                      apiType == ApiType.AGGREGATED_GRPC ||
+                      apiType == ApiType.AGGREGATED_DELTA_GRPC,
+                      "Unsupported api_type: %s", apiType);
+        final Function<String, DefaultConfigSourceLifecycleObserver> metersFunction =
+                xdsType -> new DefaultConfigSourceLifecycleObserver(
+                        meterRegistry, meterIdPrefix,
+                        configSource.getConfigSourceSpecifierCase(),
+                        envoyGrpc.getClusterName(), xdsType, apiType);
+
+        final boolean isDelta =
+                apiType == ApiType.AGGREGATED_DELTA_GRPC || apiType == ApiType.DELTA_GRPC;
+        final boolean isAds = configSource.hasAds() ||
+                              apiType == ApiType.AGGREGATED_GRPC ||
+                              apiType == ApiType.AGGREGATED_DELTA_GRPC;
+
+        final StateCoordinator stateCoordinator =
+                new StateCoordinator(eventLoop, configSource, isDelta, extensionRegistry);
+        final Backoff backoff = Backoff.ofDefault();
+
+        final SnapshotStream<ParsedResources> xdsStream;
+        if (isAds) {
+            final ConfigSourceLifecycleObserver lifecycleObserver = metersFunction.apply("ads");
+            if (isDelta) {
+                final DeltaDiscoveryStub stub = DeltaDiscoveryStub.ads(builder);
+                xdsStream = new AdsXdsStream(
+                        owner -> new DeltaActualStream(stub, owner, eventLoop,
+                                                       lifecycleObserver, node),
+                        backoff, eventLoop, stateCoordinator, lifecycleObserver,
+                        XdsType.discoverableTypes(), interestedStream);
             } else {
-                throw new IllegalArgumentException("Unsupported config source: " + configSource);
+                final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
+                xdsStream = new AdsXdsStream(
+                        owner -> new SotwActualStream(stub, owner, eventLoop,
+                                                      lifecycleObserver, node),
+                        backoff, eventLoop, stateCoordinator, lifecycleObserver,
+                        XdsType.discoverableTypes(), interestedStream);
             }
-
-            final List<GrpcService> grpcServices = apiConfigSource.getGrpcServicesList();
-            checkArgument(!grpcServices.isEmpty(),
-                          "At least one GrpcService should be specified for '%s'", configSource);
-            final GrpcService firstGrpcService = grpcServices.get(0);
-            checkArgument(firstGrpcService.hasEnvoyGrpc(),
-                          "Only envoyGrpc is supported for '%s'", configSource);
-            final EnvoyGrpc envoyGrpc = firstGrpcService.getEnvoyGrpc();
-
-            final GrpcClientBuilder builder =
-                    GrpcClients.builder(new GrpcServicesPreprocessor(grpcServices, bootstrapClusters));
-            builder.responseTimeoutMillis(Long.MAX_VALUE);
-            builder.maxResponseLength(0);
-
-            final ApiType apiType = apiConfigSource.getApiType();
-            checkArgument(apiType == ApiType.GRPC || apiType == ApiType.DELTA_GRPC ||
-                          apiType == ApiType.AGGREGATED_GRPC ||
-                          apiType == ApiType.AGGREGATED_DELTA_GRPC,
-                          "Unsupported api_type: %s", apiType);
-            final Function<String, DefaultConfigSourceLifecycleObserver> metersFunction =
-                    xdsType -> new DefaultConfigSourceLifecycleObserver(
-                            meterRegistry, meterIdPrefix,
-                            configSource.getConfigSourceSpecifierCase(),
-                            envoyGrpc.getClusterName(), xdsType, apiType);
-
-            final boolean isDelta =
-                    apiType == ApiType.AGGREGATED_DELTA_GRPC || apiType == ApiType.DELTA_GRPC;
-            final boolean isAds = configSource.hasAds() ||
-                                  apiType == ApiType.AGGREGATED_GRPC ||
-                                  apiType == ApiType.AGGREGATED_DELTA_GRPC;
-
-            stateCoordinator = new StateCoordinator(eventLoop, configSource, isDelta, registry);
-            final Backoff backoff = Backoff.ofDefault();
-
-            if (isAds) {
-                final ConfigSourceLifecycleObserver lifecycleObserver = metersFunction.apply("ads");
-                if (isDelta) {
-                    final DeltaDiscoveryStub stub = DeltaDiscoveryStub.ads(builder);
-                    xdsStream = new AdsXdsStream(
+        } else {
+            if (isDelta) {
+                xdsStream = new CompositeXdsStream(type -> {
+                    final DeltaDiscoveryStub stub = DeltaDiscoveryStub.basic(type, builder);
+                    final ConfigSourceLifecycleObserver lifecycleObserver =
+                            metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
+                    return new AdsXdsStream(
                             owner -> new DeltaActualStream(stub, owner, eventLoop,
                                                            lifecycleObserver, node),
                             backoff, eventLoop, stateCoordinator, lifecycleObserver,
-                            XdsType.discoverableTypes());
-                } else {
-                    final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
-                    xdsStream = new AdsXdsStream(
+                            EnumSet.of(type), interestedStream);
+                });
+            } else {
+                xdsStream = new CompositeXdsStream(type -> {
+                    final SotwDiscoveryStub stub = SotwDiscoveryStub.basic(type, builder);
+                    final ConfigSourceLifecycleObserver lifecycleObserver =
+                            metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
+                    return new AdsXdsStream(
                             owner -> new SotwActualStream(stub, owner, eventLoop,
                                                           lifecycleObserver, node),
                             backoff, eventLoop, stateCoordinator, lifecycleObserver,
-                            XdsType.discoverableTypes());
-                }
-            } else {
-                if (isDelta) {
-                    xdsStream = new CompositeXdsStream(type -> {
-                        final DeltaDiscoveryStub stub = DeltaDiscoveryStub.basic(type, builder);
-                        final ConfigSourceLifecycleObserver lifecycleObserver =
-                                metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
-                        return new AdsXdsStream(
-                                owner -> new DeltaActualStream(stub, owner, eventLoop,
-                                                               lifecycleObserver, node),
-                                backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
-                    });
-                } else {
-                    xdsStream = new CompositeXdsStream(type -> {
-                        final SotwDiscoveryStub stub = SotwDiscoveryStub.basic(type, builder);
-                        final ConfigSourceLifecycleObserver lifecycleObserver =
-                                metersFunction.apply(type.name().toLowerCase(Locale.ROOT));
-                        return new AdsXdsStream(
-                                owner -> new SotwActualStream(stub, owner, eventLoop,
-                                                              lifecycleObserver, node),
-                                backoff, eventLoop, stateCoordinator, lifecycleObserver, EnumSet.of(type));
-                    });
-                }
+                            EnumSet.of(type), interestedStream);
+                });
             }
         }
-
-        StateCoordinator stateCoordinator() {
-            return stateCoordinator;
-        }
-
-        @Override
-        public void updateInterests(XdsType type, Set<String> resourceNames) {
-            xdsStream.resourcesUpdated(type);
-        }
-
-        @Override
-        public void close() {
-            xdsStream.close();
-        }
+        return new ConfigSourceHandler(stateCoordinator, interestedStream, xdsStream, defaultWatcher);
     }
 }

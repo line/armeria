@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.stream.RefCountedStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
@@ -53,6 +54,11 @@ final class ResourceNodeAdapter<T extends XdsResource> extends RefCountedStream<
     @Override
     public String name() {
         return name;
+    }
+
+    @Override
+    public FactoryContext factoryContext() {
+        return context;
     }
 
     @Override
