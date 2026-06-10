@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AttributesGetters;
@@ -74,7 +75,6 @@ public final class ConnectionContext {
     private final List<String> alpnProtocols;
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
-    private final Channel channel;
     private final InetSocketAddress remoteAddress;
     private final InetSocketAddress localAddress;
     private final ConcurrentAttributes attrs = ConcurrentAttributes.of();
@@ -91,7 +91,6 @@ public final class ConnectionContext {
         this.sniHostname = sniHostname;
         this.alpnProtocols = ImmutableList.copyOf(alpnProtocols);
         this.proxiedAddresses = proxiedAddresses;
-        this.channel = channel;
         remoteAddress = firstNonNull(ChannelUtil.remoteAddress(channel), UNKNOWN_ADDR);
         localAddress = firstNonNull(ChannelUtil.localAddress(channel), UNKNOWN_ADDR);
     }
@@ -164,5 +163,18 @@ public final class ConnectionContext {
      */
     public AttributesGetters attrs() {
         return attrs;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("sessionProtocol", sessionProtocol)
+                          .add("sniHostname", sniHostname)
+                          .add("alpnProtocols", alpnProtocols)
+                          .add("proxiedAddresses", proxiedAddresses)
+                          .add("remoteAddress", remoteAddress)
+                          .add("localAddress", localAddress)
+                          .toString();
     }
 }

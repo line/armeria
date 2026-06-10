@@ -30,7 +30,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -202,7 +201,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final Channel ch = p.channel();
         final ConnectionContext connectionContext =
-                new ConnectionContext(HTTP, null, Collections.emptyList(), proxiedAddresses, ch);
+                new ConnectionContext(HTTP, null, ImmutableList.of(), proxiedAddresses, ch);
 
         final DefaultConnectionAcceptor connectionAcceptor = config.connectionAcceptor();
         if (!connectionAcceptor.isNoop()) {
