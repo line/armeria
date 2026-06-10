@@ -58,7 +58,6 @@ import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.server.HttpsConnectionAcceptHandler.NotAFailureException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Tag;
@@ -678,8 +677,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     loggedHandshakeFailure = true;
                     final SSLHandshakeException handshakeException = (SSLHandshakeException) cause.getCause();
                     recordHandshakeFailure(ctx, handshakeException);
-                    return;
-                } else if (cause.getCause() instanceof NotAFailureException) {
                     return;
                 }
             }

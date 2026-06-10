@@ -348,9 +348,9 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
         }
     }
 
-    static final class NotAFailureException extends RuntimeException {
+    private static final class NotAFailureException extends RuntimeException {
         private static final long serialVersionUID = -1272562527562139704L;
 
-        static final NotAFailureException INSTANCE = new NotAFailureException();
+        private static final NotAFailureException INSTANCE = new NotAFailureException();
     }
 }
