@@ -35,7 +35,7 @@ final class ConfigSourceHandler implements SafeCloseable {
     }
 
     boolean removeSubscriber(XdsType type, String resourceName,
-                                SnapshotWatcher<? extends XdsResource> watcher) {
+                             SnapshotWatcher<? extends XdsResource> watcher) {
         if (stateCoordinator.unregister(type, resourceName, watcher)) {
             stream.updateInterests(type, stateCoordinator.interestedResources(type));
         }
