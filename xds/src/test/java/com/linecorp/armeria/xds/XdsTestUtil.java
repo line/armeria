@@ -37,9 +37,7 @@ public final class XdsTestUtil {
         });
         final ClusterSnapshot clusterSnapshot = findByName(root, clusterName);
         assertThat(clusterSnapshot).isNotNull();
-        final XdsLoadBalancer selector = clusterSnapshot.loadBalancer();
-        assertThat(selector).isNotNull();
-        return selector;
+        return clusterSnapshot.loadBalancer();
     }
 
     public static XdsLoadBalancer pollLoadBalancer(
@@ -47,15 +45,11 @@ public final class XdsTestUtil {
         await().untilAsserted(() -> {
             final ClusterSnapshot clusterSnapshot = findByName(root, clusterName);
             assertThat(clusterSnapshot).isNotNull();
-            final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-            assertThat(endpointSnapshot).isNotNull();
-            assertThat(endpointSnapshot.xdsResource().resource()).isEqualTo(expected);
+            assertThat(clusterSnapshot.endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
         });
         final ClusterSnapshot clusterSnapshot = findByName(root, clusterName);
         assertThat(clusterSnapshot).isNotNull();
-        final XdsLoadBalancer selector = clusterSnapshot.loadBalancer();
-        assertThat(selector).isNotNull();
-        return selector;
+        return clusterSnapshot.loadBalancer();
     }
 
     @Nullable

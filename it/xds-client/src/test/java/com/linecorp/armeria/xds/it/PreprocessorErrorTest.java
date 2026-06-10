@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.xds.XdsBootstrap;
@@ -133,8 +134,8 @@ class PreprocessorErrorTest {
                               endpoints:
                               - lb_endpoints:
                         """,
-                        TimeoutException.class,
-                        "Failed to select an endpoint"
+                        EmptyEndpointGroupException.class,
+                        "Unable to select endpoints from"
                 )
         );
     }

@@ -16,26 +16,27 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.SELECTED_ROUTE;
-
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.Preprocessor;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 final class RouterFilter<I extends Request, O extends Response> implements Preprocessor<I, O> {
 
+    private final boolean isRpc;
+
+    RouterFilter(boolean isRpc) {
+        this.isRpc = isRpc;
+    }
+
     @Override
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
-        final RouteEntry selectedRoute = ctx.attr(SELECTED_ROUTE);
+        final RouteEntry selectedRoute = ctx.attr(XdsCommonUtil.SELECTED_ROUTE);
         if (selectedRoute == null) {
             final UnprocessedRequestException e = UnprocessedRequestException.of(
                     new IllegalArgumentException(
@@ -52,7 +53,6 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
             ctx.cancel(e);
             throw e;
         }
-        selectedRoute.applyUpstreamFilter(ctx);
 
         final long responseTimeoutMillis =
                 XdsCommonUtil.durationToMillis(selectedRoute.route().getRoute().getTimeout(), -1);
@@ -60,30 +60,9 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
             ctx.setResponseTimeoutMillis(responseTimeoutMillis);
         }
 
-        final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
-        if (loadBalancer == null) {
-            final UnprocessedRequestException e = UnprocessedRequestException.of(
-                    new IllegalArgumentException("The target cluster '" + clusterSnapshot +
-                                                 "' does not specify ClusterLoadAssignments."));
-            ctx.cancel(e);
-            throw e;
-        }
-
-        final Endpoint endpoint = loadBalancer.selectNow(ctx);
-        return execute0(delegate, ctx, req, endpoint);
-    }
-
-    private O execute0(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,
-                       @Nullable Endpoint endpoint) throws Exception {
-        if (endpoint == null) {
-            final Throwable cancellationCause = ctx.cancellationCause();
-            if (cancellationCause != null) {
-                throw UnprocessedRequestException.of(cancellationCause);
-            }
-            throw UnprocessedRequestException.of(new TimeoutException("Failed to select an endpoint."));
-        }
-        XdsCommonUtil.setTlsParams(ctx, endpoint);
-        ctx.setEndpointGroup(endpoint);
-        return delegate.execute(ctx, req);
+        @SuppressWarnings("unchecked")
+        final Preprocessor<I, O> preprocessor = (Preprocessor<I, O>) (isRpc ?
+                clusterSnapshot.rpcPreprocessor() : clusterSnapshot.preprocessor());
+        return preprocessor.execute(delegate, ctx, req);
     }
 }

@@ -82,8 +82,10 @@ final class FilterUtil {
 
     static SnapshotStream<ClientDecoration> buildUpstreamFilter(
             XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
-            List<HttpFilter> httpFilters, Map<String, Any> filterConfigs,
-            @Nullable RetryPolicy retryPolicy) {
+            List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
+        if (httpFilters.isEmpty()) {
+            return SnapshotStream.just(ClientDecoration.of());
+        }
         final ImmutableList.Builder<SnapshotStream<XdsHttpFilter>> streams = ImmutableList.builder();
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
             final HttpFilter httpFilter = httpFilters.get(i);
@@ -96,26 +98,26 @@ final class FilterUtil {
         }
         final ImmutableList<SnapshotStream<XdsHttpFilter>> streamList = streams.build();
         if (streamList.isEmpty()) {
-            return SnapshotStream.just(buildDecoration(null, retryPolicy));
+            return SnapshotStream.just(ClientDecoration.of());
         }
         return SnapshotStream.combineNLatest(streamList).map(filters -> {
-            return buildDecoration(filters, retryPolicy);
-        });
-    }
-
-    private static ClientDecoration buildDecoration(@Nullable List<XdsHttpFilter> filters,
-                                                    @Nullable RetryPolicy retryPolicy) {
-        final ClientDecorationBuilder builder = ClientDecoration.builder();
-        if (filters != null) {
+            final ClientDecorationBuilder builder = ClientDecoration.builder();
             for (XdsHttpFilter f : filters) {
                 builder.add(f.httpDecorator());
                 builder.addRpc(f.rpcDecorator());
             }
+            return builder.build();
+        });
+    }
+
+    @Nullable
+    static ClientDecoration buildRetryDecoration(@Nullable RetryPolicy retryPolicy) {
+        if (retryPolicy == null) {
+            return null;
         }
-        if (retryPolicy != null) {
-            builder.add(new RetryStateFactory(retryPolicy).retryingDecorator());
-        }
-        return builder.build();
+        return ClientDecoration.builder()
+                               .add(new RetryStateFactory(retryPolicy).retryingDecorator())
+                               .build();
     }
 
     @Nullable

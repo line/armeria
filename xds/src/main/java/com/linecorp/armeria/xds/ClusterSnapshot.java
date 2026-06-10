@@ -17,14 +17,14 @@
 package com.linecorp.armeria.xds;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
@@ -38,21 +38,24 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
 
     private final ClusterXdsResource clusterXdsResource;
     private final TransportSocketSnapshot transportSocket;
-    @Nullable
     private final EndpointSnapshot endpointSnapshot;
     private final List<TransportSocketMatchSnapshot> transportSocketMatches;
-    @Nullable
     private final XdsLoadBalancer loadBalancer;
+    private final HttpPreprocessor httpPreprocessor;
+    private final RpcPreprocessor rpcPreprocessor;
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource,
-                    Optional<XdsLoadBalancer> loadBalancer,
+                    XdsLoadBalancer loadBalancer,
                     TransportSocketSnapshot transportSocket,
                     List<TransportSocketMatchSnapshot> transportSocketMatches) {
         this.clusterXdsResource = clusterXdsResource;
         this.transportSocket = transportSocket;
-        this.loadBalancer = loadBalancer.orElse(null);
-        endpointSnapshot = loadBalancer.map(XdsLoadBalancer::endpointSnapshot).orElse(null);
+        this.loadBalancer = loadBalancer;
+        endpointSnapshot = loadBalancer.endpointSnapshot();
         this.transportSocketMatches = transportSocketMatches;
+        final ClusterFilterFactory factory = new ClusterFilterFactory(loadBalancer, transportSocket);
+        httpPreprocessor = factory.httpPreprocessor();
+        rpcPreprocessor = factory.rpcPreprocessor();
     }
 
     @Override
@@ -63,7 +66,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     /**
      * A {@link EndpointSnapshot} which belong to this {@link Cluster}.
      */
-    @Nullable
     public EndpointSnapshot endpointSnapshot() {
         return endpointSnapshot;
     }
@@ -76,6 +78,41 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     @UnstableApi
     public List<TransportSocketMatchSnapshot> transportSocketMatches() {
         return transportSocketMatches;
+    }
+
+    /**
+     * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
+     * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
+     * the current {@link ClusterSnapshot}, and may be updated if the cluster is updated.
+     */
+    public XdsLoadBalancer loadBalancer() {
+        return loadBalancer;
+    }
+
+    /**
+     * Returns an {@link HttpPreprocessor} that sets the endpoint group, session protocol,
+     * and installs cluster-level decoration (retry + per-endpoint TLS) on the context.
+     */
+    @UnstableApi
+    public HttpPreprocessor preprocessor() {
+        return httpPreprocessor;
+    }
+
+    /**
+     * Returns an {@link RpcPreprocessor} that sets the endpoint group, session protocol,
+     * and installs cluster-level decoration (retry + per-endpoint TLS) on the context.
+     */
+    @UnstableApi
+    public RpcPreprocessor rpcPreprocessor() {
+        return rpcPreprocessor;
+    }
+
+    /**
+     * Returns the default {@link TransportSocketSnapshot} for this cluster.
+     * This transport socket is used when no {@link #transportSocketMatches()} match the endpoint.
+     */
+    public TransportSocketSnapshot transportSocket() {
+        return transportSocket;
     }
 
     @Override
@@ -92,24 +129,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                Objects.equal(loadBalancer, that.loadBalancer) &&
                Objects.equal(transportSocket, that.transportSocket) &&
                Objects.equal(transportSocketMatches, that.transportSocketMatches);
-    }
-
-    /**
-     * The {@link XdsLoadBalancer} which allows users to select an upstream {@link Endpoint} for a given
-     * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
-     * the current {@link ClusterSnapshot}, and may be updated if the cluster is updated.
-     */
-    @Nullable
-    public XdsLoadBalancer loadBalancer() {
-        return loadBalancer;
-    }
-
-    /**
-     * Returns the default {@link TransportSocketSnapshot} for this cluster.
-     * This transport socket is used when no {@link #transportSocketMatches()} match the endpoint.
-     */
-    public TransportSocketSnapshot transportSocket() {
-        return transportSocket;
     }
 
     @Override
@@ -142,6 +161,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .add("transportSocketMatches",
                                SnapshotUtil.debugStrings(transportSocketMatches,
                                                          TransportSocketMatchSnapshot::toDebugString))
+                          .add("httpPreprocessor", httpPreprocessor)
+                          .add("rpcPreprocessor", rpcPreprocessor)
                           .toString();
     }
 }

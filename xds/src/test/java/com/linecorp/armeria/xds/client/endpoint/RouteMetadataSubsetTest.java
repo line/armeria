@@ -44,10 +44,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -78,7 +78,12 @@ class RouteMetadataSubsetTest {
     private static final String GROUP_KEY = "key";
     static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP_KEY);
     private static final DecoratingHttpClientFunction selectedPortDecorator =
-            (delegate, ctx, req) -> HttpResponse.of(String.valueOf(ctx.endpoint().port()));
+            (delegate, ctx, req) -> {
+                if (ctx.endpoint() != null) {
+                    return HttpResponse.of(String.valueOf(ctx.endpoint().port()));
+                }
+                return delegate.execute(ctx, req);
+            };
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -192,8 +197,8 @@ class RouteMetadataSubsetTest {
                 assertThatThrownBy(() -> client.get("/"))
                         .isInstanceOf(UnprocessedRequestException.class)
                         .cause()
-                        .isInstanceOf(TimeoutException.class)
-                        .hasMessageContaining("Failed to select an endpoint");
+                        .isInstanceOf(EmptyEndpointGroupException.class)
+                        .hasMessageContaining("Unable to select endpoints");
             } else {
                 assertThat(client.get("/").contentUtf8()).isEqualTo("8080");
                 assertThat(client.get("/").contentUtf8()).isEqualTo("8081");
