@@ -1,0 +1,135 @@
+---
+date: 2026-06-15
+---
+
+# v1.40.0
+
+## 🌟 New features
+
+- **Outlier-Detecting Endpoint Group**: You can now wrap any [EndpointGroup](type) with
+  [OutlierDetectingEndpointGroup](type) to automatically eject failing endpoints from
+  rotation using per-endpoint circuit breakers. #6224 #6757
+  ```java
+  EndpointGroup delegate = ...;
+  OutlierDetectingEndpointGroup group =
+      OutlierDetectingEndpointGroup.builder(delegate)
+                                   .failureRateThreshold(0.3)
+                                   .circuitOpenWindow(Duration.ofSeconds(20))
+                                   ...
+                                   .build();
+  WebClient client =
+      WebClient.builder(SessionProtocol.HTTPS, group)
+               .decorator(group.asDecorator()) // 👈👈👈
+               .build();
+  ```
+- **Async gRPC Exception Handler**: [GrpcExceptionHandlerFunction](type) now supports
+  asynchronous error handling via [GrpcExceptionHandlerFunction#applyAsync(RequestContext, Status, Throwable, Metadata)](type).
+  Override `applyAsync()` to perform non-blocking work during gRPC error response handling. #6697 #6717
+  ```java
+  GrpcService.builder()
+             .addService(myService)
+             .exceptionHandler(new GrpcExceptionHandlerFunction() {
+                 ...
+                 @Override
+                 public CompletableFuture<Status> applyAsync( // 👈👈👈
+                         RequestContext ctx, Status status,
+                         Throwable cause, Metadata metadata) {
+                     return myAsyncStatusMapping.check(status, cause);
+                 }
+             })
+             .build();
+  ```
+- **Thrift 0.23.0 Support**: Armeria now supports Apache Thrift 0.23.0 via the new
+  `thrift0.23` module. A new [ThriftProtocolDecorator](type) API lets you customize the
+  `TProtocol` used for serialization and deserialization. For example, you can use
+  Thrift 0.23's `TLegacyUuidProtocolDecorator` for legacy UUID wire format compatibility. #6762
+  ```java
+  ThriftProtocolDecorator decorator =
+      ThriftProtocolDecorator.ofTProtocolDecorator(
+          TLegacyUuidProtocolDecorator::new); // 👈👈👈
+  THttpService service =
+      THttpService.builder()
+                  .addService(myHandler)
+                  .protocolDecorator(decorator)
+                  .build();
+  ThriftClients.builder(uri)
+               .protocolDecorator(decorator)
+               .build(MyService.Iface.class);
+  ```
+- **Connection Acceptor**: You can now accept or reject connections at the transport level
+  before any request processing begins using [ConnectionAcceptor](type). The new
+  [ConnectionContext](type) exposes TLS ClientHello metadata (SNI hostname, ALPN protocols)
+  and per-connection attributes, enabling connection-level policies such as blocking by
+  SNI or remote address. #6788
+  ```java
+  Server.builder()
+        .connectionAcceptor(ConnectionAcceptor.of(ctx -> { // 👈👈👈
+            return !"blocked.example.com".equals(ctx.sniHostname());
+        }))
+        .build();
+  ```
+- **xDS Credential Injector Filter**: xDS extension factories can now build reactive filter
+  pipelines that depend on external resources like SDS secrets. The new
+  `CredentialInjectorFilterFactory` injects credentials from SDS-backed generic secrets into
+  outgoing HTTP requests, supporting the `envoy.filters.http.credential_injector` filter
+  type. #6785
+
+## 📈 Improvements
+
+- Fetching Athenz policies has been optimized by using ETags. When policies haven't changed,
+  the server returns 304 Not Modified, avoiding redundant policy verification. #6780
+
+## 🛠️ Bug fixes
+
+- [StaticEndpointGroup#selectNow()](type) no longer returns `null` when `whenReady()` is
+  complete and endpoints are available. #6786
+- Binary fields in `TTextProtocol` now correctly respect `ByteBuffer` position and limit
+  instead of serializing the entire backing array. #5768 #6773
+- `GrantedOAuth2AccessToken.toString()` no longer leaks OAuth2 access and refresh tokens
+  in log output. #6787
+- xDS retry now correctly re-selects endpoints on each retry attempt. Previously, retries
+  always reused the same endpoint because the retry decorator was placed after endpoint
+  selection. #6798
+
+## ☢️ Breaking changes
+
+- Apache Thrift 0.23.0 changes the UUID wire format, breaking compatibility with older
+  Thrift peers. Use `TLegacyUuidProtocolDecorator` via [ThriftProtocolDecorator](type) to
+  restore the legacy behavior. #6762
+
+## ⛓ Dependencies
+
+- ASM 9.9.1 → 9.10.1
+- Athenz 1.12.40 → 1.12.42
+- BlockHound 1.0.16.RELEASE → 1.0.17.RELEASE
+- Dropwizard Metrics 4.2.38 → 4.2.39
+- Jackson 2.21.3 → 2.22.0
+- Javassist 3.21.0-GA → 3.31.0-GA
+- Kotlin 2.3.21 → 2.4.0
+- Kotlin Coroutines 1.10.2 → 1.11.0
+- Kubernetes Client 7.6.1 → 7.7.0
+- Logback 1.5.32 → 1.5.34
+- MCP 1.1.2 → 1.1.3
+- Micrometer 1.16.5 → 1.17.0
+- Micrometer Tracing 1.6.5 → 1.7.0
+- Netty 4.2.13.Final → 4.2.15.Final
+- OkHttp 5.3.2 → 5.4.0
+- Prometheus 1.6.1 → 1.7.0
+- Protobuf 4.34.1 → 4.35.0
+- Reactor 3.8.5 → 3.8.6
+- Reactor Kotlin 1.3.0 → 1.3.1
+- SLF4J 2.0.17 → 2.0.18
+- Spring Framework 7.0.7 → 7.0.8
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Hun425',
+  'KarboniteKream',
+  'ikhoon',
+  'jrhee17',
+  'kasecato',
+  'minwoox',
+  'trustin',
+  'yzfeng2020'
+]} />
