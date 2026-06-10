@@ -17,7 +17,6 @@
 package com.linecorp.armeria.xds;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
@@ -26,7 +25,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
@@ -40,25 +38,22 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
 
     private final ClusterXdsResource clusterXdsResource;
     private final TransportSocketSnapshot transportSocket;
-    @Nullable
     private final EndpointSnapshot endpointSnapshot;
     private final List<TransportSocketMatchSnapshot> transportSocketMatches;
-    @Nullable
     private final XdsLoadBalancer loadBalancer;
     private final HttpPreprocessor httpPreprocessor;
     private final RpcPreprocessor rpcPreprocessor;
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource,
-                    Optional<XdsLoadBalancer> loadBalancer,
+                    XdsLoadBalancer loadBalancer,
                     TransportSocketSnapshot transportSocket,
                     List<TransportSocketMatchSnapshot> transportSocketMatches) {
         this.clusterXdsResource = clusterXdsResource;
         this.transportSocket = transportSocket;
-        this.loadBalancer = loadBalancer.orElse(null);
-        endpointSnapshot = loadBalancer.map(XdsLoadBalancer::endpointSnapshot).orElse(null);
+        this.loadBalancer = loadBalancer;
+        endpointSnapshot = loadBalancer.endpointSnapshot();
         this.transportSocketMatches = transportSocketMatches;
-        final ClusterFilterFactory factory = new ClusterFilterFactory(
-                clusterXdsResource, this.loadBalancer, transportSocket);
+        final ClusterFilterFactory factory = new ClusterFilterFactory(loadBalancer, transportSocket);
         httpPreprocessor = factory.httpPreprocessor();
         rpcPreprocessor = factory.rpcPreprocessor();
     }
@@ -71,7 +66,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     /**
      * A {@link EndpointSnapshot} which belong to this {@link Cluster}.
      */
-    @Nullable
     public EndpointSnapshot endpointSnapshot() {
         return endpointSnapshot;
     }
@@ -91,7 +85,6 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
      * {@link ClientRequestContext}. Note that the lifecycle of {@link XdsLoadBalancer} is not bound to
      * the current {@link ClusterSnapshot}, and may be updated if the cluster is updated.
      */
-    @Nullable
     public XdsLoadBalancer loadBalancer() {
         return loadBalancer;
     }

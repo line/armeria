@@ -92,33 +92,28 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         final List<TransportSocketMatch> matches = resource.resource().getTransportSocketMatchesList();
         final TransportSocketMatchesStream socketMatchesStream =
                 new TransportSocketMatchesStream(context, configSource, matches);
-        final SnapshotStream<Optional<EndpointSnapshot>> endpointSnapshotStream =
+        final SnapshotStream<EndpointSnapshot> endpointSnapshotStream =
                 new EndpointSnapshotNode(resource, context, configSource);
-        final SnapshotStream<Optional<XdsLoadBalancer>> lbStream =
+        final SnapshotStream<XdsLoadBalancer> lbStream =
                 SnapshotStream.combineLatest(endpointSnapshotStream, transportSocket, socketMatchesStream,
                                              LoadBalancerInput::new)
                               .switchMapEager(input -> {
-                                  if (!input.endpointSnapshot.isPresent()) {
-                                      return SnapshotStream.empty();
-                                  }
-                                  final EndpointSnapshot endpointSnapshot = input.endpointSnapshot.get();
                                   if (context.clusterManager().hasLocalCluster() &&
                                       !resourceName.equals(context.clusterManager().localClusterName())) {
                                       return new LocalClusterStream(context.clusterManager())
                                               .switchMapEager(localCluster -> {
                                                   return new LoadBalancerStream(
-                                                          resource, endpointSnapshot,
+                                                          resource, input.endpointSnapshot,
                                                           input.transportSocket,
                                                           input.transportSocketMatches,
                                                           loadBalancerFactory, localCluster);
-                                              }).map(Optional::of);
+                                              });
                                   } else {
                                       return new LoadBalancerStream(
-                                              resource, endpointSnapshot,
+                                              resource, input.endpointSnapshot,
                                               input.transportSocket,
                                               input.transportSocketMatches,
-                                              loadBalancerFactory, Optional.empty())
-                                              .map(Optional::of);
+                                              loadBalancerFactory, Optional.empty());
                                   }
                               });
         return SnapshotStream.combineLatest(
@@ -174,11 +169,11 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
 
     private static final class LoadBalancerInput {
 
-        private final Optional<EndpointSnapshot> endpointSnapshot;
+        private final EndpointSnapshot endpointSnapshot;
         private final TransportSocketSnapshot transportSocket;
         private final List<TransportSocketMatchSnapshot> transportSocketMatches;
 
-        LoadBalancerInput(Optional<EndpointSnapshot> endpointSnapshot,
+        LoadBalancerInput(EndpointSnapshot endpointSnapshot,
                           TransportSocketSnapshot transportSocket,
                           List<TransportSocketMatchSnapshot> transportSocketMatches) {
             this.endpointSnapshot = endpointSnapshot;
@@ -220,7 +215,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         }
     }
 
-    private static class EndpointSnapshotNode extends RefCountedStream<Optional<EndpointSnapshot>> {
+    private static class EndpointSnapshotNode extends RefCountedStream<EndpointSnapshot> {
 
         private final ClusterXdsResource resource;
         private final SubscriptionContext context;
@@ -235,12 +230,12 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         }
 
         @Override
-        protected Subscription onStart(SnapshotWatcher<Optional<EndpointSnapshot>> watcher) {
+        protected Subscription onStart(SnapshotWatcher<EndpointSnapshot> watcher) {
             final Cluster cluster = resource.resource();
-            final SnapshotStream<Optional<EndpointSnapshot>> node;
+            final SnapshotStream<EndpointSnapshot> node;
             if (cluster.hasLoadAssignment()) {
                 final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
-                node = new EndpointStream(new EndpointXdsResource(loadAssignment), context).map(Optional::of);
+                node = new EndpointStream(new EndpointXdsResource(loadAssignment), context);
             } else if (cluster.hasEdsClusterConfig()) {
                 final EdsClusterConfig edsClusterConfig = cluster.getEdsClusterConfig();
                 final String serviceName = edsClusterConfig.getServiceName();
@@ -250,14 +245,15 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
                                .configSource(cluster.getEdsClusterConfig().getEdsConfig(),
                                              parentConfigSource);
                 if (configSource == null) {
-                    final SnapshotStream<Optional<EndpointSnapshot>> stream =
+                    final SnapshotStream<EndpointSnapshot> stream =
                             SnapshotStream.error(new XdsResourceException(CLUSTER, clusterName,
                                                                           "config source not found"));
                     return stream.subscribe(watcher);
                 }
-                node = new EndpointStream(configSource, clusterName, context).map(Optional::of);
+                node = new EndpointStream(configSource, clusterName, context);
             } else {
-                node = SnapshotStream.empty();
+                node = SnapshotStream.error(new XdsResourceException(CLUSTER, cluster.getName(),
+                        "neither load_assignment nor eds_cluster_config is specified"));
             }
             return node.subscribe(watcher);
         }

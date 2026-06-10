@@ -28,7 +28,6 @@ import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreprocessor;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -69,16 +68,12 @@ final class ClusterFilterFactory {
     private static final RpcClient CLUSTER_ONLY_RPC_CLIENT =
             DECORATION.rpcDecorate(DelegatingRpcClient.of());
 
-    private final String clusterName;
-    @Nullable
     private final XdsEndpointGroup endpointGroup;
     private final SessionProtocol sessionProtocol;
 
-    ClusterFilterFactory(ClusterXdsResource clusterXdsResource,
-                         @Nullable XdsLoadBalancer loadBalancer,
+    ClusterFilterFactory(XdsLoadBalancer loadBalancer,
                          TransportSocketSnapshot transportSocket) {
-        clusterName = clusterXdsResource.name();
-        endpointGroup = loadBalancer != null ? XdsEndpointGroup.of(loadBalancer) : null;
+        endpointGroup = XdsEndpointGroup.of(loadBalancer);
         sessionProtocol = transportSocket.clientTlsSpec() != null ?
                           SessionProtocol.HTTPS : SessionProtocol.HTTP;
     }
@@ -93,11 +88,6 @@ final class ClusterFilterFactory {
 
     private <I extends Request, O extends Response> O execute(
             PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
-        if (endpointGroup == null) {
-            throw UnprocessedRequestException.of(new IllegalStateException(
-                    "The target cluster '" + clusterName +
-                    "' does not specify ClusterLoadAssignments."));
-        }
         ctx.setEndpointGroup(endpointGroup);
         ctx.setSessionProtocol(sessionProtocol);
 

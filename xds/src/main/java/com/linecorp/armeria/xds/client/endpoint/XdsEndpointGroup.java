@@ -151,9 +151,6 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
             return;
         }
         final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
-        if (loadBalancer == null) {
-            return;
-        }
 
         this.loadBalancer = loadBalancer;
         endpoints = loadBalancer.allEndpoints();
