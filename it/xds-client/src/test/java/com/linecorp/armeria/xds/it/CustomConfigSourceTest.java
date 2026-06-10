@@ -172,7 +172,7 @@ class CustomConfigSourceTest {
         }
 
         private SnapshotStream<DiscoveryResponse> fetchViaHttp(InterestedResources interest,
-                                                                ClusterSnapshot clusterSnapshot) {
+                                                               ClusterSnapshot clusterSnapshot) {
             return watcher -> {
                 final WebClient client = WebClient.of(clusterSnapshot.preprocessor());
                 final String type = interest.type().name().toLowerCase(Locale.ENGLISH);

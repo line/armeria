@@ -42,6 +42,7 @@ interface SubscriptionContext extends FactoryContext {
 
     @Override
     default SnapshotStream<ClusterSnapshot> clusterStream(String clusterName) {
+        requireNonNull(clusterName, "clusterName");
         final SnapshotStream<ClusterSnapshot> stream =
                 watcher -> clusterManager().register(clusterName, this, watcher);
         return stream.checkSubscribeOn(eventLoop());
