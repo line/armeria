@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Duration;
 import com.google.protobuf.util.Durations;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
@@ -70,13 +69,15 @@ final class StateCoordinator implements SotwSubscriptionCallbacks, SafeCloseable
         return epochMilli;
     }
 
-    <T extends XdsResource> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+    <T extends XdsResource> boolean register(XdsType type, String resourceName,
+                                             SnapshotWatcher<T> watcher) {
         final boolean updated = subscriberStorage.register(type, resourceName, watcher);
         replayToWatcher(type, resourceName, watcher);
         return updated;
     }
 
-    <T extends XdsResource> boolean unregister(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+    <T extends XdsResource> boolean unregister(XdsType type, String resourceName,
+                                               SnapshotWatcher<T> watcher) {
         return subscriberStorage.unregister(type, resourceName, watcher);
     }
 
@@ -101,9 +102,10 @@ final class StateCoordinator implements SotwSubscriptionCallbacks, SafeCloseable
         if (revised == null) {
             return;
         }
-        final XdsStreamSubscriber<XdsResource> subscriber = subscriber(type, resourceName);
+        final CompositeSnapshotWatcher<XdsResource> subscriber =
+                subscriberStorage.subscriber(type, resourceName);
         if (subscriber != null) {
-            subscriber.onData(revised);
+            subscriber.onUpdate(revised, null);
         }
     }
 
@@ -111,30 +113,25 @@ final class StateCoordinator implements SotwSubscriptionCallbacks, SafeCloseable
         if (!stateStore.remove(type, resourceName)) {
             return;
         }
-        final XdsStreamSubscriber<?> subscriber = subscriber(type, resourceName);
+        final CompositeSnapshotWatcher<?> subscriber = subscriberStorage.subscriber(type, resourceName);
         if (subscriber != null) {
-            subscriber.onAbsent();
+            subscriber.onUpdate(null, new MissingXdsResourceException(type, resourceName));
         }
     }
 
     void onResourceError(XdsType type, String resourceName, Throwable cause) {
-        final XdsStreamSubscriber<?> subscriber = subscriber(type, resourceName);
+        final CompositeSnapshotWatcher<?> subscriber = subscriberStorage.subscriber(type, resourceName);
         if (subscriber != null) {
-            subscriber.onError(resourceName, cause);
+            subscriber.onUpdate(null, XdsResourceException.maybeWrap(type, resourceName, cause));
         }
     }
 
-    @Nullable
-    private <T extends XdsResource> XdsStreamSubscriber<T> subscriber(XdsType type, String resourceName) {
-        return subscriberStorage.subscriber(type, resourceName);
-    }
-
     private <T extends XdsResource> void replayToWatcher(XdsType type, String resourceName,
-                                                         ResourceWatcher<T> watcher) {
-        final XdsResource resource = stateStore.resource(type, resourceName);
-        if (resource != null) {
-            //noinspection unchecked
-            watcher.onChanged((T) resource);
+                                                         SnapshotWatcher<T> watcher) {
+        @SuppressWarnings("unchecked")
+        final T cached = (T) stateStore.resource(type, resourceName);
+        if (cached != null) {
+            watcher.onUpdate(cached, null);
         }
     }
 

@@ -25,7 +25,7 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
  *
  * @param <T> the type of the current {@link XdsResource}
  */
-interface ResourceNode<T extends XdsResource> extends ResourceWatcher<T> {
+interface ResourceNode<T extends XdsResource> extends SnapshotWatcher<T> {
 
     @Nullable
     ConfigSource configSource();
