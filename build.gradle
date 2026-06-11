@@ -224,7 +224,7 @@ configure(projectsWithFlags('java')) {
     // Common dependencies
     dependencies {
         // All projects currently require ':core' (except itself)
-        if (project != project(':core')) {
+        if (project.path != project(':core').path) {
             api project(':core')
         }
 
