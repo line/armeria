@@ -136,6 +136,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Mapping<String, SslContext> sslContexts;
     private final ServerMetrics serverMetrics;
     private final Function<? super String, ? extends EventLoopGroup> bossGroupFactory;
+    private final DefaultConnectionAcceptor connectionAcceptor;
 
     @Nullable
     private String strVal;
@@ -169,7 +170,8 @@ final class DefaultServerConfig implements ServerConfig {
             Function<? super String, String> absoluteUriTransformer,
             long unloggedExceptionsReportIntervalMillis,
             List<ShutdownSupport> shutdownSupports,
-            @Nullable Function<? super String, ? extends EventLoopGroup> bossGroupFactory) {
+            @Nullable Function<? super String, ? extends EventLoopGroup> bossGroupFactory,
+            DefaultConnectionAcceptor connectionAcceptor) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -286,6 +288,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.unloggedExceptionsReportIntervalMillis = unloggedExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.bossGroupFactory = bossGroupFactory == null ? DEFAULT_BOSS_GROUP_FACTORY : bossGroupFactory;
+        this.connectionAcceptor = requireNonNull(connectionAcceptor, "connectionAcceptor");
         serverMetrics = new ServerMetrics(meterRegistry);
     }
 
@@ -737,6 +740,10 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public ServerMetrics serverMetrics() {
         return serverMetrics;
+    }
+
+    DefaultConnectionAcceptor connectionAcceptor() {
+        return connectionAcceptor;
     }
 
     List<ShutdownSupport> shutdownSupports() {

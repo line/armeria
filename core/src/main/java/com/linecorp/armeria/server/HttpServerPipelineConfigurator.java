@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -96,12 +97,12 @@ import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
-import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -198,6 +199,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
+        final Channel ch = p.channel();
+        final ConnectionContext connectionContext =
+                new ConnectionContext(HTTP, null, ImmutableList.of(), proxiedAddresses, ch);
+
+        final DefaultConnectionAcceptor connectionAcceptor = config.connectionAcceptor();
+        if (!connectionAcceptor.isNoop()) {
+            // Install the accept handler to buffer reads while the async accept is pending.
+            p.addLast(new HttpConnectionAcceptHandler(connectionAcceptor, connectionContext,
+                                                      config.idleTimeoutMillis()));
+        }
+
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
@@ -208,20 +220,20 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final KeepAliveHandler keepAliveHandler;
         if (needsKeepAliveHandler) {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
-            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer, idleTimeoutMillis,
+            keepAliveHandler = new Http1ServerKeepAliveHandler(ch, keepAliveTimer, idleTimeoutMillis,
                                                                maxConnectionAgeMillis,
                                                                maxNumRequestsPerConnection);
         } else {
             keepAliveHandler = new NoopKeepAliveHandler();
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
+                ch, H1C, keepAliveHandler, config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
-        final HttpServerHandler httpServerHandler = new HttpServerHandler(config, p.channel(),
+        final HttpServerHandler httpServerHandler = new HttpServerHandler(config, ch,
                                                                           gracefulShutdownSupport,
                                                                           responseEncoder,
-                                                                          H1C, proxiedAddresses);
+                                                                          H1C, connectionContext);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder, httpServerHandler));
         p.addLast(httpServerHandler);
     }
@@ -232,25 +244,15 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        p.addLast(newSniHandler(p));
-        p.addLast(TrafficLoggingHandler.SERVER);
-        p.addLast(new Http2OrHttpHandler(proxiedAddresses));
-    }
-
-    private SniHandler newSniHandler(ChannelPipeline p) {
         final Mapping<String, SslContext> sslContexts =
                 requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-        final SniHandler sniHandler = new SniHandler(sslContexts, Flags.defaultMaxClientHelloLength(),
-                                                     config.idleTimeoutMillis());
-        if (sslContexts instanceof TlsProviderMapping) {
-            p.channel().closeFuture().addListener(future -> {
-                final SslContext sslContext = sniHandler.sslContext();
-                if (sslContext != null) {
-                    ((TlsProviderMapping) sslContexts).release(sslContext);
-                }
-            });
-        }
-        return sniHandler;
+
+        p.addLast(new HttpsConnectionAcceptHandler(config.connectionAcceptor(), sslContexts,
+                                                   proxiedAddresses,
+                                                   Flags.defaultMaxClientHelloLength(),
+                                                   config.idleTimeoutMillis()));
+        p.addLast(TrafficLoggingHandler.SERVER);
+        p.addLast(new Http2OrHttpHandler());
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
@@ -307,6 +309,90 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
 
         return settings;
+    }
+
+    private static final class HttpConnectionAcceptHandler extends ChannelInboundHandlerAdapter {
+
+        private final DefaultConnectionAcceptor connectionAcceptor;
+        private final ConnectionContext connectionContext;
+        private final long acceptTimeoutMillis;
+        private final List<Object> buffered = new ArrayList<>();
+        @Nullable
+        private ScheduledFuture<?> timeoutFuture;
+        private boolean removed;
+
+        HttpConnectionAcceptHandler(DefaultConnectionAcceptor connectionAcceptor,
+                                    ConnectionContext connectionContext,
+                                    long acceptTimeoutMillis) {
+            this.connectionAcceptor = connectionAcceptor;
+            this.connectionContext = connectionContext;
+            this.acceptTimeoutMillis = acceptTimeoutMillis;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            final Channel ch = ctx.channel();
+            if (acceptTimeoutMillis > 0) {
+                timeoutFuture = ch.eventLoop().schedule(() -> {
+                    if (ch.isActive()) {
+                        logger.warn("{} ConnectionAcceptor timed out after {}ms",
+                                    ch, acceptTimeoutMillis);
+                        ch.close();
+                    }
+                }, acceptTimeoutMillis, TimeUnit.MILLISECONDS);
+            }
+            connectionAcceptor.accept(connectionContext, ch.eventLoop())
+                              .whenComplete((accepted, t) -> {
+                                  if (timeoutFuture != null) {
+                                      timeoutFuture.cancel(false);
+                                  }
+                                  if (t != null) {
+                                      logger.warn("Failed to accept connection for ctx: [{}]", ctx, t);
+                                      ch.close();
+                                      return;
+                                  }
+                                  if (accepted) {
+                                      ch.pipeline().remove(this);
+                                  } else {
+                                      logger.trace("Connection rejected by ConnectionAcceptor: {}",
+                                                   connectionContext);
+                                      ch.close();
+                                  }
+                              });
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (removed) {
+                logger.warn("{} Unexpected channelRead after handler removal", ctx.channel());
+            }
+            buffered.add(msg);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            // Swallow while buffering; replayed in handlerRemoved.
+        }
+
+        @Override
+        public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+            if (timeoutFuture != null) {
+                timeoutFuture.cancel(false);
+            }
+            removed = true;
+            if (!ctx.channel().isActive()) {
+                for (Object msg : buffered) {
+                    ReferenceCountUtil.release(msg);
+                }
+                buffered.clear();
+                return;
+            }
+            for (Object msg : buffered) {
+                ctx.fireChannelRead(msg);
+            }
+            buffered.clear();
+            ctx.fireChannelReadComplete();
+        }
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
@@ -486,14 +572,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
          */
         private static final String DUMMY_CIPHER_SUITE = "SSL_NULL_WITH_NULL_NULL";
 
-        @Nullable
-        private final ProxiedAddresses proxiedAddresses;
         private boolean loggedHandshakeFailure;
         private boolean addedExceptionLogger;
 
-        Http2OrHttpHandler(@Nullable ProxiedAddresses proxiedAddresses) {
+        Http2OrHttpHandler() {
             super(ApplicationProtocolNames.HTTP_1_1);
-            this.proxiedAddresses = proxiedAddresses;
         }
 
         @Override
@@ -513,12 +596,18 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             throw new SSLHandshakeException("unsupported application protocol: " + protocol);
         }
 
+        private ConnectionContext connectionContext(Channel ch) {
+            final ConnectionContext connectionContext = ConnectionContext.get(ch);
+            assert connectionContext != null : "ConnectionContext must exist for HTTPS";
+            return connectionContext;
+        }
+
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
+            final Channel ch = p.channel();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(config, p.channel(),
-                                            gracefulShutdownSupport,
-                                            null, H2, proxiedAddresses));
+            p.addLast(new HttpServerHandler(config, ch, gracefulShutdownSupport, null, H2,
+                                            connectionContext(ch)));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -546,9 +635,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
-            final HttpServerHandler httpServerHandler = new HttpServerHandler(config, ch,
-                                                                              gracefulShutdownSupport,
-                                                                              encoder, H1, proxiedAddresses);
+            final HttpServerHandler httpServerHandler =
+                    new HttpServerHandler(config, ch, gracefulShutdownSupport, encoder, H1,
+                                          connectionContext(ch));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder, httpServerHandler));
             p.addLast(httpServerHandler);
         }

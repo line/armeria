@@ -248,6 +248,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     @Nullable
     private ServerTlsConfig tlsConfig;
     private Function<? super String, ? extends EventLoopGroup> bossGroupFactory = DEFAULT_BOSS_GROUP_FACTORY;
+    private ConnectionAcceptor connectionAcceptor = ConnectionAcceptor.always();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -522,6 +523,16 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
         this.childChannelPipelineCustomizer =
                 this.childChannelPipelineCustomizer.andThen(childChannelPipelineCustomizer);
+        return this;
+    }
+
+    /**
+     * Sets the {@link ConnectionAcceptor} that is called once per connection, before TLS
+     * negotiation, to decide whether to accept the connection.
+     */
+    @UnstableApi
+    public ServerBuilder connectionAcceptor(ConnectionAcceptor connectionAcceptor) {
+        this.connectionAcceptor = requireNonNull(connectionAcceptor, "connectionAcceptor");
         return this;
     }
 
@@ -2603,7 +2614,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
                 unloggedExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports),
-                bossGroupFactory);
+                bossGroupFactory, new DefaultConnectionAcceptor(connectionAcceptor));
     }
 
     /**

@@ -67,6 +67,10 @@ final class UpdatableServerConfig implements ServerConfig {
         return delegate.sslContextMapping();
     }
 
+    DefaultConnectionAcceptor connectionAcceptor() {
+        return delegate.connectionAcceptor();
+    }
+
     /**
      * Returns the {@link Executor} which will invoke the callbacks of {@link Server#start()},
      * {@link Server#stop()} and {@link ServerListener}.
