@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -67,8 +68,7 @@ final class DefaultConnectionAcceptor implements ConnectionAcceptor {
         if (t != null) {
             future.completeExceptionally(t);
         } else {
-            assert v != null;
-            future.complete(v);
+            future.complete(firstNonNull(v, false));
         }
     }
 

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +25,8 @@ import javax.net.ssl.SSLHandshakeException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -111,7 +112,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
     @Override
     protected Future<SslContext> lookup(ChannelHandlerContext ctx,
                                         @Nullable ByteBuf clientHello) throws Exception {
-        List<String> alpnProtocols = Collections.emptyList();
+        List<String> alpnProtocols = ImmutableList.of();
 
         if (clientHello != null) {
             final ClientHelloInfo info = parseClientHello(clientHello);
@@ -333,7 +334,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
             offset += nameLength;
         }
 
-        return protocols.isEmpty() ? null : Collections.unmodifiableList(protocols);
+        return protocols.isEmpty() ? null : ImmutableList.copyOf(protocols);
     }
 
     static final class ClientHelloInfo {
