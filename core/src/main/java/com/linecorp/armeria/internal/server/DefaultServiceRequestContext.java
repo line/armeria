@@ -23,9 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +61,7 @@ import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.internal.server.RouteDecoratingService.InitialDispatcherService;
+import com.linecorp.armeria.server.ConnectionContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.Route;
@@ -75,7 +74,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.AttributeKey;
 
 /**
  * Default {@link ServiceRequestContext} implementation.
@@ -105,8 +103,7 @@ public final class DefaultServiceRequestContext
     private final ProxiedAddresses proxiedAddresses;
 
     private final InetAddress clientAddress;
-    private final InetSocketAddress remoteAddress;
-    private final InetSocketAddress localAddress;
+    private final ConnectionContext connectionContext;
 
     private boolean shouldReportUnloggedExceptions = true;
 
@@ -150,12 +147,12 @@ public final class DefaultServiceRequestContext
             SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
             RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
+            InetAddress clientAddress, ConnectionContext connectionContext,
             long requestStartTimeNanos, long requestStartTimeMicros,
             Supplier<? extends AutoCloseable> contextHook) {
 
         this(cfg, ch, eventLoop, meterRegistry, sessionProtocol, id, routingContext, routingResult,
-             exchangeType, req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+             exchangeType, req, sslSession, proxiedAddresses, clientAddress, connectionContext,
              null /* requestCancellationScheduler */, requestStartTimeNanos, requestStartTimeMicros,
              HttpHeaders.of(), HttpHeaders.of(), contextHook);
     }
@@ -165,7 +162,7 @@ public final class DefaultServiceRequestContext
             SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
             RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
+            InetAddress clientAddress, ConnectionContext connectionContext,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers,
@@ -174,7 +171,7 @@ public final class DefaultServiceRequestContext
         super(meterRegistry, id,
               requireNonNull(routingContext, "routingContext").method(),
               routingContext.requestTarget(), exchangeType, cfg.requestAutoAbortDelayMillis(),
-              requireNonNull(req, "req"), null, null, contextHook);
+              requireNonNull(req, "req"), null, connectionContext.attrs(), contextHook);
 
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.ch = requireNonNull(ch, "ch");
@@ -194,8 +191,7 @@ public final class DefaultServiceRequestContext
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
-        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
-        this.localAddress = requireNonNull(localAddress, "localAddress");
+        this.connectionContext = requireNonNull(connectionContext, "connectionContext");
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -220,19 +216,6 @@ public final class DefaultServiceRequestContext
         return RequestTarget.forServer(headers.path());
     }
 
-    @Nullable
-    @Override
-    public <V> V attr(AttributeKey<V> key) {
-        // Don't check the root attributes; root is always null.
-        return ownAttr(key);
-    }
-
-    @Override
-    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
-        // Don't check the root attributes; root is always null.
-        return ownAttrs();
-    }
-
     @Override
     public SessionProtocol sessionProtocol() {
         return sessionProtocol;
@@ -241,13 +224,13 @@ public final class DefaultServiceRequestContext
     @Nonnull
     @Override
     public InetSocketAddress remoteAddress() {
-        return remoteAddress;
+        return connectionContext.remoteAddress();
     }
 
     @Nonnull
     @Override
     public InetSocketAddress localAddress() {
-        return localAddress;
+        return connectionContext.localAddress();
     }
 
     @Override
@@ -258,6 +241,11 @@ public final class DefaultServiceRequestContext
     @Override
     protected Channel channel() {
         return ch;
+    }
+
+    @Override
+    public ConnectionContext connectionContext() {
+        return connectionContext;
     }
 
     @Override
@@ -580,6 +568,8 @@ public final class DefaultServiceRequestContext
             buf.append("[sreqId=").append(sreqId)
                .append(", chanId=").append(chanId);
 
+            final InetSocketAddress remoteAddress = remoteAddress();
+            final InetSocketAddress localAddress = localAddress();
             if (!Objects.equals(caddr, remoteAddress.getAddress())) {
                 buf.append(", caddr=");
                 TextFormatter.appendInetAddress(buf, caddr);

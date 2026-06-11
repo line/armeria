@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -243,11 +244,13 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         // Build the context with the properties set by a user and the fake objects.
         final Channel ch = fakeChannel(eventLoop);
+        final ConnectionContext connectionContext =
+                new ConnectionContext(sessionProtocol(), null, Collections.emptyList(),
+                                      proxiedAddresses, ch);
         return new DefaultServiceRequestContext(
                 serviceCfg, ch, eventLoop, meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, exchangeType, req, sslSession(), proxiedAddresses,
-                clientAddress, remoteAddress(), localAddress(),
-                requestCancellationScheduler,
+                clientAddress, connectionContext, requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
                 HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
