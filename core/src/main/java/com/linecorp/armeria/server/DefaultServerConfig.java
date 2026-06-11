@@ -47,7 +47,6 @@ import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -133,7 +132,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
-    private final Mapping<String, SslContext> sslContexts;
+    private final DefaultServerTlsProvider serverTlsProvider;
     private final ServerMetrics serverMetrics;
     private final Function<? super String, ? extends EventLoopGroup> bossGroupFactory;
     private final DefaultConnectionAcceptor connectionAcceptor;
@@ -164,7 +163,7 @@ final class DefaultServerConfig implements ServerConfig {
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             ServerErrorHandler errorHandler,
-            @Nullable Mapping<String, SslContext> sslContexts,
+            @Nullable DefaultServerTlsProvider serverTlsProvider,
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
@@ -278,7 +277,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.enableDateHeader = enableDateHeader;
 
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
-        this.sslContexts = sslContexts;
+        this.serverTlsProvider = serverTlsProvider;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
         @SuppressWarnings("unchecked")
@@ -705,11 +704,11 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     /**
-     * Returns a map of SslContexts {@link SslContext}.
+     * Returns the {@link DefaultServerTlsProvider}, or {@code null} if TLS is not configured.
      */
     @Nullable
-    Mapping<String, SslContext> sslContextMapping() {
-        return sslContexts;
+    DefaultServerTlsProvider serverTlsProvider() {
+        return serverTlsProvider;
     }
 
     @Override

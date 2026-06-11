@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -143,35 +142,6 @@ class ServerTlsProviderTest {
                 assertThat(client.get("/").contentUtf8()).isEqualTo(host);
             }
         }
-    }
-
-    @Test
-    void disallowTlsProviderWhenTlsSettingsIsSet() {
-        assertThatThrownBy(() -> {
-            Server.builder()
-                  .tls(TlsKeyPair.ofSelfSigned())
-                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
-                  .build();
-        }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
-
-        assertThatThrownBy(() -> {
-            Server.builder()
-                  .tlsSelfSigned()
-                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
-                  .build();
-        }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
-
-        assertThatThrownBy(() -> {
-            Server.builder()
-                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
-                  .virtualHost("example.com")
-                  .tls(TlsKeyPair.ofSelfSigned())
-                  .and()
-                  .build();
-        }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
     }
 
     private static class SettableTlsProvider implements TlsProvider {

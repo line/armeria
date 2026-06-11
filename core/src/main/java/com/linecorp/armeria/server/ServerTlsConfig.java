@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -43,11 +44,14 @@ public final class ServerTlsConfig extends AbstractTlsConfig {
     }
 
     private final ClientAuth clientAuth;
+    private final TlsEngineType tlsEngineType;
 
     ServerTlsConfig(boolean allowsUnsafeCiphers, @Nullable MeterIdPrefix meterIdPrefix,
-                    ClientAuth clientAuth, Consumer<SslContextBuilder> tlsCustomizer) {
+                    ClientAuth clientAuth, Consumer<SslContextBuilder> tlsCustomizer,
+                    TlsEngineType tlsEngineType) {
         super(allowsUnsafeCiphers, meterIdPrefix, tlsCustomizer);
         this.clientAuth = clientAuth;
+        this.tlsEngineType = tlsEngineType;
     }
 
     /**
@@ -55,6 +59,13 @@ public final class ServerTlsConfig extends AbstractTlsConfig {
      */
     public ClientAuth clientAuth() {
         return clientAuth;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} to use for TLS.
+     */
+    public TlsEngineType tlsEngineType() {
+        return tlsEngineType;
     }
 
     @Override
@@ -65,6 +76,7 @@ public final class ServerTlsConfig extends AbstractTlsConfig {
                           .add("meterIdPrefix", meterIdPrefix())
                           .add("clientAuth", clientAuth)
                           .add("tlsCustomizer", tlsCustomizer())
+                          .add("tlsEngineType", tlsEngineType)
                           .toString();
     }
 }

@@ -19,8 +19,10 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.AbstractTlsConfigBuilder;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.netty.handler.ssl.ClientAuth;
 
@@ -31,6 +33,7 @@ import io.netty.handler.ssl.ClientAuth;
 public final class ServerTlsConfigBuilder extends AbstractTlsConfigBuilder<ServerTlsConfigBuilder> {
 
     private ClientAuth clientAuth = ClientAuth.NONE;
+    private TlsEngineType tlsEngineType = Flags.tlsEngineType();
 
     ServerTlsConfigBuilder() {}
 
@@ -43,9 +46,19 @@ public final class ServerTlsConfigBuilder extends AbstractTlsConfigBuilder<Serve
     }
 
     /**
+     * Sets the {@link TlsEngineType} to use for TLS.
+     * If not set, {@link Flags#tlsEngineType()} is used.
+     */
+    public ServerTlsConfigBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        this.tlsEngineType = requireNonNull(tlsEngineType, "tlsEngineType");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link ServerTlsConfig} based on the properties of this builder.
      */
     public ServerTlsConfig build() {
-        return new ServerTlsConfig(allowsUnsafeCiphers(), meterIdPrefix(), clientAuth, tlsCustomizer());
+        return new ServerTlsConfig(allowsUnsafeCiphers(), meterIdPrefix(), clientAuth,
+                                   tlsCustomizer(), tlsEngineType);
     }
 }

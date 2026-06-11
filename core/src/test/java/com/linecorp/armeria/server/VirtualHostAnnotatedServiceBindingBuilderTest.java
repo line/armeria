@@ -110,7 +110,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .multipartUploadsLocation(multipartUploadsLocation)
                 .requestIdGenerator(serviceRequestIdGenerator)
                 .build(new TestService())
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault(), null,
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault(),
                        sslContextFactory);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
