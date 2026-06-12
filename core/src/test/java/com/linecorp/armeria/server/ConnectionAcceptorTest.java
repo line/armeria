@@ -17,12 +17,15 @@
 package com.linecorp.armeria.server;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,6 +47,7 @@ class ConnectionAcceptorTest {
 
     private static final AttributeKey<String> TEST_ATTR =
             AttributeKey.valueOf(ConnectionAcceptorTest.class, "TEST_ATTR");
+    private static final AtomicLong acceptCount = new AtomicLong();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -54,6 +58,7 @@ class ConnectionAcceptorTest {
               .tls(TlsKeyPair.ofSelfSigned())
               .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
                   ctx.setAttr(TEST_ATTR, "from-connection");
+                  acceptCount.incrementAndGet();
                   return true;
               }))
               .service("/", (ctx, req) -> connectionContextJson(ctx))
@@ -71,7 +76,10 @@ class ConnectionAcceptorTest {
             sb.http(0)
               .https(0)
               .tls(TlsKeyPair.ofSelfSigned())
-              .connectionAcceptor(ConnectionAcceptor.of(ctx -> false))
+              .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
+                  acceptCount.incrementAndGet();
+                  return false;
+              }))
               .service("/", (ctx, req) -> HttpResponse.of("should not reach"));
         }
     };
@@ -84,6 +92,7 @@ class ConnectionAcceptorTest {
               .https(0)
               .tls(TlsKeyPair.ofSelfSigned())
               .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
+                  acceptCount.incrementAndGet();
                   throw new RuntimeException("acceptor failed");
               }))
               .service("/", (ctx, req) -> HttpResponse.of("should not reach"));
@@ -101,6 +110,11 @@ class ConnectionAcceptorTest {
         return HttpResponse.ofJson(map);
     }
 
+    @BeforeEach
+    void beforeEach() {
+        acceptCount.set(0);
+    }
+
     @Test
     void httpsAcceptorAcceptsConnection() {
         try (ClientFactory factory = ClientFactory.builder().tlsNoVerify().build()) {
@@ -115,6 +129,7 @@ class ConnectionAcceptorTest {
             assertThatJson(body).node("alpn").isEqualTo("[\"h2\",\"http/1.1\"]");
             assertThatJson(body).node("connAttr").isEqualTo("from-connection");
             assertThatJson(body).node("ctxAttr").isEqualTo("from-connection");
+            assertThat(acceptCount).hasValue(1);
         }
     }
 
@@ -130,6 +145,7 @@ class ConnectionAcceptorTest {
             assertThatJson(body).node("alpn").isEqualTo("[]");
             assertThatJson(body).node("connAttr").isEqualTo("from-connection");
             assertThatJson(body).node("ctxAttr").isEqualTo("from-connection");
+            assertThat(acceptCount).hasValue(1);
         }
     }
 
@@ -165,6 +181,11 @@ class ConnectionAcceptorTest {
                                                       .blocking();
             assertThatThrownBy(() -> client.get("/"))
                     .isInstanceOf(UnprocessedRequestException.class);
+            if (protocol.isHttp()) {
+                assertThat(acceptCount).hasValue(2);
+            } else {
+                assertThat(acceptCount).hasValue(1);
+            }
         }
     }
 }

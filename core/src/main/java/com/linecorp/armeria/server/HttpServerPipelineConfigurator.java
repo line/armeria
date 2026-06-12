@@ -248,7 +248,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
 
         p.addLast(new HttpsConnectionAcceptHandler(config.connectionAcceptor(), sslContexts,
-                                                   proxiedAddresses,
+                                                   proxiedAddresses, p,
                                                    Flags.defaultMaxClientHelloLength(),
                                                    config.idleTimeoutMillis()));
         p.addLast(TrafficLoggingHandler.SERVER);
