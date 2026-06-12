@@ -30,6 +30,13 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
     private final EndpointXdsResource endpoint;
 
+    /**
+     * Creates a new {@link EndpointSnapshot} from the given {@link ClusterLoadAssignment}.
+     */
+    public static EndpointSnapshot of(ClusterLoadAssignment loadAssignment) {
+        return new EndpointSnapshot(new EndpointXdsResource(loadAssignment));
+    }
+
     EndpointSnapshot(EndpointXdsResource endpoint) {
         this.endpoint = endpoint;
     }

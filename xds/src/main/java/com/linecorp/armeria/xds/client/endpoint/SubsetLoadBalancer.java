@@ -115,8 +115,7 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
         for (LbSubsetSelector subsetSelector: lbSubsetConfig.getSubsetSelectorsList()) {
             final ProtocolStringList keys = subsetSelector.getKeysList();
             for (Endpoint endpoint : prioritySet.endpoints()) {
-                final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributeKeys.LB_ENDPOINT_KEY);
-                assert lbEndpoint != null;
+                final LbEndpoint lbEndpoint = EndpointUtil.lbEndpoint(endpoint);
                 final Struct endpointMetadata = lbEndpoint.getMetadata().getFilterMetadataOrDefault(
                         SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance());
                 final Struct.Builder filteredStructBuilder = Struct.newBuilder();

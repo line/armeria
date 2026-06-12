@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.xds.internal.XdsEndpoint;
 import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
@@ -129,8 +130,11 @@ final class ClusterFilterFactory {
         if (endpoint == null) {
             return;
         }
-        final TransportSocketSnapshot transportSocket =
-                endpoint.attr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY);
+        final XdsEndpoint xdsEndpoint = XdsEndpoint.get(endpoint);
+        if (xdsEndpoint == null) {
+            return;
+        }
+        final TransportSocketSnapshot transportSocket = xdsEndpoint.transportSocket();
         if (transportSocket == null) {
             return;
         }

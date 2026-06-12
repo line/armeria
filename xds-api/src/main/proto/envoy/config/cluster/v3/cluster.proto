@@ -198,11 +198,13 @@ message Cluster {
         "envoy.api.v2.Cluster.CustomClusterType";
 
     // The type of the cluster to instantiate. The name must match a supported cluster type.
+    option (armeria.xds.supported.field) = 1;
     string name = 1 [(validate.rules).string = {min_len: 1}];
 
     // Cluster specific configuration which depends on the cluster being instantiated.
     // See the supported cluster for further documentation.
     // [#extension-category: envoy.clusters]
+    option (armeria.xds.supported.field) = 2;
     google.protobuf.Any typed_config = 2;
   }
 
@@ -907,6 +909,7 @@ message Cluster {
     DiscoveryType type = 2 [(validate.rules).enum = {defined_only: true}];
 
     // The custom cluster type.
+    option (armeria.xds.supported.oneof_field) = 38;
     CustomClusterType cluster_type = 38;
   }
 

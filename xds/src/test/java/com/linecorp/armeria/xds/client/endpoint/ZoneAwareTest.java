@@ -107,8 +107,7 @@ class ZoneAwareTest {
 
                 final Endpoint selected = loadBalancer.selectNow(ctx);
                 assertThat(selected).isNotNull();
-                final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                                  .getLocality();
+                final Locality locality = EndpointUtil.locality(selected);
                 assertThat(locality.getRegion()).isEqualTo("local");
             }
         }
@@ -160,8 +159,7 @@ class ZoneAwareTest {
                 random.fixNextInt(RandomHint.ROUTING_ENABLED, 50);
                 final Endpoint selected = loadBalancer.selectNow(ctx);
                 assertThat(selected).isNotNull();
-                final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                                  .getLocality();
+                final Locality locality = EndpointUtil.locality(selected);
                 selectedRegions.add(locality.getRegion());
             }
             assertThat(selectedRegions).containsExactlyInAnyOrderElementsOf(expectedRegions);
@@ -211,8 +209,7 @@ class ZoneAwareTest {
             for (int i = 0; i < 10; i++) {
                 final Endpoint selected = loadBalancer.selectNow(ctx);
                 assertThat(selected).isNotNull();
-                final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                                  .getLocality();
+                final Locality locality = EndpointUtil.locality(selected);
                 selectedRegions.add(locality.getRegion());
             }
             assertThat(selectedRegions).containsExactlyInAnyOrderElementsOf(expectedRegions);
@@ -260,8 +257,7 @@ class ZoneAwareTest {
             random.fixNextLong(RandomHint.LOCAL_PERCENTAGE, localPercentage);
             final Endpoint selected = loadBalancer.selectNow(ctx);
             assertThat(selected).isNotNull();
-            final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                              .getLocality();
+            final Locality locality = EndpointUtil.locality(selected);
             assertThat(locality.getRegion()).isEqualTo(expectedRegion);
         }
     }
@@ -317,8 +313,7 @@ class ZoneAwareTest {
             random.fixNextLong(RandomHint.LOCAL_THRESHOLD, localThreshold);
             final Endpoint selected = loadBalancer.selectNow(ctx);
             assertThat(selected).isNotNull();
-            final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                              .getLocality();
+            final Locality locality = EndpointUtil.locality(selected);
             assertThat(locality.getRegion()).isEqualTo(expectedRegion);
         }
     }
@@ -372,8 +367,7 @@ class ZoneAwareTest {
             random.fixNextLong(RandomHint.LOCAL_THRESHOLD, localThreshold);
             final Endpoint selected = loadBalancer.selectNow(ctx);
             assertThat(selected).isNotNull();
-            final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                              .getLocality();
+            final Locality locality = EndpointUtil.locality(selected);
             assertThat(locality.getRegion()).isEqualTo(expectedRegion);
         }
     }
@@ -422,8 +416,7 @@ class ZoneAwareTest {
             random.fixNextInt(RandomHint.SELECT_PRIORITY, selectPriority);
             final Endpoint selected = loadBalancer.selectNow(ctx);
             assertThat(selected).isNotNull();
-            final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                              .getLocality();
+            final Locality locality = EndpointUtil.locality(selected);
             assertThat(locality.getRegion()).isEqualTo(expectedRegion);
         }
     }
@@ -480,8 +473,7 @@ class ZoneAwareTest {
                 random.fixNextInt(RandomHint.SELECT_PRIORITY, i * 10);
                 final Endpoint selected = loadBalancer.selectNow(ctx);
                 assertThat(selected).isNotNull();
-                final Locality locality = selected.attr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY)
-                                                  .getLocality();
+                final Locality locality = EndpointUtil.locality(selected);
                 selectedRegions.add(locality.getRegion());
             }
         }

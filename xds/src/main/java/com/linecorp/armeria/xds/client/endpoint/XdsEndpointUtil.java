@@ -16,203 +16,73 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Predicate;
 
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
-import com.google.protobuf.Struct;
-import com.google.protobuf.Value;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
-import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
-import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
-import com.linecorp.armeria.xds.ClusterXdsResource;
-import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
-import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+import com.linecorp.armeria.xds.internal.XdsEndpoint;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.RefreshRate;
+import io.envoyproxy.envoy.config.core.v3.Address;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
-import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 
 final class XdsEndpointUtil {
 
-    static List<Endpoint> convertEndpoints(List<Endpoint> endpoints, Struct filterMetadata) {
-        checkArgument(filterMetadata.getFieldsCount() > 0,
-                      "filterMetadata.getFieldsCount(): %s (expected: > 0)", filterMetadata.getFieldsCount());
-        final Predicate<Endpoint> lbEndpointPredicate = endpoint -> {
-            final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributeKeys.LB_ENDPOINT_KEY);
-            assert lbEndpoint != null;
-            final Struct endpointMetadata = lbEndpoint.getMetadata().getFilterMetadataOrDefault(
-                    SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance());
-            if (endpointMetadata.getFieldsCount() == 0) {
-                return false;
-            }
-            return containsFilterMetadata(filterMetadata, endpointMetadata);
-        };
-        return endpoints.stream().filter(lbEndpointPredicate).collect(toImmutableList());
-    }
-
-    private static boolean containsFilterMetadata(Struct filterMetadata, Struct endpointMetadata) {
-        final Map<String, Value> endpointMetadataMap = endpointMetadata.getFieldsMap();
-        for (Entry<String, Value> entry : filterMetadata.getFieldsMap().entrySet()) {
-            final Value value = endpointMetadataMap.get(entry.getKey());
-            if (value == null || !value.equals(entry.getValue())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    static EndpointGroup convertEndpointGroup(ClusterXdsResource clusterXdsResource,
-                                              EndpointSnapshot endpointSnapshot,
-                                              TransportSocketSnapshot transportSocket,
-                                              List<TransportSocketMatchSnapshot> transportSocketMatches) {
-        final Cluster cluster = clusterXdsResource.resource();
-        final EndpointGroup endpointGroup;
-        switch (cluster.getType()) {
-            case STATIC:
-            case EDS:
-                endpointGroup = staticEndpointGroup(endpointSnapshot, transportSocket,
-                                                    transportSocketMatches);
-                break;
-            case STRICT_DNS:
-                endpointGroup = strictDnsEndpointGroup(clusterXdsResource, endpointSnapshot,
-                                                       transportSocket, transportSocketMatches);
-                break;
-            default:
-                throw new UnsupportedOperationException(
-                        "Cluster (" + cluster.getName() + ") is attempting to use an " +
-                        "unsupported cluster type: (" + cluster.getType() + "). " +
-                        "Only (STATIC, STRICT_DNS, EDS) are supported.");
-        }
+    static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster) {
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
             if (healthCheck.hasHttpHealthCheck()) {
-                return maybeHealthChecked(endpointGroup, cluster, healthCheck);
+                final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
+                return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
+                        .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
+                        .build();
             }
         }
-        return endpointGroup;
+        return delegate;
     }
 
-    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster,
-                                                    HealthCheck healthCheck) {
-        final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
-        return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
-                .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
-                .build();
-    }
-
-    private static EndpointGroup staticEndpointGroup(
-            EndpointSnapshot endpointSnapshot, TransportSocketSnapshot transportSocket,
-            List<TransportSocketMatchSnapshot> transportSocketMatches) {
-        final List<Endpoint> endpoints = convertLoadAssignment(endpointSnapshot.xdsResource().resource(),
-                                                               transportSocket, transportSocketMatches);
-        return EndpointGroup.of(endpoints);
-    }
-
-    private static EndpointGroup strictDnsEndpointGroup(
-            ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
+    static List<Endpoint> convertLoadAssignment(
+            ClusterLoadAssignment clusterLoadAssignment,
             TransportSocketSnapshot transportSocket,
             List<TransportSocketMatchSnapshot> transportSocketMatches) {
-        final Cluster cluster = clusterXdsResource.resource();
-
-        final ImmutableList.Builder<EndpointGroup> endpointGroupBuilder = ImmutableList.builder();
-        final ClusterLoadAssignment loadAssignment = endpointSnapshot.xdsResource().resource();
-        for (LocalityLbEndpoints localityLbEndpoints: loadAssignment.getEndpointsList()) {
-            for (LbEndpoint lbEndpoint: localityLbEndpoints.getLbEndpointsList()) {
-                final io.envoyproxy.envoy.config.core.v3.Address address =
-                        lbEndpoint.getEndpoint().getAddress();
-                if (address.hasPipe()) {
-                    throw new UnsupportedOperationException(
-                            "Pipe addresses are not supported for STRICT_DNS cluster type");
-                }
-                final SocketAddress socketAddress = address.getSocketAddress();
-                final String dnsAddress = socketAddress.getAddress();
-                final DnsAddressEndpointGroupBuilder builder = DnsAddressEndpointGroup.builder(dnsAddress);
-                if (socketAddress.hasPortValue()) {
-                    builder.port(socketAddress.getPortValue());
-                }
-                if (!cluster.getRespectDnsTtl()) {
-                    final int refreshRateSeconds =
-                            cluster.hasDnsRefreshRate() ?
-                            Ints.saturatedCast(cluster.getDnsRefreshRate().getSeconds()) : 5;
-                    builder.ttl(refreshRateSeconds, refreshRateSeconds);
-
-                    if (cluster.hasDnsFailureRefreshRate()) {
-                        final RefreshRate failureRefreshRate = cluster.getDnsFailureRefreshRate();
-                        int baseSeconds = refreshRateSeconds;
-                        int maxSeconds = refreshRateSeconds;
-                        if (failureRefreshRate.hasBaseInterval()) {
-                            baseSeconds = Ints.saturatedCast(failureRefreshRate.getBaseInterval().getSeconds());
-                        }
-                        if (failureRefreshRate.hasMaxInterval()) {
-                            maxSeconds = Ints.saturatedCast(failureRefreshRate.getMaxInterval().getSeconds());
-                        }
-                        builder.backoff(Backoff.random(baseSeconds, maxSeconds));
-                    }
-                }
-
-                // wrap in an assigning EndpointGroup to set appropriate attributes
-                endpointGroupBuilder.add(new XdsAttributeAssigningEndpointGroup(
-                        builder.build(), localityLbEndpoints, lbEndpoint,
-                        transportSocket, transportSocketMatches));
-            }
-        }
-        return EndpointGroup.of(endpointGroupBuilder.build());
+        return clusterLoadAssignment
+                .getEndpointsList().stream()
+                .flatMap(localityLbEndpoints -> localityLbEndpoints
+                        .getLbEndpointsList()
+                        .stream()
+                        .map(lbEndpoint -> {
+                            final TransportSocketSnapshot matched =
+                                    TransportSocketMatchUtil.selectTransportSocket(
+                                            transportSocket, transportSocketMatches,
+                                            lbEndpoint, localityLbEndpoints);
+                            return XdsEndpoint.of(convertToEndpoint(lbEndpoint), localityLbEndpoints,
+                                                  lbEndpoint, matched)
+                                              .endpoint();
+                        }))
+                .collect(toImmutableList());
     }
 
-    private static List<Endpoint> convertLoadAssignment(
-            ClusterLoadAssignment clusterLoadAssignment, TransportSocketSnapshot transportSocket,
-            List<TransportSocketMatchSnapshot> transportSocketMatches) {
-        return clusterLoadAssignment.getEndpointsList().stream()
-                                    .flatMap(localityLbEndpoints -> localityLbEndpoints
-                                            .getLbEndpointsList()
-                                            .stream()
-                                            .map(lbEndpoint -> convertToEndpoint(localityLbEndpoints,
-                                                                                 lbEndpoint, transportSocket,
-                                                                                 transportSocketMatches)))
-                                    .collect(toImmutableList());
-    }
-
-    private static Endpoint convertToEndpoint(
-            LocalityLbEndpoints localityLbEndpoints, LbEndpoint lbEndpoint,
-            TransportSocketSnapshot transportSocket,
-            List<TransportSocketMatchSnapshot> transportSocketMatches) {
-        final io.envoyproxy.envoy.config.core.v3.Address address =
-                lbEndpoint.getEndpoint().getAddress();
-        final int weight = endpointWeight(lbEndpoint);
-        final TransportSocketSnapshot matchedTransport = TransportSocketMatchUtil.selectTransportSocket(
-                transportSocket, transportSocketMatches, lbEndpoint, localityLbEndpoints);
+    static Endpoint convertToEndpoint(LbEndpoint lbEndpoint) {
+        final Address address = lbEndpoint.getEndpoint().getAddress();
 
         if (address.hasPipe()) {
             final String pipePath = Paths.get(address.getPipe().getPath()).toAbsolutePath().toString();
-            return DomainSocketAddress.of(pipePath)
-                                      .asEndpoint()
-                                      .withAttr(XdsAttributeKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                                      .withAttr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
-                                      .withAttr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY, matchedTransport)
-                                      .withWeight(weight);
+            return DomainSocketAddress.of(pipePath).asEndpoint();
         }
 
         final SocketAddress socketAddress = address.getSocketAddress();
@@ -220,17 +90,9 @@ final class XdsEndpointUtil {
         final Endpoint endpoint;
         if (!Strings.isNullOrEmpty(hostname)) {
             endpoint = Endpoint.of(hostname)
-                               .withIpAddr(socketAddress.getAddress())
-                               .withAttr(XdsAttributeKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                               .withAttr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
-                               .withAttr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY, matchedTransport)
-                               .withWeight(weight);
+                               .withIpAddr(socketAddress.getAddress());
         } else {
-            endpoint = Endpoint.of(socketAddress.getAddress())
-                               .withAttr(XdsAttributeKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                               .withAttr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
-                               .withAttr(XdsCommonUtil.TRANSPORT_SOCKET_SNAPSHOT_KEY, matchedTransport)
-                               .withWeight(weight);
+            endpoint = Endpoint.of(socketAddress.getAddress());
         }
         if (socketAddress.hasPortValue()) {
             return endpoint.withPort(socketAddress.getPortValue());
@@ -238,9 +100,11 @@ final class XdsEndpointUtil {
         return endpoint;
     }
 
-    static int endpointWeight(LbEndpoint lbEndpoint) {
-        return lbEndpoint.hasLoadBalancingWeight() ?
-               Math.max(1, lbEndpoint.getLoadBalancingWeight().getValue()) : 1;
+    static SnapshotStream<List<Endpoint>> endpointGroupToStream(EndpointGroup group) {
+        return watcher -> {
+            group.addListener(endpoints -> watcher.onUpdate(endpoints, null), true);
+            return group::closeAsync;
+        };
     }
 
     private XdsEndpointUtil() {}
