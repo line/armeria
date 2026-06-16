@@ -502,6 +502,97 @@ class KubernetesEndpointGroupMockServerTest {
         }
     }
 
+    @Test
+    void nodePortModeAttachesPodAndNode() {
+        // In NODE_PORT mode, each endpoint should carry both the Pod and the Node it was derived from.
+        final List<Node> nodes = ImmutableList.of(newNode("1.1.1.1"), newNode("2.2.2.2"));
+        final Deployment deployment = newDeployment();
+        final int nodePort = 30000;
+        final Service service = newService(nodePort);
+        final List<Pod> pods = nodes.stream()
+                                    .map(node -> node.getMetadata().getName())
+                                    .map(nodeName -> newPod(deployment.getSpec().getTemplate(), nodeName))
+                                    .collect(toImmutableList());
+
+        for (Node node : nodes) {
+            client.nodes().resource(node).create();
+        }
+        for (Pod pod : pods) {
+            client.pods().resource(pod).create();
+        }
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .build()) {
+            final List<Endpoint> endpoints = endpointGroup.whenReady().join();
+            assertThat(endpoints).containsExactlyInAnyOrder(
+                    Endpoint.of("1.1.1.1", nodePort),
+                    Endpoint.of("2.2.2.2", nodePort));
+
+            for (Endpoint endpoint : endpoints) {
+                // newNode(ip) names the node "node-<ip>", and the endpoint host is the node IP.
+                final String nodeName = "node-" + endpoint.host();
+
+                final Node node = KubernetesResourceAccess.node(endpoint);
+                assertThat(node).isNotNull();
+                assertThat(node.getMetadata().getName()).isEqualTo(nodeName);
+
+                // The attached pod must be the one scheduled on the node behind this endpoint.
+                final Pod pod = KubernetesResourceAccess.pod(endpoint);
+                assertThat(pod).isNotNull();
+                assertThat(pod.getSpec().getNodeName()).isEqualTo(nodeName);
+            }
+        }
+    }
+
+    @Test
+    void podModeAttachesPodButNotNode() {
+        // In POD mode, each endpoint should carry the Pod, but no Node is involved.
+        final Deployment deployment = newDeployment();
+        final Service service = newService(null, "nginx", false);
+        service.getSpec().setType("ClusterIP");
+
+        final Pod pod1 = newPodWithIp(deployment.getSpec().getTemplate(), "pod-1", "10.0.0.1");
+        final Pod pod2 = newPodWithIp(deployment.getSpec().getTemplate(), "pod-2", "10.0.0.2");
+
+        client.pods().resource(pod1).create();
+        client.pods().resource(pod2).create();
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        try (KubernetesEndpointGroup endpointGroup =
+                     KubernetesEndpointGroup.builder(client, false)
+                                            .serviceName("nginx-service")
+                                            .mode(KubernetesEndpointMode.POD)
+                                            .build()) {
+            final List<Endpoint> endpoints = endpointGroup.whenReady().join();
+            assertThat(endpoints).containsExactlyInAnyOrder(
+                    Endpoint.of("10.0.0.1", 8080),
+                    Endpoint.of("10.0.0.2", 8080));
+
+            for (Endpoint endpoint : endpoints) {
+                // The attached pod must be the one whose podIP backs this endpoint.
+                final Pod pod = KubernetesResourceAccess.pod(endpoint);
+                assertThat(pod).isNotNull();
+                assertThat(pod.getStatus().getPodIP()).isEqualTo(endpoint.host());
+
+                // No Node is attached in POD mode.
+                assertThat(KubernetesResourceAccess.node(endpoint)).isNull();
+            }
+        }
+    }
+
+    @Test
+    void returnsNullWhenEndpointHasNoAttachedResource() {
+        // An endpoint that did not originate from a KubernetesEndpointGroup has no attached resources.
+        final Endpoint endpoint = Endpoint.of("1.1.1.1", 8080);
+        assertThat(KubernetesResourceAccess.pod(endpoint)).isNull();
+        assertThat(KubernetesResourceAccess.node(endpoint)).isNull();
+    }
+
     private static Pod newPodWithIp(PodTemplateSpec template, String podName, String podIp) {
         final PodSpec spec = template.getSpec()
                                      .toBuilder()
