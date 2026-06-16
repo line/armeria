@@ -153,6 +153,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
                                   if (accepted) {
                                       resolveSslContext(ctx, connectionCtx, lookupPromise);
                                   } else {
+                                      // connection rejected via connectionacceptor
                                       logger.trace("Connection for '{}' rejected", connectionCtx);
                                       lookupPromise.trySuccess(null);
                                   }
