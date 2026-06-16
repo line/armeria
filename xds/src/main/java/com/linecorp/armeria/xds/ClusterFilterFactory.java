@@ -37,12 +37,12 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
-import com.linecorp.armeria.xds.internal.XdsEndpoint;
 import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+import com.linecorp.armeria.xds.internal.XdsEndpoint;
 
 /**
  * A factory which injects cluster-related filters.

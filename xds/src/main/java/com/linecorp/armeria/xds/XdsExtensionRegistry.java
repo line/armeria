@@ -24,6 +24,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory;
@@ -38,6 +39,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <p>Also serves as the single entry point for {@link Any}-related operations:
  * factory lookup ({@link #query}) and proto decode ({@link #unpack}).
  */
+@UnstableApi
 public final class XdsExtensionRegistry {
 
     private final Map<String, XdsExtensionFactory> byTypeUrl;

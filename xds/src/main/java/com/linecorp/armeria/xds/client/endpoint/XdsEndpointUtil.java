@@ -27,6 +27,7 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
 import com.linecorp.armeria.xds.internal.XdsEndpoint;
@@ -89,8 +90,10 @@ final class XdsEndpointUtil {
         final String hostname = lbEndpoint.getEndpoint().getHostname();
         final Endpoint endpoint;
         if (!Strings.isNullOrEmpty(hostname)) {
-            endpoint = Endpoint.of(hostname)
-                               .withIpAddr(socketAddress.getAddress());
+            final Endpoint hostnameEndpoint = Endpoint.of(hostname);
+            final String addr = socketAddress.getAddress();
+            endpoint = IpAddrUtil.normalize(addr) != null ? hostnameEndpoint.withIpAddr(addr)
+                                                          : hostnameEndpoint;
         } else {
             endpoint = Endpoint.of(socketAddress.getAddress());
         }

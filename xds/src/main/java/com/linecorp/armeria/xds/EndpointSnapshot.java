@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -34,6 +36,7 @@ public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
      * Creates a new {@link EndpointSnapshot} from the given {@link ClusterLoadAssignment}.
      */
     public static EndpointSnapshot of(ClusterLoadAssignment loadAssignment) {
+        requireNonNull(loadAssignment, "loadAssignment");
         return new EndpointSnapshot(new EndpointXdsResource(loadAssignment));
     }
 

@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import java.util.HashMap;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -26,9 +29,11 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -43,6 +48,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
  * A {@link ClusterTypeFactory} for STRICT_DNS cluster types that resolves
  * endpoints via DNS lookups.
  */
+@UnstableApi
 public final class StrictDnsClusterTypeFactory implements ClusterTypeFactory {
 
     static final String NAME = "armeria.cluster.strict_dns";
@@ -83,7 +89,7 @@ public final class StrictDnsClusterTypeFactory implements ClusterTypeFactory {
                              .map(localities -> EndpointSnapshot.of(
                                      loadAssignment.toBuilder()
                                                    .clearEndpoints()
-                                                   .addAllEndpoints(localities)
+                                                   .addAllEndpoints(mergeLocalities(localities))
                                                    .build()));
     }
 
@@ -105,6 +111,16 @@ public final class StrictDnsClusterTypeFactory implements ClusterTypeFactory {
         return builder.build();
     }
 
+    private static List<LocalityLbEndpoints> mergeLocalities(List<LocalityLbEndpoints> localities) {
+        final HashMap<LocalityLbEndpoints, LocalityLbEndpoints.Builder> merged = new HashMap<>();
+        for (LocalityLbEndpoints lle : localities) {
+            final LocalityLbEndpoints key = lle.toBuilder().clearLbEndpoints().build();
+            merged.computeIfAbsent(key, LocalityLbEndpoints::toBuilder)
+                  .addAllLbEndpoints(lle.getLbEndpointsList());
+        }
+        return merged.values().stream().map(LocalityLbEndpoints.Builder::build).collect(toImmutableList());
+    }
+
     private static EndpointGroup buildDnsGroup(Cluster cluster, SocketAddress socketAddress) {
         final DnsAddressEndpointGroupBuilder builder =
                 DnsAddressEndpointGroup.builder(socketAddress.getAddress());
@@ -112,24 +128,23 @@ public final class StrictDnsClusterTypeFactory implements ClusterTypeFactory {
             builder.port(socketAddress.getPortValue());
         }
         if (!cluster.getRespectDnsTtl()) {
-            final int refreshRateSeconds =
+            final long refreshRateMillis =
                     cluster.hasDnsRefreshRate() ?
-                    Ints.saturatedCast(cluster.getDnsRefreshRate().getSeconds()) : 5;
+                    XdsCommonUtil.durationToMillis(cluster.getDnsRefreshRate()) : 5000L;
+            final int refreshRateSeconds = Ints.saturatedCast(refreshRateMillis / 1000);
             builder.ttl(refreshRateSeconds, refreshRateSeconds);
 
             if (cluster.hasDnsFailureRefreshRate()) {
                 final RefreshRate failureRefreshRate = cluster.getDnsFailureRefreshRate();
-                int baseSeconds = refreshRateSeconds;
-                int maxSeconds = refreshRateSeconds;
+                long baseMillis = refreshRateMillis;
+                long maxMillis = refreshRateMillis;
                 if (failureRefreshRate.hasBaseInterval()) {
-                    baseSeconds = Ints.saturatedCast(
-                            failureRefreshRate.getBaseInterval().getSeconds());
+                    baseMillis = XdsCommonUtil.durationToMillis(failureRefreshRate.getBaseInterval());
                 }
                 if (failureRefreshRate.hasMaxInterval()) {
-                    maxSeconds = Ints.saturatedCast(
-                            failureRefreshRate.getMaxInterval().getSeconds());
+                    maxMillis = XdsCommonUtil.durationToMillis(failureRefreshRate.getMaxInterval());
                 }
-                builder.backoff(Backoff.random(baseSeconds, maxSeconds));
+                builder.backoff(Backoff.random(baseMillis, maxMillis));
             }
         }
         return builder.build();

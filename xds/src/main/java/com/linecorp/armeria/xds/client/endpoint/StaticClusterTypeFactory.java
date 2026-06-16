@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.ClusterXdsResource;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 import com.linecorp.armeria.xds.filter.FactoryContext;
@@ -25,6 +26,7 @@ import com.linecorp.armeria.xds.stream.SnapshotStream;
  * A {@link ClusterTypeFactory} for STATIC cluster types that uses the inline
  * {@code load_assignment} from the cluster configuration.
  */
+@UnstableApi
 public final class StaticClusterTypeFactory implements ClusterTypeFactory {
 
     static final String NAME = "armeria.cluster.static";
