@@ -89,7 +89,7 @@
     "node-fetch": "^3.3.2",
     "prettier": "^3.5.0",
     "source-map-explorer": "^2.5.2",
-    "tsx": "^4.20.5",
+    "tsx": "^4.22.4",
     "typescript": ">=5.1.0 <5.2.0"
   },
   "browserslist": {
