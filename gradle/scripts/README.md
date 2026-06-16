@@ -36,6 +36,7 @@ sensible defaults. By applying them, you can:
 - [Setting a Kotlin target version with the `kotlin(\\d+\\.\\d+)` flag](#setting-a-koltin-target-version-with-the-kotlindd-flag)
 - [Automatic module names](#automatic-module-names)
 - [Tagging conveniently with `release` task](#tagging-conveniently-with-release-task)
+- [Using a Maven Central mirror](#using-a-maven-central-mirror)
 
 <!-- /MarkdownTOC -->
 
@@ -759,3 +760,25 @@ instructions after tagging:
 Note the `${tag}`, which is replaced with the tag name.
 See [Groovy `SimpleTemplateEngine`](http://docs.groovy-lang.org/docs/next/html/documentation/template-engines.html#_simpletemplateengine)
 for the syntax.
+
+## Using a Maven Central mirror
+
+If your organization blocks direct access to Maven Central (e.g. for supply chain security), you can
+redirect all Maven Central requests to an internal mirror by setting the `mavenCentralMirror` Gradle
+property.
+
+Add to `~/.gradle/gradle.properties`:
+
+```properties
+mavenCentralMirror=https://your-mirror.example.com/repository/maven-central/
+```
+
+Or pass via the CLI:
+
+```bash
+./gradlew build -PmavenCentralMirror=https://your-mirror.example.com/repository/maven-central/
+```
+
+When set, the mirror URL replaces `mavenCentral()` in all repository declarations including
+`settings.gradle`, `buildSrc`, and `buildscript` blocks of applied scripts. When unset, behavior
+is identical to the default — fully backward compatible.
