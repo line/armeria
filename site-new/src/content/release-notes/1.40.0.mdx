@@ -1,5 +1,5 @@
 ---
-date: 2026-06-15
+date: 2026-06-17
 ---
 
 # v1.40.0
@@ -70,9 +70,11 @@ date: 2026-06-15
   ```
 - **xDS Credential Injector Filter**: xDS extension factories can now build reactive filter
   pipelines that depend on external resources like SDS secrets. The new
-  `CredentialInjectorFilterFactory` injects credentials from SDS-backed generic secrets into
+  [CredentialInjectorFilterFactory](type) injects credentials from SDS-backed generic secrets into
   outgoing HTTP requests, supporting the `envoy.filters.http.credential_injector` filter
   type. #6785
+- Endpoints created by [KubernetesEndpointGroup](type) now carry their originating `Pod`
+  and `Node` as endpoint attributes. This can be retrieved via [KubernetesResourceAccess](type). #6814
 
 ## 📈 Improvements
 
@@ -99,7 +101,6 @@ date: 2026-06-15
 
 ## ⛓ Dependencies
 
-- ASM 9.9.1 → 9.10.1
 - Athenz 1.12.40 → 1.12.42
 - BlockHound 1.0.16.RELEASE → 1.0.17.RELEASE
 - Dropwizard Metrics 4.2.38 → 4.2.39
