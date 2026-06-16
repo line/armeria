@@ -49,10 +49,10 @@ import io.netty.util.AttributeKey;
 public final class KubernetesResourceAccess {
 
     static final AttributeKey<Node> NODE_KEY =
-            AttributeKey.valueOf(KubernetesResourceAccess.class, "NODE");
+            AttributeKey.valueOf(KubernetesResourceAccess.class, "NODE_KEY");
 
     static final AttributeKey<Pod> POD_KEY =
-            AttributeKey.valueOf(KubernetesResourceAccess.class, "POD");
+            AttributeKey.valueOf(KubernetesResourceAccess.class, "POD_KEY");
 
     /**
      * Returns the {@link Node} the specified {@link Endpoint} was derived from, or {@code null} if the
