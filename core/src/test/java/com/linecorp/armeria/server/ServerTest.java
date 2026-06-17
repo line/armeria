@@ -232,10 +232,11 @@ class ServerTest {
                       .service("/", (ctx, req) -> HttpResponse.of(200))
                       .build();
 
-        // .. which will fail with an IOException.
+        // .. which will fail with a ServerPortBindException whose root cause is an IOException.
         assertThatThrownBy(() -> serverAtSamePort.start().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IOException.class);
+                .hasCauseInstanceOf(ServerPortBindException.class)
+                .hasRootCauseInstanceOf(IOException.class);
 
         // A failed bind attempt must not leave a dangling boss group thread.
         final long numBossThreads =
@@ -379,7 +380,8 @@ class ServerTest {
                                                   .service("/", (ctx, res) -> HttpResponse.of(""))
                                                   .build();
         assertThatThrownBy(() -> duplicatedPortServer.start().join())
-                .hasCauseInstanceOf(IOException.class);
+                .hasCauseInstanceOf(ServerPortBindException.class)
+                .hasRootCauseInstanceOf(IOException.class);
     }
 
     @Test

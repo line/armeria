@@ -30,6 +30,7 @@ import org.springframework.context.SmartLifecycle;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerPortBindException;
 
 class RetryableArmeriaServerGracefulShutdownLifecycleTest {
 
@@ -47,8 +48,9 @@ class RetryableArmeriaServerGracefulShutdownLifecycleTest {
         // Make sure that `failingServer` is unable to start because of the port collision.
         assertThatThrownBy(() -> failingServer.start().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IOException.class)
-                .hasMessageContaining("Address already in use");
+                .hasCauseInstanceOf(ServerPortBindException.class)
+                .hasRootCauseInstanceOf(IOException.class)
+                .hasStackTraceContaining("Address already in use");
 
         final SmartLifecycle lifecycle =
                 new RetryableArmeriaServerGracefulShutdownLifecycle(failingServer, 100);
