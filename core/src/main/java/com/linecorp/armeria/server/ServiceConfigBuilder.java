@@ -353,9 +353,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                         String baseContextPath, Supplier<AutoCloseable> contextHook) {
-        ServiceErrorHandler errorHandler =
+        ServiceErrorHandler errorHandler = ErrorHandlerDecorators.decorate(
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
-                                            : defaultServiceErrorHandler;
+                                            : defaultServiceErrorHandler);
         if (unloggedExceptionsReporter != null) {
             errorHandler = new ExceptionReportingServiceErrorHandler(errorHandler,
                                                                      unloggedExceptionsReporter);
