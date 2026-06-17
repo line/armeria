@@ -42,6 +42,14 @@ import io.netty.handler.ssl.SslContextBuilder;
 @UnstableApi
 public final class ServerTlsSpec extends AbstractTlsSpec {
 
+    /**
+     * Returns a new {@link ServerTlsSpecBuilder}.
+     */
+    @UnstableApi
+    public static ServerTlsSpecBuilder builder() {
+        return new ServerTlsSpecBuilder();
+    }
+
     private final ClientAuth clientAuth;
     private final String hostnamePattern;
 
@@ -115,11 +123,4 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
                           .toString();
     }
 
-    /**
-     * Returns a new {@link ServerTlsSpecBuilder}.
-     */
-    @UnstableApi
-    public static ServerTlsSpecBuilder builder() {
-        return new ServerTlsSpecBuilder();
-    }
 }

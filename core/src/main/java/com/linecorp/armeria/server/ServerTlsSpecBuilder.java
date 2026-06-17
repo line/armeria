@@ -35,7 +35,7 @@ import io.netty.handler.ssl.SslContextBuilder;
  * A builder for {@link ServerTlsSpec}.
  */
 @UnstableApi
-public class ServerTlsSpecBuilder extends AbstractTlsSpecBuilder<ServerTlsSpecBuilder, ServerTlsSpec> {
+public final class ServerTlsSpecBuilder extends AbstractTlsSpecBuilder<ServerTlsSpecBuilder, ServerTlsSpec> {
 
     private ClientAuth clientAuth = ClientAuth.NONE;
     private String hostnamePattern = "UNKNOWN";
