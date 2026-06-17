@@ -122,5 +122,4 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
                           .add("allowUnsafeCiphers", allowUnsafeCiphers())
                           .toString();
     }
-
 }
