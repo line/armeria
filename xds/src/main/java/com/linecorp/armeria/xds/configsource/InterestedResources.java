@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -35,13 +36,7 @@ public final class InterestedResources {
     private final XdsType type;
     private final Set<String> resourceNames;
 
-    /**
-     * Creates a new {@link InterestedResources} instance.
-     *
-     * @param type the xDS resource type
-     * @param resourceNames the set of resource names currently subscribed
-     */
-    public InterestedResources(XdsType type, Set<String> resourceNames) {
+    InterestedResources(XdsType type, Set<String> resourceNames) {
         this.type = requireNonNull(type, "type");
         this.resourceNames = ImmutableSet.copyOf(requireNonNull(resourceNames, "resourceNames"));
     }
@@ -58,5 +53,13 @@ public final class InterestedResources {
      */
     public Set<String> resourceNames() {
         return resourceNames;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("type", type)
+                          .add("resourceNames", resourceNames)
+                          .toString();
     }
 }

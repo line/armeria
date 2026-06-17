@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ class CompositeSnapshotWatcher<T extends XdsResource> implements SnapshotWatcher
     private final String resource;
     @Nullable
     private ScheduledFuture<?> initialAbsentFuture;
-    private final Set<SnapshotWatcher<? super T>> watchers = new CopyOnWriteArraySet<>();
+    private final Set<SnapshotWatcher<? super T>> watchers = new HashSet<>();
 
     CompositeSnapshotWatcher(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis,
                              boolean enableAbsentOnTimeout) {
