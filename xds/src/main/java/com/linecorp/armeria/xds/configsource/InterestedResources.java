@@ -33,10 +33,17 @@ import com.linecorp.armeria.xds.XdsType;
 @UnstableApi
 public final class InterestedResources {
 
+    /**
+     * Creates a new {@link InterestedResources} instance.
+     */
+    public static InterestedResources of(XdsType type, Set<String> resourceNames) {
+        return new InterestedResources(type, resourceNames);
+    }
+
     private final XdsType type;
     private final Set<String> resourceNames;
 
-    InterestedResources(XdsType type, Set<String> resourceNames) {
+    private InterestedResources(XdsType type, Set<String> resourceNames) {
         this.type = requireNonNull(type, "type");
         this.resourceNames = ImmutableSet.copyOf(requireNonNull(resourceNames, "resourceNames"));
     }

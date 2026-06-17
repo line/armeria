@@ -95,7 +95,7 @@ final class ConfigSourceHandler implements SafeCloseable {
     void addSubscriber(XdsType type, String resourceName, SnapshotWatcher<? extends XdsResource> watcher) {
         if (stateCoordinator.register(type, resourceName, watcher)) {
             interestPublisher.publish(
-                    new InterestedResources(type, stateCoordinator.interestedResources(type)));
+                    InterestedResources.of(type, stateCoordinator.interestedResources(type)));
         }
     }
 
@@ -103,7 +103,7 @@ final class ConfigSourceHandler implements SafeCloseable {
                              SnapshotWatcher<? extends XdsResource> watcher) {
         if (stateCoordinator.unregister(type, resourceName, watcher)) {
             interestPublisher.publish(
-                    new InterestedResources(type, stateCoordinator.interestedResources(type)));
+                    InterestedResources.of(type, stateCoordinator.interestedResources(type)));
         }
         return stateCoordinator.hasNoSubscribers();
     }
