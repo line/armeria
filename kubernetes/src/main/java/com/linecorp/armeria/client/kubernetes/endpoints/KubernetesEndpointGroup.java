@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.client.kubernetes.endpoints.KubernetesResourceAccess.NODE_KEY;
+import static com.linecorp.armeria.client.kubernetes.endpoints.KubernetesResourceAccess.POD_KEY;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -129,6 +131,11 @@ import io.fabric8.kubernetes.client.WatcherException;
  *   .portName("http")
  *   .build();
  * }</pre>
+ *
+ * <p>Each {@link Endpoint} created by a {@link KubernetesEndpointGroup} carries the {@link Pod} it was
+ * derived from as an attribute, and additionally the {@link Node} the {@link Pod} is running on in
+ * {@link KubernetesEndpointMode#NODE_PORT} mode. Use {@link KubernetesResourceAccess#pod(Endpoint)} and
+ * {@link KubernetesResourceAccess#node(Endpoint)} to retrieve them.
  */
 @UnstableApi
 public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
@@ -249,8 +256,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final KubernetesEndpointMode mode;
 
     // NODE_PORT mode maps
-    private final Map<String, String> podToNode = new NonBlockingHashMap<>();
-    private final Map<String, String> nodeToIp = new NonBlockingHashMap<>();
+    private final Map<String, Pod> podMap = new NonBlockingHashMap<>();
+    private final Map<String, NodeAndIp> nodeMap = new NonBlockingHashMap<>();
     @Nullable
     private volatile Integer nodePort;
 
@@ -323,8 +330,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         try {
             // Change the updateId to ensure that outdated watchers do not update endpoints.
             updateId++;
-            nodeToIp.clear();
-            podToNode.clear();
+            nodeMap.clear();
+            podMap.clear();
             podToEndpoint.clear();
         } finally {
             updateLock.unlock();
@@ -579,7 +586,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         if (action == Action.ERROR || action == Action.BOOKMARK) {
             return false;
         }
-        final String podName = resource.getMetadata().getName();
+        final String podName = getPodName(resource);
         if (podName == null) {
             logger.debug("[{}/{}] Pod name is null.", namespace, serviceName);
             return false;
@@ -595,8 +602,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
+    private static String getPodName(Pod pod) {
+        return pod.getMetadata().getName();
+    }
+
+    private static String getNodeName(Pod pod) {
+        return pod.getSpec().getNodeName();
+    }
+
     private boolean updatePodForNodePortMode(Action action, String podName, Pod resource) {
-        final String nodeName = resource.getSpec().getNodeName();
+        final String nodeName = getNodeName(resource);
         logger.debug("[{}/{}] Pod event received. action: {}, pod: {}, node: {}, resource version: {}",
                      namespace, serviceName, action, podName, nodeName,
                      resource.getMetadata().getResourceVersion());
@@ -609,10 +624,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         switch (action) {
             case ADDED:
             case MODIFIED:
-                podToNode.put(podName, nodeName);
+                podMap.put(podName, resource);
                 break;
             case DELETED:
-                podToNode.remove(podName);
+                podMap.remove(podName);
                 break;
             default:
         }
@@ -652,10 +667,10 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         final Integer containerPort = findContainerPort(pod);
         if (containerPort == null) {
             logger.warn("[{}/{}] No matching container port found in pod: {}",
-                        namespace, serviceName, pod.getMetadata().getName());
+                        namespace, serviceName, getPodName(pod));
             return null;
         }
-        return Endpoint.of(podIp, containerPort);
+        return Endpoint.of(podIp, containerPort).withAttr(POD_KEY, pod);
     }
 
     @Nullable
@@ -691,7 +706,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
      * Fetches the internal IPs of the node.
      */
     private Watch doWatchNode(long updateId, String resourceVersion) {
-        final Watcher<Node> watcher = new Watcher<Node>() {
+        final Watcher<Node> watcher = new Watcher<>() {
             @Override
             public void eventReceived(Action action, Node node) {
                 if (closed) {
@@ -742,20 +757,20 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 } catch (Throwable ex) {
                     logger.warn("[{}/{}] Failed to extract the IP address of the node: {}",
                                 namespace, serviceName, nodeName, ex);
-                    nodeToIp.remove(nodeName);
+                    nodeMap.remove(nodeName);
                     return true;
                 }
 
                 if (nodeIp == null) {
                     logger.debug("[{}/{}] No matching IP address is found in {}. node: {}",
                                  namespace, serviceName, nodeName, node);
-                    nodeToIp.remove(nodeName);
+                    nodeMap.remove(nodeName);
                 } else {
-                    nodeToIp.put(nodeName, nodeIp);
+                    nodeMap.put(nodeName, new NodeAndIp(nodeIp, node));
                 }
                 break;
             case DELETED:
-                nodeToIp.remove(nodeName);
+                nodeMap.remove(nodeName);
                 break;
         }
         return true;
@@ -828,12 +843,12 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         final List<Endpoint> endpoints;
         switch (mode) {
             case NODE_PORT:
-                if (nodeToIp.isEmpty()) {
+                if (nodeMap.isEmpty()) {
                     // No event received for the nodes yet.
                     return;
                 }
 
-                if (podToNode.isEmpty()) {
+                if (podMap.isEmpty()) {
                     // No event received for the pods yet.
                     return;
                 }
@@ -841,16 +856,19 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 final Integer nodePort = this.nodePort;
                 assert nodePort != null;
                 endpoints =
-                        podToNode.values().stream()
-                                 .map(nodeName -> {
-                                     final String nodeIp = nodeToIp.get(nodeName);
-                                     if (nodeIp == null) {
+                        podMap.values().stream()
+                              .map(pod -> {
+                                     final String nodeName = getNodeName(pod);
+                                     final NodeAndIp nodeAndIp = nodeMap.get(nodeName);
+                                     if (nodeAndIp == null) {
                                          return null;
                                      }
-                                     return Endpoint.of(nodeIp, nodePort);
+                                     return Endpoint.of(nodeAndIp.nodeIp, nodePort)
+                                                    .withAttr(POD_KEY, pod)
+                                                    .withAttr(NODE_KEY, nodeAndIp.node);
                                  })
-                                 .filter(Objects::nonNull)
-                                 .collect(toImmutableList());
+                              .filter(Objects::nonNull)
+                              .collect(toImmutableList());
                 break;
             case POD:
                 endpoints = ImmutableList.copyOf(podToEndpoint.values());
@@ -906,6 +924,30 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             task.run();
         } finally {
             updateLock.unlock();
+        }
+    }
+
+    private static final class NodeAndIp {
+        final String nodeIp;
+        final Node node;
+
+        NodeAndIp(String nodeIp, Node node) {
+            this.nodeIp = nodeIp;
+            this.node = node;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof NodeAndIp)) {
+                return false;
+            }
+            final NodeAndIp nodeAndIp = (NodeAndIp) o;
+            return nodeIp.equals(nodeAndIp.nodeIp) && node.equals(nodeAndIp.node);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(nodeIp, node);
         }
     }
 }
