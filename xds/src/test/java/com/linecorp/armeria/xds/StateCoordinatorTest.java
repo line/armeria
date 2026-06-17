@@ -24,6 +24,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -55,7 +57,7 @@ class StateCoordinatorTest {
         final StateCoordinator coordinator = new StateCoordinator(
                 eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
         final ClusterXdsResource resource =
-                new ClusterXdsResource(createCluster(CLUSTER_NAME), "1").withRevision(1);
+                new ClusterXdsResource(createCluster(CLUSTER_NAME), "1", null).withRevision(1);
 
         final AtomicReference<XdsResource> changed = new AtomicReference<>();
         final SnapshotWatcher<XdsResource> watcher = (value, error) -> {
@@ -78,7 +80,7 @@ class StateCoordinatorTest {
         final StateCoordinator coordinator = new StateCoordinator(
                 eventLoop.get(), ConfigSource.getDefaultInstance(), false, extensionRegistry);
         final ClusterXdsResource resource =
-                new ClusterXdsResource(createCluster(CLUSTER_NAME), "1").withRevision(1);
+                new ClusterXdsResource(createCluster(CLUSTER_NAME), "1", null).withRevision(1);
 
         // First register + store a resource
         final SnapshotWatcher<XdsResource> noopWatcher = (value, error) -> {};
@@ -166,7 +168,8 @@ class StateCoordinatorTest {
         return XdsExtensionRegistry.of(new XdsResourceValidator(),
                                        watchService,
                                        meterRegistry,
-                                       new MeterIdPrefix("test"));
+                                       new MeterIdPrefix("test"),
+                                       ImmutableList.of());
     }
 
     private static Cluster createCluster(String name) {

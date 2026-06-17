@@ -172,24 +172,22 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     }
 
     private void handleResponse(ResourceParser<?, ?> resourceParser, DiscoveryResponse response) {
-        final StateCoordinator stateCoordinator = stateCoordinator();
-        final ParsedResourcesHolder holder =
+        final ParsedResources.SotwParsedResources holder =
                 resourceParser.parseResources(response.getResourcesList(),
-                                              stateCoordinator.extensionRegistry(), response.getVersionInfo());
+                                              stateCoordinator().extensionRegistry(),
+                                              response.getVersionInfo());
 
         final XdsType type = resourceParser.type();
         if (!holder.errors().isEmpty()) {
-            holder.invalidResources().forEach((name, error) -> stateCoordinator.onResourceError(
-                    type, name, error));
+            owner.emit(holder, null);
             lifecycleObserver.resourceRejected(type, response, holder.invalidResources());
             nackResponse(type, response.getNonce(),
                          String.join("\n", holder.errors()));
             return;
         }
 
-        stateCoordinator.onSotwConfigUpdate(type, holder.parsedResources());
+        owner.emit(holder, null);
         lifecycleObserver.resourceUpdated(type, response, holder.parsedResources());
-        // send the ack
         ackResponse(type, response.getVersionInfo(), response.getNonce());
     }
 }

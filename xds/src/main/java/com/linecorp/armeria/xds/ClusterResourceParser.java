@@ -16,9 +16,17 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.protobuf.Any;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions;
 
 final class ClusterResourceParser extends ResourceParser<Cluster, ClusterXdsResource> {
+
+    private static final String HTTP_PROTOCOL_OPTIONS_KEY =
+            "envoy.extensions.upstreams.http.v3.HttpProtocolOptions";
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
@@ -26,7 +34,17 @@ final class ClusterResourceParser extends ResourceParser<Cluster, ClusterXdsReso
 
     @Override
     ClusterXdsResource parse(Cluster cluster, XdsExtensionRegistry registry, String version) {
-        return new ClusterXdsResource(cluster, version);
+        return new ClusterXdsResource(cluster, version, parseHttpProtocolOptions(cluster, registry));
+    }
+
+    @Nullable
+    private static HttpProtocolOptions parseHttpProtocolOptions(Cluster cluster,
+                                                                 XdsExtensionRegistry registry) {
+        final Any any = cluster.getTypedExtensionProtocolOptionsMap().get(HTTP_PROTOCOL_OPTIONS_KEY);
+        if (any == null) {
+            return null;
+        }
+        return registry.unpack(any, HttpProtocolOptions.class);
     }
 
     @Override

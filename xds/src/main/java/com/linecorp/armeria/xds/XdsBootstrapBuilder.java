@@ -17,10 +17,17 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -28,6 +35,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
+import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,6 +49,8 @@ import io.netty.util.concurrent.EventExecutor;
 @UnstableApi
 public final class XdsBootstrapBuilder {
 
+    static final Set<Class<? extends XdsExtensionFactory>> ALLOWED_EXTENSION_TYPES =
+            ImmutableSet.of(HttpFilterFactory.class, SotwConfigSourceSubscriptionFactory.class);
     static final MeterIdPrefix DEFAULT_METER_ID_PREFIX = new MeterIdPrefix("armeria.xds");
     private static final Logger logger = LoggerFactory.getLogger(XdsBootstrapBuilder.class);
 
@@ -81,6 +92,7 @@ public final class XdsBootstrapBuilder {
     private EventExecutor eventExecutor;
     private final Bootstrap bootstrap;
     private SnapshotWatcher<Object> snapshotWatcher = DEFAULT_SNAPSHOT_WATCHER;
+    private final List<XdsExtensionFactory> extensionFactories = new ArrayList<>();
 
     XdsBootstrapBuilder(Bootstrap bootstrap) {
         this.bootstrap = requireNonNull(bootstrap, "bootstrap");
@@ -120,11 +132,28 @@ public final class XdsBootstrapBuilder {
     }
 
     /**
+     * Adds an {@link XdsExtensionFactory} that takes precedence over those
+     * discovered via {@link java.util.ServiceLoader}.
+     */
+    public XdsBootstrapBuilder extensionFactory(XdsExtensionFactory factory) {
+        requireNonNull(factory, "factory");
+        validateExtensionFactory(factory);
+        extensionFactories.add(factory);
+        return this;
+    }
+
+    static void validateExtensionFactory(XdsExtensionFactory factory) {
+        checkArgument(ALLOWED_EXTENSION_TYPES.stream().anyMatch(t -> t.isInstance(factory)),
+                      "Unsupported extension factory type: %s. Allowed types: %s",
+                      factory.getClass().getName(), ALLOWED_EXTENSION_TYPES);
+    }
+
+    /**
      * Builds the {@link XdsBootstrap}.
      */
     public XdsBootstrap build() {
         final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
         return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
-                                    snapshotWatcher);
+                                    snapshotWatcher, extensionFactories);
     }
 }

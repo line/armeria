@@ -53,7 +53,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
         this.loadBalancer = loadBalancer;
         endpointSnapshot = loadBalancer.endpointSnapshot();
         this.transportSocketMatches = transportSocketMatches;
-        final ClusterFilterFactory factory = new ClusterFilterFactory(loadBalancer, transportSocket);
+        final ClusterFilterFactory factory =
+                new ClusterFilterFactory(loadBalancer, transportSocket, clusterXdsResource);
         httpPreprocessor = factory.httpPreprocessor();
         rpcPreprocessor = factory.rpcPreprocessor();
     }

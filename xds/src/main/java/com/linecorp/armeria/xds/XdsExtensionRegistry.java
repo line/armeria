@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 
@@ -26,7 +28,6 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -54,7 +55,8 @@ final class XdsExtensionRegistry {
     static XdsExtensionRegistry of(XdsResourceValidator validator,
                                    DirectoryWatchService watchService,
                                    MeterRegistry meterRegistry,
-                                   MeterIdPrefix meterIdPrefix) {
+                                   MeterIdPrefix meterIdPrefix,
+                                   List<XdsExtensionFactory> extensionFactories) {
         final ImmutableMap.Builder<String, XdsExtensionFactory> byName = ImmutableMap.builder();
         final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
 
@@ -62,13 +64,9 @@ final class XdsExtensionRegistry {
                  byName, byTypeUrl);
         register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
 
-        // Load SPI-discovered HttpFilterFactory instances as base factories
-        ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
-            register(factory, byName, byTypeUrl);
-        });
-
-        // Load SPI-discovered SotwConfigSourceSubscriptionFactory instances
-        ServiceLoader.load(SotwConfigSourceSubscriptionFactory.class).forEach(factory -> {
+        // Load SPI-discovered extension factories
+        ServiceLoader.load(XdsExtensionFactory.class).forEach(factory -> {
+            XdsBootstrapBuilder.validateExtensionFactory(factory);
             register(factory, byName, byTypeUrl);
         });
 
@@ -79,7 +77,19 @@ final class XdsExtensionRegistry {
         register(UpstreamTlsTransportSocketFactory.INSTANCE, byName, byTypeUrl);
         register(RawBufferTransportSocketFactory.INSTANCE, byName, byTypeUrl);
 
-        return new XdsExtensionRegistry(byTypeUrl.build(), byName.build(), validator);
+        final Map<String, XdsExtensionFactory> nameMap = new HashMap<>(byName.build());
+        final Map<String, XdsExtensionFactory> typeUrlMap = new HashMap<>(byTypeUrl.build());
+
+        // User-provided factories override all of the above
+        for (XdsExtensionFactory factory : extensionFactories) {
+            nameMap.put(factory.name(), factory);
+            for (String typeUrl : factory.typeUrls()) {
+                typeUrlMap.put(typeUrl, factory);
+            }
+        }
+
+        return new XdsExtensionRegistry(ImmutableMap.copyOf(typeUrlMap),
+                                        ImmutableMap.copyOf(nameMap), validator);
     }
 
     private static void register(XdsExtensionFactory factory,

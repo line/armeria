@@ -18,21 +18,28 @@ package com.linecorp.armeria.xds;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 
-final class ParsedResourcesHolder {
+abstract class ParsedResources {
+    private final XdsType type;
     private final Map<String, Object> parsedResources;
     private final Map<String, Throwable> invalidResources;
     private final List<String> errors;
 
-    ParsedResourcesHolder(Map<String, Object> parsedResources,
-                          Map<String, Throwable> invalidResources) {
+    ParsedResources(XdsType type, Map<String, Object> parsedResources,
+                    Map<String, Throwable> invalidResources) {
+        this.type = type;
         this.parsedResources = parsedResources;
         this.invalidResources = invalidResources;
         errors = invalidResources.values().stream()
                                  .map(Throwable::getMessage)
                                  .collect(ImmutableList.toImmutableList());
+    }
+
+    XdsType type() {
+        return type;
     }
 
     Map<String, Object> parsedResources() {
@@ -45,5 +52,35 @@ final class ParsedResourcesHolder {
 
     List<String> errors() {
         return errors;
+    }
+
+    static final class DeltaParsedResources extends ParsedResources {
+
+        private final Set<String> removed;
+
+        DeltaParsedResources(XdsType type, Map<String, Object> parsedResources,
+                             Map<String, Throwable> invalidResources, Set<String> removed) {
+            super(type, parsedResources, invalidResources);
+            this.removed = removed;
+        }
+
+        Set<String> removed() {
+            return removed;
+        }
+    }
+
+    static final class SotwParsedResources extends ParsedResources {
+
+        private final boolean fullStateOfTheWorld;
+
+        SotwParsedResources(XdsType type, Map<String, Object> parsedResources,
+                            Map<String, Throwable> invalidResources, boolean fullStateOfTheWorld) {
+            super(type, parsedResources, invalidResources);
+            this.fullStateOfTheWorld = fullStateOfTheWorld;
+        }
+
+        boolean isFullStateOfTheWorld() {
+            return fullStateOfTheWorld;
+        }
     }
 }
