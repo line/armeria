@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -44,7 +45,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
                      SnapshotWatcher<Object> defaultWatcher,
-                     DataSourcePolicy dataSourcePolicy) {
+                     DataSourcePolicy dataSourcePolicy,
+                     List<XdsExtensionFactory> extensionFactories) {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
@@ -52,7 +54,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         final XdsResourceValidator resourceValidator = new XdsResourceValidator();
         final XdsExtensionRegistry extensionRegistry =
                 XdsExtensionRegistry.of(resourceValidator, watchService,
-                                        meterRegistry, meterIdPrefix);
+                                        meterRegistry, meterIdPrefix, extensionFactories);
         extensionRegistry.assertValid(bootstrap);
         clusterManager = new XdsClusterManager(eventLoop, bootstrap);
         final BootstrapClusters bootstrapClusters =

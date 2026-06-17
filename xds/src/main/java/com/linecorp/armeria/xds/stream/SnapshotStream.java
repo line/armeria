@@ -152,6 +152,36 @@ public interface SnapshotStream<T> {
     }
 
     /**
+     * Returns a stream that combines the latest values from four streams using the given
+     * combiner function. The combined stream emits a new value whenever any source stream
+     * emits, but only after all four have emitted at least one value.
+     *
+     * @param a the first source stream
+     * @param b the second source stream
+     * @param c the third source stream
+     * @param d the fourth source stream
+     * @param combiner the function to combine the latest values
+     * @param <A> the type of the first stream's values
+     * @param <B> the type of the second stream's values
+     * @param <C> the type of the third stream's values
+     * @param <D> the type of the fourth stream's values
+     * @param <O> the type of the combined values
+     */
+    static <A, B, C, D, O> SnapshotStream<O> combineLatest(
+            SnapshotStream<A> a,
+            SnapshotStream<B> b,
+            SnapshotStream<C> c,
+            SnapshotStream<D> d,
+            QuadFunction<? super A, ? super B, ? super C, ? super D, ? extends O> combiner) {
+        requireNonNull(a, "a");
+        requireNonNull(b, "b");
+        requireNonNull(c, "c");
+        requireNonNull(d, "d");
+        requireNonNull(combiner, "combiner");
+        return new CombineLatest4Stream<>(a, b, c, d, combiner);
+    }
+
+    /**
      * Returns a stream that immediately emits the given value to every subscriber.
      *
      * @param value the value to emit

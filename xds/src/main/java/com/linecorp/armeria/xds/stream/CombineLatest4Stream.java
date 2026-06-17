@@ -1,0 +1,146 @@
+/*
+ * Copyright 2026 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.xds.stream;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.SnapshotWatcher;
+
+final class CombineLatest4Stream<A, B, C, D, O> extends RefCountedStream<O> {
+
+    private final SnapshotStream<A> streamA;
+    private final SnapshotStream<B> streamB;
+    private final SnapshotStream<C> streamC;
+    private final SnapshotStream<D> streamD;
+    private final QuadFunction<? super A, ? super B, ? super C, ? super D, ? extends O> combiner;
+
+    @Nullable
+    private Subscription subA;
+    @Nullable
+    private Subscription subB;
+    @Nullable
+    private Subscription subC;
+    @Nullable
+    private Subscription subD;
+
+    private boolean aReady;
+    private boolean bReady;
+    private boolean cReady;
+    private boolean dReady;
+
+    @Nullable
+    private A latestA;
+    @Nullable
+    private B latestB;
+    @Nullable
+    private C latestC;
+    @Nullable
+    private D latestD;
+
+    CombineLatest4Stream(SnapshotStream<A> streamA,
+                         SnapshotStream<B> streamB,
+                         SnapshotStream<C> streamC,
+                         SnapshotStream<D> streamD,
+                         QuadFunction<? super A, ? super B, ? super C, ? super D, ? extends O> combiner) {
+        this.streamA = streamA;
+        this.streamB = streamB;
+        this.streamC = streamC;
+        this.streamD = streamD;
+        this.combiner = combiner;
+    }
+
+    @Override
+    protected Subscription onStart(SnapshotWatcher<O> watcher) {
+        subA = streamA.subscribe(this::onA);
+        subB = streamB.subscribe(this::onB);
+        subC = streamC.subscribe(this::onC);
+        subD = streamD.subscribe(this::onD);
+
+        return () -> {
+            if (subA != null) {
+                subA.close();
+            }
+            if (subB != null) {
+                subB.close();
+            }
+            if (subC != null) {
+                subC.close();
+            }
+            if (subD != null) {
+                subD.close();
+            }
+            subA = null;
+            subB = null;
+            subC = null;
+            subD = null;
+        };
+    }
+
+    private void onA(@Nullable A v, @Nullable Throwable t) {
+        if (v == null) {
+            emit(null, t);
+            return;
+        }
+        latestA = v;
+        aReady = true;
+        maybeEmit();
+    }
+
+    private void onB(@Nullable B v, @Nullable Throwable t) {
+        if (v == null) {
+            emit(null, t);
+            return;
+        }
+        latestB = v;
+        bReady = true;
+        maybeEmit();
+    }
+
+    private void onC(@Nullable C v, @Nullable Throwable t) {
+        if (v == null) {
+            emit(null, t);
+            return;
+        }
+        latestC = v;
+        cReady = true;
+        maybeEmit();
+    }
+
+    private void onD(@Nullable D v, @Nullable Throwable t) {
+        if (v == null) {
+            emit(null, t);
+            return;
+        }
+        latestD = v;
+        dReady = true;
+        maybeEmit();
+    }
+
+    private void maybeEmit() {
+        if (!aReady || !bReady || !cReady || !dReady) {
+            return;
+        }
+        assert latestA != null;
+        assert latestB != null;
+        assert latestC != null;
+        assert latestD != null;
+        try {
+            emit(combiner.apply(latestA, latestB, latestC, latestD), null);
+        } catch (Throwable t) {
+            emit(null, t);
+        }
+    }
+}

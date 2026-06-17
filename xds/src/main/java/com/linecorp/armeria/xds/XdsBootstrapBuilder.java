@@ -17,10 +17,13 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -82,6 +85,7 @@ public final class XdsBootstrapBuilder {
     private final Bootstrap bootstrap;
     private SnapshotWatcher<Object> snapshotWatcher = DEFAULT_SNAPSHOT_WATCHER;
     private DataSourcePolicy dataSourcePolicy = DataSourcePolicy.allowAll();
+    private final ImmutableList.Builder<XdsExtensionFactory> extensionFactories = ImmutableList.builder();
 
     XdsBootstrapBuilder(Bootstrap bootstrap) {
         this.bootstrap = requireNonNull(bootstrap, "bootstrap");
@@ -131,11 +135,35 @@ public final class XdsBootstrapBuilder {
     }
 
     /**
+     * Adds {@link XdsExtensionFactory}s. Precedence is builtin > builder > SPI.
+     */
+    public XdsBootstrapBuilder extensionFactories(XdsExtensionFactory... extensionFactories) {
+        requireNonNull(extensionFactories, "extensionFactories");
+        checkArgument(extensionFactories.length > 0, "extensionFactories is empty");
+        for (XdsExtensionFactory factory : extensionFactories) {
+            this.extensionFactories.add(requireNonNull(factory, "extensionFactories[?]"));
+        }
+        return this;
+    }
+
+    /**
+     * Adds {@link XdsExtensionFactory}s. Precedence is builtin > builder > SPI.
+     */
+    public XdsBootstrapBuilder extensionFactories(
+            Iterable<? extends XdsExtensionFactory> extensionFactories) {
+        requireNonNull(extensionFactories, "extensionFactories");
+        for (XdsExtensionFactory factory : extensionFactories) {
+            this.extensionFactories.add(requireNonNull(factory, "extensionFactories[?]"));
+        }
+        return this;
+    }
+
+    /**
      * Builds the {@link XdsBootstrap}.
      */
     public XdsBootstrap build() {
         final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
         return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
-                                    snapshotWatcher, dataSourcePolicy);
+                                    snapshotWatcher, dataSourcePolicy, extensionFactories.build());
     }
 }

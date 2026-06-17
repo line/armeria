@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -31,16 +34,23 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
 
     private final ListenerXdsResource listenerXdsResource;
+    private final List<FilterChainSnapshot> filterChains;
     @Nullable
-    private final RouteSnapshot routeSnapshot;
+    private final FilterChainSnapshot defaultFilterChain;
+    @Nullable
+    private final RouteSnapshot apiListenerRoute;
+    @Nullable
+    private final RouteSnapshot defaultRouteSnapshot;
 
-    ListenerSnapshot(ListenerXdsResource listenerXdsResource) {
-        this(listenerXdsResource, null);
-    }
-
-    ListenerSnapshot(ListenerXdsResource listenerXdsResource, @Nullable RouteSnapshot routeSnapshot) {
+    ListenerSnapshot(ListenerXdsResource listenerXdsResource,
+                     Optional<RouteSnapshot> apiListenerRoute,
+                     List<FilterChainSnapshot> filterChains,
+                     Optional<FilterChainSnapshot> defaultFilterChain) {
         this.listenerXdsResource = listenerXdsResource;
-        this.routeSnapshot = routeSnapshot;
+        this.filterChains = filterChains;
+        this.defaultFilterChain = defaultFilterChain.orElse(null);
+        this.apiListenerRoute = apiListenerRoute.orElse(null);
+        defaultRouteSnapshot = defaultRouteSnapshot();
     }
 
     @Override
@@ -49,11 +59,46 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     }
 
     /**
-     * A {@link RouteSnapshot} which belong to this {@link Listener}.
+     * Returns a {@link RouteSnapshot} for this {@link Listener}, checking
+     * the {@code api_listener} first, then falling back to the first filter chain
+     * or default filter chain that contains a route.
      */
     @Nullable
     public RouteSnapshot routeSnapshot() {
-        return routeSnapshot;
+        return defaultRouteSnapshot;
+    }
+
+    @Nullable
+    private RouteSnapshot defaultRouteSnapshot() {
+        if (apiListenerRoute != null) {
+            return apiListenerRoute;
+        }
+        for (FilterChainSnapshot fcs : filterChains) {
+            if (fcs.routeSnapshot() != null) {
+                return fcs.routeSnapshot();
+            }
+        }
+        if (defaultFilterChain != null) {
+            return defaultFilterChain.routeSnapshot();
+        }
+        return null;
+    }
+
+    /**
+     * The resolved filter chain snapshots, in the same order as the
+     * {@link Listener}'s {@code filter_chains} list.
+     */
+    public List<FilterChainSnapshot> filterChains() {
+        return filterChains;
+    }
+
+    /**
+     * The resolved default filter chain snapshot,
+     * or {@code null} if no default filter chain is configured.
+     */
+    @Nullable
+    public FilterChainSnapshot defaultFilterChain() {
+        return defaultFilterChain;
     }
 
     @Override
@@ -66,12 +111,15 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
         }
         final ListenerSnapshot that = (ListenerSnapshot) object;
         return Objects.equal(listenerXdsResource, that.listenerXdsResource) &&
-               Objects.equal(routeSnapshot, that.routeSnapshot);
+               Objects.equal(apiListenerRoute, that.apiListenerRoute) &&
+               Objects.equal(filterChains, that.filterChains) &&
+               Objects.equal(defaultFilterChain, that.defaultFilterChain);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(listenerXdsResource, routeSnapshot);
+        return Objects.hashCode(listenerXdsResource, apiListenerRoute,
+                                filterChains, defaultFilterChain);
     }
 
     @Override
@@ -79,7 +127,9 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("listenerXdsResource", listenerXdsResource)
-                          .add("routeSnapshot", routeSnapshot)
+                          .add("apiListenerRoute", apiListenerRoute)
+                          .add("filterChains", filterChains)
+                          .add("defaultFilterChain", defaultFilterChain)
                           .toString();
     }
 
@@ -88,8 +138,14 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("listener", listenerXdsResource.resource())
-                          .add("routeSnapshot",
-                               SnapshotUtil.debugString(routeSnapshot, RouteSnapshot::toDebugString))
+                          .add("apiListenerRoute",
+                               SnapshotUtil.debugString(apiListenerRoute, RouteSnapshot::toDebugString))
+                          .add("filterChains",
+                               SnapshotUtil.debugStrings(filterChains,
+                                                         FilterChainSnapshot::toDebugString))
+                          .add("defaultFilterChain",
+                               SnapshotUtil.debugString(defaultFilterChain,
+                                                        FilterChainSnapshot::toDebugString))
                           .toString();
     }
 }

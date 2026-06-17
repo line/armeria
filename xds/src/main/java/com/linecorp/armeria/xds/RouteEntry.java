@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
@@ -53,6 +54,8 @@ public final class RouteEntry {
     private final int index;
     private final HttpClient httpClient;
     private final RpcClient rpcClient;
+    @Nullable
+    private final HttpService httpService;
     private final HttpPreClient httpPreClient;
     private final RpcPreClient rpcPreClient;
     private final RouteEntryMatcher matcher;
@@ -61,11 +64,12 @@ public final class RouteEntry {
                Map<String, Any> filterConfigs,
                ClientPreprocessors downstreamPreprocessors,
                @Nullable ClientDecoration retryDecoration,
-               ClientDecoration upstreamDecoration) {
+               ClientDecoration upstreamDecoration, @Nullable HttpService httpService) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
         this.index = index;
         this.filterConfigs = filterConfigs;
+        this.httpService = httpService;
         matcher = new RouteEntryMatcher(route.getMatch());
 
         // Pre-build the full cluster chain: retry → ClusterFilter → upstream filters → delegate
@@ -107,6 +111,16 @@ public final class RouteEntry {
     @Nullable
     public Any filterConfig(String filterName) {
         return filterConfigs.get(filterName);
+    }
+
+    /**
+     * Returns the composed {@link HttpService} from the HTTP filters for this route,
+     * or {@code null} if no server-side HTTP filters are configured.
+     */
+    @Nullable
+    @UnstableApi
+    public HttpService httpService() {
+        return httpService;
     }
 
     /**

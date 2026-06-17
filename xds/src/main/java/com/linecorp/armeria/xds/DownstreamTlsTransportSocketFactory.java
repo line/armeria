@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -29,17 +27,22 @@ import com.linecorp.armeria.xds.stream.SnapshotStream;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CommonTlsContext;
-import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext;
 
-final class UpstreamTlsTransportSocketFactory implements TransportSocketFactory {
+/**
+ * Server-side (downstream) TLS transport socket factory. Mirrors
+ * {@link UpstreamTlsTransportSocketFactory} but unpacks {@link DownstreamTlsContext}.
+ */
+final class DownstreamTlsTransportSocketFactory implements TransportSocketFactory {
 
-    static final UpstreamTlsTransportSocketFactory INSTANCE = new UpstreamTlsTransportSocketFactory();
-    private static final String NAME = "envoy.transport_sockets.tls";
+    static final DownstreamTlsTransportSocketFactory INSTANCE =
+            new DownstreamTlsTransportSocketFactory();
+    private static final String NAME = "envoy.transport_sockets.downstream_tls";
     private static final String TYPE_URL =
-            "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext";
+            "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
-    private UpstreamTlsTransportSocketFactory() {}
+    private DownstreamTlsTransportSocketFactory() {}
 
     @Override
     public String name() {
@@ -58,21 +61,16 @@ final class UpstreamTlsTransportSocketFactory implements TransportSocketFactory 
         if (!transportSocket.hasTypedConfig()) {
             return SnapshotStream.just(new TransportSocketSnapshot(TransportSocket.getDefaultInstance()));
         }
-        final UpstreamTlsContext tlsContext = context.extensionRegistry().unpack(
-                transportSocket.getTypedConfig(), UpstreamTlsContext.class);
+        final DownstreamTlsContext tlsContext = context.extensionRegistry().unpack(
+                transportSocket.getTypedConfig(), DownstreamTlsContext.class);
         final CommonTlsContext commonTlsContext = tlsContext.getCommonTlsContext();
-        checkArgument(commonTlsContext.getTlsCertificatesCount() <= 1,
-                      "Upstream TLS context must have at most one TLS certificate, but got: %s",
-                      commonTlsContext.getTlsCertificatesCount());
-        checkArgument(commonTlsContext.getTlsCertificateSdsSecretConfigsCount() <= 1,
-                      "Upstream TLS context must have at most one TLS certificate SDS config, but got: %s",
-                      commonTlsContext.getTlsCertificateSdsSecretConfigsCount());
         final SnapshotStream<Optional<CertificateValidationContextSnapshot>> validationStream =
                 TransportSocketFactory.resolveValidationContext(commonTlsContext, configSource, context);
         final SnapshotStream<List<TlsCertificateSnapshot>> tlsCertStream =
                 TransportSocketFactory.resolveTlsCertificates(commonTlsContext, configSource, context);
 
-        return SnapshotStream.combineLatest(tlsCertStream, validationStream, (certs, validation) ->
-                new TransportSocketSnapshot(transportSocket, tlsContext, certs, validation));
+        return SnapshotStream.combineLatest(tlsCertStream, validationStream, (certs, validation) -> {
+            return new TransportSocketSnapshot(transportSocket, tlsContext, certs, validation);
+        });
     }
 }

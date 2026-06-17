@@ -449,14 +449,10 @@ class XdsControlPlaneErrorHandlingTest {
     }
 
     private static String malformedListenerYaml() {
-        // PGV-invalid: HCM Any has correct @type but no stat_prefix or http_filters
         //language=YAML
         return """
                 name: %s
-                api_listener:
-                  api_listener:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network\
-                .http_connection_manager.v3.HttpConnectionManager
+                connection_balance_config: {}
                 """.formatted(LISTENER_NAME);
     }
 

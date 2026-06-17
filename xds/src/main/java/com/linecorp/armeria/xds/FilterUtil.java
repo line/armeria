@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,6 +31,8 @@ import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
@@ -42,11 +45,13 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 final class FilterUtil {
 
     static Map<String, Any> mergeFilterConfigs(
-            Map<String, Any> filterConfigs1,
-            Map<String, Any> filterConfigs2) {
+            Map<String, Any> routeConfigFilterConfigs,
+            Map<String, Any> vhostFilterConfigs,
+            Map<String, Any> routeFilterConfigs) {
         return ImmutableMap.<String, Any>builder()
-                           .putAll(filterConfigs1)
-                           .putAll(filterConfigs2)
+                           .putAll(routeConfigFilterConfigs)
+                           .putAll(vhostFilterConfigs)
+                           .putAll(routeFilterConfigs)
                            .buildKeepingLast();
     }
 
@@ -118,6 +123,38 @@ final class FilterUtil {
         return ClientDecoration.builder()
                                .add(new RetryStateFactory(retryPolicy).retryingDecorator())
                                .build();
+    }
+
+    static SnapshotStream<Optional<HttpService>> buildDownstreamServerFilter(
+            XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
+            List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
+        if (httpFilters.isEmpty()) {
+            return SnapshotStream.empty();
+        }
+        final ImmutableList.Builder<SnapshotStream<XdsHttpFilter>> streams = ImmutableList.builder();
+        for (int i = httpFilters.size() - 1; i >= 0; i--) {
+            final HttpFilter httpFilter = httpFilters.get(i);
+            final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
+            final SnapshotStream<XdsHttpFilter> stream =
+                    resolveInstance(extensionRegistry, factoryContext, httpFilter, perRouteConfig);
+            if (stream != null) {
+                streams.add(stream);
+            }
+        }
+        final ImmutableList<SnapshotStream<XdsHttpFilter>> streamList = streams.build();
+        if (streamList.isEmpty()) {
+            return SnapshotStream.empty();
+        }
+        return SnapshotStream.combineNLatest(streamList).map(filters -> {
+            HttpService service = DelegatingHttpService.of();
+            for (XdsHttpFilter f : filters) {
+                final DecoratingHttpServiceFunction decorator = f.serviceDecorator();
+                if (decorator != null) {
+                    service = service.decorate(decorator);
+                }
+            }
+            return Optional.of(service);
+        });
     }
 
     @Nullable

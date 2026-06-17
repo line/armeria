@@ -19,14 +19,16 @@ package com.linecorp.armeria.xds;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Any;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.envoyproxy.envoy.config.listener.v3.Filter;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 
 final class HttpConnectionManagerFactory implements XdsExtensionFactory {
 
     static final HttpConnectionManagerFactory INSTANCE = new HttpConnectionManagerFactory();
-    private static final String NAME = "envoy.http_connection_manager";
+    private static final String NAME = "envoy.filters.network.http_connection_manager";
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3" +
             ".HttpConnectionManager";
@@ -44,7 +46,14 @@ final class HttpConnectionManagerFactory implements XdsExtensionFactory {
         return TYPE_URLS;
     }
 
-    HttpConnectionManager create(Any config, XdsResourceValidator validator) {
-        return validator.unpack(config, HttpConnectionManager.class);
+    @Nullable
+    static HttpConnectionManager extractHcm(Filter filter, XdsExtensionRegistry registry) {
+        if (filter.hasTypedConfig() && TYPE_URL.equals(filter.getTypedConfig().getTypeUrl())) {
+            return registry.unpack(filter.getTypedConfig(), HttpConnectionManager.class);
+        }
+        if (NAME.equals(filter.getName())) {
+            return HttpConnectionManager.getDefaultInstance();
+        }
+        return null;
     }
 }

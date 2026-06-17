@@ -30,9 +30,11 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -43,6 +45,7 @@ import com.google.common.io.BaseEncoding;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.xds.CertificateValidationContextSnapshot;
+import com.linecorp.armeria.xds.FilterChainSnapshot;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.TlsCertificateSnapshot;
@@ -55,6 +58,10 @@ class TransportSocketSnapshotTest {
 
     @RegisterExtension
     static final XdsCertificateExtension certificate =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension());
+
+    @RegisterExtension
+    static final XdsCertificateExtension certificate2 =
             new XdsCertificateExtension(new SelfSignedCertificateExtension());
 
     //language=YAML
@@ -451,6 +458,93 @@ class TransportSocketSnapshotTest {
             assertThat(clientTlsSpec.verifierFactories())
                     .extracting(factory -> factory.getClass().getName())
                     .containsExactly("com.linecorp.armeria.common.NoVerifyPeerVerifierFactory");
+        }
+    }
+
+    @Test
+    void downstreamMultipleTlsCertificates() throws Exception {
+        final String key1 = escapeMultiLine(Files.readString(certificate.privateKeyFile().toPath()));
+        final String cert1 = escapeMultiLine(Files.readString(certificate.certificateFile().toPath()));
+        final String key2 = escapeMultiLine(Files.readString(certificate2.privateKeyFile().toPath()));
+        final String cert2 = escapeMultiLine(Files.readString(certificate2.certificateFile().toPath()));
+
+        //language=YAML
+        final String yaml = """
+                static_resources:
+                  listeners:
+                    - name: test-listener
+                      filter_chains:
+                      - transport_socket:
+                          name: envoy.transport_sockets.downstream_tls
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.DownstreamTlsContext
+                            common_tls_context:
+                              tls_certificates:
+                                - private_key:
+                                    inline_string: "%s"
+                                  certificate_chain:
+                                    inline_string: "%s"
+                                - private_key:
+                                    inline_string: "%s"
+                                  certificate_chain:
+                                    inline_string: "%s"
+                        filters:
+                        - name: envoy.filters.network.http_connection_manager
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.network\
+                .http_connection_manager.v3.HttpConnectionManager
+                            stat_prefix: http
+                            route_config:
+                              name: local_route
+                              virtual_hosts:
+                              - name: local_service
+                                domains: [ "*" ]
+                                routes:
+                                - match:
+                                    prefix: /
+                                  route:
+                                    cluster: test-cluster
+                            http_filters:
+                            - name: envoy.filters.http.router
+                              typed_config:
+                                "@type": type.googleapis.com/envoy.extensions.filters.http\
+                .router.v3.Router
+                  clusters:
+                    - name: test-cluster
+                      type: STATIC
+                      load_assignment:
+                        cluster_name: test-cluster
+                        endpoints:
+                        - lb_endpoints:
+                          - endpoint:
+                              address:
+                                socket_address:
+                                  address: 127.0.0.1
+                                  port_value: 8080
+                """.formatted(key1, cert1, key2, cert2);
+
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(yaml, Bootstrap.class);
+        final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("test-listener");
+            listenerRoot.addSnapshotWatcher((snapshot, t) -> {
+                if (snapshot != null) {
+                    snapshotRef.set(snapshot);
+                }
+            });
+
+            await().untilAsserted(() -> {
+                assertThat(snapshotRef.get()).isNotNull();
+                final FilterChainSnapshot chain = snapshotRef.get().filterChains().get(0);
+                final TransportSocketSnapshot tsSnapshot = chain.transportSocketSnapshot();
+                final List<TlsCertificateSnapshot> certs = tsSnapshot.tlsCertificates();
+                assertThat(certs).hasSize(2);
+                assertThat(certs.get(0).tlsKeyPair()).isEqualTo(certificate.tlsKeyPair());
+                assertThat(certs.get(1).tlsKeyPair()).isEqualTo(certificate2.tlsKeyPair());
+                // tlsCertificate() returns the first one
+                assertThat(tsSnapshot.tlsCertificate()).isSameAs(certs.get(0));
+            });
         }
     }
 
