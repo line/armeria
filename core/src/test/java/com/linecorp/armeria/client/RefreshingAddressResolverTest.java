@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
@@ -259,7 +260,8 @@ class RefreshingAddressResolverTest {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder =
                     builder(false, server).negativeTtl(600)
-                                          .queryTimeoutMillis(1000);
+                                          .queryTimeoutMillis(1000)
+                                          .searchDomains(ImmutableList.of());
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
@@ -909,8 +911,8 @@ class RefreshingAddressResolverTest {
     void shouldRemoveListenerFromDnsCacheWhenClosed() {
         final EventLoop eventLoop = eventLoopExtension.get();
         final DnsCache dnsCache = DnsCache.builder()
-                .executor(eventLoop)
-                .build();
+                                          .executor(eventLoop)
+                                          .build();
         try (RefreshingAddressResolverGroup group = new DnsResolverGroupBuilder()
                 .dnsCache(dnsCache)
                 .build(eventLoop)) {
