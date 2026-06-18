@@ -65,10 +65,7 @@ final class DefaultServerTlsProvider implements AutoCloseable {
             cf.completeExceptionally(t);
             return;
         }
-        if (serverTlsSpec == null) {
-            cf.completeExceptionally(new NullPointerException("serverTlsSpec"));
-            return;
-        }
+        assert serverTlsSpec != null;
         cf.complete(serverTlsSpec);
     }
 
