@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,57 +18,45 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.List;
 
-import javax.annotation.concurrent.NotThreadSafe;
-
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ClusterXdsResource;
-import com.linecorp.armeria.xds.EndpointSnapshot;
-import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
 import com.linecorp.armeria.xds.TransportSocketSnapshot;
-import com.linecorp.armeria.xds.XdsBootstrap;
-
-import io.envoyproxy.envoy.config.core.v3.Locality;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.netty.util.concurrent.EventExecutor;
+import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 /**
- * A {@link XdsLoadBalancer} factory.
- * A factory maintains a state which can be propagated across different
- * {@link ClusterLoadAssignment}s with the same identifier.
- * Users are encouraged to use {@link XdsBootstrap} to retrieve an instance of {@link XdsLoadBalancer}
- * instead of using this class directly.
+ * Creates {@link SnapshotStream}s of {@link XdsLoadBalancer} from cluster and endpoint data.
+ *
+ * <p>Instances are scoped to a single cluster and may preserve per-endpoint state
+ * (e.g., creation timestamps for slow-start ramping) across stream switches.
  */
 @UnstableApi
-@NotThreadSafe
 public interface XdsLoadBalancerFactory extends SafeCloseable {
 
     /**
-     * Creates a {@link XdsLoadBalancerFactory} based on the input parameters.
-     * Rather than instantiating a {@link XdsLoadBalancer} directly, users are encouraged
-     * to use the load balancer provided by {@link ClusterSnapshot#loadBalancer()} to select
-     * {@link Endpoint}s.
+     * Creates a new {@link XdsLoadBalancerFactory}.
+     *
+     * @param context the factory context providing bootstrap, event loop, and metrics
+     * @param clusterName the cluster name for metric tags
      */
-    static XdsLoadBalancerFactory of(EventExecutor eventLoop, Locality locality,
-                                     XdsLoadBalancerLifecycleObserver lifecycleObserver) {
-        return new DefaultXdsLoadBalancerFactory(eventLoop, locality, lifecycleObserver);
+    static XdsLoadBalancerFactory of(FactoryContext context, String clusterName) {
+        return new DefaultXdsLoadBalancerFactory(context, clusterName);
     }
 
     /**
-     * Registers a {@link SnapshotWatcher} to watch for {@link XdsLoadBalancer}s created using
-     * the supplied cluster and endpoint information.
-     * A {@link XdsLoadBalancer} is immutable, and a new {@link XdsLoadBalancer} will be generated
-     * when endpoints change. (e.g. if an endpoint becomes unhealthy, a new {@link XdsLoadBalancer}
-     * will be passed to the {@link SnapshotWatcher}).
-     * Note that there are no thread-safety guarantees with this method.
+     * Creates a {@link SnapshotStream} that emits a new {@link XdsLoadBalancer} whenever
+     * the underlying endpoints change.
+     *
+     * @param clusterXdsResource the cluster resource
+     * @param transportSocket the transport socket snapshot
+     * @param transportSocketMatches the transport socket match snapshots
+     * @param localLoadBalancer the local cluster load balancer for zone-aware routing, or {@code null}
      */
-    void register(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
-                  TransportSocketSnapshot transportSocket,
-                  List<TransportSocketMatchSnapshot> transportSocketMatches,
-                  SnapshotWatcher<XdsLoadBalancer> watcher,
-                  @Nullable XdsLoadBalancer localLoadBalancer);
+    SnapshotStream<XdsLoadBalancer> register(ClusterXdsResource clusterXdsResource,
+                                             TransportSocketSnapshot transportSocket,
+                                             List<TransportSocketMatchSnapshot> transportSocketMatches,
+                                             @Nullable XdsLoadBalancer localLoadBalancer);
 }

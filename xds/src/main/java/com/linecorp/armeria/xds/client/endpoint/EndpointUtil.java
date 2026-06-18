@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.WeightTransition;
 import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 import com.linecorp.armeria.xds.EndpointSnapshot;
+import com.linecorp.armeria.xds.internal.XdsEndpoint;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
@@ -142,17 +143,18 @@ final class EndpointUtil {
         return localityLbEndpoints(endpoint).getLoadBalancingWeight().getValue();
     }
 
+    private static XdsEndpoint xdsEndpoint(Endpoint endpoint) {
+        final XdsEndpoint xdsEndpoint = XdsEndpoint.get(endpoint);
+        assert xdsEndpoint != null;
+        return xdsEndpoint;
+    }
+
     static LbEndpoint lbEndpoint(Endpoint endpoint) {
-        final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributeKeys.LB_ENDPOINT_KEY);
-        assert lbEndpoint != null;
-        return lbEndpoint;
+        return xdsEndpoint(endpoint).lbEndpoint();
     }
 
     private static LocalityLbEndpoints localityLbEndpoints(Endpoint endpoint) {
-        final LocalityLbEndpoints localityLbEndpoints = endpoint.attr(
-                XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY);
-        assert localityLbEndpoints != null;
-        return localityLbEndpoints;
+        return xdsEndpoint(endpoint).localityLbEndpoints();
     }
 
     static int overProvisionFactor(EndpointSnapshot endpointSnapshot) {

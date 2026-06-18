@@ -19,9 +19,11 @@ package com.linecorp.armeria.xds.filter;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.GenericSecretSnapshot;
+import com.linecorp.armeria.xds.XdsExtensionRegistry;
 import com.linecorp.armeria.xds.XdsResourceValidator;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
@@ -32,6 +34,11 @@ import io.netty.util.concurrent.EventExecutor;
  */
 @UnstableApi
 public interface FactoryContext {
+
+    /**
+     * Returns the original xDS {@link Bootstrap} configuration.
+     */
+    Bootstrap bootstrap();
 
     /**
      * Returns the event loop used for scheduling and executing asynchronous operations.
@@ -52,6 +59,11 @@ public interface FactoryContext {
      * Returns the {@link XdsResourceValidator} for validating and unpacking protobuf messages.
      */
     XdsResourceValidator validator();
+
+    /**
+     * Returns the {@link XdsExtensionRegistry} for looking up extension factories.
+     */
+    XdsExtensionRegistry extensionRegistry();
 
     /**
      * Creates a reactive {@link SnapshotStream} of {@link GenericSecretSnapshot} that fetches

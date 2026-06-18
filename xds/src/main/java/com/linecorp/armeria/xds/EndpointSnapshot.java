@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -29,6 +31,14 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 @UnstableApi
 public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
     private final EndpointXdsResource endpoint;
+
+    /**
+     * Creates a new {@link EndpointSnapshot} from the given {@link ClusterLoadAssignment}.
+     */
+    public static EndpointSnapshot of(ClusterLoadAssignment loadAssignment) {
+        requireNonNull(loadAssignment, "loadAssignment");
+        return new EndpointSnapshot(new EndpointXdsResource(loadAssignment));
+    }
 
     EndpointSnapshot(EndpointXdsResource endpoint) {
         this.endpoint = endpoint;

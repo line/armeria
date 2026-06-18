@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.RouteEntry;
-import com.linecorp.armeria.xds.TransportSocketSnapshot;
 
 import io.netty.util.AttributeKey;
 
@@ -34,9 +33,6 @@ public final class XdsCommonUtil {
 
     public static final AttributeKey<RouteEntry> SELECTED_ROUTE =
             AttributeKey.valueOf(XdsCommonUtil.class, "SELECTED_ROUTE");
-
-    public static final AttributeKey<TransportSocketSnapshot> TRANSPORT_SOCKET_SNAPSHOT_KEY =
-            AttributeKey.valueOf(XdsCommonUtil.class, "TRANSPORT_SOCKET_SNAPSHOT_KEY");
 
     /**
      * An attribute key for overriding the ALPN protocols on upstream TLS connections.
