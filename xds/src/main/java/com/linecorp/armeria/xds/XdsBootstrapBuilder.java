@@ -81,6 +81,7 @@ public final class XdsBootstrapBuilder {
     private EventExecutor eventExecutor;
     private final Bootstrap bootstrap;
     private SnapshotWatcher<Object> snapshotWatcher = DEFAULT_SNAPSHOT_WATCHER;
+    private DataSourcePolicy dataSourcePolicy = DataSourcePolicy.allowAll();
 
     XdsBootstrapBuilder(Bootstrap bootstrap) {
         this.bootstrap = requireNonNull(bootstrap, "bootstrap");
@@ -120,11 +121,21 @@ public final class XdsBootstrapBuilder {
     }
 
     /**
+     * Sets the {@link DataSourcePolicy} that restricts which file paths and environment variables
+     * may be accessed by {@code DataSource} resources. By default, all paths and variables
+     * are allowed (matching Envoy behavior).
+     */
+    public XdsBootstrapBuilder dataSourcePolicy(DataSourcePolicy dataSourcePolicy) {
+        this.dataSourcePolicy = requireNonNull(dataSourcePolicy, "dataSourcePolicy");
+        return this;
+    }
+
+    /**
      * Builds the {@link XdsBootstrap}.
      */
     public XdsBootstrap build() {
         final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
         return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
-                                    snapshotWatcher);
+                                    snapshotWatcher, dataSourcePolicy);
     }
 }

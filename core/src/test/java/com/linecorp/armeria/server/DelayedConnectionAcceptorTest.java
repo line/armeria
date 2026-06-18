@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -44,6 +46,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
  */
 class DelayedConnectionAcceptorTest {
 
+    private static final AtomicLong acceptCount = new AtomicLong();
+
     @RegisterExtension
     private static final EventLoopExtension eventLoop = new EventLoopExtension();
 
@@ -55,6 +59,7 @@ class DelayedConnectionAcceptorTest {
               .https(0)
               .tls(TlsKeyPair.ofSelfSigned())
               .connectionAcceptor(ctx -> {
+                  acceptCount.incrementAndGet();
                   final CompletableFuture<Boolean> future = new CompletableFuture<>();
                   eventLoop.get().schedule(() -> future.complete(true), 1, TimeUnit.SECONDS);
                   return future;
@@ -72,10 +77,18 @@ class DelayedConnectionAcceptorTest {
               .tls(TlsKeyPair.ofSelfSigned())
               .idleTimeoutMillis(1000)
               // Never completes — should be closed by the accept timeout.
-              .connectionAcceptor(ctx -> new CompletableFuture<>())
+              .connectionAcceptor(ctx -> {
+                  acceptCount.incrementAndGet();
+                  return new CompletableFuture<>();
+              })
               .service("/", (ctx, req) -> HttpResponse.of("should not reach"));
         }
     };
+
+    @BeforeEach
+    void beforeEach() {
+        acceptCount.set(0);
+    }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
@@ -88,6 +101,7 @@ class DelayedConnectionAcceptorTest {
             final AggregatedHttpResponse response = client.get("/");
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo("OK");
+            assertThat(acceptCount).hasValue(1);
         }
     }
 
@@ -101,6 +115,11 @@ class DelayedConnectionAcceptorTest {
                                                       .blocking();
             assertThatThrownBy(() -> client.get("/"))
                     .isInstanceOf(UnprocessedRequestException.class);
+            if (protocol.isHttp()) {
+                assertThat(acceptCount).hasValue(2);
+            } else {
+                assertThat(acceptCount).hasValue(1);
+            }
         }
     }
 }

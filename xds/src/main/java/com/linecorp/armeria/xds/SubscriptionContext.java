@@ -50,6 +50,8 @@ interface SubscriptionContext extends FactoryContext {
 
     DirectoryWatchService watchService();
 
+    DataSourcePolicy dataSourcePolicy();
+
     BootstrapSecrets bootstrapSecrets();
 
     ResourceNodeMeterBinderFactory meterBinderFactory();
