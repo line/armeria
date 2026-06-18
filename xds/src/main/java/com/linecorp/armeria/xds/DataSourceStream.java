@@ -41,16 +41,26 @@ import io.envoyproxy.envoy.config.core.v3.WatchedDirectory;
 final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
 
     private static final Logger logger = LoggerFactory.getLogger(DataSourceStream.class);
+    private static boolean allowAllWarningLogged;
 
     private final DataSource dataSource;
     private final WatchedDirectory watchedDirectory;
     private final SubscriptionContext context;
+    private final DataSourcePolicy dataSourcePolicy;
 
     DataSourceStream(DataSource dataSource, WatchedDirectory watchedDirectory,
                      SubscriptionContext context) {
         this.dataSource = dataSource;
         this.watchedDirectory = watchedDirectory;
         this.context = context;
+        dataSourcePolicy = context.dataSourcePolicy();
+        if (dataSourcePolicy == DataSourcePolicy.allowAll() && !allowAllWarningLogged) {
+            allowAllWarningLogged = true;
+            logger.warn("No DataSourcePolicy restrictions configured. " +
+                        "All file paths and environment variables are accessible via DataSource. " +
+                        "Consider setting a DataSourcePolicy via " +
+                        "XdsBootstrapBuilder#dataSourcePolicy(DataSourcePolicy) to restrict access.");
+        }
     }
 
     @Override
@@ -68,6 +78,11 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
         }
         if (dataSource.hasEnvironmentVariable()) {
             final String envVar = dataSource.getEnvironmentVariable();
+            if (!dataSourcePolicy.isEnvVarAllowed(envVar)) {
+                final IllegalArgumentException e = new IllegalArgumentException(
+                        "DataSource environment variable is not in the allowed list: " + envVar);
+                return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
+            }
             final String envVarValue = System.getenv(envVar);
             if (envVarValue == null) {
                 final IllegalArgumentException e = new IllegalArgumentException(
@@ -79,7 +94,12 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
         }
         if (dataSource.hasFilename()) {
             final String filename = dataSource.getFilename();
-            final Path filePath = Paths.get(filename).toAbsolutePath();
+            final Path filePath = Paths.get(filename).toAbsolutePath().normalize();
+            if (!dataSourcePolicy.isFileAllowed(filePath)) {
+                final IllegalArgumentException e = new IllegalArgumentException(
+                        "DataSource file path is not under any allowed root directory: " + filePath);
+                return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
+            }
             Path dirPath = filePath.getParent();
             if (watchedDirectory != WatchedDirectory.getDefaultInstance()) {
                 dirPath = Paths.get(watchedDirectory.getPath());

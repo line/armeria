@@ -43,7 +43,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      MeterIdPrefix meterIdPrefix, MeterRegistry meterRegistry,
-                     SnapshotWatcher<Object> defaultWatcher) {
+                     SnapshotWatcher<Object> defaultWatcher,
+                     DataSourcePolicy dataSourcePolicy) {
         this.bootstrap = bootstrap;
         this.defaultWatcher = defaultWatcher;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
@@ -63,7 +64,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
                 bootstrap, eventLoop, bootstrapClusters, configSourceMapper, extensionRegistry);
         subscriptionContext = new DefaultSubscriptionContext(
                 eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
-                meterRegistry, meterIdPrefix, watchService, bootstrapSecrets, extensionRegistry);
+                meterRegistry, meterIdPrefix, watchService, bootstrapSecrets, extensionRegistry,
+                dataSourcePolicy);
         bootstrapClusters.initializeStaticClusters(subscriptionContext);
         listenerManager = new ListenerManager(eventLoop, bootstrap, subscriptionContext, defaultWatcher);
     }
