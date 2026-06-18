@@ -46,6 +46,7 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
                                DirectoryWatchService watchService, BootstrapSecrets bootstrapSecrets,
                                XdsExtensionRegistry extensionRegistry,
                                DataSourcePolicy dataSourcePolicy) {
+        this.bootstrap = bootstrap;
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         this.configSourceMapper = configSourceMapper;
