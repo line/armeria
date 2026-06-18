@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,7 +43,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import io.netty.util.CharsetUtil;
-import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -64,7 +64,7 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
     private static final int SERVER_NAME_TYPE_HOSTNAME = 0;
 
     private final DefaultConnectionAcceptor connectionAcceptor;
-    private final Mapping<String, SslContext> sslContextMapping;
+    private final DefaultServerTlsProvider serverTlsProvider;
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
     private final long handshakeTimeoutMillis;
@@ -76,12 +76,12 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
     private final Promise<SslContext> lookupPromise;
 
     HttpsConnectionAcceptHandler(DefaultConnectionAcceptor connectionAcceptor,
-                                 Mapping<String, SslContext> sslContextMapping,
+                                 DefaultServerTlsProvider serverTlsProvider,
                                  @Nullable ProxiedAddresses proxiedAddresses,
                                  ChannelPipeline p, int maxClientHelloLength, long handshakeTimeoutMillis) {
         super(maxClientHelloLength);
         this.connectionAcceptor = connectionAcceptor;
-        this.sslContextMapping = sslContextMapping;
+        this.serverTlsProvider = serverTlsProvider;
         this.proxiedAddresses = proxiedAddresses;
         this.handshakeTimeoutMillis = handshakeTimeoutMillis;
         lookupPromise = p.channel().eventLoop().newPromise();
@@ -166,17 +166,20 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
     private void resolveSslContext(ChannelHandlerContext ctx,
                                    ConnectionContext connectionCtx,
                                    Promise<SslContext> promise) {
-        final SslContext sslContext = sslContextMapping.map(connectionCtx.sniHostname());
-        if (sslContext == null) {
-            promise.tryFailure(toSSLException(
-                    "No SslContext found for hostname: " + connectionCtx.sniHostname()));
-            return;
-        }
-        if (sslContextMapping instanceof TlsProviderMapping) {
-            ctx.channel().closeFuture().addListener(
-                    f -> ((TlsProviderMapping) sslContextMapping).release(sslContext));
-        }
-        promise.trySuccess(sslContext);
+        serverTlsProvider.serverTlsSpec(connectionCtx, ctx.channel().eventLoop()).whenComplete((spec, t) -> {
+            if (t != null) {
+                promise.tryFailure(toSSLException(t));
+                return;
+            }
+            try {
+                final SslContextFactory factory = serverTlsProvider.sslContextFactory();
+                final SslContext sslContext = factory.getOrCreate(spec);
+                ctx.channel().closeFuture().addListener(f -> factory.release(sslContext));
+                promise.trySuccess(sslContext);
+            } catch (Exception e) {
+                promise.tryFailure(toSSLException(e));
+            }
+        });
     }
 
     @Override
@@ -362,10 +365,6 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
             this.sniHostname = sniHostname;
             this.alpnProtocols = alpnProtocols;
         }
-    }
-
-    static Throwable toSSLException(String message) {
-        return new DecoderException(new SSLHandshakeException(message));
     }
 
     static Throwable toSSLException(Throwable e) {

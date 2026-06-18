@@ -97,10 +97,8 @@ import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
-import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -244,10 +242,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final Mapping<String, SslContext> sslContexts =
-                requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-
-        p.addLast(new HttpsConnectionAcceptHandler(config.connectionAcceptor(), sslContexts,
+        final DefaultServerTlsProvider serverTlsProvider =
+                requireNonNull(config.serverTlsProvider(), "serverTlsProvider");
+        p.addLast(new HttpsConnectionAcceptHandler(config.connectionAcceptor(), serverTlsProvider,
                                                    proxiedAddresses, p,
                                                    Flags.defaultMaxClientHelloLength(),
                                                    config.idleTimeoutMillis()));

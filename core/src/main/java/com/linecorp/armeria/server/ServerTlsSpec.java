@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
@@ -30,13 +27,11 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.AbstractTlsSpec;
-import com.linecorp.armeria.common.AbstractTlsSpecBuilder;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -46,6 +41,14 @@ import io.netty.handler.ssl.SslContextBuilder;
  */
 @UnstableApi
 public final class ServerTlsSpec extends AbstractTlsSpec {
+
+    /**
+     * Returns a new {@link ServerTlsSpecBuilder}.
+     */
+    @UnstableApi
+    public static ServerTlsSpecBuilder builder() {
+        return new ServerTlsSpecBuilder();
+    }
 
     private final ClientAuth clientAuth;
     private final String hostnamePattern;
@@ -118,48 +121,5 @@ public final class ServerTlsSpec extends AbstractTlsSpec {
                           .add("hostnamePattern", hostnamePattern)
                           .add("allowUnsafeCiphers", allowUnsafeCiphers())
                           .toString();
-    }
-
-    static ServerTlsSpecBuilder builder() {
-        return new ServerTlsSpecBuilder();
-    }
-
-    static class ServerTlsSpecBuilder extends AbstractTlsSpecBuilder<ServerTlsSpecBuilder, ServerTlsSpec> {
-
-        private ClientAuth clientAuth = ClientAuth.NONE;
-        private String hostnamePattern = "UNKNOWN";
-        private Consumer<? super SslContextBuilder> tlsCustomizer = SslContextUtil.DEFAULT_NOOP_CUSTOMIZER;
-        @Nullable
-        private KeyManagerFactory keyManagerFactory;
-
-        ServerTlsSpecBuilder clientAuth(ClientAuth clientAuth) {
-            this.clientAuth = requireNonNull(clientAuth, "clientAuth");
-            return this;
-        }
-
-        ServerTlsSpecBuilder hostnamePattern(String hostnamePattern) {
-            this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
-            return this;
-        }
-
-        ServerTlsSpecBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
-            this.tlsCustomizer = requireNonNull(tlsCustomizer, "tlsCustomizer");
-            return this;
-        }
-
-        ServerTlsSpecBuilder keyManagerFactory(KeyManagerFactory keyManagerFactory) {
-            this.keyManagerFactory = requireNonNull(keyManagerFactory, "keyManagerFactory");
-            return this;
-        }
-
-        @Override
-        public ServerTlsSpec build() {
-            checkArgument(tlsKeyPair() != null || keyManagerFactory != null,
-                          "Either 'tlsKeyPair' or 'keyManagerFactory' must be set");
-            return new ServerTlsSpec(SslContextUtil.supportedTlsVersions(engineType().sslProvider()),
-                                     SslContextUtil.DEFAULT_ALPN_PROTOCOLS, ciphers(), tlsKeyPair(),
-                                     trustedCertificates(), verifierFactories(), engineType(), tlsCustomizer,
-                                     clientAuth, allowUnsafeCiphers(), keyManagerFactory, hostnamePattern);
-        }
     }
 }

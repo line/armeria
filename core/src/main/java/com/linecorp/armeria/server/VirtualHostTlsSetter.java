@@ -25,7 +25,6 @@ import javax.net.ssl.KeyManagerFactory;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.server.ServerTlsSpec.ServerTlsSpecBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;
 

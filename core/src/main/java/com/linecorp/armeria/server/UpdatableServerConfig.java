@@ -38,8 +38,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.SslContext;
-import io.netty.util.Mapping;
 
 final class UpdatableServerConfig implements ServerConfig {
 
@@ -59,12 +57,9 @@ final class UpdatableServerConfig implements ServerConfig {
 
     // Delegate non-public methods
 
-    /**
-     * Returns a map of SslContexts {@link SslContext}.
-     */
     @Nullable
-    Mapping<String, SslContext> sslContextMapping() {
-        return delegate.sslContextMapping();
+    DefaultServerTlsProvider serverTlsProvider() {
+        return delegate.serverTlsProvider();
     }
 
     DefaultConnectionAcceptor connectionAcceptor() {
