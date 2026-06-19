@@ -25,14 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsClusterManager implements SafeCloseable {
@@ -41,17 +39,13 @@ final class XdsClusterManager implements SafeCloseable {
     private boolean closed;
 
     private final EventExecutor eventLoop;
-    private final LoadBalancerFactoryPool loadBalancerFactoryPool;
     private final String localClusterName;
 
     private final List<Subscription> subscriptions = new ArrayList<>();
 
-    XdsClusterManager(EventExecutor eventLoop, Bootstrap bootstrap, MeterIdPrefix meterIdPrefix,
-                      MeterRegistry meterRegistry) {
+    XdsClusterManager(EventExecutor eventLoop, Bootstrap bootstrap) {
         this.eventLoop = eventLoop;
         localClusterName = bootstrap.getClusterManager().getLocalClusterName();
-        loadBalancerFactoryPool = new LoadBalancerFactoryPool(meterIdPrefix,
-                                                              meterRegistry, eventLoop, bootstrap);
     }
 
     boolean hasLocalCluster() {
@@ -76,8 +70,7 @@ final class XdsClusterManager implements SafeCloseable {
                       "Cluster with name '%s' already registered", cluster.getName());
         final ClusterXdsResource resource =
                 ClusterResourceParser.INSTANCE.parse(cluster, context.extensionRegistry(), "");
-        final ClusterStream node = new ClusterStream(resource, context,
-                                                     loadBalancerFactoryPool);
+        final ClusterStream node = new ClusterStream(resource, context);
         nodes.put(cluster.getName(), node);
         for (SnapshotWatcher<? super ClusterSnapshot> watcher : watchers) {
             eventLoop.execute(safeRunnable(() -> {
@@ -96,7 +89,7 @@ final class XdsClusterManager implements SafeCloseable {
         }
         final ClusterStream node = nodes.computeIfAbsent(name, ignored -> {
             // on-demand cds if not already registered
-            return new ClusterStream(name, context, loadBalancerFactoryPool);
+            return new ClusterStream(name, context);
         });
         final Subscription subscription = node.subscribe(watcher);
         return () -> {
@@ -120,6 +113,5 @@ final class XdsClusterManager implements SafeCloseable {
         for (Subscription subscription : subscriptions) {
             subscription.close();
         }
-        loadBalancerFactoryPool.close();
     }
 }

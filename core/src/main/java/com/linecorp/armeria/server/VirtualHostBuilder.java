@@ -72,7 +72,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -338,6 +337,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return (VirtualHostBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
     }
 
+    /**
+     * Configures SSL or TLS with the specified {@link TlsKeyPair}.
+     *
+     * <p>If a {@code tlsProvider} is also set via
+     * {@link ServerBuilder#tlsProvider(TlsProvider)} or
+     * {@link ServerBuilder#tlsProvider(ServerTlsProvider)},
+     * the {@code tlsProvider} takes priority. The TLS settings configured by this method
+     * are used as a fallback when the provider returns {@code null}.
+     */
     @Override
     public VirtualHostBuilder tls(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
@@ -346,6 +354,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return this;
     }
 
+    /**
+     * Configures SSL or TLS with the specified {@link KeyManagerFactory}.
+     *
+     * <p>If a {@code tlsProvider} is also set via
+     * {@link ServerBuilder#tlsProvider(TlsProvider)} or
+     * {@link ServerBuilder#tlsProvider(ServerTlsProvider)},
+     * the {@code tlsProvider} takes priority. The TLS settings configured by this method
+     * are used as a fallback when the provider returns {@code null}.
+     */
     @Override
     public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
@@ -1352,7 +1369,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
                       @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
-                      ServerErrorHandler serverErrorHandler, @Nullable TlsProvider tlsProvider,
+                      ServerErrorHandler serverErrorHandler,
                       SslContextFactory sslContextFactory) {
         requireNonNull(template, "template");
 
@@ -1513,14 +1530,11 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                             this.tlsEngineType : template.tlsEngineType;
 
         final ServerTlsSpec serverTlsSpec = buildServerTlsSpec(template, tlsEngineType, hostnamePattern);
-        if (serverTlsSpec != null && tlsProvider != null) {
-            throw new IllegalStateException("Cannot configure TLS settings with a TlsProvider");
-        }
         final SslContext sslContext = sslContext(sslContextFactory, serverTlsSpec);
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port, serverPort,
-                                sslContext, tlsProvider, tlsEngineType,
+                                sslContext, serverTlsSpec, tlsEngineType,
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
@@ -1553,8 +1567,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     @Nullable
-    private SslContext sslContext(SslContextFactory sslContextFactory,
-                                  @Nullable ServerTlsSpec serverTlsSpec) {
+    private SslContext sslContext(SslContextFactory sslContextFactory, @Nullable ServerTlsSpec serverTlsSpec) {
         if (portBased || serverTlsSpec == null) {
             return null;
         }

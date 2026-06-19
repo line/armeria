@@ -19,11 +19,13 @@ package com.linecorp.armeria.xds;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultSubscriptionContext implements SubscriptionContext {
 
+    private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
     private final XdsClusterManager clusterManager;
     private final ConfigSourceMapper configSourceMapper;
@@ -31,16 +33,20 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
     private final DirectoryWatchService watchService;
+    private final DataSourcePolicy dataSourcePolicy;
     private final BootstrapSecrets bootstrapSecrets;
     private final ResourceNodeMeterBinderFactory meterBinderFactory;
     private final XdsExtensionRegistry extensionRegistry;
 
-    DefaultSubscriptionContext(EventExecutor eventLoop, XdsClusterManager clusterManager,
+    DefaultSubscriptionContext(Bootstrap bootstrap, EventExecutor eventLoop,
+                               XdsClusterManager clusterManager,
                                ConfigSourceMapper configSourceMapper,
                                ControlPlaneClientManager controlPlaneClientManager,
                                MeterRegistry meterRegistry, MeterIdPrefix meterIdPrefix,
                                DirectoryWatchService watchService, BootstrapSecrets bootstrapSecrets,
-                               XdsExtensionRegistry extensionRegistry) {
+                               XdsExtensionRegistry extensionRegistry,
+                               DataSourcePolicy dataSourcePolicy) {
+        this.bootstrap = bootstrap;
         this.eventLoop = eventLoop;
         this.clusterManager = clusterManager;
         this.configSourceMapper = configSourceMapper;
@@ -48,9 +54,15 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
         this.meterRegistry = meterRegistry;
         this.meterIdPrefix = meterIdPrefix;
         this.watchService = watchService;
+        this.dataSourcePolicy = dataSourcePolicy;
         this.bootstrapSecrets = bootstrapSecrets;
         this.extensionRegistry = extensionRegistry;
         meterBinderFactory = new ResourceNodeMeterBinderFactory(meterRegistry, meterIdPrefix);
+    }
+
+    @Override
+    public Bootstrap bootstrap() {
+        return bootstrap;
     }
 
     @Override
@@ -91,6 +103,11 @@ final class DefaultSubscriptionContext implements SubscriptionContext {
     @Override
     public DirectoryWatchService watchService() {
         return watchService;
+    }
+
+    @Override
+    public DataSourcePolicy dataSourcePolicy() {
+        return dataSourcePolicy;
     }
 
     @Override

@@ -262,6 +262,7 @@ class ErrorHandlingTest {
     private static final String edsClusterYaml =
             """
                 name: my-cluster
+                type: EDS
                 eds_cluster_config:
                   service_name: unknown-cluster
                   eds_config:
@@ -435,6 +436,7 @@ class ErrorHandlingTest {
     private static final String normalClusterYaml =
             """
                 name: my-cluster
+                type: EDS
                 eds_cluster_config:
                   service_name: my-cluster
                   eds_config:

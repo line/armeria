@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,9 +28,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.xds.client.endpoint.HostSet;
-import com.linecorp.armeria.xds.client.endpoint.LoadBalancerState;
-import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancerLifecycleObserver;
+import com.linecorp.armeria.xds.ClusterXdsResource;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.micrometer.core.instrument.Counter;

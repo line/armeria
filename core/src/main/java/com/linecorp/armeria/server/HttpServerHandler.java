@@ -71,7 +71,6 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -98,26 +97,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
-
-    private static final InetSocketAddress UNKNOWN_ADDR;
-
-    static {
-        InetAddress unknownAddr;
-        try {
-            unknownAddr = InetAddress.getByAddress("<unknown>", new byte[] { 0, 0, 0, 0 });
-        } catch (Exception e1) {
-            // Just in case a certain JRE implementation doesn't accept the hostname '<unknown>'
-            try {
-                unknownAddr = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0 });
-            } catch (Exception e2) {
-                // Should never reach here.
-                final Error err = new Error(e2);
-                err.addSuppressed(e1);
-                throw err;
-            }
-        }
-        UNKNOWN_ADDR = new InetSocketAddress(unknownAddr, 1);
-    }
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -194,10 +173,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     @Nullable
     private ServerHttpObjectEncoder responseEncoder;
 
-    @Nullable
-    private final ProxiedAddresses proxiedAddresses;
-    private final InetSocketAddress remoteAddress;
-    private final InetSocketAddress localAddress;
+    private final ConnectionContext connectionContext;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
@@ -209,7 +185,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                       Channel channel, GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
-                      @Nullable ProxiedAddresses proxiedAddresses) {
+                      ConnectionContext connectionContext) {
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
@@ -217,13 +193,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServerPortMetric serverPortMetric = channel.attr(SERVER_PORT_METRIC).get();
         assert serverPortMetric != null;
         this.serverPortMetric = serverPortMetric;
-        remoteAddress = firstNonNull(ChannelUtil.remoteAddress(channel), UNKNOWN_ADDR);
-        localAddress = firstNonNull(ChannelUtil.localAddress(channel), UNKNOWN_ADDR);
+        this.connectionContext = requireNonNull(connectionContext, "connectionContext");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
-        this.proxiedAddresses = proxiedAddresses;
         unfinishedRequests = new IdentityHashMap<>();
     }
 
@@ -413,8 +387,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // `determineProxiedAddresses` could throw IllegalArgumentException if the headers are invalid.
         // If it does, we will return a 400 Bad Request response.
         // We need to get the ServiceConfig before responding, hence, we store the exception first.
-        ProxiedAddresses proxiedAddresses = (this.proxiedAddresses != null) ?
-                this.proxiedAddresses : ProxiedAddresses.of(remoteAddress);
+        final ProxiedAddresses connProxiedAddresses = connectionContext.proxiedAddresses();
+        ProxiedAddresses proxiedAddresses = (connProxiedAddresses != null) ?
+                connProxiedAddresses : ProxiedAddresses.of(connectionContext.remoteAddress());
         IllegalArgumentException invalidProxiedAddressesException = null;
         try {
             proxiedAddresses = determineProxiedAddresses(headers);
@@ -464,7 +439,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+                req, sslSession, proxiedAddresses, clientAddress, connectionContext,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
         HttpResponse res;
@@ -592,6 +567,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ProxiedAddresses determineProxiedAddresses(RequestHeaders headers) {
+        final ProxiedAddresses proxiedAddresses = connectionContext.proxiedAddresses();
+        final InetSocketAddress remoteAddress = connectionContext.remoteAddress();
         if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
             return HttpHeaderUtil.determineProxiedAddresses(
                     headers, config.clientAddressSources(), proxiedAddresses,
@@ -739,7 +716,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceConfig,
                 channel, eventLoop, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+                req, sslSession, proxiedAddresses, clientAddress, connectionContext,
                 System.nanoTime(), SystemInfo.currentTimeMicros(), NOOP_CONTEXT_HOOK);
     }
 

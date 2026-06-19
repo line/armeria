@@ -24,8 +24,10 @@ import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory;
 import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
@@ -38,7 +40,8 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <p>Also serves as the single entry point for {@link Any}-related operations:
  * factory lookup ({@link #query}) and proto decode ({@link #unpack}).
  */
-final class XdsExtensionRegistry {
+@UnstableApi
+public final class XdsExtensionRegistry {
 
     private final Map<String, XdsExtensionFactory> byTypeUrl;
     private final Map<String, XdsExtensionFactory> byName;
@@ -62,6 +65,7 @@ final class XdsExtensionRegistry {
         register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),
                  byName, byTypeUrl);
         register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
+        register(new EdsClusterTypeFactory(), byName, byTypeUrl);
 
         // Load SPI-discovered HttpFilterFactory instances as base factories
         ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
@@ -70,6 +74,11 @@ final class XdsExtensionRegistry {
 
         // Load SPI-discovered SotwConfigSourceSubscriptionFactory instances
         ServiceLoader.load(SotwConfigSourceSubscriptionFactory.class).forEach(factory -> {
+            register(factory, byName, byTypeUrl);
+        });
+
+        // Load SPI-discovered ClusterTypeFactory instances
+        ServiceLoader.load(ClusterTypeFactory.class).forEach(factory -> {
             register(factory, byName, byTypeUrl);
         });
 
@@ -138,7 +147,7 @@ final class XdsExtensionRegistry {
      * @throws IllegalArgumentException if the factory does not implement the expected interface
      */
     @Nullable
-    <T extends XdsExtensionFactory> T queryByName(String name, Class<T> expectedType) {
+    public <T extends XdsExtensionFactory> T queryByName(String name, Class<T> expectedType) {
         final XdsExtensionFactory factory = byName.get(name);
         if (factory == null) {
             return null;
@@ -158,12 +167,12 @@ final class XdsExtensionRegistry {
      * @throws IllegalArgumentException if a found factory does not implement the expected interface
      */
     @Nullable
-    <T extends XdsExtensionFactory> T query(Any any, @Nullable String name, Class<T> expectedType) {
+    public <T extends XdsExtensionFactory> T query(Any any, String name, Class<T> expectedType) {
         final T factory = queryByTypeUrl(any.getTypeUrl(), expectedType);
         if (factory != null) {
             return factory;
         }
-        if (name != null) {
+        if (!name.isEmpty()) {
             return queryByName(name, expectedType);
         }
         return null;

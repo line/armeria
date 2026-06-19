@@ -17,13 +17,16 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.Socket;
 import java.security.KeyStore;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -91,13 +94,33 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
         @Override
         protected TrustManager[] engineGetTrustManagers() {
             return new TrustManager[] {
-                    new X509TrustManager() {
+                    new X509ExtendedTrustManager() {
                         @Override
                         public void checkClientTrusted(X509Certificate[] chain, String authType) {}
 
                         @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                                       Socket socket) {}
+
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                                       SSLEngine engine) {}
+
+                        @Override
                         public void checkServerTrusted(X509Certificate[] chain, String authType) {
                             actualKeyName.set(chain[0].getSubjectX500Principal().getName());
+                        }
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType,
+                                                       Socket socket) throws CertificateException {
+                            checkServerTrusted(chain, authType);
+                        }
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType,
+                                                       SSLEngine engine) throws CertificateException {
+                            checkServerTrusted(chain, authType);
                         }
 
                         @Override
