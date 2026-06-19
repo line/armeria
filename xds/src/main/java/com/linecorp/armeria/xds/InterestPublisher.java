@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,24 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.configsource.InterestedResources;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+final class InterestPublisher extends RefCountedStream<InterestedResources> {
 
-/**
- * A resource node.
- *
- * @param <T> the type of the current {@link XdsResource}
- */
-interface ResourceNode<T extends XdsResource> extends SnapshotWatcher<T> {
+    void publish(InterestedResources interestedResources) {
+        emit(interestedResources, null);
+    }
 
-    @Nullable
-    ConfigSource configSource();
-
-    XdsType type();
-
-    String name();
-
-    FactoryContext factoryContext();
+    @Override
+    protected Subscription onStart(SnapshotWatcher<InterestedResources> watcher) {
+        return () -> {};
+    }
 }

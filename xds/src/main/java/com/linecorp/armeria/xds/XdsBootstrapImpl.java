@@ -61,7 +61,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
         final ConfigSourceMapper configSourceMapper = new ConfigSourceMapper(bootstrap);
         controlPlaneClientManager = new ControlPlaneClientManager(
-                bootstrap, eventLoop, bootstrapClusters, configSourceMapper, extensionRegistry);
+                bootstrap, eventLoop, bootstrapClusters, configSourceMapper, extensionRegistry, defaultWatcher);
         subscriptionContext = new DefaultSubscriptionContext(
                 bootstrap, eventLoop, clusterManager, configSourceMapper, controlPlaneClientManager,
                 meterRegistry, meterIdPrefix, watchService, bootstrapSecrets, extensionRegistry,

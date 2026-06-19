@@ -1,7 +1,7 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -14,9 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+/**
+ * Config source abstractions for xDS resource discovery.
+ */
+@NonNullByDefault
+@UnstableApi
+package com.linecorp.armeria.xds.configsource;
 
-import com.linecorp.armeria.xds.stream.SnapshotStream;
-
-interface XdsStream extends SnapshotStream<ParsedResources> {
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

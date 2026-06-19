@@ -23,11 +23,15 @@ import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.configsource.InterestedResources;
+import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
+import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 
-final class AdsXdsStream implements XdsStream {
+final class AdsXdsStream extends RefCountedStream<ParsedResources> implements XdsStream {
 
     interface ActualStream {
         void closeStream();
@@ -46,6 +50,7 @@ final class AdsXdsStream implements XdsStream {
     private final StateCoordinator stateCoordinator;
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Set<XdsType> targetTypes;
+    private final SnapshotStream<InterestedResources> interestStream;
 
     StateCoordinator stateCoordinator() {
         return stateCoordinator;
@@ -58,13 +63,14 @@ final class AdsXdsStream implements XdsStream {
 
     AdsXdsStream(ActualStreamFactory factory, Backoff backoff, EventExecutor eventLoop,
                  StateCoordinator stateCoordinator, ConfigSourceLifecycleObserver lifecycleObserver,
-                 Set<XdsType> targetTypes) {
+                 Set<XdsType> targetTypes, SnapshotStream<InterestedResources> interestStream) {
         this.factory = requireNonNull(factory, "factory");
         this.backoff = requireNonNull(backoff, "backoff");
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.stateCoordinator = requireNonNull(stateCoordinator, "stateCoordinator");
         this.lifecycleObserver = requireNonNull(lifecycleObserver, "lifecycleObserver");
         this.targetTypes = requireNonNull(targetTypes, "targetTypes");
+        this.interestStream = interestStream;
     }
 
     void stop() {
@@ -86,14 +92,18 @@ final class AdsXdsStream implements XdsStream {
     }
 
     @Override
-    public void close() {
-        stop();
-        lifecycleObserver.close();
-    }
-
-    @Override
-    public void resourcesUpdated(XdsType type) {
-        ensureStream().resourcesUpdated(type);
+    protected Subscription onStart(SnapshotWatcher<ParsedResources> watcher) {
+        final Subscription subscription = interestStream.subscribe((snapshot, error) -> {
+            assert snapshot != null;
+            if (targetTypes.contains(snapshot.type())) {
+                ensureStream().resourcesUpdated(snapshot.type());
+            }
+        });
+        return () -> {
+            subscription.close();
+            stop();
+            lifecycleObserver.close();
+        };
     }
 
     void retryOrClose(boolean closedByError) {
@@ -127,7 +137,7 @@ final class AdsXdsStream implements XdsStream {
         }
         for (XdsType targetType : targetTypes) {
             if (!stateCoordinator.interestedResources(targetType).isEmpty()) {
-                resourcesUpdated(targetType);
+                ensureStream().resourcesUpdated(targetType);
             }
         }
     }

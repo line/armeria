@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory;
+import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
 import io.micrometer.core.instrument.MeterRegistry;

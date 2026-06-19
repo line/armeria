@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds.filter;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.GenericSecretSnapshot;
 import com.linecorp.armeria.xds.XdsExtensionRegistry;
 import com.linecorp.armeria.xds.XdsResourceValidator;
@@ -74,4 +75,14 @@ public interface FactoryContext {
      * @param sdsSecretConfig the SDS secret configuration describing which secret to fetch
      */
     SnapshotStream<GenericSecretSnapshot> genericSecretStream(SdsSecretConfig sdsSecretConfig);
+
+    /**
+     * Creates a reactive {@link SnapshotStream} of {@link ClusterSnapshot} for the given cluster name.
+     * The stream resolves the cluster via CDS (or static bootstrap clusters), including its
+     * endpoints, transport sockets, and load balancer, and emits snapshots whenever any of
+     * these change.
+     *
+     * @param clusterName the name of the cluster to watch
+     */
+    SnapshotStream<ClusterSnapshot> clusterStream(String clusterName);
 }
