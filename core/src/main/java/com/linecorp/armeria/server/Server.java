@@ -113,17 +113,19 @@ public final class Server implements ListenableAsyncCloseable {
     @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
+    private final List<ServerPlugin> plugins;
     private boolean hasWebSocketService;
 
     @Nullable
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-    Server(DefaultServerConfig serverConfig) {
+    Server(DefaultServerConfig serverConfig, List<ServerPlugin> plugins) {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
+        this.plugins = requireNonNull(plugins, "plugins");
 
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
@@ -418,6 +420,7 @@ public final class Server implements ListenableAsyncCloseable {
         requireNonNull(serverConfigurator, "serverConfigurator");
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
+        plugins.forEach(plugin -> plugin.install(sb));
         final ImmutableList<ServerPort> serverPorts;
         lock.lock();
         try {
@@ -720,6 +723,9 @@ public final class Server implements ListenableAsyncCloseable {
             serverChannels.clear();
 
             final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            for (ServerPlugin plugin : plugins) {
+                builder.add(ShutdownSupport.of(plugin));
+            }
             builder.addAll(config.delegate().shutdownSupports());
             for (VirtualHost virtualHost : config.virtualHosts()) {
                 builder.addAll(virtualHost.shutdownSupports());
