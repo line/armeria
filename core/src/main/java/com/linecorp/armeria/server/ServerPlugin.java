@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  *
  * <p>The {@link #install(ServerBuilder)} method is called during {@link Server} construction
  * and during {@link Server#reconfigure(ServerConfigurator)}, allowing the plugin to register
- * any combination of server-level concerns (e.g., server listeners, service decorators).
+ * any combination of server-level concerns (e.g., ports, TLS, service decorators).
  *
  * <p>The {@link #close()} method is called when the {@link Server} stops, allowing the plugin
  * to clean up resources such as subscriptions or background tasks.
@@ -35,12 +35,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  *     @Override
  *     public void install(ServerBuilder sb) {
  *         sb.decorator(LoggingService.newDecorator());
- *         sb.serverListener(new ServerListenerAdapter() {
- *             @Override
- *             public void serverStarted(Server server) {
- *                 // ...
- *             }
- *         });
  *     }
  *
  *     @Override
