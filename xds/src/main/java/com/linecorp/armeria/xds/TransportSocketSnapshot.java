@@ -46,7 +46,6 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 public final class TransportSocketSnapshot implements Snapshot<TransportSocket> {
 
     private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
-    private static boolean warnedNoVerify;
 
     private final TransportSocket transportSocket;
     @Nullable
@@ -106,8 +105,12 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
             @Nullable UpstreamTlsContext upstreamTlsContext,
             @Nullable TlsCertificateSnapshot tlsCertificate,
             @Nullable CertificateValidationContextSnapshot validationContext) {
-        final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder()
-                                                              .endpointIdentificationAlgorithm("");
+        final ClientTlsSpecBuilder specBuilder = ClientTlsSpec.builder();
+        final boolean autoSniSanValidation = upstreamTlsContext != null &&
+                                             upstreamTlsContext.getAutoSniSanValidation();
+        if (!autoSniSanValidation) {
+            specBuilder.endpointIdentificationAlgorithm("");
+        }
         if (upstreamTlsContext != null) {
             final List<String> alpn = upstreamTlsContext.getCommonTlsContext().getAlpnProtocolsList();
             if (!alpn.isEmpty()) {
@@ -122,10 +125,15 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
             if (trustedCa != null) {
                 specBuilder.trustedCertificates(trustedCa);
             } else if (systemRootCerts) {
-                // use java default root CAs, also enable JSSE
-                specBuilder.endpointIdentificationAlgorithm("HTTPS");
+                // use java default root CAs
             } else {
-                warnNoVerifyOnce();
+                if (autoSniSanValidation) {
+                    throw new IllegalArgumentException(
+                            "'auto_sni_san_validation' was configured without configuring a trusted CA");
+                }
+                logger.warn("TLS peer verification is disabled: validation_context has no " +
+                            "trusted_ca and system_root_certs is unset. " +
+                            "Set 'system_root_certs: \\{}' or provide trusted_ca.");
                 verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
             }
 
@@ -136,7 +144,9 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
                 verifiersBuilder.addAll(verifierFactories);
             }
         } else {
-            // don't verify ca certs if no validation context is configured
+            // No validation context — don't verify peer certs (matches Envoy SSL_VERIFY_NONE).
+            logger.warn("TLS peer verification is disabled: no validation_context configured. " +
+                        "Configure a validation_context with trusted_ca or system_root_certs.");
             verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
         }
         if (tlsCertificate != null) {
@@ -150,16 +160,6 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
             specBuilder.verifierFactories(verifierFactories);
         }
         return specBuilder.build();
-    }
-
-    private static void warnNoVerifyOnce() {
-        if (!warnedNoVerify) {
-            warnedNoVerify = true;
-            logger.warn("TLS peer verification is disabled because validation context has no trusted CA " +
-                        "and system_root_certs is unset. " +
-                        "Set 'system_root_certs: {}' in the validation context " +
-                        "to use the default Java TLS roots.");
-        }
     }
 
     @Override
