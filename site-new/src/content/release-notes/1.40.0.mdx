@@ -76,6 +76,13 @@ date: 2026-06-18
 - Endpoints created by [KubernetesEndpointGroup](type) now carry their originating `Pod`
   and `Node` as endpoint attributes. This can be retrieved via [KubernetesResourceAccess](type). #6814
 
+## 🔒 Security fixes
+
+- The `DataSourceStream` in the xDS module now validates control-plane-supplied `filename` and
+  `environment_variable` fields from SDS Secret resources. Previously, a compromised or semi-trusted
+  xDS control plane could read arbitrary local files and environment variables on the xDS client host.
+  [CVE-2026-11752](https://github.com/line/armeria/security/advisories/GHSA-hgw6-8c77-v4gq)
+
 ## 📈 Improvements
 
 - Fetching Athenz policies has been optimized by using ETags. When policies haven't changed,
