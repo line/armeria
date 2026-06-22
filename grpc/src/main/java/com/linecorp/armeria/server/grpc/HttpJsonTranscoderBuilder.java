@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +80,8 @@ final class HttpJsonTranscoderBuilder {
     private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscoderBuilder.class);
 
     private final Map<String, HttpJsonGrpcMethod> methods = new HashMap<>();
+    private final List<ServerServiceDefinition> serviceDefinitions = new ArrayList<>();
+    private final List<io.grpc.ServiceDescriptor> serviceDescriptors = new ArrayList<>();
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
     private boolean protoSerialization = true;
 
@@ -85,7 +89,7 @@ final class HttpJsonTranscoderBuilder {
             Iterable<ServerServiceDefinition> serviceDefinitions) {
         requireNonNull(serviceDefinitions, "serviceDefinitions");
         for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
-            serviceDefinition(serviceDefinition);
+            this.serviceDefinitions.add(serviceDefinition);
         }
         return this;
     }
@@ -99,7 +103,7 @@ final class HttpJsonTranscoderBuilder {
         }
 
         final io.grpc.ServiceDescriptor grpcServiceDescriptor = serviceDefinition.getServiceDescriptor();
-        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.of(grpcServiceDescriptor);
+        final GrpcJsonMarshaller jsonMarshaller = buildJsonMarshaller(grpcServiceDescriptor);
         for (ServerMethodDefinition<?, ?> methodDefinition : serviceDefinition.getMethods()) {
             final Descriptors.MethodDescriptor methodDesc = methodDescriptor(methodDefinition);
             if (methodDesc == null) {
@@ -116,7 +120,7 @@ final class HttpJsonTranscoderBuilder {
             Iterable<io.grpc.ServiceDescriptor> serviceDescriptors) {
         requireNonNull(serviceDescriptors, "serviceDescriptors");
         for (io.grpc.ServiceDescriptor serviceDescriptor : serviceDescriptors) {
-            serviceDescriptor(serviceDescriptor);
+            this.serviceDescriptors.add(serviceDescriptor);
         }
         return this;
     }
@@ -142,7 +146,7 @@ final class HttpJsonTranscoderBuilder {
     }
 
     private void serviceDescriptor(io.grpc.ServiceDescriptor serviceDescriptor) {
-        final GrpcJsonMarshaller jsonMarshaller = GrpcJsonMarshaller.of(serviceDescriptor);
+        final GrpcJsonMarshaller jsonMarshaller = buildJsonMarshaller(serviceDescriptor);
         for (io.grpc.MethodDescriptor<?, ?> grpcMethodDescriptor : serviceDescriptor.getMethods()) {
             final Descriptors.MethodDescriptor methodDesc = methodDescriptor(grpcMethodDescriptor);
             if (methodDesc == null) {
@@ -368,6 +372,16 @@ final class HttpJsonTranscoderBuilder {
 
     @Nullable
     HttpJsonTranscoder build() {
+        // 'includingDefaultValueFields' changes the output only when the transcoder marshals the response
+        // itself. This needs Protobuf serialization between the transcoder and the gRPC service.
+        checkState(!options.includingDefaultValueFields() || protoSerialization,
+                   "'includingDefaultValueFields' requires 'protoSerialization' to be enabled.");
+        for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
+            serviceDefinition(serviceDefinition);
+        }
+        for (io.grpc.ServiceDescriptor serviceDescriptor : serviceDescriptors) {
+            serviceDescriptor(serviceDescriptor);
+        }
         final Map<MethodDescriptor, HttpRule> httpRules = buildHttpRules();
         if (httpRules.isEmpty()) {
             return null;
@@ -483,6 +497,14 @@ final class HttpJsonTranscoderBuilder {
                 doRegisterRoute(routeAndSpecs, additionalRouteAndVariables.route(), additionalSpec);
             }
         }
+    }
+
+    private GrpcJsonMarshaller buildJsonMarshaller(io.grpc.ServiceDescriptor serviceDescriptor) {
+        final boolean includingDefaultValueFields = options.includingDefaultValueFields();
+        return GrpcJsonMarshaller.builder()
+                                 .jsonMarshallerCustomizer(
+                                         b -> b.includingDefaultValueFields(includingDefaultValueFields))
+                                 .build(serviceDescriptor);
     }
 
     static final class HttpJsonGrpcMethod {

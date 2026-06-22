@@ -59,6 +59,8 @@ public final class HttpJsonTranscodingOptionsBuilder {
     @Nullable
     private Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
 
+    private boolean includingDefaultValueFields;
+
     HttpJsonTranscodingOptionsBuilder() {}
 
     /**
@@ -70,6 +72,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
         conflictStrategy(options.conflictStrategy());
         queryParamMatchRules(options.queryParamMatchRules());
         errorHandler(options.errorHandler());
+        includingDefaultValueFields(options.includingDefaultValueFields());
     }
 
     /**
@@ -174,6 +177,17 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
+     * Sets whether fields with default values are included in the transcoded JSON response.
+     * Defaults to {@code false}.
+     * See {@link HttpJsonTranscodingOptions#includingDefaultValueFields()} for details.
+     */
+    @UnstableApi
+    public HttpJsonTranscodingOptionsBuilder includingDefaultValueFields(boolean includingDefaultValueFields) {
+        this.includingDefaultValueFields = includingDefaultValueFields;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
@@ -195,6 +209,6 @@ public final class HttpJsonTranscodingOptionsBuilder {
             }
         }
         return new DefaultHttpJsonTranscodingOptions(ignoreProtoHttpRule, rules, conflictStrategy,
-                                                     matchRules, errorHandler);
+                                                     matchRules, errorHandler, includingDefaultValueFields);
     }
 }

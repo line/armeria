@@ -145,6 +145,20 @@ class GrpcServiceBuilderTest {
     }
 
     @Test
+    void includingDefaultValueFieldsRequiresProtoFormat() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .addService(new MetricsServiceImpl())
+                                            .supportedSerializationFormats(GrpcSerializationFormats.JSON)
+                                            .enableHttpJsonTranscoding(
+                                                    HttpJsonTranscodingOptions.builder()
+                                                                              .includingDefaultValueFields(true)
+                                                                              .build())
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("'GrpcSerializationFormats.PROTO' must be set");
+    }
+
+    @Test
     void addServices() {
         final BindableService metricsService = new MetricsServiceImpl();
         final BindableService reconnectService = new ReconnectServiceImpl();

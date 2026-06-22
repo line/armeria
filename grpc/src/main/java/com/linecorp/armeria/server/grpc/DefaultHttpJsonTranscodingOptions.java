@@ -32,17 +32,20 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
     private final HttpJsonTranscodingConflictStrategy conflictStrategy;
     private final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
     private final UnframedGrpcErrorHandler errorHandler;
+    private final boolean includingDefaultValueFields;
 
     DefaultHttpJsonTranscodingOptions(boolean ignoreProtoHttpRule,
                                       List<HttpRule> additionalHttpRules,
                                       HttpJsonTranscodingConflictStrategy conflictStrategy,
                                       Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
-                                      UnframedGrpcErrorHandler errorHandler) {
+                                      UnframedGrpcErrorHandler errorHandler,
+                                      boolean includingDefaultValueFields) {
         this.ignoreProtoHttpRule = ignoreProtoHttpRule;
         this.additionalHttpRules = additionalHttpRules;
         this.conflictStrategy = conflictStrategy;
         this.queryParamMatchRules = queryParamMatchRules;
         this.errorHandler = errorHandler;
+        this.includingDefaultValueFields = includingDefaultValueFields;
     }
 
     @Override
@@ -71,6 +74,11 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
     }
 
     @Override
+    public boolean includingDefaultValueFields() {
+        return includingDefaultValueFields;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -83,13 +91,14 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
                additionalHttpRules.equals(that.additionalHttpRules()) &&
                conflictStrategy.equals(that.conflictStrategy()) &&
                queryParamMatchRules.equals(that.queryParamMatchRules()) &&
-               errorHandler.equals(that.errorHandler());
+               errorHandler.equals(that.errorHandler()) &&
+               includingDefaultValueFields == that.includingDefaultValueFields();
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(ignoreProtoHttpRule, additionalHttpRules, conflictStrategy,
-                            queryParamMatchRules, errorHandler);
+                            queryParamMatchRules, errorHandler, includingDefaultValueFields);
     }
 
     @Override
@@ -100,6 +109,7 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
                           .add("conflictStrategy", conflictStrategy)
                           .add("queryParamMatchRules", queryParamMatchRules)
                           .add("errorHandler", errorHandler)
+                          .add("includingDefaultValueFields", includingDefaultValueFields)
                           .toString();
     }
 }

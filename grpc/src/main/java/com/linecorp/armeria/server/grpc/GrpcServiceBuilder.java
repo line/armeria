@@ -1029,6 +1029,15 @@ public final class GrpcServiceBuilder {
                     "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
             );
         }
+        // When 'includingDefaultValueFields' is set, the transcoder marshals the response itself and
+        // sends 'application/grpc+proto' to the gRPC service. So PROTO must be supported.
+        if (enableHttpJsonTranscoding && httpJsonTranscodingOptions.includingDefaultValueFields() &&
+            !supportedSerializationFormats.contains(GrpcSerializationFormats.PROTO)) {
+            throw new IllegalStateException(
+                    "'GrpcSerializationFormats.PROTO' must be set if 'includingDefaultValueFields' is " +
+                    "enabled for HTTP/JSON transcoding"
+            );
+        }
         if (enableHealthCheckService) {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
@@ -1094,10 +1103,14 @@ public final class GrpcServiceBuilder {
             } else {
                 httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
             }
+            // The gRPC service's marshaller is shared (it also serves native 'grpc+json' clients), so apply
+            // 'includingDefaultValueFields' with the transcoder's own marshaller instead. The transcoder
+            // marshals the response only under 'grpc+proto', so enable 'grpc+proto' when the option is set.
+            final boolean protoSerialization = httpJsonTranscodingOptions.includingDefaultValueFields();
             final HttpJsonTranscoder transcoder =
                     new HttpJsonTranscoderBuilder()
                             .options(httpJsonTranscodingOptions)
-                            .protoSerialization(false)
+                            .protoSerialization(protoSerialization)
                             .serviceDefinitions(grpcService.services())
                             .build();
             if (transcoder != null) {

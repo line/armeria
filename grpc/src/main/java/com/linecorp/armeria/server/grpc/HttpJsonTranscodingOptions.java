@@ -98,4 +98,18 @@ public interface HttpJsonTranscodingOptions {
      * request transcoded from an HTTP/JSON request.
      */
     UnframedGrpcErrorHandler errorHandler();
+
+    /**
+     * Returns whether fields with default values are included in the transcoded JSON response.
+     *
+     * <p>By default ({@code false}), proto3 JSON output drops a field whose value is the default
+     * (e.g. {@code 0}, {@code false}, an empty string, or the first {@code enum} entry). When {@code true},
+     * Armeria writes such scalar, {@code enum}, and {@code repeated} fields with their default values.
+     *
+     * <p>This option affects responses only. It works only when the transcoder serializes the response
+     * itself, which needs Protobuf serialization between the transcoder and the gRPC service.
+     * {@link GrpcServiceBuilder#enableHttpJsonTranscoding(HttpJsonTranscodingOptions)} turns on Protobuf
+     * serialization automatically when this option is set.
+     */
+    boolean includingDefaultValueFields();
 }

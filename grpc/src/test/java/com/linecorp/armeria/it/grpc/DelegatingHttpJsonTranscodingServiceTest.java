@@ -17,6 +17,7 @@
 package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
@@ -50,6 +51,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingService;
 import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingServiceBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -133,6 +135,18 @@ class DelegatingHttpJsonTranscodingServiceTest {
                 transcoderBuilder((ctx, req) -> HttpResponse.of(HttpStatus.OK)).build();
         assertThat(transcoder.as(DelegatingHttpJsonTranscodingService.class)).isSameAs(transcoder);
         assertThat(transcoder.as(HttpServiceWithRoutes.class)).isSameAs(transcoder);
+    }
+
+    @Test
+    void includingDefaultValueFieldsRequiresProtoSerialization() {
+        assertThatThrownBy(() -> transcoderBuilder((ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .protoSerialization(false)
+                .options(HttpJsonTranscodingOptions.builder()
+                                                   .includingDefaultValueFields(true)
+                                                   .build())
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("protoSerialization");
     }
 
     @Test

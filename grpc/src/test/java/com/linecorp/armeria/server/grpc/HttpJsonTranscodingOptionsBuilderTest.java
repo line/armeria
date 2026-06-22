@@ -83,6 +83,7 @@ class HttpJsonTranscodingOptionsBuilderTest {
                                           .additionalHttpRules(rule)
                                           .queryParamMatchRules(LOWER_CAMEL_CASE, ORIGINAL_FIELD)
                                           .errorHandler(UnframedGrpcErrorHandler.ofJson())
+                                          .includingDefaultValueFields(true)
                                           .build();
 
         final HttpJsonTranscodingOptions copy = new HttpJsonTranscodingOptionsBuilder(original).build();
@@ -91,6 +92,7 @@ class HttpJsonTranscodingOptionsBuilderTest {
         assertThat(copy.additionalHttpRules()).isEqualTo(original.additionalHttpRules());
         assertThat(copy.queryParamMatchRules()).isEqualTo(original.queryParamMatchRules());
         assertThat(copy.errorHandler()).isEqualTo(original.errorHandler());
+        assertThat(copy.includingDefaultValueFields()).isEqualTo(original.includingDefaultValueFields());
         assertThat(copy).isEqualTo(original);
     }
 }
