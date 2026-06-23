@@ -47,6 +47,11 @@ public final class RouterFilterFactory implements HttpFilterFactory {
 
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
+    private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter =
+            new RouterFilter<>(true);
+    private static final RouterFilter<HttpRequest, HttpResponse> httpFilter =
+            new RouterFilter<>(false);
+
     /**
      * Returns the extension name for the router filter.
      */
@@ -60,10 +65,6 @@ public final class RouterFilterFactory implements HttpFilterFactory {
     public static String extensionTypeUrl() {
         return TYPE_URL;
     }
-    private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter =
-            new RouterFilter<>(true);
-    private static final RouterFilter<HttpRequest, HttpResponse> httpFilter =
-            new RouterFilter<>(false);
 
     @Override
     public String name() {
