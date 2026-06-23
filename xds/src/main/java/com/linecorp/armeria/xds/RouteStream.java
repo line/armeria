@@ -17,8 +17,6 @@
 package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.ROUTE;
-import static com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory.NAME;
-import static com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory.TYPE_URL;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory;
 import com.linecorp.armeria.xds.stream.RefCountedStream;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
@@ -165,10 +164,11 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
                 return null;
             }
             final HttpFilter last = httpFilters.get(httpFilters.size() - 1);
-            if (last.hasTypedConfig() && TYPE_URL.equals(last.getTypedConfig().getTypeUrl())) {
+            if (last.hasTypedConfig() &&
+                RouterFilterFactory.extensionTypeUrl().equals(last.getTypedConfig().getTypeUrl())) {
                 return registry.unpack(last.getTypedConfig(), Router.class);
             }
-            if (NAME.equals(last.getName())) {
+            if (RouterFilterFactory.extensionName().equals(last.getName())) {
                 return Router.getDefaultInstance();
             }
             return null;

@@ -29,7 +29,14 @@ import com.linecorp.armeria.xds.stream.SnapshotStream;
 @UnstableApi
 public final class StaticClusterTypeFactory implements ClusterTypeFactory {
 
-    static final String NAME = "armeria.cluster.static";
+    private static final String NAME = "armeria.cluster.static";
+
+    /**
+     * Returns the extension name for the static cluster type.
+     */
+    public static String extensionName() {
+        return NAME;
+    }
 
     @Override
     public String name() {

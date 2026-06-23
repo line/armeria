@@ -33,6 +33,9 @@ import io.envoyproxy.envoy.config.listener.v3.FilterChain;
 
 final class ListenerStream extends RefCountedStream<ListenerSnapshot> {
 
+    private static final SnapshotStream<List<FilterChainSnapshot>> EMPTY_FILTER_CHAINS =
+            SnapshotStream.just(ImmutableList.of());
+
     @Nullable
     private final ListenerXdsResource listenerXdsResource;
     private final String resourceName;
@@ -94,7 +97,7 @@ final class ListenerStream extends RefCountedStream<ListenerSnapshot> {
             @Nullable ConfigSource parentConfigSource) {
         final List<FilterChain> filterChains = resource.resource().getFilterChainsList();
         if (filterChains.isEmpty()) {
-            return SnapshotStream.just(ImmutableList.of());
+            return EMPTY_FILTER_CHAINS;
         }
         final ImmutableList.Builder<SnapshotStream<FilterChainSnapshot>> streams = ImmutableList.builder();
         for (FilterChain filterChain : filterChains) {

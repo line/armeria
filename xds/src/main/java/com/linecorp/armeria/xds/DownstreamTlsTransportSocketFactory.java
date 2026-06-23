@@ -35,12 +35,12 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.DownstreamTlsCont
  */
 final class DownstreamTlsTransportSocketFactory implements TransportSocketFactory {
 
-    static final DownstreamTlsTransportSocketFactory INSTANCE =
-            new DownstreamTlsTransportSocketFactory();
     private static final String NAME = "envoy.transport_sockets.downstream_tls";
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
+    static final DownstreamTlsTransportSocketFactory INSTANCE =
+            new DownstreamTlsTransportSocketFactory();
 
     private DownstreamTlsTransportSocketFactory() {}
 
