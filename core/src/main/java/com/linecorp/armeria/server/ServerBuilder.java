@@ -44,10 +44,12 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -245,6 +247,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private final ServerTlsProviderBuilder serverTlsProviderBuilder = new ServerTlsProviderBuilder();
     private Function<? super String, ? extends EventLoopGroup> bossGroupFactory = DEFAULT_BOSS_GROUP_FACTORY;
     private ConnectionAcceptor connectionAcceptor = ConnectionAcceptor.always();
+    private static final List<ServerPlugin> SPI_PLUGINS =
+            ImmutableList.copyOf(ServiceLoader.load(ServerPlugin.class));
     private final List<ServerPlugin> plugins = new ArrayList<>();
 
     ServerBuilder() {
@@ -551,6 +555,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         plugins.add(requireNonNull(plugin, "plugin"));
         return this;
     }
+
 
     /**
      * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
@@ -2486,11 +2491,22 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final List<ServerPlugin> plugins = ImmutableList.copyOf(this.plugins);
+        final List<ServerPlugin> plugins = buildPlugins();
         plugins.forEach(plugin -> plugin.install(this));
         final Server server = new Server(buildServerConfig(ports), plugins);
         serverListeners.forEach(server::addListener);
         return server;
+    }
+
+    private List<ServerPlugin> buildPlugins() {
+        // SPI-discovered plugins first, then user-registered plugins
+        return ImmutableList.<ServerPlugin>builder()
+                            .addAll(SPI_PLUGINS)
+                            .addAll(this.plugins)
+                            .build()
+                            .stream()
+                            .sorted(Comparator.comparingInt(ServerPlugin::order))
+                            .collect(toImmutableList());
     }
 
     DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {

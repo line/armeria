@@ -36,9 +36,6 @@ class ServerPluginTest {
             public void install(ServerBuilder sb) {
                 installCount.incrementAndGet();
             }
-
-            @Override
-            public void close() {}
         };
 
         final Server server = Server.builder()
@@ -58,9 +55,6 @@ class ServerPluginTest {
             public void install(ServerBuilder sb) {
                 installCount.incrementAndGet();
             }
-
-            @Override
-            public void close() {}
         };
 
         final Server server = Server.builder()
@@ -108,27 +102,18 @@ class ServerPluginTest {
             public void install(ServerBuilder sb) {
                 order.add("A");
             }
-
-            @Override
-            public void close() {}
         };
         final ServerPlugin pluginB = new ServerPlugin() {
             @Override
             public void install(ServerBuilder sb) {
                 order.add("B");
             }
-
-            @Override
-            public void close() {}
         };
         final ServerPlugin pluginC = new ServerPlugin() {
             @Override
             public void install(ServerBuilder sb) {
                 order.add("C");
             }
-
-            @Override
-            public void close() {}
         };
 
         final Server server = Server.builder()
@@ -143,15 +128,95 @@ class ServerPluginTest {
     }
 
     @Test
+    void pluginsSortedByOrder() {
+        final List<String> order = new ArrayList<>();
+        final ServerPlugin pluginA = new ServerPlugin() {
+            @Override
+            public void install(ServerBuilder sb) {
+                order.add("A");
+            }
+
+            @Override
+            public int order() {
+                return 10;
+            }
+        };
+        final ServerPlugin pluginB = new ServerPlugin() {
+            @Override
+            public void install(ServerBuilder sb) {
+                order.add("B");
+            }
+
+            @Override
+            public int order() {
+                return -1;
+            }
+        };
+        final ServerPlugin pluginC = new ServerPlugin() {
+            @Override
+            public void install(ServerBuilder sb) {
+                order.add("C");
+            }
+
+            @Override
+            public int order() {
+                return 5;
+            }
+        };
+
+        // Registered in A, B, C order but B (-1) < C (5) < A (10)
+        final Server server = Server.builder()
+                                    .http(0)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .plugin(pluginA)
+                                    .plugin(pluginB)
+                                    .plugin(pluginC)
+                                    .build();
+        assertThat(order).containsExactly("B", "C", "A");
+        server.close();
+    }
+
+    @Test
+    void pluginsWithSameOrderPreserveInsertionOrder() {
+        final List<String> order = new ArrayList<>();
+        final ServerPlugin pluginA = new ServerPlugin() {
+            @Override
+            public void install(ServerBuilder sb) {
+                order.add("A");
+            }
+        };
+        final ServerPlugin pluginB = new ServerPlugin() {
+            @Override
+            public void install(ServerBuilder sb) {
+                order.add("B");
+            }
+        };
+        final ServerPlugin pluginC = new ServerPlugin() {
+            @Override
+            public void install(ServerBuilder sb) {
+                order.add("C");
+            }
+        };
+
+        // All have default order (0), so insertion order is preserved
+        final Server server = Server.builder()
+                                    .http(0)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .plugin(pluginC)
+                                    .plugin(pluginA)
+                                    .plugin(pluginB)
+                                    .build();
+        assertThat(order).containsExactly("C", "A", "B");
+        server.close();
+    }
+
+    @Test
     void pluginCanModifyServerBuilder() {
         final ServerPlugin plugin = new ServerPlugin() {
             @Override
             public void install(ServerBuilder sb) {
                 sb.serverListener(new ServerListenerAdapter() {});
             }
-
-            @Override
-            public void close() {}
         };
 
         final Server server = Server.builder()
