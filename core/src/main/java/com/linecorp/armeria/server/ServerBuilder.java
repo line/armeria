@@ -556,7 +556,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         return this;
     }
 
-
     /**
      * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
