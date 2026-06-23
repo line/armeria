@@ -38,7 +38,7 @@ public final class CircuitBreakerRpcClientBuilder
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, handler(), ruleWithContent(), fallback());
+        return new CircuitBreakerRpcClient(delegate, handler(), composedRuleWithContent(), fallback());
     }
 
     /**
@@ -65,5 +65,10 @@ public final class CircuitBreakerRpcClientBuilder
     public CircuitBreakerRpcClientBuilder recover(BiFunction<? super ClientRequestContext, ? super RpcRequest,
             ? extends RpcResponse> fallback) {
         return (CircuitBreakerRpcClientBuilder) super.recover(fallback);
+    }
+
+    @Override
+    public CircuitBreakerRpcClientBuilder useSuccessFunctionMatch(boolean useSuccessFunctionMatch) {
+        return (CircuitBreakerRpcClientBuilder) super.useSuccessFunctionMatch(useSuccessFunctionMatch);
     }
 }

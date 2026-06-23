@@ -16,11 +16,24 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SuccessFunction;
 
 class CircuitBreakerClientBuilderTest {
 
@@ -33,5 +46,77 @@ class CircuitBreakerClientBuilderTest {
                   .hasMessageContaining("maxContentLength: 0 (expected: > 0)");
 
         CircuitBreakerClient.builder(rule, 1);
+    }
+
+    @Test
+    void successFunctionOverridesUserRule_whenEnabled() {
+        final CircuitBreakerRule userRule = failOnSuccessStatus();
+        final CircuitBreakerClient client = CircuitBreakerClient.builder(userRule)
+                                                                .useSuccessFunctionMatch(true)
+                                                                .build(mock(HttpClient.class));
+        final ClientRequestContext ctx = httpCtxWith(SuccessFunction.always());
+        assertThat(client.rule().shouldReportAsSuccess(ctx, null).toCompletableFuture().join())
+                .isEqualTo(CircuitBreakerDecision.success());
+    }
+
+    @Test
+    void successFunctionIgnored_whenDisabled() {
+        final CircuitBreakerRule userRule = failOnSuccessStatus();
+        final CircuitBreakerClient client = CircuitBreakerClient.builder(userRule)
+                                                                .build(mock(HttpClient.class));
+        final ClientRequestContext ctx = httpCtxWith(SuccessFunction.always());
+        assertThat(client.rule().shouldReportAsSuccess(ctx, null).toCompletableFuture().join())
+                .isEqualTo(CircuitBreakerDecision.failure());
+    }
+
+    @Test
+    void successFunctionOverridesRpcRule_whenEnabled() {
+        final CircuitBreakerRuleWithContent<RpcResponse> userRule =
+                CircuitBreakerRuleWithContent.<RpcResponse>builder()
+                                             .onStatusClass(HttpStatusClass.SUCCESS)
+                                             .thenFailure();
+        final CircuitBreakerRpcClient client = CircuitBreakerRpcClient.builder(userRule)
+                                                                      .useSuccessFunctionMatch(true)
+                                                                      .build(mock(RpcClient.class));
+        final ClientRequestContext ctx = rpcCtxWith(SuccessFunction.always());
+        assertThat(client.ruleWithContent().shouldReportAsSuccess(ctx, null, null)
+                          .toCompletableFuture().join())
+                .isEqualTo(CircuitBreakerDecision.success());
+    }
+
+    private static CircuitBreakerRule failOnSuccessStatus() {
+        return CircuitBreakerRule.builder()
+                                 .onStatusClass(HttpStatusClass.SUCCESS)
+                                 .thenFailure();
+    }
+
+    private static ClientRequestContext httpCtxWith(SuccessFunction successFunction) {
+        final ClientOptions opts = ClientOptions.builder()
+                                                .successFunction(successFunction)
+                                                .build();
+        final ClientRequestContext ctx =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                    .options(opts)
+                                    .build();
+        completeLog(ctx);
+        return ctx;
+    }
+
+    private static ClientRequestContext rpcCtxWith(SuccessFunction successFunction) {
+        final ClientOptions opts = ClientOptions.builder()
+                                                .successFunction(successFunction)
+                                                .build();
+        final ClientRequestContext ctx =
+                ClientRequestContext.builder(RpcRequest.of(Object.class, "test"), "h2c://dummy/")
+                                    .options(opts)
+                                    .build();
+        completeLog(ctx);
+        return ctx;
+    }
+
+    private static void completeLog(ClientRequestContext ctx) {
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        ctx.logBuilder().endResponse();
     }
 }

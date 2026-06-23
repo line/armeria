@@ -60,10 +60,10 @@ public final class CircuitBreakerClientBuilder
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(
-                    delegate, handler(), ruleWithContent(), maxContentLength, fallback());
+            return new CircuitBreakerClient(delegate, handler(), composedRuleWithContent(),
+                                            maxContentLength, fallback());
         }
-        return new CircuitBreakerClient(delegate, handler(), rule(), fallback());
+        return new CircuitBreakerClient(delegate, handler(), composedRule(), fallback());
     }
 
     /**
@@ -91,5 +91,10 @@ public final class CircuitBreakerClientBuilder
     public CircuitBreakerClientBuilder recover(BiFunction<? super ClientRequestContext, ? super HttpRequest,
             ? extends HttpResponse> fallback) {
         return (CircuitBreakerClientBuilder) super.recover(fallback);
+    }
+
+    @Override
+    public CircuitBreakerClientBuilder useSuccessFunctionMatch(boolean useSuccessFunctionMatch) {
+        return (CircuitBreakerClientBuilder) super.useSuccessFunctionMatch(useSuccessFunctionMatch);
     }
 }
