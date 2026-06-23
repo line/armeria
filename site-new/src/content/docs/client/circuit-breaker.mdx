@@ -148,6 +148,37 @@ WebClient client = WebClient
 AggregatedHttpResponse res = client.execute(...).aggregate().join();
 ```
 
+## Aligning with `SuccessFunction`
+
+[ClientOptions#SUCCESS_FUNCTION](type) lets you classify certain responses (e.g., HTTP `4xx`, business
+exceptions) as success for metrics and logging. By default a [CircuitBreakerRule](type) does **not**
+consult it, which can lead to a subtle pitfall: if such a response is classified as
+`CircuitBreakerDecision.ignore()` by your rule, an `OPEN` [CircuitBreaker](type) will never close,
+because every trial request in `HALF_OPEN` keeps getting ignored.
+
+There are two ways to align the circuit breaker with the client's [SuccessFunction](type).
+
+The simplest is the [CircuitBreakerClientBuilder](type) flag, which composes a [SuccessFunction](type)
+check before your rule:
+
+```java
+WebClient client = WebClient
+        .builder(...)
+        .successFunction((ctx, log) -> log.responseHeaders().status().code() == 404)
+        .decorator(CircuitBreakerClient.builder(myRule)
+                                       .useSuccessFunctionMatch(true)
+                                       .newDecorator())
+        .build();
+```
+
+For finer-grained control, compose [CircuitBreakerRule#onSuccessFunctionMatch()](type) yourself:
+
+```java
+final CircuitBreakerRule rule =
+        CircuitBreakerRule.onSuccessFunctionMatch()
+                          .orElse(myRule);
+```
+
 ## Grouping `CircuitBreaker`s
 
 In the very first example above, a single [CircuitBreaker](type) was used to track the events. However,
