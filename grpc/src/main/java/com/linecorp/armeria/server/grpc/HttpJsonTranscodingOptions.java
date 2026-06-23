@@ -18,11 +18,15 @@ package com.linecorp.armeria.server.grpc;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.google.api.HttpRule;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+
+import io.grpc.ServiceDescriptor;
 
 /**
  * User provided options for customizing {@link HttpJsonTranscodingGrpcService} and
@@ -100,16 +104,15 @@ public interface HttpJsonTranscodingOptions {
     UnframedGrpcErrorHandler errorHandler();
 
     /**
-     * Returns whether fields with default values are included in the transcoded JSON response.
+     * Returns the factory that creates the {@link GrpcJsonMarshaller} the transcoder uses to convert
+     * between JSON and the gRPC message, deserializing the request and serializing the response. By
+     * default, the built-in marshaller is used.
      *
-     * <p>By default ({@code false}), proto3 JSON output drops a field whose value is the default
-     * (e.g. {@code 0}, {@code false}, an empty string, or the first {@code enum} entry). When {@code true},
-     * Armeria writes such scalar, {@code enum}, and {@code repeated} fields with their default values.
-     *
-     * <p>This option affects responses only. It works only when the transcoder serializes the response
-     * itself, which needs Protobuf serialization between the transcoder and the gRPC service.
-     * {@link GrpcServiceBuilder#enableHttpJsonTranscoding(HttpJsonTranscodingOptions)} turns on Protobuf
-     * serialization automatically when this option is set.
+     * <p>A custom factory takes effect only when the transcoder converts messages itself, which needs
+     * Protobuf serialization between the transcoder and the gRPC service.
+     * {@link GrpcServiceBuilder#enableHttpJsonTranscoding(HttpJsonTranscodingOptions)} enables Protobuf
+     * serialization automatically when a custom factory is set, so the customization applies to transcoded
+     * traffic without affecting native {@code application/grpc+json} traffic.
      */
-    boolean includingDefaultValueFields();
+    Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory();
 }

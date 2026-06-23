@@ -19,33 +19,46 @@ package com.linecorp.armeria.server.grpc;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.google.api.HttpRule;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+
+import io.grpc.ServiceDescriptor;
+
 final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOptions {
 
+    static final Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller>
+            DEFAULT_JSON_MARSHALLER_FACTORY = GrpcJsonMarshaller::of;
+
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
+
+    static boolean hasCustomJsonMarshallerFactory(HttpJsonTranscodingOptions options) {
+        return options.jsonMarshallerFactory() != DEFAULT_JSON_MARSHALLER_FACTORY;
+    }
 
     private final boolean ignoreProtoHttpRule;
     private final List<HttpRule> additionalHttpRules;
     private final HttpJsonTranscodingConflictStrategy conflictStrategy;
     private final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
     private final UnframedGrpcErrorHandler errorHandler;
-    private final boolean includingDefaultValueFields;
+    private final Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory;
 
-    DefaultHttpJsonTranscodingOptions(boolean ignoreProtoHttpRule,
-                                      List<HttpRule> additionalHttpRules,
-                                      HttpJsonTranscodingConflictStrategy conflictStrategy,
-                                      Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
-                                      UnframedGrpcErrorHandler errorHandler,
-                                      boolean includingDefaultValueFields) {
+    DefaultHttpJsonTranscodingOptions(
+            boolean ignoreProtoHttpRule,
+            List<HttpRule> additionalHttpRules,
+            HttpJsonTranscodingConflictStrategy conflictStrategy,
+            Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
+            UnframedGrpcErrorHandler errorHandler,
+            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
         this.ignoreProtoHttpRule = ignoreProtoHttpRule;
         this.additionalHttpRules = additionalHttpRules;
         this.conflictStrategy = conflictStrategy;
         this.queryParamMatchRules = queryParamMatchRules;
         this.errorHandler = errorHandler;
-        this.includingDefaultValueFields = includingDefaultValueFields;
+        this.jsonMarshallerFactory = jsonMarshallerFactory;
     }
 
     @Override
@@ -74,8 +87,8 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
     }
 
     @Override
-    public boolean includingDefaultValueFields() {
-        return includingDefaultValueFields;
+    public Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory() {
+        return jsonMarshallerFactory;
     }
 
     @Override
@@ -92,13 +105,13 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
                conflictStrategy.equals(that.conflictStrategy()) &&
                queryParamMatchRules.equals(that.queryParamMatchRules()) &&
                errorHandler.equals(that.errorHandler()) &&
-               includingDefaultValueFields == that.includingDefaultValueFields();
+               jsonMarshallerFactory.equals(that.jsonMarshallerFactory());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(ignoreProtoHttpRule, additionalHttpRules, conflictStrategy,
-                            queryParamMatchRules, errorHandler, includingDefaultValueFields);
+                            queryParamMatchRules, errorHandler, jsonMarshallerFactory);
     }
 
     @Override
@@ -109,7 +122,7 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
                           .add("conflictStrategy", conflictStrategy)
                           .add("queryParamMatchRules", queryParamMatchRules)
                           .add("errorHandler", errorHandler)
-                          .add("includingDefaultValueFields", includingDefaultValueFields)
+                          .add("jsonMarshallerFactory", jsonMarshallerFactory)
                           .toString();
     }
 }

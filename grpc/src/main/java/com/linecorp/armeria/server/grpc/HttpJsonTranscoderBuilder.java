@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.grpc.DefaultHttpJsonTranscodingOptions.hasCustomJsonMarshallerFactory;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
@@ -372,10 +373,10 @@ final class HttpJsonTranscoderBuilder {
 
     @Nullable
     HttpJsonTranscoder build() {
-        // 'includingDefaultValueFields' changes the output only when the transcoder marshals the response
-        // itself. This needs Protobuf serialization between the transcoder and the gRPC service.
-        checkState(!options.includingDefaultValueFields() || protoSerialization,
-                   "'includingDefaultValueFields' requires 'protoSerialization' to be enabled.");
+        // A custom 'jsonMarshallerFactory' is used only when the transcoder converts messages itself.
+        // This needs Protobuf serialization between the transcoder and the gRPC service.
+        checkState(!hasCustomJsonMarshallerFactory(options) || protoSerialization,
+                   "A custom 'jsonMarshallerFactory' requires 'protoSerialization' to be enabled.");
         for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
             serviceDefinition(serviceDefinition);
         }
@@ -500,11 +501,7 @@ final class HttpJsonTranscoderBuilder {
     }
 
     private GrpcJsonMarshaller buildJsonMarshaller(io.grpc.ServiceDescriptor serviceDescriptor) {
-        final boolean includingDefaultValueFields = options.includingDefaultValueFields();
-        return GrpcJsonMarshaller.builder()
-                                 .jsonMarshallerCustomizer(
-                                         b -> b.includingDefaultValueFields(includingDefaultValueFields))
-                                 .build(serviceDescriptor);
+        return options.jsonMarshallerFactory().apply(serviceDescriptor);
     }
 
     static final class HttpJsonGrpcMethod {

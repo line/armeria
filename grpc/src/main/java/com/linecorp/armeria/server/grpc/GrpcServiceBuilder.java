@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.grpc.DefaultHttpJsonTranscodingOptions.hasCustomJsonMarshallerFactory;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -1029,13 +1030,14 @@ public final class GrpcServiceBuilder {
                     "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
             );
         }
-        // When 'includingDefaultValueFields' is set, the transcoder marshals the response itself and
-        // sends 'application/grpc+proto' to the gRPC service. So PROTO must be supported.
-        if (enableHttpJsonTranscoding && httpJsonTranscodingOptions.includingDefaultValueFields() &&
+        // A custom transcoding 'jsonMarshallerFactory' makes the transcoder convert messages itself and
+        // exchange 'application/grpc+proto' with the gRPC service, so PROTO must be supported.
+        if (enableHttpJsonTranscoding &&
+            hasCustomJsonMarshallerFactory(httpJsonTranscodingOptions) &&
             !supportedSerializationFormats.contains(GrpcSerializationFormats.PROTO)) {
             throw new IllegalStateException(
-                    "'GrpcSerializationFormats.PROTO' must be set if 'includingDefaultValueFields' is " +
-                    "enabled for HTTP/JSON transcoding"
+                    "'GrpcSerializationFormats.PROTO' must be set if a custom 'jsonMarshallerFactory' is " +
+                    "set for HTTP/JSON transcoding"
             );
         }
         if (enableHealthCheckService) {
@@ -1103,10 +1105,9 @@ public final class GrpcServiceBuilder {
             } else {
                 httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
             }
-            // The gRPC service's marshaller is shared (it also serves native 'grpc+json' clients), so apply
-            // 'includingDefaultValueFields' with the transcoder's own marshaller instead. The transcoder
-            // marshals the response only under 'grpc+proto', so enable 'grpc+proto' when the option is set.
-            final boolean protoSerialization = httpJsonTranscodingOptions.includingDefaultValueFields();
+            // A custom 'jsonMarshallerFactory' applies only when the transcoder converts messages itself,
+            // which needs Protobuf serialization. Native 'grpc+json' keeps using the gRPC service marshaller.
+            final boolean protoSerialization = hasCustomJsonMarshallerFactory(httpJsonTranscodingOptions);
             final HttpJsonTranscoder transcoder =
                     new HttpJsonTranscoderBuilder()
                             .options(httpJsonTranscodingOptions)

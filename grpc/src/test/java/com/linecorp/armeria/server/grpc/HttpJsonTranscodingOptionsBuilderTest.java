@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import com.google.api.HttpRule;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
+
 class HttpJsonTranscodingOptionsBuilderTest {
 
     @Test
@@ -83,7 +85,7 @@ class HttpJsonTranscodingOptionsBuilderTest {
                                           .additionalHttpRules(rule)
                                           .queryParamMatchRules(LOWER_CAMEL_CASE, ORIGINAL_FIELD)
                                           .errorHandler(UnframedGrpcErrorHandler.ofJson())
-                                          .includingDefaultValueFields(true)
+                                          .jsonMarshallerFactory(GrpcJsonMarshaller::of)
                                           .build();
 
         final HttpJsonTranscodingOptions copy = new HttpJsonTranscodingOptionsBuilder(original).build();
@@ -92,7 +94,7 @@ class HttpJsonTranscodingOptionsBuilderTest {
         assertThat(copy.additionalHttpRules()).isEqualTo(original.additionalHttpRules());
         assertThat(copy.queryParamMatchRules()).isEqualTo(original.queryParamMatchRules());
         assertThat(copy.errorHandler()).isEqualTo(original.errorHandler());
-        assertThat(copy.includingDefaultValueFields()).isEqualTo(original.includingDefaultValueFields());
+        assertThat(copy.jsonMarshallerFactory()).isSameAs(original.jsonMarshallerFactory());
         assertThat(copy).isEqualTo(original);
     }
 }

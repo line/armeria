@@ -18,16 +18,20 @@ package com.linecorp.armeria.it.grpc;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.function.Function;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.ServiceDescriptor;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import testing.grpc.Transcoding.GetMessageRequestV1;
@@ -35,16 +39,23 @@ import testing.grpc.Transcoding.Message;
 
 class HttpJsonTranscodingDefaultValueFieldsTest {
 
+    private static final Function<ServiceDescriptor, GrpcJsonMarshaller> INCLUDING_DEFAULT_VALUE_FIELDS =
+            serviceDescriptor -> GrpcJsonMarshaller.builder()
+                                                   .jsonMarshallerCustomizer(
+                                                           b -> b.includingDefaultValueFields(true))
+                                                   .build(serviceDescriptor);
+
     @RegisterExtension
     static final ServerExtension serverIncludingDefaults = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            final HttpJsonTranscodingOptions options =
+                    HttpJsonTranscodingOptions.builder()
+                                              .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
+                                              .build();
             sb.service(GrpcService.builder()
                                   .addService(new DefaultValueTestService())
-                                  .enableHttpJsonTranscoding(
-                                          HttpJsonTranscodingOptions.builder()
-                                                                    .includingDefaultValueFields(true)
-                                                                    .build())
+                                  .enableHttpJsonTranscoding(options)
                                   .build());
         }
     };
