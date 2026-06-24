@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
@@ -388,8 +389,8 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     }
 
     /**
-     * Returns whether this rule being built requires the entire {@link com.linecorp.armeria.common.logging.RequestLog}
-     * to be available, e.g. to evaluate {@link SuccessFunction}.
+     * Returns whether this rule being built requires the entire {@link RequestLog} to be available,
+     * e.g. to evaluate {@link SuccessFunction}.
      */
     protected final boolean requiresFullLog() {
         return expectedSuccessFunctionResult != null;
