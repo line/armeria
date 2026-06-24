@@ -94,6 +94,7 @@ public final class CircuitBreakerClientBuilder
     }
 
     @Override
+    @UnstableApi
     public CircuitBreakerClientBuilder useSuccessFunctionMatch(boolean useSuccessFunctionMatch) {
         return (CircuitBreakerClientBuilder) super.useSuccessFunctionMatch(useSuccessFunctionMatch);
     }

@@ -23,6 +23,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
@@ -68,6 +69,7 @@ public final class CircuitBreakerRpcClientBuilder
     }
 
     @Override
+    @UnstableApi
     public CircuitBreakerRpcClientBuilder useSuccessFunctionMatch(boolean useSuccessFunctionMatch) {
         return (CircuitBreakerRpcClientBuilder) super.useSuccessFunctionMatch(useSuccessFunctionMatch);
     }
