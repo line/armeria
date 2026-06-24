@@ -44,10 +44,12 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -245,6 +247,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private final ServerTlsProviderBuilder serverTlsProviderBuilder = new ServerTlsProviderBuilder();
     private Function<? super String, ? extends EventLoopGroup> bossGroupFactory = DEFAULT_BOSS_GROUP_FACTORY;
     private ConnectionAcceptor connectionAcceptor = ConnectionAcceptor.always();
+    private static final List<ServerPlugin> SPI_PLUGINS =
+            ImmutableList.copyOf(ServiceLoader.load(ServerPlugin.class));
+    private final List<ServerPlugin> plugins = new ArrayList<>();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -529,6 +534,25 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     @UnstableApi
     public ServerBuilder connectionAcceptor(ConnectionAcceptor connectionAcceptor) {
         this.connectionAcceptor = requireNonNull(connectionAcceptor, "connectionAcceptor");
+        return this;
+    }
+
+    /**
+     * Adds a {@link ServerPlugin} that will be installed during {@link Server} construction
+     * and during {@link Server#reconfigure(ServerConfigurator)}.
+     *
+     * <p>Plugins are installed in insertion order. Each plugin's
+     * {@link ServerPlugin#install(ServerBuilder)} is called before the server configuration
+     * is built. Plugins are closed when the {@link Server} stops.
+     *
+     * <p>Note: Plugins can only be added at initial build time. Calling
+     * {@link ServerBuilder#plugin(ServerPlugin)} inside a {@link ServerConfigurator} passed to
+     * {@link Server#reconfigure(ServerConfigurator)} has no effect — the server uses the plugins
+     * registered at construction. Existing plugins are re-installed automatically during reconfiguration.
+     */
+    @UnstableApi
+    public ServerBuilder plugin(ServerPlugin plugin) {
+        plugins.add(requireNonNull(plugin, "plugin"));
         return this;
     }
 
@@ -2466,9 +2490,22 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final Server server = new Server(buildServerConfig(ports));
+        final List<ServerPlugin> plugins = buildPlugins();
+        plugins.forEach(plugin -> plugin.install(this));
+        final Server server = new Server(buildServerConfig(ports), plugins);
         serverListeners.forEach(server::addListener);
         return server;
+    }
+
+    private List<ServerPlugin> buildPlugins() {
+        // SPI-discovered plugins first, then user-registered plugins
+        return ImmutableList.<ServerPlugin>builder()
+                            .addAll(SPI_PLUGINS)
+                            .addAll(this.plugins)
+                            .build()
+                            .stream()
+                            .sorted(Comparator.comparingInt(ServerPlugin::order))
+                            .collect(toImmutableList());
     }
 
     DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
