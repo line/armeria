@@ -47,7 +47,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
             CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault());
     @Nullable
     private BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback;
-    private boolean useSuccessFunctionMatch;
+    private boolean useSuccessFunction;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -84,13 +84,19 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
 
     final CircuitBreakerRule composedRule() {
         final CircuitBreakerRule r = rule();
-        return useSuccessFunctionMatch ? CircuitBreakerRule.onSuccessFunctionMatch().orElse(r) : r;
+        if (!useSuccessFunction) {
+            return r;
+        }
+        return CircuitBreakerRule.builder().onSuccessFunctionResult(true).thenSuccess().orElse(r);
     }
 
     final CircuitBreakerRuleWithContent<O> composedRuleWithContent() {
         final CircuitBreakerRuleWithContent<O> r = ruleWithContent();
-        return useSuccessFunctionMatch ?
-               CircuitBreakerRuleUtil.orElse(CircuitBreakerRule.onSuccessFunctionMatch(), r) : r;
+        if (!useSuccessFunction) {
+            return r;
+        }
+        return CircuitBreakerRuleUtil.orElse(
+                CircuitBreakerRule.builder().onSuccessFunctionResult(true).thenSuccess(), r);
     }
 
     /**
@@ -158,8 +164,8 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
      * @return {@code this} to support method chaining.
      */
     @UnstableApi
-    public AbstractCircuitBreakerClientBuilder<I, O> useSuccessFunctionMatch(boolean useSuccessFunctionMatch) {
-        this.useSuccessFunctionMatch = useSuccessFunctionMatch;
+    public AbstractCircuitBreakerClientBuilder<I, O> useSuccessFunction(boolean useSuccessFunction) {
+        this.useSuccessFunction = useSuccessFunction;
         return this;
     }
 }

@@ -226,8 +226,10 @@ class CircuitBreakerClientRuleTest {
     }
 
     @Test
-    void doNotOpenCircuitWithSuccessFunctionMatch_whenSuccessFunctionAgrees() {
-        final CircuitBreakerRule rule = CircuitBreakerRule.onSuccessFunctionMatch()
+    void doNotOpenCircuit_whenSuccessFunctionAgrees() {
+        final CircuitBreakerRule rule = CircuitBreakerRule.builder()
+                                                          .onSuccessFunctionResult(true)
+                                                          .thenSuccess()
                                                           .orElse(CircuitBreakerRule.onServerErrorStatus());
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
@@ -242,8 +244,10 @@ class CircuitBreakerClientRuleTest {
     }
 
     @Test
-    void openCircuitWithSuccessFunctionMatch_whenSuccessFunctionDisagrees() {
-        final CircuitBreakerRule rule = CircuitBreakerRule.onSuccessFunctionMatch()
+    void openCircuit_whenSuccessFunctionDisagrees() {
+        final CircuitBreakerRule rule = CircuitBreakerRule.builder()
+                                                          .onSuccessFunctionResult(true)
+                                                          .thenSuccess()
                                                           .orElse(CircuitBreakerRule.onServerErrorStatus());
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())

@@ -62,7 +62,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
     /**
      * Returns a newly created {@link CircuitBreakerRule} that ignores a {@link Response} when the rule matches.
      * Note that an open circuit breaker can never close if its trial requests keep matching this rule;
-     * consider {@link CircuitBreakerClientBuilder#useSuccessFunctionMatch(boolean)}.
+     * consider {@link CircuitBreakerClientBuilder#useSuccessFunction(boolean)}.
      */
     public CircuitBreakerRule thenIgnore() {
         return build(CircuitBreakerDecision.ignore());
@@ -72,13 +72,14 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
-                              exceptionFilter(), totalDurationFilter(), false);
-        return build(ruleFilter, decision, requiresResponseTrailers());
+                              exceptionFilter(), totalDurationFilter(),
+                              expectedSuccessFunctionResult(), false);
+        return build(ruleFilter, decision, requiresResponseTrailers(), requiresFullLog());
     }
 
     static CircuitBreakerRule build(
             BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-            CircuitBreakerDecision decision, boolean requiresResponseTrailers) {
+            CircuitBreakerDecision decision, boolean requiresResponseTrailers, boolean requiresFullLog) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
             decisionFuture = SUCCESS_DECISION;
@@ -100,6 +101,11 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
             @Override
             public boolean requiresResponseTrailers() {
                 return requiresResponseTrailers;
+            }
+
+            @Override
+            public boolean requiresFullLog() {
+                return requiresFullLog;
             }
         };
     }

@@ -29,14 +29,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or failure to a
@@ -56,16 +55,6 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
             BiFunction<? super ClientRequestContext, ? super T,
                     ? extends CompletionStage<Boolean>> responseFilter) {
         return CircuitBreakerRuleWithContent.<T>builder().onResponse(responseFilter).thenFailure();
-    }
-
-    /**
-     * Returns a newly created {@link CircuitBreakerRuleWithContent} that will report a {@link Response} as
-     * a success, if the {@link SuccessFunction} configured via {@link ClientOptions#SUCCESS_FUNCTION}
-     * regards the response as a success.
-     */
-    @UnstableApi
-    static <T extends Response> CircuitBreakerRuleWithContent<T> onSuccessFunctionMatch() {
-        return CircuitBreakerRuleUtil.fromCircuitBreakerRule(CircuitBreakerRule.onSuccessFunctionMatch());
     }
 
     /**
@@ -189,6 +178,15 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * successful or not.
      */
     default boolean requiresResponseTrailers() {
+        return false;
+    }
+
+    /**
+     * Returns whether this rule requires the entire {@link RequestLog} to determine if a
+     * {@link Response} is successful or not.
+     */
+    @UnstableApi
+    default boolean requiresFullLog() {
         return false;
     }
 }

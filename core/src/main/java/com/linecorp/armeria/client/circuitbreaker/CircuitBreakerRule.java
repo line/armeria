@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -36,10 +35,10 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or failure to a
@@ -156,18 +155,6 @@ public interface CircuitBreakerRule {
     }
 
     /**
-     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a success,
-     * if the {@link SuccessFunction} configured via {@link ClientOptions#SUCCESS_FUNCTION} regards the
-     * response as a success.
-     */
-    @UnstableApi
-    static CircuitBreakerRule onSuccessFunctionMatch() {
-        return (ctx, cause) -> ctx.log().whenComplete().thenApply(log ->
-                ctx.options().successFunction().isSuccess(ctx, log) ?
-                CircuitBreakerDecision.success() : CircuitBreakerDecision.next());
-    }
-
-    /**
      * Returns a newly created {@link CircuitBreakerRuleBuilder}.
      */
     static CircuitBreakerRuleBuilder builder() {
@@ -281,6 +268,15 @@ public interface CircuitBreakerRule {
      * successful or not.
      */
     default boolean requiresResponseTrailers() {
+        return false;
+    }
+
+    /**
+     * Returns whether this rule requires the entire {@link RequestLog} to determine if a
+     * {@link Response} is successful or not.
+     */
+    @UnstableApi
+    default boolean requiresFullLog() {
         return false;
     }
 }

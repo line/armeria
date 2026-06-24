@@ -52,7 +52,7 @@ class CircuitBreakerClientBuilderTest {
     void successFunctionOverridesUserRule_whenEnabled() {
         final CircuitBreakerRule userRule = failOnSuccessStatus();
         final CircuitBreakerClient client = CircuitBreakerClient.builder(userRule)
-                                                                .useSuccessFunctionMatch(true)
+                                                                .useSuccessFunction(true)
                                                                 .build(mock(HttpClient.class));
         final ClientRequestContext ctx = httpCtxWith(SuccessFunction.always());
         assertThat(client.rule().shouldReportAsSuccess(ctx, null).toCompletableFuture().join())
@@ -76,7 +76,7 @@ class CircuitBreakerClientBuilderTest {
                                              .onStatusClass(HttpStatusClass.SUCCESS)
                                              .thenFailure();
         final CircuitBreakerRpcClient client = CircuitBreakerRpcClient.builder(userRule)
-                                                                      .useSuccessFunctionMatch(true)
+                                                                      .useSuccessFunction(true)
                                                                       .build(mock(RpcClient.class));
         final ClientRequestContext ctx = rpcCtxWith(SuccessFunction.always());
         assertThat(client.ruleWithContent().shouldReportAsSuccess(ctx, null, null)

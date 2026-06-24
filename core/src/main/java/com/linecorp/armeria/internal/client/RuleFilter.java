@@ -46,11 +46,12 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
             @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
             @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
             @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
+            @Nullable Boolean expectedSuccessFunctionResult,
             boolean hasResponseFilter) {
 
         return new RuleFilter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
                               responseTrailersFilter, grpcTrailersFilter, totalDurationFilter,
-                              hasResponseFilter);
+                              expectedSuccessFunctionResult, hasResponseFilter);
     }
 
     private final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter;
@@ -59,6 +60,7 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
     private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
     private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     private final @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
+    private final @Nullable Boolean expectedSuccessFunctionResult;
     private final boolean hasResponseFilter;
 
     private RuleFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
@@ -67,6 +69,7 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
                        @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                        @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
                        @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
+                       @Nullable Boolean expectedSuccessFunctionResult,
                        boolean hasResponseFilter) {
         this.requestHeadersFilter = requestHeadersFilter;
         this.exceptionFilter = exceptionFilter;
@@ -74,6 +77,7 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         this.responseTrailersFilter = responseTrailersFilter;
         this.grpcTrailersFilter = grpcTrailersFilter;
         this.totalDurationFilter = totalDurationFilter;
+        this.expectedSuccessFunctionResult = expectedSuccessFunctionResult;
         this.hasResponseFilter = hasResponseFilter;
     }
 
@@ -88,7 +92,8 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         // Safe to return true since no filters are set
         if (exceptionFilter == null && responseHeadersFilter == null &&
             responseTrailersFilter == null && grpcTrailersFilter == null &&
-            totalDurationFilter == null && !hasResponseFilter) {
+            totalDurationFilter == null && expectedSuccessFunctionResult == null &&
+            !hasResponseFilter) {
             return true;
         }
 
@@ -138,6 +143,15 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         if (totalDurationFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
             final long totalDurationNanos = log.totalDurationNanos();
             if (totalDurationFilter.test(ctx, Duration.ofNanos(totalDurationNanos))) {
+                return true;
+            }
+        }
+
+        if (expectedSuccessFunctionResult != null) {
+            // Callers must await the full log when the rule's requiresFullLog() is true.
+            assert log.isComplete() : "log is not complete; caller did not await requiresFullLog()";
+            final boolean isSuccess = ctx.options().successFunction().isSuccess(ctx, log);
+            if (isSuccess == expectedSuccessFunctionResult) {
                 return true;
             }
         }

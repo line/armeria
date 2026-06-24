@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -62,6 +63,8 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     @Nullable
     private BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
+    @Nullable
+    private Boolean expectedSuccessFunctionResult;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -304,6 +307,19 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     }
 
     /**
+     * Matches the response when the {@link SuccessFunction} configured via
+     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION} returns the specified value.
+     *
+     * <p>Currently used only by {@link CircuitBreakerRule} and {@link CircuitBreakerRuleWithContent};
+     * {@link RetryRule} and {@link RetryRuleWithContent} ignore this filter.
+     */
+    @UnstableApi
+    public SELF onSuccessFunctionResult(boolean isSuccess) {
+        expectedSuccessFunctionResult = isSuccess;
+        return self();
+    }
+
+    /**
      * Returns the {@link BiPredicate} of a {@link RequestHeaders}.
      */
     protected final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter() {
@@ -351,11 +367,28 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     }
 
     /**
+     * Returns the expected {@link SuccessFunction} result, or {@code null} if
+     * {@link #onSuccessFunctionResult(boolean)} has not been called.
+     */
+    @Nullable
+    protected final Boolean expectedSuccessFunctionResult() {
+        return expectedSuccessFunctionResult;
+    }
+
+    /**
      * Returns whether this rule being built requires HTTP response trailers.
      */
     protected final boolean requiresResponseTrailers() {
         return responseTrailersFilter != null ||
                grpcTrailersFilter != null ||
                totalDurationFilter != null;
+    }
+
+    /**
+     * Returns whether this rule being built requires the entire {@link com.linecorp.armeria.common.logging.RequestLog}
+     * to be available, e.g. to evaluate {@link SuccessFunction}.
+     */
+    protected final boolean requiresFullLog() {
+        return expectedSuccessFunctionResult != null;
     }
 }

@@ -59,7 +59,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Returns a newly created {@link CircuitBreakerRuleWithContent} that ignores a {@link Response} when
      * the rule matches. Note that an open circuit breaker can never close if its trial requests keep
-     * matching this rule; consider {@link CircuitBreakerClientBuilder#useSuccessFunctionMatch(boolean)}.
+     * matching this rule; consider {@link CircuitBreakerClientBuilder#useSuccessFunction(boolean)}.
      */
     public CircuitBreakerRuleWithContent<T> thenIgnore() {
         return build(CircuitBreakerDecision.ignore());
@@ -73,9 +73,9 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
-                              hasResponseFilter);
+                              expectedSuccessFunctionResult(), hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
-                ruleFilter, decision, requiresResponseTrailers());
+                ruleFilter, decision, requiresResponseTrailers(), requiresFullLog());
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }

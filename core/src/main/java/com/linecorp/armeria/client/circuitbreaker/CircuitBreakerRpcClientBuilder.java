@@ -70,7 +70,7 @@ public final class CircuitBreakerRpcClientBuilder
 
     @Override
     @UnstableApi
-    public CircuitBreakerRpcClientBuilder useSuccessFunctionMatch(boolean useSuccessFunctionMatch) {
-        return (CircuitBreakerRpcClientBuilder) super.useSuccessFunctionMatch(useSuccessFunctionMatch);
+    public CircuitBreakerRpcClientBuilder useSuccessFunction(boolean useSuccessFunction) {
+        return (CircuitBreakerRpcClientBuilder) super.useSuccessFunction(useSuccessFunction);
     }
 }

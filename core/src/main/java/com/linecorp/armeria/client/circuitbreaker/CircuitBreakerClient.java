@@ -331,9 +331,14 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
             reportSuccessOrFailure(callback, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
             throw cause;
         }
-        final RequestLogProperty property =
-                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
-                                                : RequestLogProperty.RESPONSE_HEADERS;
+        final RequestLogProperty property;
+        if (rule.requiresFullLog()) {
+            property = RequestLogProperty.ALL_COMPLETE;
+        } else if (rule.requiresResponseTrailers()) {
+            property = RequestLogProperty.RESPONSE_END_TIME;
+        } else {
+            property = RequestLogProperty.RESPONSE_HEADERS;
+        }
 
         if (!needsContentInRule) {
             reportResult(ctx, callback, property);
