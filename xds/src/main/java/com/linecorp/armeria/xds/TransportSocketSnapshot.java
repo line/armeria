@@ -48,8 +48,7 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     private static final Logger logger = LoggerFactory.getLogger(TransportSocketSnapshot.class);
 
     private final TransportSocket transportSocket;
-    @Nullable
-    private final TlsCertificateSnapshot tlsCertificate;
+    private final List<TlsCertificateSnapshot> tlsCertificates;
     @Nullable
     private final CertificateValidationContextSnapshot validationContext;
     @Nullable
@@ -57,19 +56,33 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
 
     TransportSocketSnapshot(TransportSocket transportSocket) {
         this.transportSocket = transportSocket;
-        tlsCertificate = null;
+        tlsCertificates = ImmutableList.of();
         validationContext = null;
         clientTlsSpec = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
                             @Nullable UpstreamTlsContext upstreamTlsContext,
-                            Optional<TlsCertificateSnapshot> tlsCertificate,
+                            List<TlsCertificateSnapshot> tlsCertificates,
                             Optional<CertificateValidationContextSnapshot> validationContext) {
         this.transportSocket = transportSocket;
-        this.tlsCertificate = tlsCertificate.orElse(null);
+        this.tlsCertificates = ImmutableList.copyOf(tlsCertificates);
         this.validationContext = validationContext.orElse(null);
-        clientTlsSpec = buildClientTlsSpec(upstreamTlsContext, this.tlsCertificate, this.validationContext);
+        final TlsCertificateSnapshot firstCert = tlsCertificates.isEmpty() ? null
+                                                                           : tlsCertificates.get(0);
+        clientTlsSpec = buildClientTlsSpec(upstreamTlsContext, firstCert, this.validationContext);
+    }
+
+    TransportSocketSnapshot(TransportSocket transportSocket,
+                            Object downstreamTlsContext,
+                            List<TlsCertificateSnapshot> tlsCertificates,
+                            Optional<CertificateValidationContextSnapshot> validationContext) {
+        this.transportSocket = transportSocket;
+        this.tlsCertificates = ImmutableList.copyOf(tlsCertificates);
+        this.validationContext = validationContext.orElse(null);
+        // TODO: build ServerTlsSpec from DownstreamTlsContext once server-side TLS
+        //  behavior can be verified via integration tests.
+        clientTlsSpec = null;
     }
 
     @Override
@@ -78,11 +91,19 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     }
 
     /**
-     * Returns the {@link TlsCertificateSnapshot} containing the certificate and private key
+     * Returns the first {@link TlsCertificateSnapshot} containing the certificate and private key
      * for this transport socket, or {@code null} if not configured.
      */
     public @Nullable TlsCertificateSnapshot tlsCertificate() {
-        return tlsCertificate;
+        return tlsCertificates.isEmpty() ? null : tlsCertificates.get(0);
+    }
+
+    /**
+     * Returns all {@link TlsCertificateSnapshot}s configured for this transport socket.
+     * Multiple certificates may be configured for downstream (server-side) TLS to support SNI.
+     */
+    public List<TlsCertificateSnapshot> tlsCertificates() {
+        return tlsCertificates;
     }
 
     /**
@@ -95,7 +116,7 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
 
     /**
      * Returns the {@link ClientTlsSpec} resolved for this transport socket, or {@code null}
-     * if this transport socket does not configure TLS.
+     * if this transport socket does not configure upstream TLS.
      */
     public @Nullable ClientTlsSpec clientTlsSpec() {
         return clientTlsSpec;
@@ -172,20 +193,20 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         }
         final TransportSocketSnapshot that = (TransportSocketSnapshot) object;
         return Objects.equal(transportSocket, that.transportSocket) &&
-               Objects.equal(tlsCertificate, that.tlsCertificate) &&
+               Objects.equal(tlsCertificates, that.tlsCertificates) &&
                Objects.equal(validationContext, that.validationContext);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(transportSocket, tlsCertificate, validationContext);
+        return Objects.hashCode(transportSocket, tlsCertificates, validationContext);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
-                          .add("tlsCertificate", tlsCertificate)
+                          .add("tlsCertificates", tlsCertificates)
                           .add("validationContext", validationContext)
                           .toString();
     }
@@ -195,9 +216,9 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("transportSocket", transportSocket)
-                          .add("tlsCertificate",
-                               SnapshotUtil.debugString(tlsCertificate,
-                                                        TlsCertificateSnapshot::toDebugString))
+                          .add("tlsCertificates",
+                               tlsCertificates.stream().map(TlsCertificateSnapshot::toDebugString)
+                                              .collect(ImmutableList.toImmutableList()))
                           .add("validationContext",
                                SnapshotUtil.debugString(validationContext,
                                                         CertificateValidationContextSnapshot::toDebugString))

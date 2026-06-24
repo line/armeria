@@ -23,7 +23,9 @@ import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreprocessor;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 
 /**
  * Represents a resolved HTTP filter returned by {@link HttpFilterFactory#create}.
@@ -64,5 +66,14 @@ public interface XdsHttpFilter {
      */
     default DecoratingRpcClientFunction rpcDecorator() {
         return RpcClient::execute;
+    }
+
+    /**
+     * Returns a server-side {@link DecoratingHttpServiceFunction} for this filter,
+     * or {@code null} if this filter does not decorate server-side services.
+     */
+    @Nullable
+    default DecoratingHttpServiceFunction serviceDecorator() {
+        return null;
     }
 }

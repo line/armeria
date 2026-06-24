@@ -344,10 +344,7 @@ class ErrorHandlingTest {
                 static_resources:
                   listeners:
                     - name: my-listener
-                      api_listener:
-                        api_listener:
-                          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
-            .v3.HttpConnectionManager
+                      connection_balance_config: {}
             """;
 
     public static Stream<Arguments> staticResourceValidationFailure_args() {
@@ -357,7 +354,7 @@ class ErrorHandlingTest {
                 Arguments.of(malformedSecondaryStaticClusterBootstrapYaml,
                              "name: length must be at least 1 but got: 0"),
                 Arguments.of(malformedStaticListenerBootstrapYaml,
-                             "stat_prefix: length must be at least 1 but got: 0")
+                             "balance_type: is required")
         );
     }
 
@@ -377,10 +374,7 @@ class ErrorHandlingTest {
     private static final String malformedListenerYaml =
             """
                 name: my-listener
-                api_listener:
-                  api_listener:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
-            .v3.HttpConnectionManager
+                connection_balance_config: {}
             """;
 
     //language=YAML
@@ -525,7 +519,7 @@ class ErrorHandlingTest {
                                                    ImmutableList.of(), version.toString());
         return Stream.of(
                 Arguments.of(snapshot1, XdsType.LISTENER, "my-listener",
-                             "stat_prefix: length must be at least 1 but got: 0"),
+                             "balance_type: is required"),
                 Arguments.of(snapshot2, XdsType.ROUTE, "my-route",
                              "domains: must have at least 1 items"),
                 Arguments.of(snapshot3, XdsType.CLUSTER, "my-cluster",

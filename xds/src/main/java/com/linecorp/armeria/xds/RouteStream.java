@@ -20,6 +20,7 @@ import static com.linecorp.armeria.xds.XdsType.ROUTE;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
@@ -27,6 +28,8 @@ import com.google.protobuf.Any;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory;
 import com.linecorp.armeria.xds.stream.RefCountedStream;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
@@ -36,6 +39,8 @@ import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 final class RouteStream extends RefCountedStream<RouteSnapshot> {
@@ -47,38 +52,56 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
     private final String resourceName;
     private final SubscriptionContext context;
     @Nullable
-    private final ListenerXdsResource listenerResource;
+    private final HttpConnectionManager hcm;
 
     RouteStream(SubscriptionContext context, RouteConfiguration routeConfiguration,
-                @Nullable ListenerXdsResource listenerResource) {
+                @Nullable HttpConnectionManager hcm) {
         this.context = context;
         this.routeConfiguration = routeConfiguration;
         resourceName = routeConfiguration.getName();
         configSource = null;
-        this.listenerResource = listenerResource;
+        this.hcm = hcm;
     }
 
     RouteStream(ConfigSource configSource, String resourceName, SubscriptionContext context,
-                @Nullable ListenerXdsResource listenerResource) {
+                @Nullable HttpConnectionManager hcm) {
         this.configSource = configSource;
         this.resourceName = resourceName;
         this.context = context;
         routeConfiguration = null;
-        this.listenerResource = listenerResource;
+        this.hcm = hcm;
     }
 
     @Override
     protected Subscription onStart(SnapshotWatcher<RouteSnapshot> watcher) {
         if (routeConfiguration != null) {
-            return new RouteSnapshotStream(new RouteXdsResource(routeConfiguration), context, listenerResource)
+            return new RouteSnapshotStream(new RouteXdsResource(routeConfiguration), context, hcm)
                     .subscribe(watcher);
         }
         assert configSource != null;
         final SnapshotStream<RouteSnapshot> snapshotStream =
                 new ResourceNodeAdapter<RouteXdsResource>(configSource, context, resourceName, ROUTE)
-                        .switchMapEager(routeResource -> new RouteSnapshotStream(routeResource, context,
-                                                                                 listenerResource));
+                        .switchMapEager(routeResource -> new RouteSnapshotStream(routeResource, context, hcm));
         return snapshotStream.subscribe(watcher);
+    }
+
+    private static final class FilterCaches {
+        final CachingStream<Map<String, Any>, ClientPreprocessors> downstream;
+        final CachingStream<Map<String, Any>, ClientDecoration> upstream;
+        final CachingStream<Map<String, Any>, Optional<HttpService>> server;
+
+        FilterCaches(XdsExtensionRegistry registry, SubscriptionContext context,
+                     List<HttpFilter> hcmHttpFilters, List<HttpFilter> upstreamFilters) {
+            downstream = new CachingStream<>(
+                    filterConfigs -> FilterUtil.buildDownstreamFilter(
+                            registry, context, hcmHttpFilters, filterConfigs));
+            upstream = new CachingStream<>(
+                    filterConfigs -> FilterUtil.buildUpstreamFilter(
+                            registry, context, upstreamFilters, filterConfigs));
+            server = new CachingStream<>(
+                    filterConfigs -> FilterUtil.buildDownstreamServerFilter(
+                            registry, context, hcmHttpFilters, filterConfigs));
+        }
     }
 
     private static class RouteSnapshotStream extends RefCountedStream<RouteSnapshot> {
@@ -86,17 +109,34 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         private final RouteXdsResource routeResource;
         private final SubscriptionContext context;
         @Nullable
-        private final ListenerXdsResource listenerResource;
+        private final HttpConnectionManager hcm;
 
         RouteSnapshotStream(RouteXdsResource routeResource, SubscriptionContext context,
-                            @Nullable ListenerXdsResource listenerResource) {
+                            @Nullable HttpConnectionManager hcm) {
             this.routeResource = routeResource;
             this.context = context;
-            this.listenerResource = listenerResource;
+            this.hcm = hcm;
         }
 
         @Override
         protected Subscription onStart(SnapshotWatcher<RouteSnapshot> watcher) {
+            final XdsExtensionRegistry registry = context.extensionRegistry();
+
+            // Extract filter lists from the HCM (constant for all routes in this config)
+            final List<HttpFilter> hcmHttpFilters;
+            final List<HttpFilter> upstreamFilters;
+            if (hcm != null) {
+                hcmHttpFilters = hcm.getHttpFiltersList();
+                final Router router = findRouter(hcm, registry);
+                upstreamFilters = router != null ? router.getUpstreamHttpFiltersList() : ImmutableList.of();
+            } else {
+                hcmHttpFilters = ImmutableList.of();
+                upstreamFilters = ImmutableList.of();
+            }
+
+            final FilterCaches filterCaches = new FilterCaches(registry, context,
+                                                               hcmHttpFilters, upstreamFilters);
+
             final ImmutableList.Builder<VirtualHostStream> nodesBuilder = ImmutableList.builder();
             final RouteConfiguration routeConfiguration = routeResource.resource();
             for (int i = 0; i < routeConfiguration.getVirtualHostsList().size(); i++) {
@@ -105,12 +145,33 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
                         new VirtualHostXdsResource(virtualHost, routeResource.version(),
                                                    routeResource.revision());
                 nodesBuilder.add(new VirtualHostStream(i, vhostResource, context,
-                                                       listenerResource, routeResource));
+                                                       routeResource, filterCaches));
             }
             final SnapshotStream<RouteSnapshot> routeSnapshotStream =
                     SnapshotStream.combineNLatest(nodesBuilder.build())
                                   .map(list -> new RouteSnapshot(routeResource, list));
             return routeSnapshotStream.subscribe(watcher);
+        }
+
+        @Nullable
+        private static Router findRouter(@Nullable HttpConnectionManager hcm,
+                                         XdsExtensionRegistry registry) {
+            if (hcm == null) {
+                return null;
+            }
+            final List<HttpFilter> httpFilters = hcm.getHttpFiltersList();
+            if (httpFilters.isEmpty()) {
+                return null;
+            }
+            final HttpFilter last = httpFilters.get(httpFilters.size() - 1);
+            if (last.hasTypedConfig() &&
+                RouterFilterFactory.extensionTypeUrl().equals(last.getTypedConfig().getTypeUrl())) {
+                return registry.unpack(last.getTypedConfig(), Router.class);
+            }
+            if (RouterFilterFactory.extensionName().equals(last.getName())) {
+                return Router.getDefaultInstance();
+            }
+            return null;
         }
     }
 
@@ -119,18 +180,16 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         private final int index;
         private final VirtualHostXdsResource resource;
         private final SubscriptionContext context;
-        @Nullable
-        private final ListenerXdsResource listenerResource;
         private final RouteXdsResource routeResource;
+        private final FilterCaches filterCaches;
 
         VirtualHostStream(int index, VirtualHostXdsResource resource, SubscriptionContext context,
-                          @Nullable ListenerXdsResource listenerResource,
-                          RouteXdsResource routeResource) {
+                          RouteXdsResource routeResource, FilterCaches filterCaches) {
             this.index = index;
             this.resource = resource;
             this.context = context;
-            this.listenerResource = listenerResource;
             this.routeResource = routeResource;
+            this.filterCaches = filterCaches;
         }
 
         @Override
@@ -140,7 +199,7 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             for (int i = 0; i < virtualHost.getRoutesList().size(); i++) {
                 final Route route = virtualHost.getRoutesList().get(i);
                 routeEntryNodesBuilder.add(new RouteEntryStream(i, route, context,
-                                                                listenerResource, routeResource, resource));
+                                                                routeResource, resource, filterCaches));
             }
             final SnapshotStream<VirtualHostSnapshot> vHostStream =
                     SnapshotStream.combineNLatest(routeEntryNodesBuilder.build())
@@ -155,27 +214,24 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         private final Route route;
         private final SubscriptionContext context;
         private final String clusterName;
-        @Nullable
-        private final ListenerXdsResource listenerResource;
         private final RouteXdsResource routeResource;
         private final VirtualHostXdsResource vhostResource;
+        private final FilterCaches filterCaches;
 
         RouteEntryStream(int index, Route route, SubscriptionContext context,
-                         @Nullable ListenerXdsResource listenerResource,
-                         RouteXdsResource routeResource, VirtualHostXdsResource vhostResource) {
+                         RouteXdsResource routeResource, VirtualHostXdsResource vhostResource,
+                         FilterCaches filterCaches) {
             this.index = index;
             this.route = route;
             this.context = context;
             clusterName = route.getRoute().getCluster();
-            this.listenerResource = listenerResource;
             this.routeResource = routeResource;
             this.vhostResource = vhostResource;
+            this.filterCaches = filterCaches;
         }
 
         @Override
         protected Subscription onStart(SnapshotWatcher<RouteEntry> watcher) {
-            final XdsExtensionRegistry extensionRegistry = context.extensionRegistry();
-
             // Merge per_filter_config: route-config level < vhost level < route level
             final Map<String, Any> routeConfigFilterConfigs =
                     routeResource.resource().getTypedPerFilterConfigMap();
@@ -184,24 +240,7 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final Map<String, Any> routeFilterConfigs =
                     route.getTypedPerFilterConfigMap();
             final Map<String, Any> filterConfigs = FilterUtil.mergeFilterConfigs(
-                    FilterUtil.mergeFilterConfigs(routeConfigFilterConfigs, vhostFilterConfigs),
-                    routeFilterConfigs);
-
-            // Extract HCM downstream filters
-            final List<HttpFilter> hcmHttpFilters;
-            if (listenerResource != null && listenerResource.connectionManager() != null) {
-                hcmHttpFilters = listenerResource.connectionManager().getHttpFiltersList();
-            } else {
-                hcmHttpFilters = ImmutableList.of();
-            }
-
-            // Extract upstream HTTP filters from the Router
-            final List<HttpFilter> upstreamFilters;
-            if (listenerResource != null && listenerResource.router() != null) {
-                upstreamFilters = listenerResource.router().getUpstreamHttpFiltersList();
-            } else {
-                upstreamFilters = ImmutableList.of();
-            }
+                    routeConfigFilterConfigs, vhostFilterConfigs, routeFilterConfigs);
 
             // Determine retry policy
             final RetryPolicy retryPolicy = route.getRoute().getRetryPolicy();
@@ -211,20 +250,21 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final ClientDecoration retryDecoration =
                     FilterUtil.buildRetryDecoration(effectiveRetryPolicy);
 
-            // Build filter streams
+            // Build filter streams (deduped via caches for routes with identical configs)
             final SnapshotStream<ClientPreprocessors> downstreamStream =
-                    FilterUtil.buildDownstreamFilter(extensionRegistry, context,
-                                                     hcmHttpFilters, filterConfigs);
+                    filterCaches.downstream.subscribe(filterConfigs);
             final SnapshotStream<ClientDecoration> upstreamStream =
-                    FilterUtil.buildUpstreamFilter(extensionRegistry, context,
-                                                        upstreamFilters, filterConfigs);
+                    filterCaches.upstream.subscribe(filterConfigs);
+
+            final SnapshotStream<Optional<HttpService>> httpServiceStream =
+                    filterCaches.server.subscribe(filterConfigs);
 
             if (!route.getRoute().hasCluster()) {
                 return SnapshotStream.combineLatest(
-                        downstreamStream, upstreamStream,
-                        (down, up) -> new RouteEntry(
+                        downstreamStream, upstreamStream, httpServiceStream,
+                        (down, up, httpService) -> new RouteEntry(
                                 route, null, index, filterConfigs, down,
-                                retryDecoration, up))
+                                retryDecoration, up, httpService.orElse(null)))
                                      .subscribe(watcher);
             }
 
@@ -233,10 +273,10 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
                     w -> context.clusterManager().register(clusterName, context, w);
 
             return SnapshotStream.combineLatest(
-                    clusterStream, downstreamStream, upstreamStream,
-                    (cluster, down, up) -> new RouteEntry(
+                    clusterStream, downstreamStream, upstreamStream, httpServiceStream,
+                    (cluster, down, up, httpService) -> new RouteEntry(
                             route, cluster, index, filterConfigs, down,
-                            retryDecoration, up))
+                            retryDecoration, up, httpService.orElse(null)))
                                  .subscribe(watcher);
         }
     }

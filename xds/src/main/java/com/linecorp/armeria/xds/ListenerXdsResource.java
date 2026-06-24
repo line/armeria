@@ -16,12 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 
 /**
  * A resource object for a {@link Listener}.
@@ -30,23 +27,14 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 public final class ListenerXdsResource extends AbstractXdsResource {
 
     private final Listener listener;
-    @Nullable
-    private final HttpConnectionManager connectionManager;
-    @Nullable
-    private final Router router;
 
-    ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
-                        @Nullable Router router, String version) {
-        this(listener, connectionManager, router, version, 0);
+    ListenerXdsResource(Listener listener, String version) {
+        this(listener, version, 0);
     }
 
-    private ListenerXdsResource(Listener listener, @Nullable HttpConnectionManager connectionManager,
-                                @Nullable Router router,
-                                String version, long revision) {
+    private ListenerXdsResource(Listener listener, String version, long revision) {
         super(version, revision);
         this.listener = listener;
-        this.connectionManager = connectionManager;
-        this.router = router;
     }
 
     @Override
@@ -59,14 +47,6 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         return listener;
     }
 
-    /**
-     * The {@link HttpConnectionManager} contained in the {@link Listener#getListenerFiltersList()}.
-     */
-    @Nullable
-    public HttpConnectionManager connectionManager() {
-        return connectionManager;
-    }
-
     @Override
     public String name() {
         return listener.getName();
@@ -77,15 +57,6 @@ public final class ListenerXdsResource extends AbstractXdsResource {
         if (revision == revision()) {
             return this;
         }
-        return new ListenerXdsResource(listener, connectionManager, router,
-                                       version(), revision);
-    }
-
-    /**
-     * The {@link Router} contained in the {@link Listener}.
-     */
-    @Nullable
-    public Router router() {
-        return router;
+        return new ListenerXdsResource(listener, version(), revision);
     }
 }

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 
@@ -28,7 +29,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory;
+import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory;
+import com.linecorp.armeria.xds.client.endpoint.StaticClusterTypeFactory;
+import com.linecorp.armeria.xds.client.endpoint.StrictDnsClusterTypeFactory;
 import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
+import com.linecorp.armeria.xds.filter.CredentialInjectorFilterFactory;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -58,38 +63,42 @@ public final class XdsExtensionRegistry {
     static XdsExtensionRegistry of(XdsResourceValidator validator,
                                    DirectoryWatchService watchService,
                                    MeterRegistry meterRegistry,
-                                   MeterIdPrefix meterIdPrefix) {
+                                   MeterIdPrefix meterIdPrefix,
+                                   List<XdsExtensionFactory> extensionFactories) {
         final ImmutableMap.Builder<String, XdsExtensionFactory> byName = ImmutableMap.builder();
         final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
 
-        register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),
-                 byName, byTypeUrl);
-        register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
-        register(new EdsClusterTypeFactory(), byName, byTypeUrl);
-
-        // Load SPI-discovered HttpFilterFactory instances as base factories
+        // SPI-loaded factories (user-provided extensions)
         ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
             register(factory, byName, byTypeUrl);
         });
-
-        // Load SPI-discovered SotwConfigSourceSubscriptionFactory instances
         ServiceLoader.load(SotwConfigSourceSubscriptionFactory.class).forEach(factory -> {
             register(factory, byName, byTypeUrl);
         });
-
-        // Load SPI-discovered ClusterTypeFactory instances
         ServiceLoader.load(ClusterTypeFactory.class).forEach(factory -> {
             register(factory, byName, byTypeUrl);
         });
 
-        // Built-in network filter factories
-        register(HttpConnectionManagerFactory.INSTANCE, byName, byTypeUrl);
+        // Builder-provided factories
+        for (XdsExtensionFactory factory : extensionFactories) {
+            register(factory, byName, byTypeUrl);
+        }
 
-        // Built-in transport socket factories
+        // Built-in factories (registered last so they cannot be overridden)
+        register(new RouterFilterFactory(), byName, byTypeUrl);
+        register(new CredentialInjectorFilterFactory(), byName, byTypeUrl);
+        register(new StaticClusterTypeFactory(), byName, byTypeUrl);
+        register(new StrictDnsClusterTypeFactory(), byName, byTypeUrl);
+        register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),
+                 byName, byTypeUrl);
+        register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
+        register(new EdsClusterTypeFactory(), byName, byTypeUrl);
+        register(HttpConnectionManagerFactory.INSTANCE, byName, byTypeUrl);
         register(UpstreamTlsTransportSocketFactory.INSTANCE, byName, byTypeUrl);
+        register(DownstreamTlsTransportSocketFactory.INSTANCE, byName, byTypeUrl);
         register(RawBufferTransportSocketFactory.INSTANCE, byName, byTypeUrl);
 
-        return new XdsExtensionRegistry(byTypeUrl.build(), byName.build(), validator);
+        return new XdsExtensionRegistry(byTypeUrl.buildKeepingLast(), byName.buildKeepingLast(), validator);
     }
 
     private static void register(XdsExtensionFactory factory,

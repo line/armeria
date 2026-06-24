@@ -51,7 +51,14 @@ import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 @UnstableApi
 public final class StrictDnsClusterTypeFactory implements ClusterTypeFactory {
 
-    static final String NAME = "armeria.cluster.strict_dns";
+    private static final String NAME = "armeria.cluster.strict_dns";
+
+    /**
+     * Returns the extension name for the strict DNS cluster type.
+     */
+    public static String extensionName() {
+        return NAME;
+    }
 
     @Override
     public String name() {

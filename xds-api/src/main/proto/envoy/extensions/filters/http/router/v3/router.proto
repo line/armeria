@@ -8,6 +8,7 @@ import "envoy/extensions/filters/network/http_connection_manager/v3/http_connect
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 
+import "armeria/xds/supported.proto";
 import "envoy/annotations/deprecation.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
@@ -133,6 +134,7 @@ message Router {
   // upstream HTTP filters will not trigger retries, and local errors sent by
   // upstream HTTP filters will count as a final response if hedging is configured.
   // [#extension-category: envoy.filters.http.upstream]
+  option (armeria.xds.supported.field) = 8;
   repeated network.http_connection_manager.v3.HttpFilter upstream_http_filters = 8;
 
   // If set to true, Envoy will reject ``CONNECT`` requests that send data before

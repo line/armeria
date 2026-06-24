@@ -16,15 +16,81 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.List;
+import java.util.Optional;
+
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CommonTlsContext;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CommonTlsContext.CombinedCertificateValidationContext;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.Secret;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.TlsCertificate;
 
 interface TransportSocketFactory extends XdsExtensionFactory {
 
     SnapshotStream<TransportSocketSnapshot> create(SubscriptionContext context,
                                                    @Nullable ConfigSource configSource,
                                                    TransportSocket transportSocket);
+
+    static SnapshotStream<Optional<CertificateValidationContextSnapshot>> resolveValidationContext(
+            CommonTlsContext commonTlsContext, @Nullable ConfigSource configSource,
+            SubscriptionContext context) {
+        if (commonTlsContext.hasValidationContext()) {
+            final Secret secret = Secret.newBuilder()
+                                        .setValidationContext(commonTlsContext.getValidationContext())
+                                        .build();
+            final SecretStream secretStream = new SecretStream(secret, context);
+            return secretStream
+                    .switchMapEager(resource -> new CertificateValidationContextStream(context, resource))
+                    .map(Optional::of);
+        } else if (commonTlsContext.hasValidationContextSdsSecretConfig()) {
+            final SdsSecretConfig sdsConfig = commonTlsContext.getValidationContextSdsSecretConfig();
+            final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
+            return secretStream
+                    .switchMapEager(resource -> new CertificateValidationContextStream(context, resource))
+                    .map(Optional::of);
+        } else if (commonTlsContext.hasCombinedValidationContext()) {
+            final CombinedCertificateValidationContext combined =
+                    commonTlsContext.getCombinedValidationContext();
+            final SdsSecretConfig sdsConfig = combined.getValidationContextSdsSecretConfig();
+            final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
+            return secretStream.switchMapEager(resource -> new CertificateValidationContextStream(
+                                                   context, resource, combined.getDefaultValidationContext()))
+                               .map(Optional::of);
+        }
+        return SnapshotStream.empty();
+    }
+
+    static SnapshotStream<List<TlsCertificateSnapshot>> resolveTlsCertificates(
+            CommonTlsContext commonTlsContext, @Nullable ConfigSource configSource,
+            SubscriptionContext context) {
+        if (!commonTlsContext.getTlsCertificatesList().isEmpty()) {
+            final ImmutableList.Builder<SnapshotStream<TlsCertificateSnapshot>> streams =
+                    ImmutableList.builder();
+            for (TlsCertificate tlsCertificate : commonTlsContext.getTlsCertificatesList()) {
+                final Secret secret = Secret.newBuilder().setTlsCertificate(tlsCertificate).build();
+                final SecretStream secretStream = new SecretStream(secret, context);
+                streams.add(secretStream.switchMapEager(
+                        resource -> new TlsCertificateStream(context, resource)));
+            }
+            return SnapshotStream.combineNLatest(streams.build());
+        } else if (!commonTlsContext.getTlsCertificateSdsSecretConfigsList().isEmpty()) {
+            final ImmutableList.Builder<SnapshotStream<TlsCertificateSnapshot>> streams =
+                    ImmutableList.builder();
+            for (SdsSecretConfig sdsConfig
+                    : commonTlsContext.getTlsCertificateSdsSecretConfigsList()) {
+                final SecretStream secretStream = new SecretStream(sdsConfig, configSource, context);
+                streams.add(secretStream.switchMapEager(
+                        resource -> new TlsCertificateStream(context, resource)));
+            }
+            return SnapshotStream.combineNLatest(streams.build());
+        }
+        return SnapshotStream.just(ImmutableList.of());
+    }
 }

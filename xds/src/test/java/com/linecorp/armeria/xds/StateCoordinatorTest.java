@@ -24,6 +24,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -166,7 +168,8 @@ class StateCoordinatorTest {
         return XdsExtensionRegistry.of(new XdsResourceValidator(),
                                        watchService,
                                        meterRegistry,
-                                       new MeterIdPrefix("test"));
+                                       new MeterIdPrefix("test"),
+                                       ImmutableList.of());
     }
 
     private static Cluster createCluster(String name) {

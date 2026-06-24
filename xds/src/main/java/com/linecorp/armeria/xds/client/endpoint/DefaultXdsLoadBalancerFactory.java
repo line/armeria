@@ -87,12 +87,12 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
     private static String builtInClusterTypeName(Cluster cluster) {
         switch (cluster.getType()) {
             case STATIC:
-                return StaticClusterTypeFactory.NAME;
+                return StaticClusterTypeFactory.extensionName();
             case EDS:
                 // EdsClusterTypeFactory is package-private in com.linecorp.armeria.xds
                 return "armeria.cluster.eds";
             case STRICT_DNS:
-                return StrictDnsClusterTypeFactory.NAME;
+                return StrictDnsClusterTypeFactory.extensionName();
             default:
                 throw new UnsupportedOperationException(
                         "Cluster (" + cluster.getName() + ") is attempting to use an " +

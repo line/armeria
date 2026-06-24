@@ -44,11 +44,27 @@ public final class RouterFilterFactory implements HttpFilterFactory {
     private static final String NAME = "envoy.filters.http.router";
     private static final String TYPE_URL =
             "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
+
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
+
     private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter =
             new RouterFilter<>(true);
     private static final RouterFilter<HttpRequest, HttpResponse> httpFilter =
             new RouterFilter<>(false);
+
+    /**
+     * Returns the extension name for the router filter.
+     */
+    public static String extensionName() {
+        return NAME;
+    }
+
+    /**
+     * Returns the type URL for the router filter.
+     */
+    public static String extensionTypeUrl() {
+        return TYPE_URL;
+    }
 
     @Override
     public String name() {

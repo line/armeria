@@ -840,10 +840,7 @@ class ResourceNodeMetricTest {
         final String malformedListenerYaml =
                 """
                     name: my-listener
-                    api_listener:
-                      api_listener:
-                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
-                    .v3.HttpConnectionManager
+                    connection_balance_config: {}
                     """;
 
         //language=YAML

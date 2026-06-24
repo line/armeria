@@ -108,10 +108,12 @@ message DownstreamTlsContext {
   }
 
   // Common TLS context settings.
+  option (armeria.xds.supported.field) = 1;
   CommonTlsContext common_tls_context = 1;
 
   // If specified, Envoy will reject connections without a valid client
   // certificate.
+  option (armeria.xds.supported.field) = 2;
   google.protobuf.BoolValue require_client_certificate = 2;
 
   // If specified, Envoy will reject connections without a valid and matching SNI.

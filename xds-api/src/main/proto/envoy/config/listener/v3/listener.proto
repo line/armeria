@@ -175,6 +175,7 @@ message Listener {
   //
   // Example using SNI for filter chain selection can be found in the
   // :ref:`FAQ entry <faq_how_to_setup_sni>`.
+  option (armeria.xds.supported.field) = 3;
   repeated FilterChain filter_chains = 3;
 
   // Discover filter chains configurations by external service. Dynamic discovery of filter chains is allowed
@@ -210,6 +211,7 @@ message Listener {
 
   // The default filter chain if none of the filter chain matches. If no default filter chain is supplied,
   // the connection will be closed. The filter chain match is ignored in this field.
+  option (armeria.xds.supported.field) = 25;
   FilterChain default_filter_chain = 25;
 
   // Soft limit on size of the listener’s new connection read and write buffers.

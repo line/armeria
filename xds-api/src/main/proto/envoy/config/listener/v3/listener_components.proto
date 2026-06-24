@@ -11,6 +11,7 @@ import "google/protobuf/any.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 
+import "armeria/xds/supported.proto";
 import "envoy/annotations/deprecation.proto";
 import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
@@ -34,9 +35,11 @@ message Filter {
   reserved "config";
 
   // The name of the filter configuration.
+  option (armeria.xds.supported.field) = 1;
   string name = 1 [(validate.rules).string = {min_len: 1}];
 
   oneof config_type {
+    option (armeria.xds.supported.oneof_field) = 4;
     // Filter specific configuration which depends on the filter being
     // instantiated. See the supported filters for further documentation.
     // [#extension-category: envoy.filters.network]
@@ -206,6 +209,7 @@ message FilterChain {
   reserved "tls_context", "on_demand_configuration";
 
   // The criteria to use when matching a connection to this filter chain.
+  option (armeria.xds.supported.field) = 1;
   FilterChainMatch filter_chain_match = 1;
 
   // A list of individual network filters that make up the filter chain for
@@ -218,6 +222,7 @@ message FilterChain {
   // to TCP, the onData() method will never be called. Therefore, network filters
   // for QUIC listeners should only expect to do work at the start of a new connection
   // (i.e. in onNewConnection()). HCM must be the last (or only) filter in the chain.
+  option (armeria.xds.supported.field) = 3;
   repeated Filter filters = 3;
 
   // Whether the listener should expect a PROXY protocol V1 header on new
@@ -242,6 +247,7 @@ message FilterChain {
   // If no transport socket configuration is specified, new connections
   // will be set up with plaintext.
   // [#extension-category: envoy.transport_sockets.downstream]
+  option (armeria.xds.supported.field) = 6;
   core.v3.TransportSocket transport_socket = 6;
 
   // If present and nonzero, the amount of time to allow incoming connections to complete any
