@@ -214,6 +214,34 @@ public interface SnapshotStream<T> {
     }
 
     /**
+     * Returns a caching function that deduplicates {@link SnapshotStream} subscriptions by key
+     * using reference counting. When multiple subscribers request the same key, they share
+     * a single upstream {@link SnapshotStream}. The upstream is created lazily on the first
+     * subscription and closed automatically when the last subscriber unsubscribes.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * Function<String, SnapshotStream<MySnapshot>> cached = SnapshotStream.caching(
+     *     name -> createSnapshotStream(name));
+     *
+     * // Both streams share the same underlying subscription for "foo"
+     * SnapshotStream<MySnapshot> stream1 = cached.apply("foo");
+     * SnapshotStream<MySnapshot> stream2 = cached.apply("foo");
+     * }</pre>
+     *
+     * @param factory a function that creates a new {@link SnapshotStream} for a given key
+     * @param <K> the key type used to identify cached streams
+     * @param <T> the type of snapshot values delivered by the cached streams
+     * @return a function that returns cached {@link SnapshotStream}s by key
+     */
+    static <K, T> Function<K, SnapshotStream<T>> caching(
+            Function<? super K, ? extends SnapshotStream<T>> factory) {
+        requireNonNull(factory, "factory");
+        final CachingStream<K, T> cachingStream = new CachingStream<>(factory);
+        return cachingStream::subscribe;
+    }
+
+    /**
      * Returns a new stream that asserts {@link #subscribe} and {@link Subscription#close()}
      * are called from the given event loop. Throws {@link IllegalStateException} if called
      * from a different thread.

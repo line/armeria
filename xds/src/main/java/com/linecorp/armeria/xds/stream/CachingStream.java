@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -22,23 +22,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import com.linecorp.armeria.xds.stream.RefCountedStream;
-import com.linecorp.armeria.xds.stream.SnapshotStream;
-import com.linecorp.armeria.xds.stream.Subscription;
+import com.linecorp.armeria.xds.SnapshotWatcher;
 
 final class CachingStream<K, T> {
 
-    private final Function<K, SnapshotStream<T>> factory;
+    private final Function<? super K, ? extends SnapshotStream<T>> factory;
     private final Map<K, CacheEntry> cache = new HashMap<>();
 
-    CachingStream(Function<K, SnapshotStream<T>> factory) {
+    CachingStream(Function<? super K, ? extends SnapshotStream<T>> factory) {
         this.factory = requireNonNull(factory, "factory");
     }
 
     SnapshotStream<T> subscribe(K key) {
         requireNonNull(key, "key");
         return watcher -> {
-            final CacheEntry entry = cache.computeIfAbsent(key, k -> new CacheEntry(k));
+            final CacheEntry entry = cache.computeIfAbsent(key, CacheEntry::new);
             return entry.subscribe(watcher);
         };
     }

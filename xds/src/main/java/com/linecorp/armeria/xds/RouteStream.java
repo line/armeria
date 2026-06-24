@@ -21,6 +21,7 @@ import static com.linecorp.armeria.xds.XdsType.ROUTE;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
@@ -86,19 +87,19 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
     }
 
     private static final class FilterCaches {
-        final CachingStream<Map<String, Any>, ClientPreprocessors> downstream;
-        final CachingStream<Map<String, Any>, ClientDecoration> upstream;
-        final CachingStream<Map<String, Any>, Optional<HttpService>> server;
+        final Function<Map<String, Any>, SnapshotStream<ClientPreprocessors>> downstream;
+        final Function<Map<String, Any>, SnapshotStream<ClientDecoration>> upstream;
+        final Function<Map<String, Any>, SnapshotStream<Optional<HttpService>>> server;
 
         FilterCaches(XdsExtensionRegistry registry, SubscriptionContext context,
                      List<HttpFilter> hcmHttpFilters, List<HttpFilter> upstreamFilters) {
-            downstream = new CachingStream<>(
+            downstream = SnapshotStream.caching(
                     filterConfigs -> FilterUtil.buildDownstreamFilter(
                             registry, context, hcmHttpFilters, filterConfigs));
-            upstream = new CachingStream<>(
+            upstream = SnapshotStream.caching(
                     filterConfigs -> FilterUtil.buildUpstreamFilter(
                             registry, context, upstreamFilters, filterConfigs));
-            server = new CachingStream<>(
+            server = SnapshotStream.caching(
                     filterConfigs -> FilterUtil.buildDownstreamServerFilter(
                             registry, context, hcmHttpFilters, filterConfigs));
         }
@@ -252,12 +253,12 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
 
             // Build filter streams (deduped via caches for routes with identical configs)
             final SnapshotStream<ClientPreprocessors> downstreamStream =
-                    filterCaches.downstream.subscribe(filterConfigs);
+                    filterCaches.downstream.apply(filterConfigs);
             final SnapshotStream<ClientDecoration> upstreamStream =
-                    filterCaches.upstream.subscribe(filterConfigs);
+                    filterCaches.upstream.apply(filterConfigs);
 
             final SnapshotStream<Optional<HttpService>> httpServiceStream =
-                    filterCaches.server.subscribe(filterConfigs);
+                    filterCaches.server.apply(filterConfigs);
 
             if (!route.getRoute().hasCluster()) {
                 return SnapshotStream.combineLatest(
