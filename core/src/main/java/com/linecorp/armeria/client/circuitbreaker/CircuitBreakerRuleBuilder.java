@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.RuleFilter;
 
 /**
@@ -66,6 +67,12 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
      */
     public CircuitBreakerRule thenIgnore() {
         return build(CircuitBreakerDecision.ignore());
+    }
+
+    @Override
+    @UnstableApi
+    public CircuitBreakerRuleBuilder onSuccessFunctionResult(boolean isSuccess) {
+        return super.onSuccessFunctionResult(isSuccess);
     }
 
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {

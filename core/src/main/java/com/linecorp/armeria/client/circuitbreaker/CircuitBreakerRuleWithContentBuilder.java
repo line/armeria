@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.RuleFilter;
 
 /**
@@ -63,6 +64,12 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
      */
     public CircuitBreakerRuleWithContent<T> thenIgnore() {
         return build(CircuitBreakerDecision.ignore());
+    }
+
+    @Override
+    @UnstableApi
+    public CircuitBreakerRuleWithContentBuilder<T> onSuccessFunctionResult(boolean isSuccess) {
+        return super.onSuccessFunctionResult(isSuccess);
     }
 
     private CircuitBreakerRuleWithContent<T> build(CircuitBreakerDecision decision) {

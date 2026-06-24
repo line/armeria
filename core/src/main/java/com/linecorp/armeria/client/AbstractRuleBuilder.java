@@ -310,11 +310,14 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
      * Matches the response when the {@link SuccessFunction} configured via
      * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION} returns the specified value.
      *
-     * <p>Currently used only by {@link CircuitBreakerRule} and {@link CircuitBreakerRuleWithContent};
-     * {@link RetryRule} and {@link RetryRuleWithContent} ignore this filter.
+     * <p>This filter is exposed publicly only by {@link CircuitBreakerRule} and
+     * {@link CircuitBreakerRuleWithContent} builders. It is intentionally not exposed by the
+     * {@link RetryRule}-side builders, because {@link RetryRule} drives log completion in
+     * {@link com.linecorp.armeria.client.retry.RetryingClient} and cannot safely await the entire
+     * {@link com.linecorp.armeria.common.logging.RequestLog} required by {@link SuccessFunction}.
      */
     @UnstableApi
-    public SELF onSuccessFunctionResult(boolean isSuccess) {
+    protected SELF onSuccessFunctionResult(boolean isSuccess) {
         expectedSuccessFunctionResult = isSuccess;
         return self();
     }
