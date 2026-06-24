@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * An {@link RpcClient} decorator that handles failures of RPC remote invocation based on
@@ -171,9 +172,12 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
             throw cause;
         }
 
+        final RequestLogProperty property =
+                ruleWithContent().requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
+                                                             : RequestLogProperty.RESPONSE_HEADERS;
         response.handle((unused1, cause) -> {
-            reportSuccessOrFailure(
-                    callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause);
+            ctx.log().whenAvailable(property).thenAccept(log -> reportSuccessOrFailure(
+                    callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause));
             return null;
         });
         return response;
