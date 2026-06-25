@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.RuleFilter;
 
@@ -60,7 +61,8 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     /**
      * Returns a newly created {@link CircuitBreakerRuleWithContent} that ignores a {@link Response} when
      * the rule matches. Note that an open circuit breaker can never close if its trial requests keep
-     * matching this rule.
+     * matching this rule; consider {@link #onSuccessFunctionResult(boolean)} to align with the client's
+     * {@link SuccessFunction}.
      */
     public CircuitBreakerRuleWithContent<T> thenIgnore() {
         return build(CircuitBreakerDecision.ignore());

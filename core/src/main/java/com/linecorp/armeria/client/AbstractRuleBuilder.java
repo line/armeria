@@ -389,8 +389,10 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     }
 
     /**
-     * Returns whether this rule being built requires the entire {@link RequestLog} to be available,
-     * e.g. to evaluate {@link SuccessFunction}.
+     * Returns whether the rule being built requires the entire {@link RequestLog} to be available
+     * before it can be evaluated. Returns {@code true} when {@link #onSuccessFunctionResult(boolean)}
+     * has been called, because the configured {@link SuccessFunction} may inspect any property of
+     * the {@link RequestLog}.
      */
     protected final boolean requiresFullLog() {
         return expectedSuccessFunctionResult != null;

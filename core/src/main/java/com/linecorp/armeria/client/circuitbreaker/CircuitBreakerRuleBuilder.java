@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.RuleFilter;
@@ -62,7 +63,8 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
 
     /**
      * Returns a newly created {@link CircuitBreakerRule} that ignores a {@link Response} when the rule matches.
-     * Note that an open circuit breaker can never close if its trial requests keep matching this rule.
+     * Note that an open circuit breaker can never close if its trial requests keep matching this rule;
+     * consider {@link #onSuccessFunctionResult(boolean)} to align with the client's {@link SuccessFunction}.
      */
     public CircuitBreakerRule thenIgnore() {
         return build(CircuitBreakerDecision.ignore());
