@@ -176,9 +176,8 @@ CircuitBreakerRule rule =
                           .orElse(myRule);
 ```
 
-`onSuccessFunctionResult(boolean)` matches when the [SuccessFunction](type) returns the given value,
-so it can be combined with any terminal (`thenSuccess()`, `thenFailure()`, `thenIgnore()`) to express
-either direction.
+`onSuccessFunctionResult(true)` matches when the [SuccessFunction](type) regards the response as a
+success, so the rule reports it as a circuit breaker success before `myRule` is consulted.
 
 ## Grouping `CircuitBreaker`s
 
