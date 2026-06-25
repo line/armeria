@@ -62,8 +62,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
 
     /**
      * Returns a newly created {@link CircuitBreakerRule} that ignores a {@link Response} when the rule matches.
-     * Note that an open circuit breaker can never close if its trial requests keep matching this rule;
-     * consider {@link CircuitBreakerClientBuilder#useSuccessFunction(boolean)}.
+     * Note that an open circuit breaker can never close if its trial requests keep matching this rule.
      */
     public CircuitBreakerRule thenIgnore() {
         return build(CircuitBreakerDecision.ignore());

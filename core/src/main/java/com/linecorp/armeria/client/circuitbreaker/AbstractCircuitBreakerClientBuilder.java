@@ -22,11 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -47,7 +45,6 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
             CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault());
     @Nullable
     private BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback;
-    private boolean useSuccessFunction;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -80,23 +77,6 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
     final CircuitBreakerRuleWithContent<O> ruleWithContent() {
         checkState(ruleWithContent != null, "ruleWithContent is not set.");
         return ruleWithContent;
-    }
-
-    final CircuitBreakerRule composedRule() {
-        final CircuitBreakerRule r = rule();
-        if (!useSuccessFunction) {
-            return r;
-        }
-        return CircuitBreakerRule.builder().onSuccessFunctionResult(true).thenSuccess().orElse(r);
-    }
-
-    final CircuitBreakerRuleWithContent<O> composedRuleWithContent() {
-        final CircuitBreakerRuleWithContent<O> r = ruleWithContent();
-        if (!useSuccessFunction) {
-            return r;
-        }
-        return CircuitBreakerRuleUtil.orElse(
-                CircuitBreakerRule.builder().onSuccessFunctionResult(true).thenSuccess(), r);
     }
 
     /**
@@ -152,20 +132,6 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
             BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
         requireNonNull(fallback, "fallback");
         this.fallback = fallback;
-        return this;
-    }
-
-    /**
-     * Whether to report a response as a success when the {@link SuccessFunction} configured via
-     * {@link ClientOptions#SUCCESS_FUNCTION} regards it as a success. The {@link SuccessFunction} is
-     * consulted before the user-provided {@link CircuitBreakerRule} or
-     * {@link CircuitBreakerRuleWithContent}. Disabled by default.
-     *
-     * @return {@code this} to support method chaining.
-     */
-    @UnstableApi
-    public AbstractCircuitBreakerClientBuilder<I, O> useSuccessFunction(boolean useSuccessFunction) {
-        this.useSuccessFunction = useSuccessFunction;
         return this;
     }
 }

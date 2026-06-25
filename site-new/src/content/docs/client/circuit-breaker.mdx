@@ -162,33 +162,8 @@ because every trial request in `HALF_OPEN` keeps getting ignored.
 
 :::
 
-There are two ways to align the circuit breaker with the client's [SuccessFunction](type).
-
-The simplest is the [CircuitBreakerClientBuilder](type) flag, which consults the
-[SuccessFunction](type) before your rule:
-
-```java
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
-
-CircuitBreakerRule myRule = ...;
-WebClient client = WebClient
-        .builder(...)
-        .successFunction((ctx, log) -> log.responseHeaders().status().code() == 404)
-        .decorator(CircuitBreakerClient.builder(myRule)
-                                       .useSuccessFunction(true)
-                                       .newDecorator())
-        .build();
-```
-
-With this flag enabled:
-
-- If the [SuccessFunction](type) regards the response as a success, it is reported as a success and
-  your rule is skipped.
-- Otherwise your rule runs as usual.
-
-For finer-grained control, build the rule yourself using [CircuitBreakerRule#builder()](type):
+You can align the circuit breaker with the client's [SuccessFunction](type) by composing a rule with
+[CircuitBreakerRule#builder()](type):
 
 ```java
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;

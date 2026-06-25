@@ -23,7 +23,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
@@ -39,7 +38,7 @@ public final class CircuitBreakerRpcClientBuilder
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, handler(), composedRuleWithContent(), fallback());
+        return new CircuitBreakerRpcClient(delegate, handler(), ruleWithContent(), fallback());
     }
 
     /**
@@ -66,11 +65,5 @@ public final class CircuitBreakerRpcClientBuilder
     public CircuitBreakerRpcClientBuilder recover(BiFunction<? super ClientRequestContext, ? super RpcRequest,
             ? extends RpcResponse> fallback) {
         return (CircuitBreakerRpcClientBuilder) super.recover(fallback);
-    }
-
-    @Override
-    @UnstableApi
-    public CircuitBreakerRpcClientBuilder useSuccessFunction(boolean useSuccessFunction) {
-        return (CircuitBreakerRpcClientBuilder) super.useSuccessFunction(useSuccessFunction);
     }
 }
