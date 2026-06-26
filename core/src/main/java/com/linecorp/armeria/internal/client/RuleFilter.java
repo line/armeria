@@ -148,9 +148,9 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         }
 
         if (expectedSuccessFunctionResult != null) {
-            // Callers must await response trailers when the rule consults SuccessFunction.
+            // SuccessFunction is invoked only after the response has ended.
             assert log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)
-                    : "response is not ended; caller did not await requiresResponseTrailers()";
+                    : "RESPONSE_END_TIME is required before evaluating SuccessFunction";
             final boolean isSuccess = ctx.options().successFunction().isSuccess(ctx, log);
             if (isSuccess == expectedSuccessFunctionResult) {
                 return true;
