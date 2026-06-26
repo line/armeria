@@ -83,9 +83,9 @@ public final class AuthService extends SimpleDecoratingHttpService {
     private final AuthSuccessHandler defaultSuccessHandler;
     private final AuthFailureHandler defaultFailureHandler;
     @Nullable
-    private Timer successTimer;
+    private volatile Timer successTimer;
     @Nullable
-    private Timer failureTimer;
+    private volatile Timer failureTimer;
     private final MeterIdPrefix meterIdPrefix;
 
     AuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
@@ -138,8 +138,12 @@ public final class AuthService extends SimpleDecoratingHttpService {
                                        @Nullable AuthSuccessHandler authorizerSuccessHandler,
                                        ServiceRequestContext ctx, HttpRequest req,
                                        long startNanos) throws Exception {
-        assert successTimer != null;
-        successTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        // successTimer may not be set yet if a request is served during Server.reconfigure(), before
+        // serviceAdded() runs on the new service; skip recording rather than fail.
+        final Timer timer = successTimer;
+        if (timer != null) {
+            timer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        }
         final AuthSuccessHandler handler = authorizerSuccessHandler == null ? defaultSuccessHandler
                                                                             : authorizerSuccessHandler;
         return handler.authSucceeded(delegate, ctx, req);
@@ -149,8 +153,12 @@ public final class AuthService extends SimpleDecoratingHttpService {
                                        @Nullable AuthFailureHandler authorizerFailureHandler,
                                        ServiceRequestContext ctx, HttpRequest req,
                                        @Nullable Throwable cause, long startNanos) throws Exception {
-        assert failureTimer != null;
-        failureTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        // failureTimer may not be set yet if a request is served during Server.reconfigure(), before
+        // serviceAdded() runs on the new service; skip recording rather than fail.
+        final Timer timer = failureTimer;
+        if (timer != null) {
+            timer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        }
         final AuthFailureHandler handler = authorizerFailureHandler == null ? defaultFailureHandler
                                                                             : authorizerFailureHandler;
         if (cause != null) {
