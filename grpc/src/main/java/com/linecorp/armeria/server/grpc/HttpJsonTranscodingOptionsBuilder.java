@@ -24,7 +24,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 import com.google.api.HttpRule;
 import com.google.common.collect.ImmutableList;
@@ -36,9 +35,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
-
-import io.grpc.ServiceDescriptor;
 
 /**
  * A builder for {@link HttpJsonTranscodingOptions}.
@@ -63,9 +59,6 @@ public final class HttpJsonTranscodingOptionsBuilder {
     @Nullable
     private Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
 
-    private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
-            DefaultHttpJsonTranscodingOptions.DEFAULT_JSON_MARSHALLER_FACTORY;
-
     HttpJsonTranscodingOptionsBuilder() {}
 
     /**
@@ -77,7 +70,6 @@ public final class HttpJsonTranscodingOptionsBuilder {
         conflictStrategy(options.conflictStrategy());
         queryParamMatchRules(options.queryParamMatchRules());
         errorHandler(options.errorHandler());
-        jsonMarshallerFactory(options.jsonMarshallerFactory());
     }
 
     /**
@@ -182,19 +174,6 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
-     * Sets the factory that creates the {@link GrpcJsonMarshaller} the transcoder uses to convert between
-     * JSON and the gRPC message, replacing the built-in one. Use this to customize the JSON handling, for
-     * example to include fields with default values. See
-     * {@link HttpJsonTranscodingOptions#jsonMarshallerFactory()} for when it takes effect.
-     */
-    @UnstableApi
-    public HttpJsonTranscodingOptionsBuilder jsonMarshallerFactory(
-            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
-        this.jsonMarshallerFactory = requireNonNull(jsonMarshallerFactory, "jsonMarshallerFactory");
-        return this;
-    }
-
-    /**
      * Returns a newly created {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
@@ -216,6 +195,6 @@ public final class HttpJsonTranscodingOptionsBuilder {
             }
         }
         return new DefaultHttpJsonTranscodingOptions(ignoreProtoHttpRule, rules, conflictStrategy,
-                                                     matchRules, errorHandler, jsonMarshallerFactory);
+                                                     matchRules, errorHandler);
     }
 }

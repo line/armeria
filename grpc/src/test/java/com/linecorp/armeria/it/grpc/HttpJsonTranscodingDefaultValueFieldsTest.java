@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.ServiceDescriptor;
@@ -49,13 +48,12 @@ class HttpJsonTranscodingDefaultValueFieldsTest {
     static final ServerExtension serverIncludingDefaults = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final HttpJsonTranscodingOptions options =
-                    HttpJsonTranscodingOptions.builder()
-                                              .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
-                                              .build();
+            // The GrpcService path lets the gRPC service layer convert JSON, so a custom marshaller is
+            // configured with GrpcServiceBuilder.jsonMarshallerFactory() rather than on the transcoder.
             sb.service(GrpcService.builder()
                                   .addService(new DefaultValueTestService())
-                                  .enableHttpJsonTranscoding(options)
+                                  .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
+                                  .enableHttpJsonTranscoding(true)
                                   .build());
         }
     };

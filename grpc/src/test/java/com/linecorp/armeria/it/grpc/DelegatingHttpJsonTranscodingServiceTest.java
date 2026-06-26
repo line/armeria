@@ -53,7 +53,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingService;
 import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingServiceBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.ServiceDescriptor;
@@ -150,13 +149,9 @@ class DelegatingHttpJsonTranscodingServiceTest {
 
     @Test
     void jsonMarshallerFactoryRequiresProtoSerialization() {
-        final HttpJsonTranscodingOptions options =
-                HttpJsonTranscodingOptions.builder()
-                                          .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
-                                          .build();
         assertThatThrownBy(() -> transcoderBuilder((ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .protoSerialization(false)
-                .options(options)
+                .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
                 .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("protoSerialization");
@@ -168,11 +163,10 @@ class DelegatingHttpJsonTranscodingServiceTest {
             final GrpcService grpcService = GrpcService.builder()
                                                        .addService(new DefaultValueTestService())
                                                        .build();
-            final HttpJsonTranscodingOptions options =
-                    HttpJsonTranscodingOptions.builder()
-                                              .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
-                                              .build();
-            sb.serviceUnder("/defaults", transcoderBuilder(grpcService).options(options).build());
+            sb.serviceUnder("/defaults",
+                            transcoderBuilder(grpcService)
+                                    .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
+                                    .build());
         });
         final WebClient client = WebClient.of(proxyServer.httpUri());
         final AggregatedHttpResponse response =
@@ -413,19 +407,19 @@ class DelegatingHttpJsonTranscodingServiceTest {
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 
-    private static final class DefaultValueTestService extends HttpJsonTranscodingTestServiceImplBase {
-        @Override
-        public void getMessageV1(GetMessageRequestV1 request, StreamObserver<Message> responseObserver) {
-            responseObserver.onNext(Message.getDefaultInstance());
-            responseObserver.onCompleted();
-        }
-    }
-
     private static final class MismatchedTestService extends TestServiceImplBase {
         @Override
         public void unaryCall(SimpleRequest request,
                               StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onNext(SimpleResponse.newBuilder().setUsername("mismatch").build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    private static final class DefaultValueTestService extends HttpJsonTranscodingTestServiceImplBase {
+        @Override
+        public void getMessageV1(GetMessageRequestV1 request, StreamObserver<Message> responseObserver) {
+            responseObserver.onNext(Message.getDefaultInstance());
             responseObserver.onCompleted();
         }
     }

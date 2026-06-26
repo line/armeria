@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.server.grpc.DefaultHttpJsonTranscodingOptions.hasCustomJsonMarshallerFactory;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -1030,16 +1029,6 @@ public final class GrpcServiceBuilder {
                     "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
             );
         }
-        // A custom transcoding 'jsonMarshallerFactory' makes the transcoder convert messages itself and
-        // exchange 'application/grpc+proto' with the gRPC service, so PROTO must be supported.
-        if (enableHttpJsonTranscoding &&
-            hasCustomJsonMarshallerFactory(httpJsonTranscodingOptions) &&
-            !supportedSerializationFormats.contains(GrpcSerializationFormats.PROTO)) {
-            throw new IllegalStateException(
-                    "'GrpcSerializationFormats.PROTO' must be set if a custom 'jsonMarshallerFactory' is " +
-                    "set for HTTP/JSON transcoding"
-            );
-        }
         if (enableHealthCheckService) {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
@@ -1105,13 +1094,10 @@ public final class GrpcServiceBuilder {
             } else {
                 httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
             }
-            // A custom 'jsonMarshallerFactory' applies only when the transcoder converts messages itself,
-            // which needs Protobuf serialization. Native 'grpc+json' keeps using the gRPC service marshaller.
-            final boolean protoSerialization = hasCustomJsonMarshallerFactory(httpJsonTranscodingOptions);
             final HttpJsonTranscoder transcoder =
                     new HttpJsonTranscoderBuilder()
                             .options(httpJsonTranscodingOptions)
-                            .protoSerialization(protoSerialization)
+                            .protoSerialization(false)
                             .serviceDefinitions(grpcService.services())
                             .build();
             if (transcoder != null) {

@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.server.grpc.DefaultHttpJsonTranscodingOptions.hasCustomJsonMarshallerFactory;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static java.util.Objects.requireNonNull;
 
@@ -27,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,11 +80,16 @@ final class HttpJsonTranscoderBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpJsonTranscoderBuilder.class);
 
+    private static final Function<? super io.grpc.ServiceDescriptor, ? extends GrpcJsonMarshaller>
+            DEFAULT_JSON_MARSHALLER_FACTORY = GrpcJsonMarshaller::of;
+
     private final Map<String, HttpJsonGrpcMethod> methods = new HashMap<>();
     private final List<ServerServiceDefinition> serviceDefinitions = new ArrayList<>();
     private final List<io.grpc.ServiceDescriptor> serviceDescriptors = new ArrayList<>();
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
     private boolean protoSerialization = true;
+    private Function<? super io.grpc.ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
+            DEFAULT_JSON_MARSHALLER_FACTORY;
 
     HttpJsonTranscoderBuilder serviceDefinitions(
             Iterable<ServerServiceDefinition> serviceDefinitions) {
@@ -133,6 +138,12 @@ final class HttpJsonTranscoderBuilder {
 
     HttpJsonTranscoderBuilder protoSerialization(boolean protoSerialization) {
         this.protoSerialization = protoSerialization;
+        return this;
+    }
+
+    HttpJsonTranscoderBuilder jsonMarshallerFactory(
+            Function<? super io.grpc.ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
+        this.jsonMarshallerFactory = requireNonNull(jsonMarshallerFactory, "jsonMarshallerFactory");
         return this;
     }
 
@@ -375,7 +386,7 @@ final class HttpJsonTranscoderBuilder {
     HttpJsonTranscoder build() {
         // A custom 'jsonMarshallerFactory' is used only when the transcoder converts messages itself.
         // This needs Protobuf serialization between the transcoder and the gRPC service.
-        checkState(!hasCustomJsonMarshallerFactory(options) || protoSerialization,
+        checkState(jsonMarshallerFactory == DEFAULT_JSON_MARSHALLER_FACTORY || protoSerialization,
                    "A custom 'jsonMarshallerFactory' requires 'protoSerialization' to be enabled.");
         for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
             serviceDefinition(serviceDefinition);
@@ -501,7 +512,7 @@ final class HttpJsonTranscoderBuilder {
     }
 
     private GrpcJsonMarshaller buildJsonMarshaller(io.grpc.ServiceDescriptor serviceDescriptor) {
-        return options.jsonMarshallerFactory().apply(serviceDescriptor);
+        return jsonMarshallerFactory.apply(serviceDescriptor);
     }
 
     static final class HttpJsonGrpcMethod {

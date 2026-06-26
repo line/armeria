@@ -18,15 +18,11 @@ package com.linecorp.armeria.server.grpc;
 
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 import com.google.api.HttpRule;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
-
-import io.grpc.ServiceDescriptor;
 
 /**
  * User provided options for customizing {@link HttpJsonTranscodingGrpcService} and
@@ -102,17 +98,4 @@ public interface HttpJsonTranscodingOptions {
      * request transcoded from an HTTP/JSON request.
      */
     UnframedGrpcErrorHandler errorHandler();
-
-    /**
-     * Returns the factory that creates the {@link GrpcJsonMarshaller} the transcoder uses to convert
-     * between JSON and the gRPC message, deserializing the request and serializing the response. By
-     * default, the built-in marshaller is used.
-     *
-     * <p>A custom factory takes effect only when the transcoder converts messages itself, which needs
-     * Protobuf serialization between the transcoder and the gRPC service.
-     * {@link GrpcServiceBuilder#enableHttpJsonTranscoding(HttpJsonTranscodingOptions)} enables Protobuf
-     * serialization automatically when a custom factory is set, so the customization applies to transcoded
-     * traffic without affecting native {@code application/grpc+json} traffic.
-     */
-    Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory();
 }

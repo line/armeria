@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -143,21 +142,6 @@ class GrpcServiceBuilderTest {
                                             .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("addExceptionMapping() and exceptionHandler() are mutually exclusive.");
-    }
-
-    @Test
-    void jsonMarshallerFactoryRequiresProtoFormat() {
-        final HttpJsonTranscodingOptions options =
-                HttpJsonTranscodingOptions.builder()
-                                          .jsonMarshallerFactory(GrpcJsonMarshaller::of)
-                                          .build();
-        assertThatThrownBy(() -> GrpcService.builder()
-                                            .addService(new MetricsServiceImpl())
-                                            .supportedSerializationFormats(GrpcSerializationFormats.JSON)
-                                            .enableHttpJsonTranscoding(options)
-                                            .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("'GrpcSerializationFormats.PROTO' must be set");
     }
 
     @Test
