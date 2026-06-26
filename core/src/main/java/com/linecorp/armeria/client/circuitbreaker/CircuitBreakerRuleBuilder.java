@@ -89,13 +89,13 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
                               expectedSuccessFunctionResult, false);
-        return build(ruleFilter, decision, requiresResponseTrailers(),
-                     expectedSuccessFunctionResult != null);
+        return build(ruleFilter, decision,
+                     requiresResponseTrailers() || expectedSuccessFunctionResult != null);
     }
 
     static CircuitBreakerRule build(
             BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-            CircuitBreakerDecision decision, boolean requiresResponseTrailers, boolean requiresFullLog) {
+            CircuitBreakerDecision decision, boolean requiresResponseTrailers) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
             decisionFuture = SUCCESS_DECISION;
@@ -117,11 +117,6 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
             @Override
             public boolean requiresResponseTrailers() {
                 return requiresResponseTrailers;
-            }
-
-            @Override
-            public boolean requiresFullLog() {
-                return requiresFullLog;
             }
         };
     }

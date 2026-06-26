@@ -92,8 +92,8 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                               exceptionFilter(), totalDurationFilter(),
                               expectedSuccessFunctionResult, hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
-                ruleFilter, decision, requiresResponseTrailers(),
-                expectedSuccessFunctionResult != null);
+                ruleFilter, decision,
+                requiresResponseTrailers() || expectedSuccessFunctionResult != null);
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }

@@ -38,8 +38,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or failure to a
@@ -269,17 +267,6 @@ public interface CircuitBreakerRule {
      * successful or not.
      */
     default boolean requiresResponseTrailers() {
-        return false;
-    }
-
-    /**
-     * Returns whether this rule requires the entire {@link RequestLog} to determine if a
-     * {@link Response} is successful or not. When this returns {@code true},
-     * {@link CircuitBreakerClient} awaits {@link RequestLogProperty#ALL_COMPLETE} before evaluating
-     * this rule.
-     */
-    @UnstableApi
-    default boolean requiresFullLog() {
         return false;
     }
 }

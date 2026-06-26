@@ -51,11 +51,6 @@ final class CircuitBreakerRuleUtil {
             public boolean requiresResponseTrailers() {
                 return circuitBreakerRule.requiresResponseTrailers();
             }
-
-            @Override
-            public boolean requiresFullLog() {
-                return circuitBreakerRule.requiresFullLog();
-            }
         };
     }
 
@@ -72,11 +67,6 @@ final class CircuitBreakerRuleUtil {
             public boolean requiresResponseTrailers() {
                 return circuitBreakerRuleWithContent.requiresResponseTrailers();
             }
-
-            @Override
-            public boolean requiresFullLog() {
-                return circuitBreakerRuleWithContent.requiresFullLog();
-            }
         };
     }
 
@@ -84,7 +74,6 @@ final class CircuitBreakerRuleUtil {
 
         final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
                                                  second.requiresResponseTrailers();
-        final boolean requiresFullLog = first.requiresFullLog() || second.requiresFullLog();
 
         return new CircuitBreakerRule() {
             @Override
@@ -113,11 +102,6 @@ final class CircuitBreakerRuleUtil {
             public boolean requiresResponseTrailers() {
                 return requiresResponseTrailers;
             }
-
-            @Override
-            public boolean requiresFullLog() {
-                return requiresFullLog;
-            }
         };
     }
 
@@ -126,7 +110,6 @@ final class CircuitBreakerRuleUtil {
 
         final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
                                                  second.requiresResponseTrailers();
-        final boolean requiresFullLog = first.requiresFullLog() || second.requiresFullLog();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
@@ -150,11 +133,6 @@ final class CircuitBreakerRuleUtil {
             public boolean requiresResponseTrailers() {
                 return requiresResponseTrailers;
             }
-
-            @Override
-            public boolean requiresFullLog() {
-                return requiresFullLog;
-            }
         };
     }
 
@@ -163,7 +141,6 @@ final class CircuitBreakerRuleUtil {
 
         final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
                                                  second.requiresResponseTrailers();
-        final boolean requiresFullLog = first.requiresFullLog() || second.requiresFullLog();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
@@ -187,11 +164,6 @@ final class CircuitBreakerRuleUtil {
             public boolean requiresResponseTrailers() {
                 return requiresResponseTrailers;
             }
-
-            @Override
-            public boolean requiresFullLog() {
-                return requiresFullLog;
-            }
         };
     }
 
@@ -201,7 +173,6 @@ final class CircuitBreakerRuleUtil {
 
         final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
                                                  second.requiresResponseTrailers();
-        final boolean requiresFullLog = first.requiresFullLog() || second.requiresFullLog();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
@@ -226,11 +197,6 @@ final class CircuitBreakerRuleUtil {
             @Override
             public boolean requiresResponseTrailers() {
                 return requiresResponseTrailers;
-            }
-
-            @Override
-            public boolean requiresFullLog() {
-                return requiresFullLog;
             }
         };
     }
@@ -273,11 +239,6 @@ final class CircuitBreakerRuleUtil {
             @Override
             public boolean requiresResponseTrailers() {
                 return ruleWithContent.requiresResponseTrailers();
-            }
-
-            @Override
-            public boolean requiresFullLog() {
-                return ruleWithContent.requiresFullLog();
             }
         };
     }

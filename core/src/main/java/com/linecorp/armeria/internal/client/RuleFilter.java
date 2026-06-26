@@ -148,8 +148,9 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         }
 
         if (expectedSuccessFunctionResult != null) {
-            // Callers must await the full log when the rule's requiresFullLog() is true.
-            assert log.isComplete() : "log is not complete; caller did not await requiresFullLog()";
+            // Callers must await response trailers when the rule consults SuccessFunction.
+            assert log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)
+                    : "response is not ended; caller did not await requiresResponseTrailers()";
             final boolean isSuccess = ctx.options().successFunction().isSuccess(ctx, log);
             if (isSuccess == expectedSuccessFunctionResult) {
                 return true;
