@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.RuleFilter;
 
@@ -36,6 +37,9 @@ import com.linecorp.armeria.internal.client.RuleFilter;
  */
 public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         extends AbstractRuleWithContentBuilder<CircuitBreakerRuleWithContentBuilder<T>, T> {
+
+    @Nullable
+    private Boolean expectedSuccessFunctionResult;
 
     CircuitBreakerRuleWithContentBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
@@ -68,10 +72,14 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         return build(CircuitBreakerDecision.ignore());
     }
 
-    @Override
+    /**
+     * Matches the response when the {@link SuccessFunction} configured via
+     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION} returns the specified value.
+     */
     @UnstableApi
     public CircuitBreakerRuleWithContentBuilder<T> onSuccessFunctionResult(boolean isSuccess) {
-        return super.onSuccessFunctionResult(isSuccess);
+        expectedSuccessFunctionResult = isSuccess;
+        return this;
     }
 
     private CircuitBreakerRuleWithContent<T> build(CircuitBreakerDecision decision) {
@@ -82,9 +90,10 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
-                              expectedSuccessFunctionResult(), hasResponseFilter);
+                              expectedSuccessFunctionResult, hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
-                ruleFilter, decision, requiresResponseTrailers(), requiresFullLog());
+                ruleFilter, decision, requiresResponseTrailers(),
+                expectedSuccessFunctionResult != null);
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }

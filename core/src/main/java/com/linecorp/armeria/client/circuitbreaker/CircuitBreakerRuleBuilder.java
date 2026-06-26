@@ -40,6 +40,9 @@ import com.linecorp.armeria.internal.client.RuleFilter;
  */
 public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<CircuitBreakerRuleBuilder> {
 
+    @Nullable
+    private Boolean expectedSuccessFunctionResult;
+
     CircuitBreakerRuleBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
@@ -70,10 +73,14 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
         return build(CircuitBreakerDecision.ignore());
     }
 
-    @Override
+    /**
+     * Matches the response when the {@link SuccessFunction} configured via
+     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION} returns the specified value.
+     */
     @UnstableApi
     public CircuitBreakerRuleBuilder onSuccessFunctionResult(boolean isSuccess) {
-        return super.onSuccessFunctionResult(isSuccess);
+        expectedSuccessFunctionResult = isSuccess;
+        return this;
     }
 
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
@@ -81,8 +88,9 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
-                              expectedSuccessFunctionResult(), false);
-        return build(ruleFilter, decision, requiresResponseTrailers(), requiresFullLog());
+                              expectedSuccessFunctionResult, false);
+        return build(ruleFilter, decision, requiresResponseTrailers(),
+                     expectedSuccessFunctionResult != null);
     }
 
     static CircuitBreakerRule build(

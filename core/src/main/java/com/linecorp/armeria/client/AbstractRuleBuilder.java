@@ -39,11 +39,9 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
@@ -64,8 +62,6 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     @Nullable
     private BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
-    @Nullable
-    private Boolean expectedSuccessFunctionResult;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -308,22 +304,6 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     }
 
     /**
-     * Matches the response when the {@link SuccessFunction} configured via
-     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION} returns the specified value.
-     *
-     * <p>This filter is exposed publicly only by {@link CircuitBreakerRule} and
-     * {@link CircuitBreakerRuleWithContent} builders. It is intentionally not exposed by the
-     * {@link RetryRule}-side builders, because {@link RetryRule} drives log completion in
-     * {@link com.linecorp.armeria.client.retry.RetryingClient} and cannot safely await the entire
-     * {@link com.linecorp.armeria.common.logging.RequestLog} required by {@link SuccessFunction}.
-     */
-    @UnstableApi
-    protected SELF onSuccessFunctionResult(boolean isSuccess) {
-        expectedSuccessFunctionResult = isSuccess;
-        return self();
-    }
-
-    /**
      * Returns the {@link BiPredicate} of a {@link RequestHeaders}.
      */
     protected final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter() {
@@ -371,30 +351,11 @@ public abstract class AbstractRuleBuilder<SELF extends AbstractRuleBuilder<SELF>
     }
 
     /**
-     * Returns the expected {@link SuccessFunction} result, or {@code null} if
-     * {@link #onSuccessFunctionResult(boolean)} has not been called.
-     */
-    @Nullable
-    protected final Boolean expectedSuccessFunctionResult() {
-        return expectedSuccessFunctionResult;
-    }
-
-    /**
      * Returns whether this rule being built requires HTTP response trailers.
      */
     protected final boolean requiresResponseTrailers() {
         return responseTrailersFilter != null ||
                grpcTrailersFilter != null ||
                totalDurationFilter != null;
-    }
-
-    /**
-     * Returns whether the rule being built requires the entire {@link RequestLog} to be available
-     * before it can be evaluated. Returns {@code true} when {@link #onSuccessFunctionResult(boolean)}
-     * has been called, because the configured {@link SuccessFunction} may inspect any property of
-     * the {@link RequestLog}.
-     */
-    protected final boolean requiresFullLog() {
-        return expectedSuccessFunctionResult != null;
     }
 }
