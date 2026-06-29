@@ -20,11 +20,13 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerConfigurator;
 
 import io.fabric8.kubernetes.api.model.IntOrString;
@@ -63,15 +65,24 @@ public final class IstioServerExtension extends HostOnlyExtension {
     private final String serviceName;
     private final int port;
     private final Class<? extends ServerConfigurator> configuratorClass;
+    @Nullable
+    private final Consumer<DeploymentBuilder> deploymentCustomizer;
 
     public IstioServerExtension(String serviceName, int port,
                                 Class<? extends ServerConfigurator> configuratorClass) {
+        this(serviceName, port, configuratorClass, null);
+    }
+
+    public IstioServerExtension(String serviceName, int port,
+                                Class<? extends ServerConfigurator> configuratorClass,
+                                @Nullable Consumer<DeploymentBuilder> deploymentCustomizer) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
         if (port <= 0 || port > 65535) {
             throw new IllegalArgumentException("port: " + port + " (expected: 1-65535)");
         }
         this.port = port;
         this.configuratorClass = requireNonNull(configuratorClass, "configuratorClass");
+        this.deploymentCustomizer = deploymentCustomizer;
     }
 
     /**
@@ -146,38 +157,43 @@ public final class IstioServerExtension extends HostOnlyExtension {
 
     private void createDeployment(KubernetesClient client) {
         final Map<String, String> labels = Map.of("app", serviceName);
+        final DeploymentBuilder builder = new DeploymentBuilder()
+                .withNewMetadata()
+                .withName(serviceName)
+                .withNamespace(NAMESPACE)
+                .endMetadata()
+                .withNewSpec()
+                .withReplicas(1)
+                .withNewSelector()
+                .withMatchLabels(labels)
+                .endSelector()
+                .withNewTemplate()
+                .withNewMetadata()
+                .withLabels(labels)
+                .withAnnotations(Map.of("sidecar.istio.io/inject", "true"))
+                .endMetadata()
+                .withNewSpec()
+                .addNewContainer()
+                .withName("server")
+                .withImage(IstioTestImage.IMAGE_NAME)
+                .withImagePullPolicy("Never")
+                .withArgs("--server-factory", configuratorClass.getName(),
+                          "--port", String.valueOf(port))
+                .addNewEnv()
+                    .withName("JAVA_TOOL_OPTIONS")
+                    .withValue(IstioEnv.podJvmArgs())
+                .endEnv()
+                .endContainer()
+                .endSpec()
+                .endTemplate()
+                .endSpec();
+
+        if (deploymentCustomizer != null) {
+            deploymentCustomizer.accept(builder);
+        }
+
         client.apps().deployments().inNamespace(NAMESPACE)
-              .resource(new DeploymentBuilder()
-                                .withNewMetadata()
-                                .withName(serviceName)
-                                .withNamespace(NAMESPACE)
-                                .endMetadata()
-                                .withNewSpec()
-                                .withReplicas(1)
-                                .withNewSelector()
-                                .withMatchLabels(labels)
-                                .endSelector()
-                                .withNewTemplate()
-                                .withNewMetadata()
-                                .withLabels(labels)
-                                .withAnnotations(Map.of("sidecar.istio.io/inject", "true"))
-                                .endMetadata()
-                                .withNewSpec()
-                                .addNewContainer()
-                                .withName("server")
-                                .withImage(IstioTestImage.IMAGE_NAME)
-                                .withImagePullPolicy("Never")
-                                .withArgs("--server-factory", configuratorClass.getName(),
-                                          "--port", String.valueOf(port))
-                                .addNewEnv()
-                                    .withName("JAVA_TOOL_OPTIONS")
-                                    .withValue(IstioEnv.podJvmArgs())
-                                .endEnv()
-                                .endContainer()
-                                .endSpec()
-                                .endTemplate()
-                                .endSpec()
-                                .build())
+              .resource(builder.build())
               .create();
         logger.info("Created deployment '{}' with server-factory '{}'",
                     serviceName, configuratorClass.getName());
