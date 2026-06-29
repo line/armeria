@@ -154,14 +154,6 @@ AggregatedHttpResponse res = client.execute(...).aggregate().join();
 exceptions) as success for metrics and logging. By default a [CircuitBreakerRule](type) does not
 consult it.
 
-:::warning
-
-If a response that the [SuccessFunction](type) regards as a success is classified as
-`CircuitBreakerDecision.ignore()` by your rule, an `OPEN` [CircuitBreaker](type) will never close,
-because every trial request in `HALF_OPEN` keeps getting ignored.
-
-:::
-
 You can align the circuit breaker with the client's [SuccessFunction](type) by composing a rule with
 [CircuitBreakerRule#builder()](type):
 
