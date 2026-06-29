@@ -148,9 +148,6 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         }
 
         if (expectedSuccessFunctionResult != null) {
-            // SuccessFunction is invoked only after the response has ended.
-            assert log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)
-                    : "RESPONSE_END_TIME is required before evaluating SuccessFunction";
             final boolean isSuccess = ctx.options().successFunction().isSuccess(ctx, log);
             if (isSuccess == expectedSuccessFunctionResult) {
                 return true;
