@@ -91,10 +91,10 @@ final class ServerSnapshotWatcher implements SnapshotWatcher<ListenerSnapshot> {
         assert listenerSnapshot != null;
 
         final ServiceConfig cfg = serviceConfig;
+        this.listenerSnapshot = listenerSnapshot;
         if (cfg != null) {
             invokeServiceAdded(cfg);
         }
-        this.listenerSnapshot = listenerSnapshot;
         readyFuture.complete(null);
     }
 }

@@ -21,8 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
 import java.security.SignatureException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -38,6 +36,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
@@ -50,6 +49,11 @@ import com.linecorp.armeria.xds.server.XdsServerPlugin;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 class ServerMultiplePluginTest {
+
+    private static final ServerPort port1 =
+            new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+    private static final ServerPort port2 =
+            new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
 
     @RegisterExtension
     @Order(0)
@@ -72,8 +76,12 @@ class ServerMultiplePluginTest {
         protected void configure(ServerBuilder sb) {
             controlPlane.set(buildListener("listener-1", cert1),
                              buildListener("listener-2", cert2));
-            sb.plugin(XdsServerPlugin.of(controlPlane.bootstrap(), "listener-1"));
-            sb.plugin(XdsServerPlugin.of(controlPlane.bootstrap(), "listener-2"));
+            sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), "listener-1")
+                                     .port(port1)
+                                     .build());
+            sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), "listener-2")
+                                     .port(port2)
+                                     .build());
             sb.service("/hello", (ctx, req) -> HttpResponse.of("hello"));
         }
     };
@@ -122,11 +130,6 @@ class ServerMultiplePluginTest {
 
     @Test
     void multiplePluginsOnDifferentPorts() {
-        final List<Integer> httpsPorts = server.server().activePorts().values().stream()
-                                              .filter(ServerPort::hasHttps)
-                                              .map(p -> p.localAddress().getPort())
-                                              .collect(Collectors.toList());
-        assertThat(httpsPorts).hasSize(2);
         final ClientTlsSpec tlsSpec1 = ClientTlsSpec.builder()
                                                     .trustedCertificates(cert1.certificate())
                                                     .build();
@@ -134,8 +137,9 @@ class ServerMultiplePluginTest {
                                                     .trustedCertificates(cert2.certificate())
                                                     .build();
 
-        // Port 0 = listener-1 = cert1
-        final BlockingWebClient client1 = WebClient.of("https://127.0.0.1:" + httpsPorts.get(0)).blocking();
+        // port1 = listener-1 = cert1
+        final BlockingWebClient client1 =
+                WebClient.of("https://127.0.0.1:" + port1.actualPort()).blocking();
         final AggregatedHttpResponse res1 = client1.execute(HttpRequest.of(HttpMethod.GET, "/hello"),
                                                             RequestOptions.builder()
                                                                           .clientTlsSpec(tlsSpec1)
@@ -143,8 +147,9 @@ class ServerMultiplePluginTest {
         assertThat(res1.status()).isEqualTo(HttpStatus.OK);
         assertThat(res1.contentUtf8()).isEqualTo("hello");
 
-        // Port 1 = listener-2 = cert2
-        final BlockingWebClient client2 = WebClient.of("https://127.0.0.1:" + httpsPorts.get(1)).blocking();
+        // port2 = listener-2 = cert2
+        final BlockingWebClient client2 =
+                WebClient.of("https://127.0.0.1:" + port2.actualPort()).blocking();
         final AggregatedHttpResponse res2 = client2.execute(HttpRequest.of(HttpMethod.GET, "/hello"),
                                                             RequestOptions.builder()
                                                                           .clientTlsSpec(tlsSpec2)
@@ -152,8 +157,9 @@ class ServerMultiplePluginTest {
         assertThat(res2.status()).isEqualTo(HttpStatus.OK);
         assertThat(res2.contentUtf8()).isEqualTo("hello");
 
-        // Wrong cert for port 0 should fail.
-        final BlockingWebClient client3 = WebClient.of("https://127.0.0.1:" + httpsPorts.get(0)).blocking();
+        // Wrong cert for port1 should fail.
+        final BlockingWebClient client3 =
+                WebClient.of("https://127.0.0.1:" + port1.actualPort()).blocking();
         assertThatThrownBy(() -> client3.execute(HttpRequest.of(HttpMethod.GET, "/hello"),
                                                  RequestOptions.builder()
                                                                .clientTlsSpec(tlsSpec2)

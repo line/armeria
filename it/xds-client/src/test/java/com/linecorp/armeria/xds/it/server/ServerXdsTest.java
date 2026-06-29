@@ -56,20 +56,26 @@ class ServerXdsTest {
 
     @RegisterExtension
     @Order(0)
-    static final XdsCertificateExtension xdsCert =
+    static final XdsCertificateExtension serverCert =
             new XdsCertificateExtension(new SelfSignedCertificateExtension("127.0.0.1"));
 
     @RegisterExtension
     @Order(1)
-    static final XdsControlPlaneExtension controlPlane = new XdsControlPlaneExtension();
+    static final XdsCertificateExtension clientCert =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("127.0.0.1"));
 
     @RegisterExtension
     @Order(2)
+    static final XdsControlPlaneExtension controlPlane = new XdsControlPlaneExtension();
+
+    @RegisterExtension
+    @Order(3)
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final Path certPath = xdsCert.certificateFile().toPath();
-            final Path keyPath = xdsCert.privateKeyFile().toPath();
+            final Path serverCertPath = serverCert.certificateFile().toPath();
+            final Path serverKeyPath = serverCert.privateKeyFile().toPath();
+            final Path clientCaCertPath = clientCert.certificateFile().toPath();
 
             //language=YAML
             final String yaml =
@@ -98,13 +104,17 @@ class ServerXdsTest {
                         typed_config:
                           "@type": type.googleapis.com/envoy.extensions.transport_sockets\
                     .tls.v3.DownstreamTlsContext
+                          require_client_certificate: true
                           common_tls_context:
                             tls_certificates:
                               - certificate_chain:
                                   filename: "%s"
                                 private_key:
                                   filename: "%s"
-                    """.formatted(LISTENER_NAME, certPath, keyPath);
+                            validation_context:
+                              trusted_ca:
+                                filename: "%s"
+                    """.formatted(LISTENER_NAME, serverCertPath, serverKeyPath, clientCaCertPath);
             controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
             sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), LISTENER_NAME)
                                      .port(xdsPort)
@@ -115,7 +125,11 @@ class ServerXdsTest {
 
     @Test
     void mutualTlsTest() {
-        final Path certPath = xdsCert.certificateFile().toPath();
+        // Client presents clientCert, trusts serverCert.
+        // Server presents serverCert, trusts clientCert.
+        final Path clientCertPath = clientCert.certificateFile().toPath();
+        final Path clientKeyPath = clientCert.privateKeyFile().toPath();
+        final Path serverCaCertPath = serverCert.certificateFile().toPath();
 
         //language=YAML
         final String clientBootstrapYaml =
@@ -161,10 +175,15 @@ class ServerXdsTest {
                           "@type": type.googleapis.com/envoy.extensions.transport_sockets\
                 .tls.v3.UpstreamTlsContext
                           common_tls_context:
+                            tls_certificates:
+                              - certificate_chain:
+                                  filename: "%s"
+                                private_key:
+                                  filename: "%s"
                             validation_context:
                               trusted_ca:
                                 filename: "%s"
-                """.formatted(xdsPort.actualPort(), certPath);
+                """.formatted(xdsPort.actualPort(), clientCertPath, clientKeyPath, serverCaCertPath);
 
         final Bootstrap clientBootstrap =
                 XdsResourceReader.fromYaml(clientBootstrapYaml, Bootstrap.class);
@@ -188,11 +207,12 @@ class ServerXdsTest {
 
     @Test
     void managedPort() {
-        // The xDS-managed port goes through xDS and requires TLS.
+        // The xDS-managed port goes through xDS and requires mTLS.
         final int port = xdsPort.actualPort();
         assertThat(port).isGreaterThan(0);
         final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
-                                                   .trustedCertificates(xdsCert.certificate())
+                                                   .trustedCertificates(serverCert.certificate())
+                                                   .tlsKeyPair(clientCert.tlsKeyPair())
                                                    .build();
         final BlockingWebClient client = WebClient.of("https://127.0.0.1:" + port).blocking();
         final AggregatedHttpResponse res = client.execute(

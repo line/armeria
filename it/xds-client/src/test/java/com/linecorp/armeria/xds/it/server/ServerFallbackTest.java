@@ -61,6 +61,8 @@ class ServerFallbackTest {
     private static final String LISTENER_NAME = "fallback-listener";
     private static final ServerPort xdsPort =
             new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+    private static final ServerPort unmanagedPort =
+            new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
 
     private static final AtomicInteger acceptorCallCount = new AtomicInteger();
 
@@ -134,8 +136,8 @@ class ServerFallbackTest {
                                                            .build();
             sb.tlsProvider(ServerTlsProvider.of(ctx -> userTlsSpec));
 
-            // Add an explicit unmanaged HTTPS port (not controlled by xDS).
-            sb.https(0);
+            // Explicit unmanaged HTTPS port (not controlled by xDS).
+            sb.port(unmanagedPort);
 
             sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), LISTENER_NAME)
                                      .port(xdsPort)
@@ -161,52 +163,32 @@ class ServerFallbackTest {
     }
 
     @Test
-    void connectionAcceptorCalledOnUnmanagedPort() {
+    void tlsProviderFallbackOnUnmanagedPort() {
+        // The unmanaged HTTPS port should use the user-configured TLS provider (userCert),
+        // not the xDS certificate. Also verify the user-configured ConnectionAcceptor is called.
         acceptorCallCount.set(0);
-        final AggregatedHttpResponse res =
-                WebClient.of(server.httpUri()).blocking().get("/hello");
+        final ClientTlsSpec userTlsSpec = ClientTlsSpec.builder()
+                                                       .trustedCertificates(userCert.certificate())
+                                                       .build();
+        final BlockingWebClient client =
+                WebClient.of("https://127.0.0.1:" + unmanagedPort.actualPort()).blocking();
+        final AggregatedHttpResponse res = client.execute(
+                HttpRequest.of(HttpMethod.GET, "/hello"),
+                RequestOptions.builder().clientTlsSpec(userTlsSpec).build());
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("hello");
         assertThat(acceptorCallCount.get()).isGreaterThanOrEqualTo(1);
     }
 
     @Test
-    void tlsProviderFallbackOnUnmanagedPort() {
-        // The unmanaged HTTPS port should use the user-configured TLS provider (userCert),
-        // not the xDS certificate.
-        final int unmanagedHttpsPort = server.server().activePorts().values().stream()
-                                             .filter(ServerPort::hasHttps)
-                                             .map(p -> p.localAddress().getPort())
-                                             .filter(p -> p != xdsPort.actualPort())
-                                             .findFirst()
-                                             .orElseThrow();
-        final ClientTlsSpec userTlsSpec = ClientTlsSpec.builder()
-                                                       .trustedCertificates(userCert.certificate())
-                                                       .build();
-        final BlockingWebClient client =
-                WebClient.of("https://127.0.0.1:" + unmanagedHttpsPort).blocking();
-        final AggregatedHttpResponse res = client.execute(
-                HttpRequest.of(HttpMethod.GET, "/hello"),
-                RequestOptions.builder().clientTlsSpec(userTlsSpec).build());
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("hello");
-    }
-
-    @Test
     void xdsCertNotTrustedOnUnmanagedPort() {
         // The xDS certificate should NOT work on the unmanaged port — that port uses
         // userCert, so trusting xdsCert should fail the TLS handshake.
-        final int unmanagedHttpsPort = server.server().activePorts().values().stream()
-                                             .filter(ServerPort::hasHttps)
-                                             .map(p -> p.localAddress().getPort())
-                                             .filter(p -> p != xdsPort.actualPort())
-                                             .findFirst()
-                                             .orElseThrow();
         final ClientTlsSpec xdsTlsSpec = ClientTlsSpec.builder()
                                                       .trustedCertificates(xdsCert.certificate())
                                                       .build();
         final BlockingWebClient client =
-                WebClient.of("https://127.0.0.1:" + unmanagedHttpsPort).blocking();
+                WebClient.of("https://127.0.0.1:" + unmanagedPort.actualPort()).blocking();
         assertThatThrownBy(() -> client.execute(
                 HttpRequest.of(HttpMethod.GET, "/hello"),
                 RequestOptions.builder().clientTlsSpec(xdsTlsSpec).build()))
