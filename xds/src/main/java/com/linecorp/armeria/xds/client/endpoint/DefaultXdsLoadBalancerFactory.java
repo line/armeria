@@ -93,6 +93,8 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
                 return "armeria.cluster.eds";
             case STRICT_DNS:
                 return StrictDnsClusterTypeFactory.extensionName();
+            case ORIGINAL_DST:
+                return "armeria.cluster.original_dst";
             default:
                 throw new UnsupportedOperationException(
                         "Cluster (" + cluster.getName() + ") is attempting to use an " +
