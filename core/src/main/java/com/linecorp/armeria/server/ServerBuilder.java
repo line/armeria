@@ -172,7 +172,8 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<ServerBuilder> {
+public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
+        ServiceConfigsBuilder<ServerBuilder> {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -531,10 +532,20 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * Sets the {@link ConnectionAcceptor} that is called once per connection, before TLS
      * negotiation, to decide whether to accept the connection.
      */
+    @Override
     @UnstableApi
     public ServerBuilder connectionAcceptor(ConnectionAcceptor connectionAcceptor) {
         this.connectionAcceptor = requireNonNull(connectionAcceptor, "connectionAcceptor");
         return this;
+    }
+
+    /**
+     * Returns the {@link ConnectionAcceptor} configured so far.
+     */
+    @Override
+    @UnstableApi
+    public ConnectionAcceptor connectionAcceptor() {
+        return connectionAcceptor;
     }
 
     /**
@@ -1244,6 +1255,16 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
+     * Returns the {@link ServerTlsProvider} configured so far, or {@code null} if not set.
+     */
+    @Override
+    @UnstableApi
+    @Nullable
+    public ServerTlsProvider tlsProvider() {
+        return serverTlsProviderBuilder.serverTlsProvider;
+    }
+
+    /**
      * Sets the specified {@link TlsProvider} which will be used for building an {@link SslContext} of
      * a hostname.
      *
@@ -1322,6 +1343,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * the {@code tlsProvider} takes priority. The static TLS settings are used as a fallback
      * when the provider returns {@code null}.
      */
+    @Override
     @UnstableApi
     public ServerBuilder tlsProvider(ServerTlsProvider serverTlsProvider) {
         requireNonNull(serverTlsProvider, "serverTlsProvider");

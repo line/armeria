@@ -23,11 +23,11 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
@@ -55,7 +55,7 @@ final class RouteEntryMatcher {
         pathMatcher = new PathMatcherImpl(routeMatch);
     }
 
-    boolean matches(ClientRequestContext ctx) {
+    boolean matches(RequestContext ctx) {
         final HttpRequest req = ctx.request();
         if (routeMatch.hasGrpc()) {
             if (!XdsCommonUtil.isGrpcRequest(req)) {
@@ -116,7 +116,7 @@ final class RouteEntryMatcher {
             }
         }
 
-        static QueryParams fromContext(ClientRequestContext ctx) {
+        static QueryParams fromContext(RequestContext ctx) {
             final String query = ctx.query();
             final QueryParams queryParams;
             if (query == null) {
@@ -220,7 +220,7 @@ final class RouteEntryMatcher {
     @VisibleForTesting
     static class PathMatcherImpl {
 
-        private final Predicate<ClientRequestContext> predicate;
+        private final Predicate<RequestContext> predicate;
 
         PathMatcherImpl(RouteMatch routeMatch) {
             final PathSpecifierCase pathSpecifierCase = routeMatch.getPathSpecifierCase();
@@ -282,7 +282,7 @@ final class RouteEntryMatcher {
             }
         }
 
-        boolean match(ClientRequestContext ctx) {
+        boolean match(RequestContext ctx) {
             return predicate.test(ctx);
         }
     }

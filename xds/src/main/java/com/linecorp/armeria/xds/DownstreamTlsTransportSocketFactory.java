@@ -73,4 +73,12 @@ final class DownstreamTlsTransportSocketFactory implements TransportSocketFactor
             return new TransportSocketSnapshot(transportSocket, tlsContext, certs, validation);
         });
     }
+
+    /**
+     * Returns {@code true} if the {@link DownstreamTlsContext} requires client certificates.
+     */
+    static boolean requireClientCertificate(DownstreamTlsContext tlsContext) {
+        return tlsContext.hasRequireClientCertificate() &&
+               tlsContext.getRequireClientCertificate().getValue();
+    }
 }

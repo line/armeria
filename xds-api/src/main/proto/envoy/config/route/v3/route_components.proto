@@ -325,6 +325,7 @@ message Route {
     // without forwarding to an upstream host. This will be used in non-proxy
     // xDS clients like the gRPC server. It could also be used in the future
     // in Envoy for a filter that directly generates responses for requests.
+    option (armeria.xds.supported.oneof_field) = 18;
     NonForwardingAction non_forwarding_action = 18;
   }
 

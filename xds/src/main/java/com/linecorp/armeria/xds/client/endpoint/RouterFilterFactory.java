@@ -28,9 +28,11 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+import com.linecorp.armeria.xds.internal.DelegatingHttpService;
 
 import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
@@ -114,6 +116,11 @@ public final class RouterFilterFactory implements HttpFilterFactory {
         @Override
         public RpcPreprocessor rpcPreprocessor() {
             return rpcFilter::execute;
+        }
+
+        @Override
+        public DecoratingHttpServiceFunction serviceDecorator() {
+            return (delegate, ctx, req) -> DelegatingHttpService.of().serve(ctx, req);
         }
     }
 }

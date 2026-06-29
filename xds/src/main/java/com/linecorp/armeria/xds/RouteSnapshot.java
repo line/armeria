@@ -16,12 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -34,10 +40,13 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
 
     private final RouteXdsResource routeXdsResource;
     private final List<VirtualHostSnapshot> virtualHostSnapshots;
+    private final VirtualHostMatcher virtualHostMatcher;
 
     RouteSnapshot(RouteXdsResource routeXdsResource, List<VirtualHostSnapshot> virtualHostSnapshots) {
         this.routeXdsResource = routeXdsResource;
         this.virtualHostSnapshots = ImmutableList.copyOf(virtualHostSnapshots);
+        virtualHostMatcher = new VirtualHostMatcher(
+                virtualHostSnapshots, routeXdsResource.resource().getIgnorePortInHostMatching());
     }
 
     @Override
@@ -50,6 +59,34 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
      */
     public List<VirtualHostSnapshot> virtualHostSnapshots() {
         return virtualHostSnapshots;
+    }
+
+    /**
+     * Selects the first matching {@link RouteEntry} for the given {@link RequestContext}
+     * by matching virtual host by authority, then route by path/headers/query.
+     *
+     * @return the matched {@link RouteEntry}, or {@code null} if no route matches
+     */
+    @Nullable
+    public RouteEntry select(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        final String authority;
+        if (ctx instanceof ClientRequestContext) {
+            authority = ((ClientRequestContext) ctx).authority();
+        } else {
+            final HttpRequest request = ctx.request();
+            authority = request != null ? request.authority() : null;
+        }
+        final VirtualHostSnapshot vh = virtualHostMatcher.find(authority);
+        if (vh == null) {
+            return null;
+        }
+        for (RouteEntry entry : vh.routeEntries()) {
+            if (entry.matches(ctx)) {
+                return entry;
+            }
+        }
+        return null;
     }
 
     @Override

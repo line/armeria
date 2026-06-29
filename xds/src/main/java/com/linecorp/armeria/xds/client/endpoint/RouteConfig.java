@@ -21,15 +21,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.RouteSnapshot;
-import com.linecorp.armeria.xds.VirtualHostSnapshot;
 
 final class RouteConfig {
     private final ListenerSnapshot listenerSnapshot;
-    private final VirtualHostMatcher virtualHostMatcher;
 
     RouteConfig(ListenerSnapshot listenerSnapshot) {
         this.listenerSnapshot = listenerSnapshot;
-        virtualHostMatcher = new VirtualHostMatcher(listenerSnapshot);
     }
 
     ListenerSnapshot listenerSnapshot() {
@@ -42,18 +39,11 @@ final class RouteConfig {
         if (routeSnapshot == null) {
             return null;
         }
-        final VirtualHostSnapshot virtualHostSnapshot = virtualHostMatcher.find(ctx);
-        if (virtualHostSnapshot == null) {
-            return null;
+        final RouteEntry entry = routeSnapshot.select(ctx);
+        if (entry != null) {
+            ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH,
+                        entry.route().getRoute().getMetadataMatch());
         }
-
-        for (RouteEntry entry: virtualHostSnapshot.routeEntries()) {
-            if (entry.matches(ctx)) {
-                ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH,
-                            entry.route().getRoute().getMetadataMatch());
-                return entry;
-            }
-        }
-        return null;
+        return entry;
     }
 }

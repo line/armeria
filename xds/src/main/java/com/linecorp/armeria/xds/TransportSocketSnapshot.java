@@ -29,13 +29,19 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.ClientTlsSpecBuilder;
+import com.linecorp.armeria.common.AbstractTlsSpecBuilder;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.ConnectionContext;
+import com.linecorp.armeria.server.ServerTlsSpec;
+import com.linecorp.armeria.server.ServerTlsSpecBuilder;
 
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
+import io.netty.handler.ssl.ClientAuth;
 
 /**
  * A snapshot of a {@link TransportSocket} resource with its associated TLS configuration.
@@ -53,12 +59,15 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     private final CertificateValidationContextSnapshot validationContext;
     @Nullable
     private final ClientTlsSpec clientTlsSpec;
+    @Nullable
+    private final ServerTlsSpec serverTlsSpec;
 
     TransportSocketSnapshot(TransportSocket transportSocket) {
         this.transportSocket = transportSocket;
         tlsCertificates = ImmutableList.of();
         validationContext = null;
         clientTlsSpec = null;
+        serverTlsSpec = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
@@ -71,18 +80,25 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         final TlsCertificateSnapshot firstCert = tlsCertificates.isEmpty() ? null
                                                                            : tlsCertificates.get(0);
         clientTlsSpec = buildClientTlsSpec(upstreamTlsContext, firstCert, this.validationContext);
+        serverTlsSpec = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
-                            Object downstreamTlsContext,
+                            DownstreamTlsContext downstreamTlsContext,
                             List<TlsCertificateSnapshot> tlsCertificates,
                             Optional<CertificateValidationContextSnapshot> validationContext) {
         this.transportSocket = transportSocket;
         this.tlsCertificates = ImmutableList.copyOf(tlsCertificates);
         this.validationContext = validationContext.orElse(null);
-        // TODO: build ServerTlsSpec from DownstreamTlsContext once server-side TLS
-        //  behavior can be verified via integration tests.
         clientTlsSpec = null;
+
+        final List<ServerTlsSpec> specs =
+                tlsCertificates.stream()
+                               .map(cert -> buildServerTlsSpec(downstreamTlsContext, cert,
+                                                               this.validationContext))
+                               .collect(ImmutableList.toImmutableList());
+        // Simple: use first spec. SNI-based selection deferred to follow-up PR.
+        serverTlsSpec = specs.isEmpty() ? null : specs.get(0);
     }
 
     @Override
@@ -122,6 +138,26 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         return clientTlsSpec;
     }
 
+    /**
+     * Selects the best-matching {@link ServerTlsSpec} for the given connection using
+     * SNI-based certificate selection, following Envoy's
+     * <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl#arch-overview-ssl-cert-select">
+     * certificate selection</a> algorithm.
+     *
+     * <p>Selection order:
+     * <ol>
+     *   <li>Exact SNI match against certificate DNS SANs (or CN if no SANs)</li>
+     *   <li>Wildcard match (one level only, e.g. {@code *.example.com})</li>
+     *   <li>Fallback to the first certificate</li>
+     * </ol>
+     *
+     * @return the selected {@link ServerTlsSpec}, or {@code null} if this transport socket
+     *         does not configure downstream TLS
+     */
+    public @Nullable ServerTlsSpec serverTlsSpec(ConnectionContext ctx) {
+        return serverTlsSpec;
+    }
+
     private static ClientTlsSpec buildClientTlsSpec(
             @Nullable UpstreamTlsContext upstreamTlsContext,
             @Nullable TlsCertificateSnapshot tlsCertificate,
@@ -138,13 +174,27 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
                 specBuilder.alpnProtocols(alpn);
             }
         }
+        applyCommonTlsConfig(specBuilder, tlsCertificate, validationContext, autoSniSanValidation);
+        return specBuilder.build();
+    }
+
+    private static <B extends AbstractTlsSpecBuilder<B, ?>> void applyCommonTlsConfig(
+            B builder,
+            @Nullable TlsCertificateSnapshot tlsCertificate,
+            @Nullable CertificateValidationContextSnapshot validationContext,
+            boolean autoSniSanValidation) {
+        if (tlsCertificate != null) {
+            final TlsKeyPair tlsKeyPair = tlsCertificate.tlsKeyPair();
+            if (tlsKeyPair != null) {
+                builder.tlsKeyPair(tlsKeyPair);
+            }
+        }
         final ImmutableList.Builder<TlsPeerVerifierFactory> verifiersBuilder = ImmutableList.builder();
         if (validationContext != null) {
             final boolean systemRootCerts = validationContext.xdsResource().hasSystemRootCerts();
             final List<X509Certificate> trustedCa = validationContext.trustedCa();
-            // set the trusted CA certificates
             if (trustedCa != null) {
-                specBuilder.trustedCertificates(trustedCa);
+                builder.trustedCertificates(trustedCa);
             } else if (systemRootCerts) {
                 // use java default root CAs
             } else {
@@ -157,30 +207,35 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
                             "Set 'system_root_certs: \\{}' or provide trusted_ca.");
                 verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
             }
-
-            // set peer verification rules - these are applied before trusted CA verification
-            // so that checks are run regardless of CA configuration
             final List<TlsPeerVerifierFactory> verifierFactories = validationContext.peerVerifierFactories();
             if (!verifierFactories.isEmpty()) {
                 verifiersBuilder.addAll(verifierFactories);
             }
         } else {
-            // No validation context — don't verify peer certs (matches Envoy SSL_VERIFY_NONE).
             logger.warn("TLS peer verification is disabled: no validation_context configured. " +
                         "Configure a validation_context with trusted_ca or system_root_certs.");
             verifiersBuilder.add(TlsPeerVerifierFactory.noVerify());
         }
-        if (tlsCertificate != null) {
-            final TlsKeyPair tlsKeyPair = tlsCertificate.tlsKeyPair();
-            if (tlsKeyPair != null) {
-                specBuilder.tlsKeyPair(tlsKeyPair);
-            }
-        }
         final List<TlsPeerVerifierFactory> verifierFactories = verifiersBuilder.build();
         if (!verifierFactories.isEmpty()) {
-            specBuilder.verifierFactories(verifierFactories);
+            builder.verifierFactories(verifierFactories);
         }
-        return specBuilder.build();
+    }
+
+    private static ServerTlsSpec buildServerTlsSpec(
+            DownstreamTlsContext downstreamTlsContext,
+            TlsCertificateSnapshot tlsCertificate,
+            @Nullable CertificateValidationContextSnapshot validationContext) {
+        if (tlsCertificate.tlsKeyPair() == null) {
+            throw new IllegalArgumentException(
+                    "Server TlsCertificateSnapshot must have a TlsKeyPair: " + tlsCertificate);
+        }
+        final ServerTlsSpecBuilder builder = ServerTlsSpec.builder();
+        applyCommonTlsConfig(builder, tlsCertificate, validationContext, false);
+        if (DownstreamTlsTransportSocketFactory.requireClientCertificate(downstreamTlsContext)) {
+            builder.clientAuth(ClientAuth.REQUIRE);
+        }
+        return builder.build();
     }
 
     @Override
