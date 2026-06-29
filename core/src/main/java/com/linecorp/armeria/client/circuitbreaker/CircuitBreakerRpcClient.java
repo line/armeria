@@ -176,8 +176,13 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
                 ruleWithContent().requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
                                                              : RequestLogProperty.RESPONSE_HEADERS;
         response.handle((unused1, cause) -> {
-            ctx.log().whenAvailable(property).thenAccept(log -> reportSuccessOrFailure(
-                    callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause));
+            if (ctx.log().isAvailable(property)) {
+                reportSuccessOrFailure(
+                        callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause);
+            } else {
+                ctx.log().whenAvailable(property).thenAccept(log -> reportSuccessOrFailure(
+                        callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause));
+            }
             return null;
         });
         return response;
