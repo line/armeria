@@ -23,4 +23,9 @@ abstract class AbstractContextAwareBlockingTaskExecutor
     AbstractContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
         super(executor);
     }
+
+    @Override
+    public int numPendingTasks() {
+        return withoutContext().numPendingTasks();
+    }
 }
