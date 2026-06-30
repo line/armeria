@@ -51,7 +51,7 @@ class CircuitBreakerRpcClientRuleTest {
     void doNotOpenCircuit_whenSuccessFunctionAgrees() {
         final CircuitBreakerRuleWithContent<RpcResponse> rule =
                 CircuitBreakerRuleWithContent.<RpcResponse>builder()
-                                             .onSuccessFunctionResult(true)
+                                             .onSuccessFunction()
                                              .thenSuccess()
                                              .orElse(CircuitBreakerRuleWithContent
                                                              .<RpcResponse>builder()
@@ -75,7 +75,7 @@ class CircuitBreakerRpcClientRuleTest {
     void openCircuit_whenSuccessFunctionDisagrees() {
         final CircuitBreakerRuleWithContent<RpcResponse> rule =
                 CircuitBreakerRuleWithContent.<RpcResponse>builder()
-                                             .onSuccessFunctionResult(true)
+                                             .onSuccessFunction()
                                              .thenSuccess()
                                              .orElse(CircuitBreakerRuleWithContent
                                                              .<RpcResponse>builder()

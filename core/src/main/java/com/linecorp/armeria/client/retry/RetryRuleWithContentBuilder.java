@@ -80,7 +80,7 @@ public final class RetryRuleWithContentBuilder<T extends Response>
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
-                              null, hasResponseFilter);
+                              false, hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
 

@@ -77,7 +77,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder<RetryRuleBuilder
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
-                              null, false);
+                              false, false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 

@@ -40,8 +40,7 @@ import com.linecorp.armeria.internal.client.RuleFilter;
  */
 public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<CircuitBreakerRuleBuilder> {
 
-    @Nullable
-    private Boolean expectedSuccessFunctionResult;
+    private boolean matchSuccessFunction;
 
     CircuitBreakerRuleBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
@@ -73,12 +72,16 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
     }
 
     /**
-     * Matches the response when the {@link SuccessFunction} configured via
-     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION} returns the specified value.
+     * Adds the {@link SuccessFunction} configured via
+     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION}.
+     *
+     * <p>When the {@link SuccessFunction} regards the response as a success, a {@link Response} is
+     * reported as a success or failure to a {@link CircuitBreaker} or ignored depending on the build
+     * methods ({@code #thenSuccess()}, {@code #thenFailure()} and {@code #thenIgnore()}).
      */
     @UnstableApi
-    public CircuitBreakerRuleBuilder onSuccessFunctionResult(boolean isSuccess) {
-        expectedSuccessFunctionResult = isSuccess;
+    public CircuitBreakerRuleBuilder onSuccessFunction() {
+        matchSuccessFunction = true;
         return this;
     }
 
@@ -87,9 +90,9 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
                               exceptionFilter(), totalDurationFilter(),
-                              expectedSuccessFunctionResult, false);
+                              matchSuccessFunction, false);
         return build(ruleFilter, decision,
-                     requiresResponseTrailers() || expectedSuccessFunctionResult != null);
+                     requiresResponseTrailers() || matchSuccessFunction);
     }
 
     static CircuitBreakerRule build(
