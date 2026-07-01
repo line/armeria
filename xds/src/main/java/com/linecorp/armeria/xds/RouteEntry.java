@@ -18,29 +18,19 @@ package com.linecorp.armeria.xds;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
-import com.google.protobuf.Any;
 
-import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientPreprocessors;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreClient;
-import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
-import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 /**
  * Represents a {@link Route}.
@@ -48,41 +38,18 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 public final class RouteEntry {
 
     private final Route route;
-    @Nullable
-    private final ClusterSnapshot clusterSnapshot;
-    private final Map<String, Any> filterConfigs;
+    private final RouteClusterResolver routeResolver;
     private final int index;
-    private final HttpClient httpClient;
-    private final RpcClient rpcClient;
     private final HttpService httpService;
-    private final HttpPreClient httpPreClient;
-    private final RpcPreClient rpcPreClient;
     private final RouteEntryMatcher matcher;
 
-    RouteEntry(Route route, @Nullable ClusterSnapshot clusterSnapshot, int index,
-               Map<String, Any> filterConfigs,
-               ClientPreprocessors downstreamPreprocessors,
-               @Nullable ClientDecoration retryDecoration,
-               ClientDecoration upstreamDecoration, HttpService httpService) {
+    RouteEntry(Route route, RouteClusterResolver routeResolver, int index,
+               HttpService httpService) {
         this.route = route;
-        this.clusterSnapshot = clusterSnapshot;
+        this.routeResolver = routeResolver;
         this.index = index;
-        this.filterConfigs = filterConfigs;
         this.httpService = httpService;
         matcher = new RouteEntryMatcher(route.getMatch());
-
-        // Pre-build the full cluster chain: retry → ClusterFilter → upstream filters → delegate
-        HttpClient clusterHttp = ClusterFilterFactory.DECORATION.decorate(
-                upstreamDecoration.decorate(DelegatingHttpClient.of()));
-        if (retryDecoration != null) {
-            clusterHttp = retryDecoration.decorate(clusterHttp);
-        }
-        httpClient = clusterHttp;
-        rpcClient = ClusterFilterFactory.DECORATION.rpcDecorate(
-                upstreamDecoration.rpcDecorate(DelegatingRpcClient.of()));
-
-        httpPreClient = downstreamPreprocessors.decorate(DelegatingHttpClient.of());
-        rpcPreClient = downstreamPreprocessors.rpcDecorate(DelegatingRpcClient.of());
     }
 
     /**
@@ -94,22 +61,34 @@ public final class RouteEntry {
 
     /**
      * The {@link ClusterSnapshot} that is represented by {@link RouteAction#getCluster()}.
-     * If the {@link RouteAction} does not reference a cluster, the returned value may be {@code null}.
+     * If the {@link RouteAction} does not reference a single cluster (e.g. when using weighted clusters),
+     * the returned value may be {@code null}.
+     * Use {@link #resolve()} for a unified way to obtain a target regardless of the cluster specifier.
      */
     @Nullable
     public ClusterSnapshot clusterSnapshot() {
-        return clusterSnapshot;
+        return routeResolver.clusterSnapshot();
     }
 
     /**
-     * Returns the raw per-route filter config {@link Any} from
-     * {@link Route#getTypedPerFilterConfigMap()}, or {@code null} if not present.
-     *
-     * @param filterName the filter name represented by {@link HttpFilter#getName()}
+     * Returns the list of {@link WeightedClusterSnapshot}s for this route, or {@code null}
+     * if this route uses a single cluster or no cluster.
      */
     @Nullable
-    public Any filterConfig(String filterName) {
-        return filterConfigs.get(filterName);
+    @UnstableApi
+    public List<WeightedClusterSnapshot> weightedClusters() {
+        return routeResolver.weightedClusters();
+    }
+
+    /**
+     * Selects a target for this route. For single-cluster routes, returns the target directly.
+     * For weighted-cluster routes, performs a weighted random selection.
+     * Returns {@code null} if no target is configured.
+     */
+    @Nullable
+    @UnstableApi
+    public RouteCluster resolve() {
+        return routeResolver.resolve();
     }
 
     /**
@@ -118,40 +97,6 @@ public final class RouteEntry {
     @UnstableApi
     public HttpService httpService() {
         return httpService;
-    }
-
-    /**
-     * Returns the downstream {@link HttpPreClient} chain for this route.
-     */
-    @UnstableApi
-    public HttpPreClient httpPreClient() {
-        return httpPreClient;
-    }
-
-    /**
-     * Returns the downstream {@link RpcPreClient} chain for this route.
-     */
-    @UnstableApi
-    public RpcPreClient rpcPreClient() {
-        return rpcPreClient;
-    }
-
-    /**
-     * Returns the pre-built {@link HttpClient} chain for this route. This chain includes
-     * retry, cluster filter, and upstream HTTP filters ending with a {@link DelegatingHttpClient}.
-     */
-    @UnstableApi
-    public HttpClient httpClient() {
-        return httpClient;
-    }
-
-    /**
-     * Returns the pre-built {@link RpcClient} chain for this route. This chain includes
-     * cluster filter and upstream RPC filters ending with a {@link DelegatingRpcClient}.
-     */
-    @UnstableApi
-    public RpcClient rpcClient() {
-        return rpcClient;
     }
 
     /**
@@ -180,19 +125,20 @@ public final class RouteEntry {
         final RouteEntry that = (RouteEntry) o;
         return Objects.equals(route, that.route) &&
                Objects.equals(index, that.index) &&
-               Objects.equals(clusterSnapshot, that.clusterSnapshot);
+               Objects.equals(routeResolver, that.routeResolver);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(route, clusterSnapshot, index);
+        return Objects.hash(route, routeResolver, index);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
                           .add("index", index)
-                          .add("clusterSnapshot", clusterSnapshot)
+                          .add("routeResolver", routeResolver)
                           .toString();
     }
 
@@ -201,9 +147,7 @@ public final class RouteEntry {
                           .omitNullValues()
                           .add("index", index)
                           .add("route", route)
-                          .add("clusterSnapshot",
-                               SnapshotUtil.debugString(clusterSnapshot,
-                                                        ClusterSnapshot::toDebugString))
+                          .add("routeResolver", routeResolver.toDebugString())
                           .toString();
     }
 }

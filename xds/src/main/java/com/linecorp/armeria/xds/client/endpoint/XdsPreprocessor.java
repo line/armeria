@@ -29,8 +29,12 @@ import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.ListenerRoot;
+import com.linecorp.armeria.xds.RouteCluster;
+import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
+import io.envoyproxy.envoy.config.route.v3.RouteAction;
 import io.netty.channel.EventLoop;
 
 abstract class XdsPreprocessor<I extends Request, O extends Response>
@@ -75,11 +79,29 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
             throw UnprocessedRequestException.of(
                     new TimeoutException("Couldn't select a snapshot for listener '" + listenerName + "'."));
         }
-        return execute1(delegate, ctx, req, routeConfig);
+        final RouteEntry selectedRoute = routeConfig.select(ctx);
+        if (selectedRoute == null) {
+            throw UnprocessedRequestException.of(
+                    new IllegalArgumentException("No route for listener '" +
+                                                 routeConfig.listenerSnapshot() + "'."));
+        }
+        final RouteCluster routeCluster = selectedRoute.resolve();
+        if (routeCluster == null) {
+            throw UnprocessedRequestException.of(
+                    new IllegalArgumentException("No cluster is specified for selected route."));
+        }
+        ctx.setAttr(XdsCommonUtil.ROUTE_CLUSTER, routeCluster);
+        final RouteAction routeAction = selectedRoute.route().getRoute();
+        final long responseTimeoutMillis =
+                XdsCommonUtil.durationToMillis(routeAction.getTimeout(), -1);
+        if (responseTimeoutMillis > 0) {
+            ctx.setResponseTimeoutMillis(responseTimeoutMillis);
+        }
+        return execute1(delegate, ctx, req, routeCluster);
     }
 
     abstract O execute1(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,
-                        RouteConfig routeConfig) throws Exception;
+                        RouteCluster routeCluster) throws Exception;
 
     @Override
     public void close() {

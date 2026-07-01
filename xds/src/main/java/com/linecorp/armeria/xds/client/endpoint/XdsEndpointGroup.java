@@ -38,9 +38,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
@@ -146,11 +146,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>>
         if (virtualHostSnapshot.routeEntries().isEmpty()) {
             return;
         }
-        final ClusterSnapshot clusterSnapshot = virtualHostSnapshot.routeEntries().get(0).clusterSnapshot();
-        if (clusterSnapshot == null) {
+        final RouteCluster routeCluster = virtualHostSnapshot.routeEntries().get(0).resolve();
+        if (routeCluster == null) {
             return;
         }
-        final XdsLoadBalancer loadBalancer = clusterSnapshot.loadBalancer();
+        final XdsLoadBalancer loadBalancer = routeCluster.clusterSnapshot().loadBalancer();
 
         this.loadBalancer = loadBalancer;
         endpoints = loadBalancer.allEndpoints();

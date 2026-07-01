@@ -92,13 +92,13 @@ final class ClusterFilterFactory {
         ctx.setEndpointGroup(endpointGroup);
         ctx.setSessionProtocol(sessionProtocol);
 
-        final RouteEntry route = ctx.attr(XdsCommonUtil.SELECTED_ROUTE);
+        final RouteCluster routeCluster = ctx.attr(XdsCommonUtil.ROUTE_CLUSTER);
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         if (ctxExt != null) {
-            final HttpClient httpClient = route != null ?
-                                          route.httpClient() : CLUSTER_ONLY_HTTP_CLIENT;
-            final RpcClient rpcClient = route != null ?
-                                        route.rpcClient() : CLUSTER_ONLY_RPC_CLIENT;
+            final HttpClient httpClient = routeCluster != null ?
+                                          routeCluster.httpClient() : CLUSTER_ONLY_HTTP_CLIENT;
+            final RpcClient rpcClient = routeCluster != null ?
+                                        routeCluster.rpcClient() : CLUSTER_ONLY_RPC_CLIENT;
             ctxExt.httpClientCustomizer(actualClient -> {
                 DelegatingHttpClient.setDelegate(ctx, actualClient);
                 return httpClient;
