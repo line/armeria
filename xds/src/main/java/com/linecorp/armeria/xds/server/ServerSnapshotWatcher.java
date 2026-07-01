@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds.server;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ConnectionContext;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -30,7 +29,6 @@ import com.linecorp.armeria.xds.RouteSnapshot;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.VirtualHostSnapshot;
 
-@UnstableApi
 final class ServerSnapshotWatcher implements SnapshotWatcher<ListenerSnapshot> {
 
     private final CompletableFuture<Void> readyFuture = new CompletableFuture<>();
