@@ -52,14 +52,14 @@ import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension
  *         new XdsCertificateExtension(new SelfSignedCertificateExtension("localhost"));
  * }</pre>
  */
-final class XdsCertificateExtension extends AbstractAllOrEachExtension {
+public final class XdsCertificateExtension extends AbstractAllOrEachExtension {
 
     private final SelfSignedCertificateExtension delegate;
     private Path tempDir;
     private File certificateFile;
     private File privateKeyFile;
 
-    XdsCertificateExtension(SelfSignedCertificateExtension delegate) {
+    public XdsCertificateExtension(SelfSignedCertificateExtension delegate) {
         this.delegate = delegate;
     }
 
@@ -79,23 +79,23 @@ final class XdsCertificateExtension extends AbstractAllOrEachExtension {
         }
     }
 
-    File certificateFile() {
+    public File certificateFile() {
         return certificateFile;
     }
 
-    File privateKeyFile() {
+    public File privateKeyFile() {
         return privateKeyFile;
     }
 
-    X509Certificate certificate() {
+    public X509Certificate certificate() {
         return delegate.certificate();
     }
 
-    PrivateKey privateKey() {
+    public PrivateKey privateKey() {
         return delegate.privateKey();
     }
 
-    TlsKeyPair tlsKeyPair() {
+    public TlsKeyPair tlsKeyPair() {
         return delegate.tlsKeyPair();
     }
 

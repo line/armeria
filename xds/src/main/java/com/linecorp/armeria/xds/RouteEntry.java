@@ -26,11 +26,11 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientPreprocessors;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreClient;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
@@ -54,7 +54,6 @@ public final class RouteEntry {
     private final int index;
     private final HttpClient httpClient;
     private final RpcClient rpcClient;
-    @Nullable
     private final HttpService httpService;
     private final HttpPreClient httpPreClient;
     private final RpcPreClient rpcPreClient;
@@ -64,7 +63,7 @@ public final class RouteEntry {
                Map<String, Any> filterConfigs,
                ClientPreprocessors downstreamPreprocessors,
                @Nullable ClientDecoration retryDecoration,
-               ClientDecoration upstreamDecoration, @Nullable HttpService httpService) {
+               ClientDecoration upstreamDecoration, HttpService httpService) {
         this.route = route;
         this.clusterSnapshot = clusterSnapshot;
         this.index = index;
@@ -114,10 +113,8 @@ public final class RouteEntry {
     }
 
     /**
-     * Returns the composed {@link HttpService} from the HTTP filters for this route,
-     * or {@code null} if no server-side HTTP filters are configured.
+     * Returns the composed {@link HttpService} from the HTTP filters for this route.
      */
-    @Nullable
     @UnstableApi
     public HttpService httpService() {
         return httpService;
@@ -158,9 +155,9 @@ public final class RouteEntry {
     }
 
     /**
-     * Returns whether this route matches the specified {@link ClientRequestContext}.
+     * Returns whether this route matches the specified {@link RequestContext}.
      */
-    public boolean matches(ClientRequestContext ctx) {
+    public boolean matches(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return matcher.matches(ctx);
     }

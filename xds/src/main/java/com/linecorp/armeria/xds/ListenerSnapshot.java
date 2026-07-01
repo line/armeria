@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +26,7 @@ import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.ConnectionContext;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
@@ -98,6 +101,20 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
      */
     @Nullable
     public FilterChainSnapshot defaultFilterChain() {
+        return defaultFilterChain;
+    }
+
+    /**
+     * Returns the first {@link FilterChainSnapshot} that matches the given connection context,
+     * or the default filter chain if no explicit chain matches.
+     */
+    @Nullable
+    public FilterChainSnapshot matchFilterChain(ConnectionContext ctx) {
+        requireNonNull(ctx, "ctx");
+        // Simple: use first filter chain or default. Full matching deferred to follow-up PR.
+        if (!filterChains.isEmpty()) {
+            return filterChains.get(0);
+        }
         return defaultFilterChain;
     }
 

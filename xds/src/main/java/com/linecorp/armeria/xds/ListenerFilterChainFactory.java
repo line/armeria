@@ -18,14 +18,12 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.LISTENER;
 
-import java.util.List;
 import java.util.Optional;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.listener.v3.Filter;
 import io.envoyproxy.envoy.config.listener.v3.FilterChain;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -46,11 +44,17 @@ final class ListenerFilterChainFactory {
 
     SnapshotStream<FilterChainSnapshot> resolve(FilterChain filterChain,
                                                 @Nullable ConfigSource parentConfigSource) {
-        final HttpConnectionManager hcm = extractHcm(filterChain);
         final SnapshotStream<TransportSocketSnapshot> tsStream =
                 new TransportSocketStream(context, parentConfigSource, filterChain.getTransportSocket());
 
-        final SnapshotStream<Optional<RouteSnapshot>> routeStream = resolveRoute(hcm, parentConfigSource);
+        final HcmContext hcmContext = HcmContext.from(filterChain, registry, context);
+        if (hcmContext == null) {
+            return tsStream.map(transportSocket ->
+                    new FilterChainSnapshot(filterChain.getFilterChainMatch(),
+                                            transportSocket, null));
+        }
+        final SnapshotStream<Optional<RouteSnapshot>> routeStream =
+                resolveRoute(hcmContext, parentConfigSource);
 
         return SnapshotStream.combineLatest(
                 tsStream, routeStream, (transportSocket, route) ->
@@ -66,17 +70,15 @@ final class ListenerFilterChainFactory {
         }
         final HttpConnectionManager hcm = registry.unpack(listener.getApiListener().getApiListener(),
                                                           HttpConnectionManager.class);
-        return resolveRoute(hcm, parentConfigSource);
+        return resolveRoute(new HcmContext(hcm, registry, context), parentConfigSource);
     }
 
     private SnapshotStream<Optional<RouteSnapshot>> resolveRoute(
-            @Nullable HttpConnectionManager hcm, @Nullable ConfigSource parentConfigSource) {
-        if (hcm == null) {
-            return SnapshotStream.empty();
-        }
+            HcmContext hcmContext, @Nullable ConfigSource parentConfigSource) {
+        final HttpConnectionManager hcm = hcmContext.hcm();
         if (hcm.hasRouteConfig()) {
             final RouteConfiguration routeConfig = hcm.getRouteConfig();
-            return new RouteStream(context, routeConfig, hcm).map(Optional::of);
+            return new RouteStream(context, routeConfig, hcmContext).map(Optional::of);
         }
         if (hcm.hasRds()) {
             final Rds rds = hcm.getRds();
@@ -87,18 +89,8 @@ final class ListenerFilterChainFactory {
                 return SnapshotStream.error(new XdsResourceException(LISTENER, listenerResource.name(),
                                                                      "config source not found"));
             }
-            return new RouteStream(configSource, routeName, context, hcm).map(Optional::of);
+            return new RouteStream(configSource, routeName, context, hcmContext).map(Optional::of);
         }
         return SnapshotStream.empty();
-    }
-
-    @Nullable
-    private HttpConnectionManager extractHcm(FilterChain filterChain) {
-        final List<Filter> filters = filterChain.getFiltersList();
-        if (filters.isEmpty()) {
-            return null;
-        }
-        final Filter last = filters.get(filters.size() - 1);
-        return HttpConnectionManagerFactory.extractHcm(last, registry);
     }
 }

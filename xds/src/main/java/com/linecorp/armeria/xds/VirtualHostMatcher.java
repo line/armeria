@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 LY Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.xds;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -26,13 +26,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.ListenerSnapshot;
-import com.linecorp.armeria.xds.RouteSnapshot;
-import com.linecorp.armeria.xds.VirtualHostSnapshot;
 
 final class VirtualHostMatcher {
 
@@ -46,23 +41,14 @@ final class VirtualHostMatcher {
 
     private final boolean ignorePortInHostMatching;
 
-    VirtualHostMatcher(ListenerSnapshot listenerSnapshot) {
-        final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
-        if (routeSnapshot == null) {
-            exactMatch = Collections.emptyMap();
-            suffixMatch = ImmutableList.of();
-            prefixMatch = ImmutableList.of();
-            defaultVirtualHost = null;
-            ignorePortInHostMatching = false;
-            return;
-        }
-
+    VirtualHostMatcher(List<VirtualHostSnapshot> virtualHostSnapshots,
+                       boolean ignorePortInHostMatching) {
         final Map<String, VirtualHostSnapshot> exactMatch = new HashMap<>();
         final List<Entry<String, VirtualHostSnapshot>> prefixMatch = new ArrayList<>();
         final List<Entry<String, VirtualHostSnapshot>> suffixMatch = new ArrayList<>();
         VirtualHostSnapshot defaultVirtualHost = null;
 
-        for (VirtualHostSnapshot virtualHostSnapshot: routeSnapshot.virtualHostSnapshots()) {
+        for (VirtualHostSnapshot virtualHostSnapshot: virtualHostSnapshots) {
             for (String domain: virtualHostSnapshot.xdsResource().resource().getDomainsList()) {
                 domain = Ascii.toLowerCase(domain);
                 if ("*".equals(domain)) {
@@ -93,16 +79,14 @@ final class VirtualHostMatcher {
         this.suffixMatch = Collections.unmodifiableList(suffixMatch);
         this.prefixMatch = Collections.unmodifiableList(prefixMatch);
         this.defaultVirtualHost = defaultVirtualHost;
-
-        ignorePortInHostMatching = routeSnapshot.xdsResource().resource().getIgnorePortInHostMatching();
+        this.ignorePortInHostMatching = ignorePortInHostMatching;
     }
 
     @Nullable
-    VirtualHostSnapshot find(PreClientRequestContext ctx) {
+    VirtualHostSnapshot find(@Nullable String authority) {
         if (exactMatch.isEmpty() && prefixMatch.isEmpty() && suffixMatch.isEmpty()) {
             return defaultVirtualHost;
         }
-        String authority = ctx.authority();
         if (authority == null) {
             return defaultVirtualHost;
         }

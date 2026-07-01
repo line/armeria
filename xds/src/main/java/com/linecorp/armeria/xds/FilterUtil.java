@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,6 +29,9 @@ import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -125,11 +127,16 @@ final class FilterUtil {
                                .build();
     }
 
-    static SnapshotStream<Optional<HttpService>> buildDownstreamServerFilter(
+    private static final HttpService NO_ROUTER_SERVICE =
+            (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.PLAIN_TEXT_UTF_8,
+                                          "envoy.filters.http.router filter is required " +
+                                          "for server-side xDS");
+
+    static SnapshotStream<HttpService> buildDownstreamServerFilter(
             XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
             List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
         if (httpFilters.isEmpty()) {
-            return SnapshotStream.empty();
+            return SnapshotStream.just(NO_ROUTER_SERVICE);
         }
         final ImmutableList.Builder<SnapshotStream<XdsHttpFilter>> streams = ImmutableList.builder();
         for (int i = httpFilters.size() - 1; i >= 0; i--) {
@@ -143,17 +150,17 @@ final class FilterUtil {
         }
         final ImmutableList<SnapshotStream<XdsHttpFilter>> streamList = streams.build();
         if (streamList.isEmpty()) {
-            return SnapshotStream.empty();
+            return SnapshotStream.just(NO_ROUTER_SERVICE);
         }
         return SnapshotStream.combineNLatest(streamList).map(filters -> {
-            HttpService service = DelegatingHttpService.of();
+            HttpService service = NO_ROUTER_SERVICE;
             for (XdsHttpFilter f : filters) {
                 final DecoratingHttpServiceFunction decorator = f.serviceDecorator();
                 if (decorator != null) {
                     service = service.decorate(decorator);
                 }
             }
-            return Optional.of(service);
+            return service;
         });
     }
 

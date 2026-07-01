@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.internal;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -23,18 +23,18 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;
 
-final class DelegatingHttpService implements HttpService {
+public final class DelegatingHttpService implements HttpService {
 
     private static final DelegatingHttpService INSTANCE = new DelegatingHttpService();
 
     private static final AttributeKey<HttpService> DELEGATE_KEY =
             AttributeKey.valueOf(DelegatingHttpService.class, "DELEGATE_KEY");
 
-    static DelegatingHttpService of() {
+    public static DelegatingHttpService of() {
         return INSTANCE;
     }
 
-    static void setDelegate(ServiceRequestContext ctx, HttpService delegate) {
+    public static void setDelegate(ServiceRequestContext ctx, HttpService delegate) {
         ctx.setAttr(DELEGATE_KEY, delegate);
     }
 
