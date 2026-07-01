@@ -39,10 +39,12 @@ public final class RequestFactoryHttpRequestDuplicator implements HttpRequestDup
     private final HttpRequest originalReq;
     private final Supplier<HttpRequest> factory;
 
-    // Confined to a single thread: RetryingClient and RedirectingClient drive the duplicator
-    // sequentially from the request's event loop, so this flag needs no synchronization
-    // (mirrors how DefaultStreamMessageDuplicator confines its own state to an EventExecutor).
-    private boolean firstDuplicateIssued;
+    // RetryingClient and RedirectingClient drive the duplicator sequentially (never concurrently):
+    // the first duplicate() may run on the caller thread while later attempts run on the request's
+    // event loop, but each access happens-after the previous one via the async response future.
+    // Marked volatile for safe publication across that thread hand-off, since accesses are ordered
+    // but not confined to a single thread.
+    private volatile boolean firstDuplicateIssued;
 
     public RequestFactoryHttpRequestDuplicator(HttpRequest originalReq,
                                                Supplier<HttpRequest> factory) {

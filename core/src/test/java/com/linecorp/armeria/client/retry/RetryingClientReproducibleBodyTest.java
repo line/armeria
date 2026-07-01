@@ -17,10 +17,12 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -63,9 +65,13 @@ class RetryingClientReproducibleBodyTest {
         }
     };
 
+    @BeforeEach
+    void resetServerHits() {
+        serverHits.set(0);
+    }
+
     @Test
     void factoryRegeneratesBodyForRetry() {
-        serverHits.set(0);
         final AtomicInteger factoryCalls = new AtomicInteger();
 
         final Supplier<HttpRequest> factory = () -> {
@@ -97,5 +103,74 @@ class RetryingClientReproducibleBodyTest {
         assertThat(serverHits).hasValueGreaterThanOrEqualTo(2);
         // factory.get() once for the initial request + once for the retry.
         assertThat(factoryCalls).hasValueGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void factoryThrowingOnRetryFailsTheRequest() {
+        final AtomicInteger factoryCalls = new AtomicInteger();
+
+        // The initial request succeeds as a body; the factory throws when asked to regenerate it
+        // for the retry. The request must then fail rather than hang or buffer.
+        final Supplier<HttpRequest> factory = () -> {
+            if (factoryCalls.getAndIncrement() == 0) {
+                return HttpRequest.of(
+                        RequestHeaders.of(HttpMethod.POST, "/upload",
+                                          HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),
+                        StreamMessage.of(HttpData.ofUtf8("hello-body")));
+            }
+            throw new IllegalStateException("cannot regenerate body");
+        };
+
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(RetryingClient.newDecorator(
+                                 RetryRule.builder().onServerErrorStatus().thenBackoff()))
+                         .build();
+
+        final RequestOptions options =
+                RequestOptions.builder()
+                              .exchangeType(ExchangeType.REQUEST_STREAMING)
+                              .attr(ClientRequestBodyFactory.REQUEST_BODY_FACTORY, factory)
+                              .build();
+
+        // The first attempt returns 500 (server hit #1), the retry asks the factory which throws,
+        // so the overall request fails.
+        assertThatThrownBy(() -> client.execute(factory.get(), options).aggregate().join())
+                .isInstanceOf(Exception.class);
+        assertThat(factoryCalls).hasValueGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void nonStreamingRequestIgnoresFactory() {
+        final AtomicInteger factoryCalls = new AtomicInteger();
+        final Supplier<HttpRequest> factory = () -> {
+            factoryCalls.incrementAndGet();
+            return HttpRequest.of(
+                    RequestHeaders.of(HttpMethod.POST, "/upload",
+                                      HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),
+                    StreamMessage.of(HttpData.ofUtf8("hello-body")));
+        };
+
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(RetryingClient.newDecorator(
+                                 RetryRule.builder().onServerErrorStatus().thenBackoff()))
+                         .build();
+
+        // A non-streaming exchange type must ignore the factory and buffer/aggregate as before.
+        final RequestOptions options =
+                RequestOptions.builder()
+                              .exchangeType(ExchangeType.UNARY)
+                              .attr(ClientRequestBodyFactory.REQUEST_BODY_FACTORY, factory)
+                              .build();
+
+        final AggregatedHttpResponse res =
+                client.execute(factory.get(), options).aggregate().join();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("hello-body");
+        // The factory is only ever called by the caller to build the initial request (once);
+        // the retry path buffers the aggregated body and never invokes the factory again.
+        assertThat(factoryCalls).hasValue(1);
     }
 }

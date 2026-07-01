@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -50,6 +51,13 @@ class RedirectingClientReproducibleBodyTest {
                     req.aggregate().thenApply(agg ->
                             AggregatedHttpResponse.of(HttpStatus.OK, ctx.request().contentType(),
                                                       agg.contentUtf8()).toHttpResponse())));
+            // 303 See Other: the method is rewritten to GET and the body is dropped.
+            sb.service("/see-other", (ctx, req) -> HttpResponse.of(
+                    ResponseHeaders.of(HttpStatus.SEE_OTHER, HttpHeaderNames.LOCATION, "/target")));
+            sb.service("/target", (ctx, req) -> HttpResponse.of(
+                    req.aggregate().thenApply(agg -> AggregatedHttpResponse.of(
+                            HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                            req.method() + ":" + agg.contentUtf8()).toHttpResponse())));
         }
     };
 
@@ -82,5 +90,36 @@ class RedirectingClientReproducibleBodyTest {
         assertThat(res.contentUtf8()).isEqualTo("redir-body");
         // factory.get() once for the initial request + once for the redirected hop.
         assertThat(factoryCalls).hasValueGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void seeOtherRedirectDropsBodyAndDoesNotThrow() {
+        final AtomicInteger factoryCalls = new AtomicInteger();
+        final Supplier<HttpRequest> factory = () -> {
+            factoryCalls.incrementAndGet();
+            return HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/see-other",
+                                                    HttpHeaderNames.CONTENT_TYPE,
+                                                    "text/plain; charset=utf-8"),
+                                  StreamMessage.of(HttpData.ofUtf8("see-other-body")));
+        };
+
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .followRedirects()
+                         .build();
+
+        final RequestOptions options =
+                RequestOptions.builder()
+                              .exchangeType(ExchangeType.REQUEST_STREAMING)
+                              .attr(ClientRequestBodyFactory.REQUEST_BODY_FACTORY, factory)
+                              .build();
+
+        final AggregatedHttpResponse res =
+                client.execute(factory.get(), options).aggregate().join();
+
+        // On a 303 the method is rewritten to GET and the body is dropped; the redirected GET has
+        // an empty body. The factory duplicator is aborted and never invoked again for the hop.
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("GET:");
     }
 }

@@ -108,7 +108,7 @@ class RequestFactoryHttpRequestDuplicatorTest {
     }
 
     @Test
-    void bufferingDuplicatorThrowsAtIntCapWhileFactoryDoesNot() {
+    void factoryDuplicatorHasNoSizeCapAcrossManyDuplicates() {
         // The factory duplicator never accumulates signal length, so no ContentTooLargeException
         // is possible regardless of body size. This asserts the factory path is unaffected by the
         // int cap that limits DefaultStreamMessageDuplicator (verified separately in that class's
