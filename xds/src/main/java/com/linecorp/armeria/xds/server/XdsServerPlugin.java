@@ -233,7 +233,7 @@ public final class XdsServerPlugin implements ServerPlugin {
             final RouteEntry entry = routeSnapshot.select(ctx);
             if (entry == null) {
                 // No matching virtual host or route.
-                return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.PLAIN_TEXT_UTF_8,
+                return HttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8,
                                        "No matching virtual host or route");
             }
             DelegatingHttpService.setDelegate(ctx, (HttpService) unwrap());

@@ -155,7 +155,7 @@ class ServerDecoratorTest {
         final Path certPath = cert2.certificateFile().toPath();
         final Path keyPath = cert2.privateKeyFile().toPath();
 
-        // Route only matches "/other" — request to "/hello" should get 503.
+        // Route only matches "/other" — request to "/hello" should get 404.
         //language=YAML
         final String yaml =
                 """
@@ -200,7 +200,7 @@ class ServerDecoratorTest {
         final AggregatedHttpResponse res = client.execute(
                 HttpRequest.of(HttpMethod.GET, "/hello"),
                 RequestOptions.builder().clientTlsSpec(tlsSpec).build());
-        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
