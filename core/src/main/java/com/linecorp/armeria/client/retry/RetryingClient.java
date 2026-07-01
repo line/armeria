@@ -25,10 +25,12 @@ import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestBodyFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -53,6 +55,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.client.RequestFactoryHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -245,7 +248,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
         if (ctx.exchangeType().isRequestStreaming()) {
-            final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
+            final Supplier<HttpRequest> bodyFactory = ctx.attr(ClientRequestBodyFactory.REQUEST_BODY_FACTORY);
+            final HttpRequestDuplicator reqDuplicator =
+                    bodyFactory != null ? new RequestFactoryHttpRequestDuplicator(req, bodyFactory)
+                                        : req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(ctx, reqDuplicator, req, res, responseFuture);
         } else {
             req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
