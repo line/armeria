@@ -38,15 +38,14 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 public final class RouteEntry {
 
     private final Route route;
-    private final RouteClusterResolver routeResolver;
+    private final RouteClusterResolver resolver;
     private final int index;
     private final HttpService httpService;
     private final RouteEntryMatcher matcher;
 
-    RouteEntry(Route route, RouteClusterResolver routeResolver, int index,
-               HttpService httpService) {
+    RouteEntry(Route route, RouteClusterResolver resolver, int index, HttpService httpService) {
         this.route = route;
-        this.routeResolver = routeResolver;
+        this.resolver = resolver;
         this.index = index;
         this.httpService = httpService;
         matcher = new RouteEntryMatcher(route.getMatch());
@@ -67,7 +66,7 @@ public final class RouteEntry {
      */
     @Nullable
     public ClusterSnapshot clusterSnapshot() {
-        return routeResolver.clusterSnapshot();
+        return resolver.clusterSnapshot();
     }
 
     /**
@@ -77,18 +76,18 @@ public final class RouteEntry {
     @Nullable
     @UnstableApi
     public List<WeightedClusterSnapshot> weightedClusters() {
-        return routeResolver.weightedClusters();
+        return resolver.weightedClusters();
     }
 
     /**
      * Selects a target for this route. For single-cluster routes, returns the target directly.
-     * For weighted-cluster routes, performs a weighted random selection.
+     * For weighted-cluster routes, performs a weighted round-robin selection.
      * Returns {@code null} if no target is configured.
      */
     @Nullable
     @UnstableApi
     public RouteCluster resolve() {
-        return routeResolver.resolve();
+        return resolver.resolve();
     }
 
     /**
@@ -125,12 +124,12 @@ public final class RouteEntry {
         final RouteEntry that = (RouteEntry) o;
         return Objects.equals(route, that.route) &&
                Objects.equals(index, that.index) &&
-               Objects.equals(routeResolver, that.routeResolver);
+               Objects.equals(resolver, that.resolver);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(route, routeResolver, index);
+        return Objects.hash(route, resolver, index);
     }
 
     @Override
@@ -138,7 +137,7 @@ public final class RouteEntry {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("index", index)
-                          .add("routeResolver", routeResolver)
+                          .add("routeResolver", resolver)
                           .toString();
     }
 
@@ -147,7 +146,7 @@ public final class RouteEntry {
                           .omitNullValues()
                           .add("index", index)
                           .add("route", route)
-                          .add("routeResolver", routeResolver.toDebugString())
+                          .add("routeResolver", resolver.toDebugString())
                           .toString();
     }
 }
