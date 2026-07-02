@@ -123,8 +123,9 @@ final class ControlPlaneClientManager implements SafeCloseable {
                         PathSotwConfigSourceSubscriptionFactory.NAME,
                         SotwConfigSourceSubscriptionFactory.class);
             case CUSTOM_CONFIG_SOURCE:
-                return extensionRegistry.queryByTypeUrl(
-                        configSource.getCustomConfigSource().getTypeUrl(),
+                return extensionRegistry.query(
+                        configSource.getCustomConfigSource().getTypedConfig(),
+                        configSource.getCustomConfigSource().getName(),
                         SotwConfigSourceSubscriptionFactory.class);
             default:
                 return null;

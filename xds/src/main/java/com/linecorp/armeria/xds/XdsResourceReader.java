@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ServiceLoader;
 
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -49,7 +50,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <p>All well-known Envoy protobuf types (under the {@code io.envoyproxy}, {@code com.github.udpa}
  * and {@code com.github.xds} packages) are automatically registered so that {@code @type} fields
- * in YAML/JSON are resolved correctly.
+ * in YAML/JSON are resolved correctly. Additional packages can be registered via
+ * the {@link XdsTypeRegistryPackageProvider} SPI.
  *
  * <p>Since YAML is a superset of JSON, all methods accept both formats.
  *
@@ -73,18 +75,31 @@ public final class XdsResourceReader {
 
         private static TypeRegistry buildDefaultTypeRegistry() {
             final TypeRegistry.Builder builder = TypeRegistry.newBuilder();
-            final String[] packages = {
-                    "io.envoyproxy",
-                    "com.github.udpa",
-                    "com.github.xds",
-                    };
             final FilterBuilder filterBuilder = new FilterBuilder();
             final ConfigurationBuilder configuration = new ConfigurationBuilder()
                     .setScanners(new SubTypesScanner());
-            for (String pkg : packages) {
-                configuration.addUrls(ClasspathHelper.forPackage(pkg));
-                filterBuilder.include(FilterBuilder.prefix(pkg));
+
+            // Built-in packages
+            final String[] defaultPackages = {
+                    "io.envoyproxy",
+                    "com.github.udpa",
+                    "com.github.xds",
+            };
+            for (String pkg : defaultPackages) {
+                addPackage(pkg, configuration, filterBuilder);
             }
+
+            // SPI-provided packages
+            for (XdsTypeRegistryPackageProvider provider
+                    : ServiceLoader.load(XdsTypeRegistryPackageProvider.class)) {
+                final Iterable<String> packages = provider.packages();
+                requireNonNull(packages, "packages");
+                for (String pkg : packages) {
+                    requireNonNull(pkg, "pkg");
+                    addPackage(pkg, configuration, filterBuilder);
+                }
+            }
+
             configuration.filterInputsBy(filterBuilder);
             final Reflections reflections = new Reflections(configuration);
             for (Class<?> clazz : reflections.getSubTypesOf(GeneratedMessageV3.class)) {
@@ -97,6 +112,12 @@ public final class XdsResourceReader {
                 }
             }
             return builder.build();
+        }
+
+        private static void addPackage(String pkg, ConfigurationBuilder configuration,
+                                        FilterBuilder filterBuilder) {
+            configuration.addUrls(ClasspathHelper.forPackage(pkg));
+            filterBuilder.include(FilterBuilder.prefix(pkg));
         }
     }
 

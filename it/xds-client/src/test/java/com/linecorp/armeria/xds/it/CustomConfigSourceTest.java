@@ -117,7 +117,9 @@ class CustomConfigSourceTest {
                 dynamic_resources:
                   cds_config:
                     custom_config_source:
-                      "@type": "type.googleapis.com/google.protobuf.Empty"
+                      name: http-config-source
+                      typed_config:
+                        "@type": "type.googleapis.com/google.protobuf.Empty"
                 """.formatted(configServer.httpPort());
 
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml);

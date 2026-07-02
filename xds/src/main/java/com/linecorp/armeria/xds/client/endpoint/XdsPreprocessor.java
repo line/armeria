@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
@@ -80,6 +81,14 @@ abstract class XdsPreprocessor<I extends Request, O extends Response>
 
     abstract O execute1(PreClient<I, O> delegate, PreClientRequestContext ctx, I req,
                         RouteConfig routeConfig) throws Exception;
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when the initial xDS configuration is ready.
+     */
+    @UnstableApi
+    public CompletableFuture<Void> whenReady() {
+        return routeConfigSelector.whenReady();
+    }
 
     @Override
     public void close() {
