@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -35,22 +36,22 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
-import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 
-import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 class WeightedClusterFilterConfigTest {
 
     @RegisterExtension
+    @Order(0)
     static final ServerExtension echoServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
@@ -63,72 +64,55 @@ class WeightedClusterFilterConfigTest {
     };
 
     @RegisterExtension
-    static final EventLoopExtension eventLoop = new EventLoopExtension();
+    @Order(1)
+    static final XdsControlPlaneExtension controlPlane = new XdsControlPlaneExtension(
+            builder -> builder.extensionFactories(configReadingFilterFactory("test.marker.filter"))
+    );
 
     @Test
     void perClusterFilterConfig() {
         // A filter that reads a StringValue config and sets it as a header.
         // cluster-a has typed_per_filter_config that overrides the HCM default,
         // cluster-b has no override and uses the HCM default.
-        final HttpFilterFactory factory = configReadingFilterFactory("test.marker.filter");
-
-        final Bootstrap bootstrap = XdsResourceReader.fromYaml("""
-                static_resources:
-                  listeners:
-                    - name: test-listener
-                      api_listener:
-                        api_listener:
-                          "@type": type.googleapis.com/envoy.extensions.filters.network\
+        controlPlane.set(staticCluster("cluster-a"));
+        final String version = controlPlane.set(listener("""
+                name: test-listener
+                api_listener:
+                  api_listener:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network\
                 .http_connection_manager.v3.HttpConnectionManager
-                          stat_prefix: http
-                          route_config:
-                            name: local_route
-                            virtual_hosts:
-                            - name: local_service
-                              domains: [ "*" ]
-                              routes:
-                              - match:
-                                  prefix: /
-                                route:
-                                  weighted_clusters:
-                                    clusters:
-                                    - name: cluster-a
-                                      weight: 100
-                                      typed_per_filter_config:
-                                        test.marker.filter:
-                                          "@type": type.googleapis.com/google.protobuf.StringValue
-                                          value: "from-cluster-a"
-                          http_filters:
-                          - name: test.marker.filter
-                            typed_config:
-                              "@type": type.googleapis.com/google.protobuf.StringValue
-                              value: "default"
-                          - name: envoy.filters.http.router
-                            typed_config:
-                              "@type": type.googleapis.com/envoy.extensions.filters.http\
+                    stat_prefix: http
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                      - name: local_service
+                        domains: [ "*" ]
+                        routes:
+                        - match:
+                            prefix: /
+                          route:
+                            weighted_clusters:
+                              clusters:
+                              - name: cluster-a
+                                weight: 100
+                                typed_per_filter_config:
+                                  test.marker.filter:
+                                    "@type": type.googleapis.com/google.protobuf.StringValue
+                                    value: "from-cluster-a"
+                    http_filters:
+                    - name: test.marker.filter
+                      typed_config:
+                        "@type": type.googleapis.com/google.protobuf.StringValue
+                        value: "default"
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http\
                 .router.v3.Router
-                  clusters:
-                    - name: cluster-a
-                      type: STATIC
-                      load_assignment:
-                        cluster_name: cluster-a
-                        endpoints:
-                        - lb_endpoints:
-                          - endpoint:
-                              address:
-                                socket_address:
-                                  address: %s
-                                  port_value: %s
-                """.formatted(echoServer.httpSocketAddress().getHostString(),
-                              echoServer.httpPort()),
-                Bootstrap.class);
+                """));
+        controlPlane.awaitListener("test-listener", version);
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
-                                                     .eventExecutor(eventLoop.get())
-                                                     .extensionFactories(factory)
-                                                     .build();
-             XdsHttpPreprocessor preprocessor =
-                     XdsHttpPreprocessor.ofListener("test-listener", xdsBootstrap)) {
+        try (XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("test-listener", controlPlane.bootstrap())) {
             final BlockingWebClient client = WebClient.of(preprocessor).blocking();
 
             await().untilAsserted(() -> {
@@ -145,69 +129,49 @@ class WeightedClusterFilterConfigTest {
         // Route-level typed_per_filter_config sets "from-route".
         // ClusterWeight typed_per_filter_config sets "from-cluster" for the same filter.
         // ClusterWeight should win (higher precedence).
-        final HttpFilterFactory factory = configReadingFilterFactory("test.marker.filter");
-
-        final Bootstrap bootstrap = XdsResourceReader.fromYaml("""
-                static_resources:
-                  listeners:
-                    - name: test-listener
-                      api_listener:
-                        api_listener:
-                          "@type": type.googleapis.com/envoy.extensions.filters.network\
+        controlPlane.set(staticCluster("cluster-a"));
+        final String version = controlPlane.set(listener("""
+                name: test-listener
+                api_listener:
+                  api_listener:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network\
                 .http_connection_manager.v3.HttpConnectionManager
-                          stat_prefix: http
-                          route_config:
-                            name: local_route
-                            virtual_hosts:
-                            - name: local_service
-                              domains: [ "*" ]
-                              routes:
-                              - match:
-                                  prefix: /
-                                route:
-                                  weighted_clusters:
-                                    clusters:
-                                    - name: cluster-a
-                                      weight: 100
-                                      typed_per_filter_config:
-                                        test.marker.filter:
-                                          "@type": type.googleapis.com/google.protobuf.StringValue
-                                          value: "from-cluster"
+                    stat_prefix: http
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                      - name: local_service
+                        domains: [ "*" ]
+                        routes:
+                        - match:
+                            prefix: /
+                          route:
+                            weighted_clusters:
+                              clusters:
+                              - name: cluster-a
+                                weight: 100
                                 typed_per_filter_config:
                                   test.marker.filter:
                                     "@type": type.googleapis.com/google.protobuf.StringValue
-                                    value: "from-route"
-                          http_filters:
-                          - name: test.marker.filter
-                            typed_config:
+                                    value: "from-cluster"
+                          typed_per_filter_config:
+                            test.marker.filter:
                               "@type": type.googleapis.com/google.protobuf.StringValue
-                              value: "default"
-                          - name: envoy.filters.http.router
-                            typed_config:
-                              "@type": type.googleapis.com/envoy.extensions.filters.http\
+                              value: "from-route"
+                    http_filters:
+                    - name: test.marker.filter
+                      typed_config:
+                        "@type": type.googleapis.com/google.protobuf.StringValue
+                        value: "default"
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http\
                 .router.v3.Router
-                  clusters:
-                    - name: cluster-a
-                      type: STATIC
-                      load_assignment:
-                        cluster_name: cluster-a
-                        endpoints:
-                        - lb_endpoints:
-                          - endpoint:
-                              address:
-                                socket_address:
-                                  address: %s
-                                  port_value: %s
-                """.formatted(echoServer.httpSocketAddress().getHostString(),
-                              echoServer.httpPort()),
-                Bootstrap.class);
+                """));
+        controlPlane.awaitListener("test-listener", version);
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
-                                                     .eventExecutor(eventLoop.get())
-                                                     .extensionFactories(factory)
-                                                     .build();
-             XdsHttpPreprocessor preprocessor =
-                     XdsHttpPreprocessor.ofListener("test-listener", xdsBootstrap)) {
+        try (XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("test-listener", controlPlane.bootstrap())) {
             final BlockingWebClient client = WebClient.of(preprocessor).blocking();
 
             await().untilAsserted(() -> {
@@ -224,65 +188,45 @@ class WeightedClusterFilterConfigTest {
         // cluster-b has NO typed_per_filter_config.
         // Route-level typed_per_filter_config sets "from-route".
         // cluster-b should use the route-level config.
-        final HttpFilterFactory factory = configReadingFilterFactory("test.marker.filter");
-
-        final Bootstrap bootstrap = XdsResourceReader.fromYaml("""
-                static_resources:
-                  listeners:
-                    - name: test-listener
-                      api_listener:
-                        api_listener:
-                          "@type": type.googleapis.com/envoy.extensions.filters.network\
+        controlPlane.set(staticCluster("cluster-b"));
+        final String version = controlPlane.set(listener("""
+                name: test-listener
+                api_listener:
+                  api_listener:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network\
                 .http_connection_manager.v3.HttpConnectionManager
-                          stat_prefix: http
-                          route_config:
-                            name: local_route
-                            virtual_hosts:
-                            - name: local_service
-                              domains: [ "*" ]
-                              routes:
-                              - match:
-                                  prefix: /
-                                route:
-                                  weighted_clusters:
-                                    clusters:
-                                    - name: cluster-b
-                                      weight: 100
-                                typed_per_filter_config:
-                                  test.marker.filter:
-                                    "@type": type.googleapis.com/google.protobuf.StringValue
-                                    value: "from-route"
-                          http_filters:
-                          - name: test.marker.filter
-                            typed_config:
+                    stat_prefix: http
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                      - name: local_service
+                        domains: [ "*" ]
+                        routes:
+                        - match:
+                            prefix: /
+                          route:
+                            weighted_clusters:
+                              clusters:
+                              - name: cluster-b
+                                weight: 100
+                          typed_per_filter_config:
+                            test.marker.filter:
                               "@type": type.googleapis.com/google.protobuf.StringValue
-                              value: "default"
-                          - name: envoy.filters.http.router
-                            typed_config:
-                              "@type": type.googleapis.com/envoy.extensions.filters.http\
+                              value: "from-route"
+                    http_filters:
+                    - name: test.marker.filter
+                      typed_config:
+                        "@type": type.googleapis.com/google.protobuf.StringValue
+                        value: "default"
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http\
                 .router.v3.Router
-                  clusters:
-                    - name: cluster-b
-                      type: STATIC
-                      load_assignment:
-                        cluster_name: cluster-b
-                        endpoints:
-                        - lb_endpoints:
-                          - endpoint:
-                              address:
-                                socket_address:
-                                  address: %s
-                                  port_value: %s
-                """.formatted(echoServer.httpSocketAddress().getHostString(),
-                              echoServer.httpPort()),
-                Bootstrap.class);
+                """));
+        controlPlane.awaitListener("test-listener", version);
 
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
-                                                     .eventExecutor(eventLoop.get())
-                                                     .extensionFactories(factory)
-                                                     .build();
-             XdsHttpPreprocessor preprocessor =
-                     XdsHttpPreprocessor.ofListener("test-listener", xdsBootstrap)) {
+        try (XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("test-listener", controlPlane.bootstrap())) {
             final BlockingWebClient client = WebClient.of(preprocessor).blocking();
 
             await().untilAsserted(() -> {
@@ -298,75 +242,47 @@ class WeightedClusterFilterConfigTest {
     void snapshotStructureWithPerClusterConfig() {
         // Verify that RouteCluster carries per-cluster chains
         // when typed_per_filter_config is set on ClusterWeight.
-        final HttpFilterFactory factory = configReadingFilterFactory("test.marker.filter");
-
-        final Bootstrap bootstrap = XdsResourceReader.fromYaml("""
-                static_resources:
-                  listeners:
-                    - name: test-listener
-                      api_listener:
-                        api_listener:
-                          "@type": type.googleapis.com/envoy.extensions.filters.network\
+        controlPlane.set(staticCluster("cluster-a"), staticCluster("cluster-b"));
+        final String version = controlPlane.set(listener("""
+                name: test-listener
+                api_listener:
+                  api_listener:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network\
                 .http_connection_manager.v3.HttpConnectionManager
-                          stat_prefix: http
-                          route_config:
-                            name: local_route
-                            virtual_hosts:
-                            - name: local_service
-                              domains: [ "*" ]
-                              routes:
-                              - match:
-                                  prefix: /
-                                route:
-                                  weighted_clusters:
-                                    clusters:
-                                    - name: cluster-a
-                                      weight: 50
-                                      typed_per_filter_config:
-                                        test.marker.filter:
-                                          "@type": type.googleapis.com/google.protobuf.StringValue
-                                          value: "override-a"
-                                    - name: cluster-b
-                                      weight: 50
-                          http_filters:
-                          - name: test.marker.filter
-                            typed_config:
-                              "@type": type.googleapis.com/google.protobuf.StringValue
-                              value: "default"
-                          - name: envoy.filters.http.router
-                            typed_config:
-                              "@type": type.googleapis.com/envoy.extensions.filters.http\
+                    stat_prefix: http
+                    route_config:
+                      name: local_route
+                      virtual_hosts:
+                      - name: local_service
+                        domains: [ "*" ]
+                        routes:
+                        - match:
+                            prefix: /
+                          route:
+                            weighted_clusters:
+                              clusters:
+                              - name: cluster-a
+                                weight: 50
+                                typed_per_filter_config:
+                                  test.marker.filter:
+                                    "@type": type.googleapis.com/google.protobuf.StringValue
+                                    value: "override-a"
+                              - name: cluster-b
+                                weight: 50
+                    http_filters:
+                    - name: test.marker.filter
+                      typed_config:
+                        "@type": type.googleapis.com/google.protobuf.StringValue
+                        value: "default"
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http\
                 .router.v3.Router
-                  clusters:
-                    - name: cluster-a
-                      type: STATIC
-                      load_assignment:
-                        cluster_name: cluster-a
-                        endpoints:
-                        - lb_endpoints:
-                          - endpoint:
-                              address:
-                                socket_address:
-                                  address: 127.0.0.1
-                                  port_value: 8080
-                    - name: cluster-b
-                      type: STATIC
-                      load_assignment:
-                        cluster_name: cluster-b
-                        endpoints:
-                        - lb_endpoints:
-                          - endpoint:
-                              address:
-                                socket_address:
-                                  address: 127.0.0.1
-                                  port_value: 8080
-                """, Bootstrap.class);
+                """));
+        controlPlane.awaitListener("test-listener", version);
 
         final AtomicReference<ListenerSnapshot> snapshotRef = new AtomicReference<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
-                                                     .extensionFactories(factory)
-                                                     .build()) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("test-listener");
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("test-listener")) {
             listenerRoot.addSnapshotWatcher((snapshot, t) -> {
                 if (snapshot != null) {
                     snapshotRef.set(snapshot);
@@ -394,6 +310,29 @@ class WeightedClusterFilterConfigTest {
                 assertThat(selected.httpClient()).isNotNull();
             });
         }
+    }
+
+    private Cluster staticCluster(String name) {
+        final String yaml = """
+                name: %s
+                type: STATIC
+                load_assignment:
+                  cluster_name: %s
+                  endpoints:
+                  - lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: %s
+                            port_value: %s
+                """.formatted(name, name,
+                              echoServer.httpSocketAddress().getHostString(),
+                              echoServer.httpPort());
+        return XdsResourceReader.fromYaml(yaml, Cluster.class);
+    }
+
+    private static Listener listener(String yaml) {
+        return XdsResourceReader.fromYaml(yaml, Listener.class);
     }
 
     /**

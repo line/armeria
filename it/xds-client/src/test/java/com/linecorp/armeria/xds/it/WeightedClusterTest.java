@@ -22,21 +22,13 @@ import static org.awaitility.Awaitility.await;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.ListenerSnapshot;
@@ -44,12 +36,7 @@ import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.SnapshotWatcher;
 import com.linecorp.armeria.xds.WeightedClusterSnapshot;
-import com.linecorp.armeria.xds.XdsBootstrap;
 
-import io.envoyproxy.controlplane.cache.v3.SimpleCache;
-import io.envoyproxy.controlplane.cache.v3.Snapshot;
-import io.envoyproxy.controlplane.server.V3DiscoveryServer;
-import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -58,60 +45,19 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 class WeightedClusterTest {
 
-    private static final String GROUP = "key";
-    private static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
-    private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
-    private static final AtomicLong version = new AtomicLong();
-
     @RegisterExtension
-    @Order(0)
-    static final ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
-            sb.service(GrpcService.builder()
-                                  .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getListenerDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getClusterDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getRouteDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getEndpointDiscoveryServiceImpl())
-                                  .build());
-            sb.http(0);
-        }
-    };
-
-    @RegisterExtension
-    @Order(1)
-    static final EventLoopExtension eventLoop = new EventLoopExtension();
-
-    @BeforeEach
-    void beforeEach() {
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(), ImmutableList.of(),
-                                         ImmutableList.of(), ImmutableList.of(),
-                                         ImmutableList.of(),
-                                         String.valueOf(version.incrementAndGet())));
-    }
+    static final XdsControlPlaneExtension controlPlane = new XdsControlPlaneExtension();
 
     @Test
-    void weightedClustersSnapshotStructure() throws Exception {
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig = weightedRouteConfig("route_0", "cluster-a", 80, "cluster-b", 20);
-        final Cluster clusterA = cluster("cluster-a");
-        final Cluster clusterB = cluster("cluster-b");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
-        final ClusterLoadAssignment endpointB = endpoint("cluster-b", "127.0.0.1", 5678);
+    void weightedClustersSnapshotStructure() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfig("route_0", "cluster-a", 80, "cluster-b", 20));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                         ImmutableList.of(endpointA, endpointB),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -143,24 +89,15 @@ class WeightedClusterTest {
     }
 
     @Test
-    void weightDistribution() throws Exception {
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig = weightedRouteConfig("route_0", "cluster-a", 3, "cluster-b", 1);
-        final Cluster clusterA = cluster("cluster-a");
-        final Cluster clusterB = cluster("cluster-b");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
-        final ClusterLoadAssignment endpointB = endpoint("cluster-b", "127.0.0.1", 5678);
+    void weightDistribution() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfig("route_0", "cluster-a", 3, "cluster-b", 1));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                         ImmutableList.of(endpointA, endpointB),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -191,24 +128,15 @@ class WeightedClusterTest {
     }
 
     @Test
-    void dynamicUpdate() throws Exception {
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig = weightedRouteConfig("route_0", "cluster-a", 50, "cluster-b", 50);
-        final Cluster clusterA = cluster("cluster-a");
-        final Cluster clusterB = cluster("cluster-b");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
-        final ClusterLoadAssignment endpointB = endpoint("cluster-b", "127.0.0.1", 5678);
+    void dynamicUpdate() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfig("route_0", "cluster-a", 50, "cluster-b", 50));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                         ImmutableList.of(endpointA, endpointB),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -220,12 +148,7 @@ class WeightedClusterTest {
 
             // Update endpoints for cluster-a
             final ClusterLoadAssignment updatedEndpointA = endpoint("cluster-a", "127.0.0.2", 9999);
-            cache.setSnapshot(GROUP,
-                              Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                             ImmutableList.of(updatedEndpointA, endpointB),
-                                             ImmutableList.of(listener),
-                                             ImmutableList.of(routeConfig),
-                                             ImmutableList.of(), nextVersion()));
+            controlPlane.set(updatedEndpointA, endpoint("cluster-b", "127.0.0.1", 5678));
 
             // Wait for re-emission with updated endpoint
             await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -241,26 +164,15 @@ class WeightedClusterTest {
     }
 
     @Test
-    void defaultWeight() throws Exception {
-        // Clusters without explicit weight default to 1
-        final RouteConfiguration routeConfig
-                = weightedRouteConfigNoWeights("route_0", "cluster-a", "cluster-b");
-        final Listener listener = listener("listener_0", "route_0");
-        final Cluster clusterA = cluster("cluster-a");
-        final Cluster clusterB = cluster("cluster-b");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
-        final ClusterLoadAssignment endpointB = endpoint("cluster-b", "127.0.0.1", 5678);
+    void defaultWeight() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfigNoWeights("route_0", "cluster-a", "cluster-b"));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                         ImmutableList.of(endpointA, endpointB),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -288,27 +200,15 @@ class WeightedClusterTest {
     }
 
     @Test
-    void metadataMatchMerging() throws Exception {
-        // Route-level metadata_match: envoy.lb: {version: "v1", stage: "prod"}
-        // cluster-a metadata_match:   envoy.lb: {stage: "canary"}         -> overrides stage
-        // cluster-b metadata_match:   (none)                              -> inherits route-level
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig = weightedRouteConfigWithMetadata("route_0");
-        final Cluster clusterA = cluster("cluster-a");
-        final Cluster clusterB = cluster("cluster-b");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
-        final ClusterLoadAssignment endpointB = endpoint("cluster-b", "127.0.0.1", 5678);
+    void metadataMatchMerging() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfigWithMetadata("route_0"));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                         ImmutableList.of(endpointA, endpointB),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -342,26 +242,14 @@ class WeightedClusterTest {
     }
 
     @Test
-    void metadataMatchMergingMultipleFilterKeys() throws Exception {
-        // Route-level metadata_match: envoy.lb: {version: "v1"}, custom.filter: {key1: "a"}
-        // cluster-a metadata_match:   custom.filter: {key2: "b"}
-        // Merged cluster-a: envoy.lb: {version: "v1"}, custom.filter: {key1: "a", key2: "b"}
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig =
-                weightedRouteConfigWithMultipleFilterKeys("route_0");
-        final Cluster clusterA = cluster("cluster-a");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
+    void metadataMatchMergingMultipleFilterKeys() {
+        controlPlane.set(cluster("cluster-a"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234));
+        controlPlane.set(weightedRouteConfigWithMultipleFilterKeys("route_0"));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA),
-                                         ImmutableList.of(endpointA),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -388,27 +276,17 @@ class WeightedClusterTest {
     }
 
     @Test
-    void zeroWeightIsRejected() throws Exception {
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig =
-                weightedRouteConfigWithZeroWeight("route_0", "cluster-a", "cluster-b");
-        final Cluster clusterA = cluster("cluster-a");
-        final Cluster clusterB = cluster("cluster-b");
-        final ClusterLoadAssignment endpointA = endpoint("cluster-a", "127.0.0.1", 1234);
-        final ClusterLoadAssignment endpointB = endpoint("cluster-b", "127.0.0.1", 5678);
-
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(clusterA, clusterB),
-                                         ImmutableList.of(endpointA, endpointB),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+    void zeroWeightIsRejected() {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
+
+            // Push invalid resources after the watcher is attached
+            controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+            controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                             endpoint("cluster-b", "127.0.0.1", 5678));
+            controlPlane.set(weightedRouteConfigWithZeroWeight("route_0", "cluster-a", "cluster-b"));
+            controlPlane.set(listener("listener_0", "route_0"));
 
             // The zero-weight should cause an error during route stream processing
             await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -424,22 +302,14 @@ class WeightedClusterTest {
     }
 
     @Test
-    void singleClusterUnchanged() throws Exception {
-        final Listener listener = listener("listener_0", "route_0");
-        final RouteConfiguration routeConfig = singleClusterRouteConfig("route_0", "cluster-single");
-        final Cluster cluster = cluster("cluster-single");
-        final ClusterLoadAssignment ep = endpoint("cluster-single", "127.0.0.1", 1234);
+    void singleClusterUnchanged() {
+        controlPlane.set(cluster("cluster-single"));
+        controlPlane.set(endpoint("cluster-single", "127.0.0.1", 1234));
+        controlPlane.set(singleClusterRouteConfig("route_0", "cluster-single"));
+        final String version = controlPlane.set(listener("listener_0", "route_0"));
+        controlPlane.awaitListener("listener_0", version);
 
-        cache.setSnapshot(GROUP,
-                          Snapshot.create(ImmutableList.of(cluster),
-                                         ImmutableList.of(ep),
-                                         ImmutableList.of(listener),
-                                         ImmutableList.of(routeConfig),
-                                         ImmutableList.of(), nextVersion()));
-
-        final Bootstrap bootstrap = bootstrap(server.httpPort());
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap, eventLoop.get());
-             ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener_0")) {
+        try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
@@ -460,40 +330,6 @@ class WeightedClusterTest {
             assertThat(routeEntry.resolve()).isNotNull();
             assertThat(routeEntry.resolve().clusterSnapshot()).isEqualTo(routeEntry.clusterSnapshot());
         }
-    }
-
-    private static String nextVersion() {
-        return String.valueOf(version.incrementAndGet());
-    }
-
-    private static Bootstrap bootstrap(int port) {
-        final String yaml = """
-                static_resources:
-                  clusters:
-                    - name: %s
-                      connect_timeout: 5s
-                      type: STATIC
-                      load_assignment:
-                        cluster_name: %s
-                        endpoints:
-                          - lb_endpoints:
-                              - endpoint:
-                                  address:
-                                    socket_address:
-                                      address: 127.0.0.1
-                                      port_value: %s
-                dynamic_resources:
-                  ads_config:
-                    api_type: AGGREGATED_GRPC
-                    grpc_services:
-                      - envoy_grpc:
-                          cluster_name: %s
-                  lds_config:
-                    ads: {}
-                  cds_config:
-                    ads: {}
-                """.formatted(BOOTSTRAP_CLUSTER_NAME, BOOTSTRAP_CLUSTER_NAME, port, BOOTSTRAP_CLUSTER_NAME);
-        return XdsResourceReader.fromYaml(yaml, Bootstrap.class);
     }
 
     private static Listener listener(String name, String routeName) {
