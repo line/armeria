@@ -44,6 +44,7 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     private final RouteSnapshot apiListenerRoute;
     @Nullable
     private final RouteSnapshot defaultRouteSnapshot;
+    private final FilterChainMatcher filterChainMatcher;
 
     ListenerSnapshot(ListenerXdsResource listenerXdsResource,
                      Optional<RouteSnapshot> apiListenerRoute,
@@ -54,6 +55,7 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
         this.defaultFilterChain = defaultFilterChain.orElse(null);
         this.apiListenerRoute = apiListenerRoute.orElse(null);
         defaultRouteSnapshot = defaultRouteSnapshot();
+        filterChainMatcher = new FilterChainMatcher(filterChains);
     }
 
     @Override
@@ -111,11 +113,7 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     @Nullable
     public FilterChainSnapshot matchFilterChain(ConnectionContext ctx) {
         requireNonNull(ctx, "ctx");
-        // Simple: use first filter chain or default. Full matching deferred to follow-up PR.
-        if (!filterChains.isEmpty()) {
-            return filterChains.get(0);
-        }
-        return defaultFilterChain;
+        return filterChainMatcher.match(defaultFilterChain, ctx);
     }
 
     @Override
