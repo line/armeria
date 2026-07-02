@@ -118,9 +118,9 @@ class ServerFallbackTest {
                           common_tls_context:
                             tls_certificates:
                               - certificate_chain:
-                                  filename: "%s"
+                                  filename: '%s'
                                 private_key:
-                                  filename: "%s"
+                                  filename: '%s'
                     """.formatted(LISTENER_NAME, certPath, keyPath);
             controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
 

@@ -120,9 +120,9 @@ class ServerFilterChainMatchTest {
                         common_tls_context:
                           tls_certificates:
                             - certificate_chain:
-                                filename: "%s"
+                                filename: '%s'
                               private_key:
-                                filename: "%s"
+                                filename: '%s'
                   - filter_chain_match:
                       transport_protocol: "raw_buffer"
                     filters:
@@ -208,9 +208,9 @@ class ServerFilterChainMatchTest {
                         common_tls_context:
                           tls_certificates:
                             - certificate_chain:
-                                filename: "%s"
+                                filename: '%s'
                               private_key:
-                                filename: "%s"
+                                filename: '%s'
                 default_filter_chain:
                   filters:
                     - name: envoy.filters.network.http_connection_manager
@@ -237,9 +237,9 @@ class ServerFilterChainMatchTest {
                       common_tls_context:
                         tls_certificates:
                           - certificate_chain:
-                              filename: "%s"
+                              filename: '%s'
                             private_key:
-                              filename: "%s"
+                              filename: '%s'
                 """.formatted(LISTENER_NAME, certPathA, keyPathA, certPathDefault, keyPathDefault);
         final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
         controlPlane.awaitListener(LISTENER_NAME, ver);
@@ -308,9 +308,9 @@ class ServerFilterChainMatchTest {
                         common_tls_context:
                           tls_certificates:
                             - certificate_chain:
-                                filename: "%s"
+                                filename: '%s'
                               private_key:
-                                filename: "%s"
+                                filename: '%s'
                 """.formatted(LISTENER_NAME, certPathA, keyPathA);
         final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
         controlPlane.awaitListener(LISTENER_NAME, ver);

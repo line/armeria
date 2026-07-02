@@ -208,7 +208,7 @@ class XdsEndpointGroupTest {
                 common_tls_context:
                   validation_context:
                     trusted_ca:
-                      filename: %s
+                      filename: '%s'
             """.formatted(name, trustedCaFile.getAbsolutePath());
         }
         return XdsResourceReader.fromYaml(yaml, Cluster.class);
@@ -332,7 +332,7 @@ class XdsEndpointGroupTest {
                     common_tls_context:
                       validation_context:
                         trusted_ca:
-                          filename: %s
+                          filename: '%s'
             """.formatted(clusterName, clusterName, clusterName, address, port,
                           trustedCaFile.getAbsolutePath());
         }

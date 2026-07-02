@@ -331,9 +331,9 @@ class PipeEndpointTest {
                 name: %s
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(name,
                               cert.privateKeyFile().toPath().toString(),
                               cert.certificateFile().toPath().toString());

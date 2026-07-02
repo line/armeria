@@ -84,9 +84,9 @@ class DynamicSecretTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """;
     //language=YAML
     private static final String validationContextYaml =
@@ -94,7 +94,7 @@ class DynamicSecretTest {
                 name: my-validation
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                 """;
 
     // YAML
@@ -168,7 +168,7 @@ class DynamicSecretTest {
                     - name: my-validation
                       validation_context:
                         trusted_ca:
-                          filename: %s
+                          filename: '%s'
                 """;
 
     @Test
@@ -285,7 +285,7 @@ class DynamicSecretTest {
                     - name: my-validation
                       validation_context:
                         trusted_ca:
-                          filename: %s
+                          filename: '%s'
                 """;
 
     @Test
@@ -504,7 +504,7 @@ class DynamicSecretTest {
                 name: my-cert-validation
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(certificate2.certificateFile().toPath().toString());
         final Secret secret2 = XdsResourceReader.fromYaml(validationYaml, Secret.class);
         version.incrementAndGet();
@@ -604,9 +604,9 @@ class DynamicSecretTest {
                     - name: my-cert
                       tls_certificate:
                         private_key:
-                          filename: %s
+                          filename: '%s'
                         certificate_chain:
-                          filename: %s
+                          filename: '%s'
                 """;
 
     @Test

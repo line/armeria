@@ -701,9 +701,9 @@ class ErrorHandlingTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(certificate.privateKeyFile().toPath().toString(),
                               invalidCertFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
@@ -748,9 +748,9 @@ class ErrorHandlingTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(invalidKeyFile.getAbsolutePath(),
                               certificate.certificateFile().toPath().toString());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
@@ -794,9 +794,9 @@ class ErrorHandlingTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(certificate.privateKeyFile().toPath().toString(),
                               missingFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
@@ -836,9 +836,9 @@ class ErrorHandlingTest {
                 name: wrong-cert-name
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(certificate.privateKeyFile().toPath().toString(),
                               certificate.certificateFile().toPath().toString());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
@@ -872,9 +872,9 @@ class ErrorHandlingTest {
                     name: my-cert
                     tls_certificate:
                       private_key:
-                        filename: %s
+                        filename: '%s'
                       certificate_chain:
-                        filename: %s
+                        filename: '%s'
                     """.formatted(certificate.privateKeyFile().toPath().toString(),
                                   certificate.certificateFile().toPath().toString());
             final Secret correctSecret = XdsResourceReader.fromYaml(correctSecretYaml, Secret.class);

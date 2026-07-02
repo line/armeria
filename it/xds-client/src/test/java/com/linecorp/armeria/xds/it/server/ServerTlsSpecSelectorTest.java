@@ -103,13 +103,13 @@ class ServerTlsSpecSelectorTest {
                           common_tls_context:
                             tls_certificates:
                               - certificate_chain:
-                                  filename: "%s"
+                                  filename: '%s'
                                 private_key:
-                                  filename: "%s"
+                                  filename: '%s'
                               - certificate_chain:
-                                  filename: "%s"
+                                  filename: '%s'
                                 private_key:
-                                  filename: "%s"
+                                  filename: '%s'
                     """.formatted(LISTENER_NAME, certPathFoo, keyPathFoo, certPathBar, keyPathBar);
             controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
             sb.plugin(XdsServerPlugin.of(controlPlane.bootstrap(), LISTENER_NAME));
