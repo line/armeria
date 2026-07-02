@@ -19,8 +19,10 @@ package com.linecorp.armeria.xds;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 
@@ -48,6 +50,11 @@ import io.micrometer.core.instrument.MeterRegistry;
 @UnstableApi
 public final class XdsExtensionRegistry {
 
+    private static final Set<Class<? extends XdsExtensionFactory>> SUPPORTED_FACTORY_TYPES =
+            ImmutableSet.of(HttpFilterFactory.class,
+                            SotwConfigSourceSubscriptionFactory.class,
+                            ClusterTypeFactory.class);
+
     private final Map<String, XdsExtensionFactory> byTypeUrl;
     private final Map<String, XdsExtensionFactory> byName;
     private final XdsResourceValidator validator;
@@ -69,18 +76,15 @@ public final class XdsExtensionRegistry {
         final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
 
         // SPI-loaded factories (user-provided extensions)
-        ServiceLoader.load(HttpFilterFactory.class).forEach(factory -> {
+        for (XdsExtensionFactoryProvider provider : ServiceLoader.load(XdsExtensionFactoryProvider.class)) {
+            final XdsExtensionFactory factory = provider.newFactory();
+            validateFactoryType(factory);
             register(factory, byName, byTypeUrl);
-        });
-        ServiceLoader.load(SotwConfigSourceSubscriptionFactory.class).forEach(factory -> {
-            register(factory, byName, byTypeUrl);
-        });
-        ServiceLoader.load(ClusterTypeFactory.class).forEach(factory -> {
-            register(factory, byName, byTypeUrl);
-        });
+        }
 
         // Builder-provided factories
         for (XdsExtensionFactory factory : extensionFactories) {
+            validateFactoryType(factory);
             register(factory, byName, byTypeUrl);
         }
 
@@ -99,6 +103,17 @@ public final class XdsExtensionRegistry {
         register(RawBufferTransportSocketFactory.INSTANCE, byName, byTypeUrl);
 
         return new XdsExtensionRegistry(byTypeUrl.buildKeepingLast(), byName.buildKeepingLast(), validator);
+    }
+
+    private static void validateFactoryType(XdsExtensionFactory factory) {
+        for (Class<? extends XdsExtensionFactory> type : SUPPORTED_FACTORY_TYPES) {
+            if (type.isInstance(factory)) {
+                return;
+            }
+        }
+        throw new IllegalArgumentException(
+                "Unsupported factory type: " + factory.getClass().getName() +
+                ". Must implement one of: " + SUPPORTED_FACTORY_TYPES);
     }
 
     private static void register(XdsExtensionFactory factory,

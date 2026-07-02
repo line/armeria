@@ -1,0 +1,9 @@
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$IstioStats
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$IstioAlpn
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$IstioMetadataExchange
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$EnvoyFault
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$EnvoyCors
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$EnvoyGzipCompressor
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$EnvoyZstdCompressor
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$EnvoyBrotliCompressor
+com.linecorp.armeria.it.xds.filter.IstioExtensionFactoryProviders$EnvoyGrpcStats
