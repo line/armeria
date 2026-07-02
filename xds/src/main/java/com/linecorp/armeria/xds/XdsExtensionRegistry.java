@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -106,6 +108,7 @@ public final class XdsExtensionRegistry {
     }
 
     private static void validateFactoryType(XdsExtensionFactory factory) {
+        requireNonNull(factory, "factory");
         for (Class<? extends XdsExtensionFactory> type : SUPPORTED_FACTORY_TYPES) {
             if (type.isInstance(factory)) {
                 return;

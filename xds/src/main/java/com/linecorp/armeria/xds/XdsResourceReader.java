@@ -92,7 +92,10 @@ public final class XdsResourceReader {
             // SPI-provided packages
             for (XdsTypeRegistryPackageProvider provider
                     : ServiceLoader.load(XdsTypeRegistryPackageProvider.class)) {
-                for (String pkg : provider.packages()) {
+                final Iterable<String> packages = provider.packages();
+                requireNonNull(packages, "packages");
+                for (String pkg : packages) {
+                    requireNonNull(pkg, "pkg");
                     addPackage(pkg, configuration, filterBuilder);
                 }
             }
