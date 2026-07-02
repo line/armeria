@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.embedded.jetty.JettyWebServer;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -44,6 +45,8 @@ class SpringJettyApplicationItTest {
     private TestRestTemplate restTemplate;
     @Inject
     private GreetingController greetingController;
+    @Inject
+    private JettyWebServer jettyWebServer;
 
     @BeforeEach
     public void init() throws Exception {
@@ -67,6 +70,14 @@ class SpringJettyApplicationItTest {
         assertThat(restTemplate.getForObject("http://localhost:" + httpPort + JETTY_BASE_PATH + "/greeting",
                                              String.class))
                 .contains("Hello, World!");
+    }
+
+    @Test
+    void greetingDirectlyToJettyShouldReturnDefaultMessage() throws Exception {
+        assertThat(restTemplate.getForEntity("http://localhost:" + jettyWebServer.getPort() + "/greeting",
+                                             Void.class)
+                           .getStatusCode().value()).isEqualByComparingTo(404);
+
     }
 
     @Test
