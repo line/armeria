@@ -60,14 +60,14 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
     @Nullable
     private final ClientTlsSpec clientTlsSpec;
     @Nullable
-    private final ServerTlsSpec serverTlsSpec;
+    private final ServerTlsSpecSelector serverTlsSpecSelector;
 
     TransportSocketSnapshot(TransportSocket transportSocket) {
         this.transportSocket = transportSocket;
         tlsCertificates = ImmutableList.of();
         validationContext = null;
         clientTlsSpec = null;
-        serverTlsSpec = null;
+        serverTlsSpecSelector = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
@@ -80,7 +80,7 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
         final TlsCertificateSnapshot firstCert = tlsCertificates.isEmpty() ? null
                                                                            : tlsCertificates.get(0);
         clientTlsSpec = buildClientTlsSpec(upstreamTlsContext, firstCert, this.validationContext);
-        serverTlsSpec = null;
+        serverTlsSpecSelector = null;
     }
 
     TransportSocketSnapshot(TransportSocket transportSocket,
@@ -97,8 +97,7 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
                                .map(cert -> buildServerTlsSpec(downstreamTlsContext, cert,
                                                                this.validationContext))
                                .collect(ImmutableList.toImmutableList());
-        // Simple: use first spec. SNI-based selection deferred to follow-up PR.
-        serverTlsSpec = specs.isEmpty() ? null : specs.get(0);
+        serverTlsSpecSelector = new ServerTlsSpecSelector(specs, this.tlsCertificates);
     }
 
     @Override
@@ -155,7 +154,7 @@ public final class TransportSocketSnapshot implements Snapshot<TransportSocket> 
      *         does not configure downstream TLS
      */
     public @Nullable ServerTlsSpec serverTlsSpec(ConnectionContext ctx) {
-        return serverTlsSpec;
+        return serverTlsSpecSelector != null ? serverTlsSpecSelector.select(ctx) : null;
     }
 
     private static ClientTlsSpec buildClientTlsSpec(
