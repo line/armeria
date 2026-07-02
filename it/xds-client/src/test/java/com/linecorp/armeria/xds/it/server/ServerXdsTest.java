@@ -108,12 +108,12 @@ class ServerXdsTest {
                           common_tls_context:
                             tls_certificates:
                               - certificate_chain:
-                                  filename: "%s"
+                                  filename: '%s'
                                 private_key:
-                                  filename: "%s"
+                                  filename: '%s'
                             validation_context:
                               trusted_ca:
-                                filename: "%s"
+                                filename: '%s'
                     """.formatted(LISTENER_NAME, serverCertPath, serverKeyPath, clientCaCertPath);
             controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
             sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), LISTENER_NAME)
@@ -177,12 +177,12 @@ class ServerXdsTest {
                           common_tls_context:
                             tls_certificates:
                               - certificate_chain:
-                                  filename: "%s"
+                                  filename: '%s'
                                 private_key:
-                                  filename: "%s"
+                                  filename: '%s'
                             validation_context:
                               trusted_ca:
-                                filename: "%s"
+                                filename: '%s'
                 """.formatted(xdsPort.actualPort(), clientCertPath, clientKeyPath, serverCaCertPath);
 
         final Bootstrap clientBootstrap =

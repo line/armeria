@@ -116,9 +116,9 @@ class CertificateValidationContextTest {
                       common_tls_context:
                         tls_certificates:
                           - private_key:
-                              filename: %s
+                              filename: '%s'
                             certificate_chain:
-                              filename: %s
+                              filename: '%s'
                         combined_validation_context:
                           default_validation_context: {}
                           validation_context_sds_secret_config:
@@ -159,7 +159,7 @@ class CertificateValidationContextTest {
                 name: validation-certs
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(invalidCaFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
         version.incrementAndGet();
@@ -275,7 +275,7 @@ class CertificateValidationContextTest {
                 name: validation-certs
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(multiCaFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
         version.incrementAndGet();
@@ -323,7 +323,7 @@ class CertificateValidationContextTest {
                 name: validation-certs
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(caFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
         version.incrementAndGet();
@@ -398,9 +398,9 @@ class CertificateValidationContextTest {
                       common_tls_context:
                         tls_certificates:
                           - private_key:
-                              filename: %s
+                              filename: '%s'
                             certificate_chain:
-                              filename: %s
+                              filename: '%s'
                         combined_validation_context:
                           default_validation_context:
                             match_subject_alt_names:
@@ -443,7 +443,7 @@ class CertificateValidationContextTest {
                 name: validation-certs
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(caFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(secretYaml, Secret.class);
         version.incrementAndGet();
@@ -491,7 +491,7 @@ class CertificateValidationContextTest {
                 name: validation-certs
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                   match_subject_alt_names:
                     - exact: "override.example.com"
                 """.formatted(caFile.getAbsolutePath());

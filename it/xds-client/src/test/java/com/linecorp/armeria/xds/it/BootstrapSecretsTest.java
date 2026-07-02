@@ -110,13 +110,13 @@ class BootstrapSecretsTest {
                     - name: my-cert
                       tls_certificate:
                         private_key:
-                          filename: %s
+                          filename: '%s'
                         certificate_chain:
-                          filename: %s
+                          filename: '%s'
                     - name: my-validation
                       validation_context:
                         trusted_ca:
-                          filename: %s
+                          filename: '%s'
                 """;
 
     @Test

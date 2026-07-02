@@ -87,9 +87,9 @@ class DataSourceTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(certificate1.privateKeyFile().toPath().toString(),
                               certificate1.certificateFile().toPath().toString());
         final Secret secret = XdsResourceReader.fromYaml(tlsCertYaml, Secret.class);
@@ -205,9 +205,9 @@ class DataSourceTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(privateKeyFile.getAbsolutePath(),
                               certificateFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(tlsCertYaml, Secret.class);
@@ -344,9 +344,9 @@ class DataSourceTest {
                   watched_directory:
                     path: %s
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(watchDir.getAbsolutePath(),
                               privateKeyFile.getAbsolutePath(),
                               certificateFile.getAbsolutePath());
@@ -496,9 +496,9 @@ class DataSourceTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(privateKeyFile.getAbsolutePath(),
                               certificateFile.getAbsolutePath());
         final Secret secret = XdsResourceReader.fromYaml(tlsCertYaml, Secret.class);
@@ -615,9 +615,9 @@ class DataSourceTest {
                   watched_directory:
                     path: %s
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(watchDir.getAbsolutePath(),
                               privateKeyFile.getAbsolutePath(),
                               certificateFile.getAbsolutePath());
@@ -1054,9 +1054,9 @@ class DataSourceTest {
                   watched_directory:
                     path: %s
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """.formatted(tempDir.getAbsolutePath(),
                               privateKeyFile.getAbsolutePath(),
                               certificateFile.getAbsolutePath());

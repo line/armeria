@@ -120,9 +120,9 @@ class ServerMultiplePluginTest {
                       common_tls_context:
                         tls_certificates:
                           - certificate_chain:
-                              filename: "%s"
+                              filename: '%s'
                             private_key:
-                              filename: "%s"
+                              filename: '%s'
                 """.formatted(listenerName, certPath, keyPath);
 
         return XdsResourceReader.fromYaml(yaml, Listener.class);

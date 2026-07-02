@@ -220,7 +220,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_spki:
                   - "%s"
                 verify_certificate_hash:
@@ -250,7 +250,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_spki:
                   - "%s"
                 match_typed_subject_alt_names:
@@ -278,7 +278,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_hash:
                   - "%s"
                 match_typed_subject_alt_names:
@@ -307,7 +307,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_spki:
                   - "%s"
                 verify_certificate_hash:
@@ -338,7 +338,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_spki:
                   - "%s"
                 verify_certificate_hash:
@@ -368,7 +368,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 match_typed_subject_alt_names:
                   - san_type: IP_ADDRESS
                     matcher:
@@ -393,7 +393,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 match_typed_subject_alt_names:
                   - san_type: DNS
                     matcher:
@@ -418,7 +418,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 match_typed_subject_alt_names:
                   - san_type: URI
                     matcher:
@@ -443,7 +443,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 match_typed_subject_alt_names:
                   - san_type: DNS
                     matcher:
@@ -482,7 +482,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_hash:
                   - "%s"
                 match_typed_subject_alt_names:
@@ -511,7 +511,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_spki:
                   - "%s"
                 verify_certificate_hash:
@@ -541,7 +541,7 @@ class TlsPeerVerificationIntegrationTest {
         final String validationContext =
                 """
                 trusted_ca:
-                  filename: %s
+                  filename: '%s'
                 verify_certificate_spki:
                   - "%s"
                 verify_certificate_hash:
