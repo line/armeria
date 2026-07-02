@@ -54,11 +54,11 @@ class ScheduledHealthCheckerTest {
         server.start().join();
         await().untilAsserted(() -> assertThat(invokedCount.get()).isOne());
 
-        holder.get().complete(new HealthCheckStatus(true, 100));
+        holder.get().complete(new HealthCheckStatus(HealthStatus.HEALTHY, 100));
         await().untilAsserted(() -> assertThat(invokedCount.get()).isEqualTo(2));
 
         server.stop().join();
-        holder.get().complete(new HealthCheckStatus(true, 100));
+        holder.get().complete(new HealthCheckStatus(HealthStatus.HEALTHY, 100));
         // Wait for a while to verify health checker is not invoked anymore.
         Thread.sleep(1000);
         assertThat(invokedCount.get()).isEqualTo(2);
