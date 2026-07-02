@@ -20,7 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
-import java.security.SignatureException;
+
+import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -264,7 +265,7 @@ class ServerFilterChainMatchTest {
                 HttpRequest.of(HttpMethod.GET, "/hello"),
                 RequestOptions.builder().clientTlsSpec(wrongTlsSpec).build()))
                 .isInstanceOf(UnprocessedRequestException.class)
-                .hasRootCauseInstanceOf(SignatureException.class);
+                .hasCauseInstanceOf(SSLHandshakeException.class);
     }
 
     @Test

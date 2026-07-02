@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import java.util.List;
+import java.util.Locale;
 
 import com.google.common.collect.ImmutableList;
 
@@ -180,13 +181,15 @@ final class FilterChainMatcher {
         }
 
         @Override
-        List<FilterChainSnapshot> matchSpecifics(List<FilterChainSnapshot> specifics,
-                                                 ConnectionContext ctx) {
+        List<FilterChainSnapshot> matchSpecifics(List<FilterChainSnapshot> specifics, ConnectionContext ctx) {
             final String sniHostname = ctx.sniHostname();
+            if (sniHostname == null || sniHostname.isEmpty()) {
+                return ImmutableList.of();
+            }
+            final String normalizedSni = sniHostname.toLowerCase(Locale.ROOT);
             final ImmutableList.Builder<FilterChainSnapshot> matched = ImmutableList.builder();
             for (FilterChainSnapshot fcs : specifics) {
-                if (sniHostname != null && !sniHostname.isEmpty() &&
-                    fcs.filterChainMatch().getServerNamesList().contains(sniHostname)) {
+                if (fcs.filterChainMatch().getServerNamesList().contains(normalizedSni)) {
                     matched.add(fcs);
                 }
             }
