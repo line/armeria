@@ -25,14 +25,14 @@ import com.google.protobuf.UInt32Value;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.RouteEntry;
+import com.linecorp.armeria.xds.RouteCluster;
 
 import io.netty.util.AttributeKey;
 
 public final class XdsCommonUtil {
 
-    public static final AttributeKey<RouteEntry> SELECTED_ROUTE =
-            AttributeKey.valueOf(XdsCommonUtil.class, "SELECTED_ROUTE");
+    public static final AttributeKey<RouteCluster> ROUTE_CLUSTER =
+            AttributeKey.valueOf(XdsCommonUtil.class, "ROUTE_CLUSTER");
 
     /**
      * An attribute key for overriding the ALPN protocols on upstream TLS connections.

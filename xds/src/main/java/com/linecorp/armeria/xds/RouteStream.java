@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.xds.stream.RefCountedStream;
@@ -75,7 +74,7 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         final SnapshotStream<RouteSnapshot> snapshotStream =
                 new ResourceNodeAdapter<RouteXdsResource>(configSource, context, resourceName, ROUTE)
                         .switchMapEager(routeResource ->
-                                new RouteSnapshotStream(routeResource, context, hcmContext));
+                                                new RouteSnapshotStream(routeResource, context, hcmContext));
         return snapshotStream.subscribe(watcher);
     }
 
@@ -149,7 +148,6 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
         private final int index;
         private final Route route;
         private final SubscriptionContext context;
-        private final String clusterName;
         private final RouteXdsResource routeResource;
         private final VirtualHostXdsResource vhostResource;
         private final HcmContext hcmContext;
@@ -160,7 +158,6 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             this.index = index;
             this.route = route;
             this.context = context;
-            clusterName = route.getRoute().getCluster();
             this.routeResource = routeResource;
             this.vhostResource = vhostResource;
             this.hcmContext = hcmContext;
@@ -186,29 +183,15 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final ClientDecoration retryDecoration =
                     FilterUtil.buildRetryDecoration(effectiveRetryPolicy);
 
-            // Build filter streams (deduped via caches for routes with identical configs)
-            final SnapshotStream<ClientPreprocessors> downstreamStream = hcmContext.downstream(filterConfigs);
-            final SnapshotStream<ClientDecoration> upstreamStream = hcmContext.upstream(filterConfigs);
+            final SnapshotStream<RouteClusterResolver> routeResolverStream =
+                    new RouteClusterFactory(context, hcmContext, filterConfigs, retryDecoration)
+                            .resolve(route);
             final SnapshotStream<HttpService> httpServiceStream = hcmContext.server(filterConfigs);
 
-            if (!route.getRoute().hasCluster()) {
-                return SnapshotStream.combineLatest(
-                        downstreamStream, upstreamStream, httpServiceStream,
-                        (down, up, httpService) -> new RouteEntry(
-                                route, null, index, filterConfigs, down,
-                                retryDecoration, up, httpService))
-                                     .subscribe(watcher);
-            }
-
-            // Wrap cluster registration as SnapshotStream
-            final SnapshotStream<ClusterSnapshot> clusterStream =
-                    w -> context.clusterManager().register(clusterName, context, w);
-
-            return SnapshotStream.combineLatest(
-                    clusterStream, downstreamStream, upstreamStream, httpServiceStream,
-                    (cluster, down, up, httpService) -> new RouteEntry(
-                            route, cluster, index, filterConfigs, down,
-                            retryDecoration, up, httpService))
+            return SnapshotStream.combineLatest(routeResolverStream, httpServiceStream,
+                                                (resolver, httpService) -> {
+                                                    return new RouteEntry(route, resolver, index, httpService);
+                                                })
                                  .subscribe(watcher);
         }
     }
