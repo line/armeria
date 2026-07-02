@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.management;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -64,6 +66,16 @@ public final class ManagementService extends AbstractHttpService {
      * Returns a singleton {@link ManagementService}.
      */
     public static ManagementService of() {
+        AppInfoService.INSTANCE.setAppInfo(null);
+        return INSTANCE;
+    }
+
+    /**
+     * Returns a singleton {@link ManagementService} with specified {@link AppInfo}.
+     */
+    public static ManagementService of(AppInfo appInfo) {
+        requireNonNull(appInfo, "appInfo");
+        AppInfoService.INSTANCE.setAppInfo(appInfo);
         return INSTANCE;
     }
 
@@ -77,6 +89,8 @@ public final class ManagementService extends AbstractHttpService {
                 return ThreadDumpService.INSTANCE.serve(ctx, req);
             case "/jvm/heapdump":
                 return HeapDumpService.INSTANCE.serve(ctx, req);
+            case "/info":
+                return AppInfoService.INSTANCE.serve(ctx, req);
             default:
                 return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
