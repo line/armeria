@@ -226,6 +226,43 @@ class CircuitBreakerClientRuleTest {
     }
 
     @Test
+    void doNotOpenCircuit_whenSuccessFunctionAgrees() {
+        final CircuitBreakerRule rule = CircuitBreakerRule.builder()
+                                                          .onSuccessFunction()
+                                                          .thenSuccess()
+                                                          .orElse(CircuitBreakerRule.onServerErrorStatus());
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .successFunction((ctx, log) -> log.responseHeaders().status().code() == 503)
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
+                         .build()
+                         .blocking();
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(client.get("/503").status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    @Test
+    void openCircuit_whenSuccessFunctionDisagrees() {
+        final CircuitBreakerRule rule = CircuitBreakerRule.builder()
+                                                          .onSuccessFunction()
+                                                          .thenSuccess()
+                                                          .orElse(CircuitBreakerRule.onServerErrorStatus());
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .successFunction((ctx, log) -> false)
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
+                         .build()
+                         .blocking();
+
+        assertThat(client.get("/503").status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/503")).isInstanceOf(FailFastException.class);
+        });
+    }
+
+    @Test
     void openCircuitWithTotalDuration() {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
                 CircuitBreakerRuleWithContent

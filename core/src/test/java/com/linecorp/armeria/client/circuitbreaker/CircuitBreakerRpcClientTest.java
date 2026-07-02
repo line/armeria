@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -47,10 +48,18 @@ class CircuitBreakerRpcClientTest {
 
     // Remote invocation parameters
     private static final RpcRequest reqA = RpcRequest.of(Object.class, "methodA", "a", "b");
-    private static final ClientRequestContext ctxA = ClientRequestContext.of(reqA, "h2c://dummyhost:8080/");
+    private static final ClientRequestContext ctxA = newPreLoggedContext(reqA);
 
     private static final RpcRequest reqB = RpcRequest.of(Object.class, "methodB", "c", "d");
-    private static final ClientRequestContext ctxB = ClientRequestContext.of(reqB, "h2c://dummyhost:8080/");
+    private static final ClientRequestContext ctxB = newPreLoggedContext(reqB);
+
+    private static ClientRequestContext newPreLoggedContext(RpcRequest req) {
+        final ClientRequestContext ctx = ClientRequestContext.of(req, "h2c://dummyhost:8080/");
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        ctx.logBuilder().endResponse();
+        return ctx;
+    }
 
     private static final RpcResponse successRes = RpcResponse.of(null);
     private static final RpcResponse failureRes = RpcResponse.ofFailure(

@@ -30,13 +30,17 @@ import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.RuleFilter;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRule}.
  */
 public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<CircuitBreakerRuleBuilder> {
+
+    private boolean matchSuccessFunction;
 
     CircuitBreakerRuleBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
@@ -61,17 +65,34 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder<Circuit
 
     /**
      * Returns a newly created {@link CircuitBreakerRule} that ignores a {@link Response} when the rule matches.
+     * Note that an open circuit breaker can never close if its trial requests keep matching this rule.
      */
     public CircuitBreakerRule thenIgnore() {
         return build(CircuitBreakerDecision.ignore());
+    }
+
+    /**
+     * Adds the {@link SuccessFunction} configured via
+     * {@link com.linecorp.armeria.client.ClientOptions#SUCCESS_FUNCTION}.
+     *
+     * <p>When the {@link SuccessFunction} regards the response as a success, a {@link Response} is
+     * reported as a success or failure to a {@link CircuitBreaker} or ignored depending on the build
+     * methods ({@code #thenSuccess()}, {@code #thenFailure()} and {@code #thenIgnore()}).
+     */
+    @UnstableApi
+    public CircuitBreakerRuleBuilder onSuccessFunction() {
+        matchSuccessFunction = true;
+        return this;
     }
 
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
                               responseTrailersFilter(), grpcTrailersFilter(),
-                              exceptionFilter(), totalDurationFilter(), false);
-        return build(ruleFilter, decision, requiresResponseTrailers());
+                              exceptionFilter(), totalDurationFilter(),
+                              matchSuccessFunction, false);
+        return build(ruleFilter, decision,
+                     requiresResponseTrailers() || matchSuccessFunction);
     }
 
     static CircuitBreakerRule build(

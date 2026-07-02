@@ -148,6 +148,29 @@ WebClient client = WebClient
 AggregatedHttpResponse res = client.execute(...).aggregate().join();
 ```
 
+## Aligning with `SuccessFunction`
+
+[ClientOptions#SUCCESS_FUNCTION](type) lets you classify certain responses (e.g., HTTP `4xx`, business
+exceptions) as success for metrics and logging. By default a [CircuitBreakerRule](type) does not
+consult it.
+
+You can align the circuit breaker with the client's [SuccessFunction](type) by composing a rule with
+[CircuitBreakerRule#builder()](type):
+
+```java
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+
+CircuitBreakerRule myRule = ...;
+CircuitBreakerRule rule =
+        CircuitBreakerRule.builder()
+                          .onSuccessFunction()
+                          .thenSuccess()
+                          .orElse(myRule);
+```
+
+`onSuccessFunction()` matches when the [SuccessFunction](type) regards the response as a
+success, so the rule reports it as a circuit breaker success before `myRule` is consulted.
+
 ## Grouping `CircuitBreaker`s
 
 In the very first example above, a single [CircuitBreaker](type) was used to track the events. However,

@@ -46,11 +46,12 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
             @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
             @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
             @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
+            boolean matchSuccessFunction,
             boolean hasResponseFilter) {
 
         return new RuleFilter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
                               responseTrailersFilter, grpcTrailersFilter, totalDurationFilter,
-                              hasResponseFilter);
+                              matchSuccessFunction, hasResponseFilter);
     }
 
     private final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter;
@@ -59,6 +60,7 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
     private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
     private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     private final @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
+    private final boolean matchSuccessFunction;
     private final boolean hasResponseFilter;
 
     private RuleFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
@@ -67,6 +69,7 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
                        @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                        @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
                        @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
+                       boolean matchSuccessFunction,
                        boolean hasResponseFilter) {
         this.requestHeadersFilter = requestHeadersFilter;
         this.exceptionFilter = exceptionFilter;
@@ -74,6 +77,7 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         this.responseTrailersFilter = responseTrailersFilter;
         this.grpcTrailersFilter = grpcTrailersFilter;
         this.totalDurationFilter = totalDurationFilter;
+        this.matchSuccessFunction = matchSuccessFunction;
         this.hasResponseFilter = hasResponseFilter;
     }
 
@@ -88,7 +92,8 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
         // Safe to return true since no filters are set
         if (exceptionFilter == null && responseHeadersFilter == null &&
             responseTrailersFilter == null && grpcTrailersFilter == null &&
-            totalDurationFilter == null && !hasResponseFilter) {
+            totalDurationFilter == null && !matchSuccessFunction &&
+            !hasResponseFilter) {
             return true;
         }
 
@@ -140,6 +145,10 @@ public final class RuleFilter implements BiFunction<ClientRequestContext, Throwa
             if (totalDurationFilter.test(ctx, Duration.ofNanos(totalDurationNanos))) {
                 return true;
             }
+        }
+
+        if (matchSuccessFunction && ctx.options().successFunction().isSuccess(ctx, log)) {
+            return true;
         }
 
         return false;
