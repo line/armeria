@@ -17,11 +17,13 @@
 package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -38,6 +40,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -52,17 +55,26 @@ import com.linecorp.armeria.server.grpc.DelegatingHttpJsonTranscodingServiceBuil
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.ServiceDescriptor;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc;
+import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
+import testing.grpc.Transcoding.GetMessageRequestV1;
+import testing.grpc.Transcoding.Message;
 
 class DelegatingHttpJsonTranscodingServiceTest {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
     private static final AtomicReference<CompletableFuture<Void>> unconsumedGrpcRequestCompletion =
             new AtomicReference<>();
+    private static final Function<ServiceDescriptor, GrpcJsonMarshaller> INCLUDING_DEFAULT_VALUE_FIELDS =
+            serviceDescriptor -> GrpcJsonMarshaller.builder()
+                                                   .jsonMarshallerCustomizer(
+                                                           b -> b.includingDefaultValueFields(true))
+                                                   .build(serviceDescriptor);
 
     @RegisterExtension
     static final ServerExtension upstreamServer = new ServerExtension() {
@@ -133,6 +145,36 @@ class DelegatingHttpJsonTranscodingServiceTest {
                 transcoderBuilder((ctx, req) -> HttpResponse.of(HttpStatus.OK)).build();
         assertThat(transcoder.as(DelegatingHttpJsonTranscodingService.class)).isSameAs(transcoder);
         assertThat(transcoder.as(HttpServiceWithRoutes.class)).isSameAs(transcoder);
+    }
+
+    @Test
+    void jsonMarshallerFactoryRequiresProtoSerialization() {
+        assertThatThrownBy(() -> transcoderBuilder((ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .protoSerialization(false)
+                .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
+                .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("protoSerialization");
+    }
+
+    @Test
+    void jsonMarshallerFactoryIncludesDefaultValueFields() throws Exception {
+        reconfigureProxyServer(sb -> {
+            final GrpcService grpcService = GrpcService.builder()
+                                                       .addService(new DefaultValueTestService())
+                                                       .build();
+            sb.serviceUnder("/defaults",
+                            transcoderBuilder(grpcService)
+                                    .jsonMarshallerFactory(INCLUDING_DEFAULT_VALUE_FIELDS)
+                                    .build());
+        });
+        final WebClient client = WebClient.of(proxyServer.httpUri());
+        final AggregatedHttpResponse response =
+                client.get("/defaults/v1/messages/1").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("text").asText()).isEqualTo("");
     }
 
     @Test
@@ -370,6 +412,14 @@ class DelegatingHttpJsonTranscodingServiceTest {
         public void unaryCall(SimpleRequest request,
                               StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onNext(SimpleResponse.newBuilder().setUsername("mismatch").build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    private static final class DefaultValueTestService extends HttpJsonTranscodingTestServiceImplBase {
+        @Override
+        public void getMessageV1(GetMessageRequestV1 request, StreamObserver<Message> responseObserver) {
+            responseObserver.onNext(Message.getDefaultInstance());
             responseObserver.onCompleted();
         }
     }

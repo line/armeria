@@ -20,13 +20,16 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.server.HttpService;
 
 import io.grpc.ServiceDescriptor;
@@ -52,6 +55,8 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
     private HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.of();
     private HttpService fallback = DEFAULT_FALLBACK;
     private boolean protoSerialization = true;
+    @Nullable
+    private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory;
 
     /**
      * Creates a new builder for the specified delegate.
@@ -88,6 +93,21 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
     }
 
     /**
+     * Sets the factory that creates the {@link GrpcJsonMarshaller} used to convert between JSON and the
+     * gRPC message, replacing the built-in one. Use this to customize the JSON handling, for example to
+     * include fields with default values.
+     *
+     * <p>The custom factory takes effect only when the transcoder converts messages itself, so
+     * {@link #protoSerialization(boolean)} must be enabled (the default). {@link #build()} throws an
+     * {@link IllegalStateException} if a custom factory is set while {@code protoSerialization} is disabled.
+     */
+    public DelegatingHttpJsonTranscodingServiceBuilder jsonMarshallerFactory(
+            Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory) {
+        this.jsonMarshallerFactory = requireNonNull(jsonMarshallerFactory, "jsonMarshallerFactory");
+        return this;
+    }
+
+    /**
      * Adds the {@link ServiceDescriptor}s that define HTTP/JSON mappings.
      */
     public DelegatingHttpJsonTranscodingServiceBuilder serviceDescriptors(
@@ -117,12 +137,15 @@ public final class DelegatingHttpJsonTranscodingServiceBuilder {
     public DelegatingHttpJsonTranscodingService build() {
         final Set<ServiceDescriptor> serviceDescriptors = serviceDescriptorsBuilder.build();
         checkState(!serviceDescriptors.isEmpty(), "serviceDescriptors must be set.");
-        final HttpJsonTranscoder transcoder =
+        final HttpJsonTranscoderBuilder transcoderBuilder =
                 new HttpJsonTranscoderBuilder()
                         .options(options)
                         .protoSerialization(protoSerialization)
-                        .serviceDescriptors(serviceDescriptors)
-                        .build();
+                        .serviceDescriptors(serviceDescriptors);
+        if (jsonMarshallerFactory != null) {
+            transcoderBuilder.jsonMarshallerFactory(jsonMarshallerFactory);
+        }
+        final HttpJsonTranscoder transcoder = transcoderBuilder.build();
         if (transcoder == null) {
             throw new IllegalStateException("No HTTP rules are configured.");
         }
