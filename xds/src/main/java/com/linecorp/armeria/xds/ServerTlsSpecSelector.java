@@ -120,10 +120,7 @@ final class ServerTlsSpecSelector {
                     dnsNames.add(((String) san.get(1)).toLowerCase(Locale.ROOT));
                 }
             }
-            final ImmutableList<String> result = dnsNames.build();
-            if (!result.isEmpty()) {
-                return result;
-            }
+            return dnsNames.build();
         }
         final String cn = extractCn(cert);
         if (cn != null) {
