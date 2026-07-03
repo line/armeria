@@ -88,7 +88,7 @@ final class RouteClusterFactory {
                 new ArrayList<>(clusterWeightList.size());
         for (ClusterWeight clusterWeight : clusterWeightList) {
             final String name = clusterWeight.getName();
-            final int weight = clusterWeight.hasWeight() ? clusterWeight.getWeight().getValue() : 1;
+            final int weight = clusterWeight.getWeight().getValue();
             checkArgument(weight > 0, "weighted cluster '%s' has a weight of 0", name);
             final Metadata mergedMetadata = mergeMetadata(routeMetadataMatch, clusterWeight.getMetadataMatch());
             final SnapshotStream<ClusterSnapshot> clusterStream =

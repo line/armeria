@@ -164,38 +164,28 @@ class WeightedClusterTest {
     }
 
     @Test
-    void defaultWeight() {
-        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
-        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
-                         endpoint("cluster-b", "127.0.0.1", 5678));
-        controlPlane.set(weightedRouteConfigNoWeights("route_0", "cluster-a", "cluster-b"));
-        final String version = controlPlane.set(listener("listener_0", "route_0"));
-        controlPlane.awaitListener("listener_0", version);
-
+    void missingWeightIsRejected() {
         try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
 
+            // Push resources with missing weight after the watcher is attached
+            controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+            controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                             endpoint("cluster-b", "127.0.0.1", 5678));
+            controlPlane.set(weightedRouteConfigNoWeights("route_0", "cluster-a", "cluster-b"));
+            controlPlane.set(listener("listener_0", "route_0"));
+
+            // Missing weight defaults to 0 and should be rejected like Envoy
             await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
-                assertThat(watcher.lastSnapshot()).isNotNull();
+                assertThat(watcher.errors()).isNotEmpty();
+                assertThat(watcher.errors().get(0))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("weight of 0");
             });
 
-            final RouteEntry routeEntry =
-                    watcher.lastSnapshot().routeSnapshot().virtualHostSnapshots().get(0)
-                           .routeEntries().get(0);
-
-            assertThat(routeEntry.weightedClusters()).hasSize(2);
-            // Both should default to weight 1
-            assertThat(routeEntry.weightedClusters().get(0).weight()).isEqualTo(1);
-            assertThat(routeEntry.weightedClusters().get(1).weight()).isEqualTo(1);
-
-            // Equal weights: round-robin alternates between the two clusters
-            final RouteCluster first = routeEntry.resolve();
-            final RouteCluster second = routeEntry.resolve();
-            assertThat(first).isNotNull();
-            assertThat(second).isNotNull();
-            assertThat(first.clusterSnapshot().xdsResource().name())
-                    .isNotEqualTo(second.clusterSnapshot().xdsResource().name());
+            // No successful snapshot should be emitted
+            assertThat(watcher.lastSnapshot()).isNull();
         }
     }
 
