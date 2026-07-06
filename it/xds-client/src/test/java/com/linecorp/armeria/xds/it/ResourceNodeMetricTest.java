@@ -1032,9 +1032,9 @@ class ResourceNodeMetricTest {
                 name: my-cert
                 tls_certificate:
                   private_key:
-                    filename: %s
+                    filename: '%s'
                   certificate_chain:
-                    filename: %s
+                    filename: '%s'
                 """;
 
         //language=YAML

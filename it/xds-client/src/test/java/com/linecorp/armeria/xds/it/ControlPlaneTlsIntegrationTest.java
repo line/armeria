@@ -157,7 +157,7 @@ class ControlPlaneTlsIntegrationTest {
                 """
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                   match_typed_subject_alt_names:
                   - san_type: IP_ADDRESS
                     matcher:
@@ -192,7 +192,7 @@ class ControlPlaneTlsIntegrationTest {
                 """
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                   match_typed_subject_alt_names:
                   - san_type: IP_ADDRESS
                     matcher:
@@ -219,7 +219,7 @@ class ControlPlaneTlsIntegrationTest {
                 """
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                   verify_certificate_spki:
                     - "%s"
                   match_typed_subject_alt_names:
@@ -247,7 +247,7 @@ class ControlPlaneTlsIntegrationTest {
                 """
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                   match_typed_subject_alt_names:
                   - san_type: IP_ADDRESS
                     matcher:
@@ -273,12 +273,12 @@ class ControlPlaneTlsIntegrationTest {
                 """
                 tls_certificates:
                   - private_key:
-                      filename: %s
+                      filename: '%s'
                     certificate_chain:
-                      filename: %s
+                      filename: '%s'
                 validation_context:
                   trusted_ca:
-                    filename: %s
+                    filename: '%s'
                   match_typed_subject_alt_names:
                   - san_type: IP_ADDRESS
                     matcher:

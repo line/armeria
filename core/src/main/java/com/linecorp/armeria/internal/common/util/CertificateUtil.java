@@ -28,6 +28,7 @@ import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
@@ -121,6 +122,35 @@ public final class CertificateUtil {
             logger.warn("Failed to parse subject alternative names from a certificate: {}", cert, ex);
             return null;
         }
+    }
+
+    public static List<String> extractDnsNames(X509Certificate cert) {
+        requireNonNull(cert, "cert");
+        try {
+            final Collection<List<?>> altNames = cert.getSubjectAlternativeNames();
+            if (altNames != null) {
+                final ImmutableList.Builder<String> dnsNames = ImmutableList.builder();
+                for (List<?> altName : altNames) {
+                    final Integer type = altName.size() >= 2 ? (Integer) altName.get(0) : null;
+                    // Type 2 is DNS name.
+                    if (type != null && type == 2) {
+                        dnsNames.add(((String) altName.get(1)).toLowerCase(Locale.ROOT));
+                    }
+                }
+                return dnsNames.build();
+            }
+        } catch (CertificateParsingException e) {
+            return Exceptions.throwUnsafely(e);
+        }
+        try {
+            final String cn = extractCommonName(cert);
+            if (cn != null) {
+                return ImmutableList.of(cn.toLowerCase(Locale.ROOT));
+            }
+        } catch (CertificateEncodingException e) {
+            return Exceptions.throwUnsafely(e);
+        }
+        return ImmutableList.of();
     }
 
     @Nullable

@@ -130,9 +130,9 @@ class ServerDecoratorTest {
                       common_tls_context:
                         tls_certificates:
                           - certificate_chain:
-                              filename: "%s"
+                              filename: '%s'
                             private_key:
-                              filename: "%s"
+                              filename: '%s'
                 """.formatted(LISTENER_NAME, certPath, keyPath);
         final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
         controlPlane.awaitListener(LISTENER_NAME, ver);
@@ -186,9 +186,9 @@ class ServerDecoratorTest {
                       common_tls_context:
                         tls_certificates:
                           - certificate_chain:
-                              filename: "%s"
+                              filename: '%s'
                             private_key:
-                              filename: "%s"
+                              filename: '%s'
                 """.formatted(LISTENER_NAME, certPath, keyPath);
         final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
         controlPlane.awaitListener(LISTENER_NAME, ver);
@@ -239,9 +239,9 @@ class ServerDecoratorTest {
                       common_tls_context:
                         tls_certificates:
                           - certificate_chain:
-                              filename: "%s"
+                              filename: '%s'
                             private_key:
-                              filename: "%s"
+                              filename: '%s'
                 """.formatted(LISTENER_NAME, certPath, keyPath);
         final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
         controlPlane.awaitListener(LISTENER_NAME, ver);
@@ -304,9 +304,9 @@ class ServerDecoratorTest {
                       common_tls_context:
                         tls_certificates:
                           - certificate_chain:
-                              filename: "%s"
+                              filename: '%s'
                             private_key:
-                              filename: "%s"
+                              filename: '%s'
                 """.formatted(LISTENER_NAME, certPath, keyPath);
         final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
         controlPlane.awaitListener(LISTENER_NAME, ver);

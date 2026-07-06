@@ -13,15 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.xds.it.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -29,6 +26,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -37,11 +35,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ConnectionAcceptor;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.ServerTlsProvider;
-import com.linecorp.armeria.server.ServerTlsSpec;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.it.XdsCertificateExtension;
@@ -51,30 +45,19 @@ import com.linecorp.armeria.xds.server.XdsServerPlugin;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
-/**
- * Verifies that {@link XdsServerPlugin} correctly composes with user-configured
- * {@link ConnectionAcceptor} and {@link ServerTlsProvider} on both xDS-managed
- * and unmanaged ports.
- */
-class ServerFallbackTest {
+class ServerTlsSpecSelectorTest {
 
-    private static final String LISTENER_NAME = "fallback-listener";
-    private static final ServerPort xdsPort =
-            new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
-    private static final ServerPort unmanagedPort =
-            new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
-
-    private static final AtomicInteger acceptorCallCount = new AtomicInteger();
+    private static final String LISTENER_NAME = "sni-listener";
 
     @RegisterExtension
     @Order(0)
-    static final XdsCertificateExtension xdsCert =
-            new XdsCertificateExtension(new SelfSignedCertificateExtension("127.0.0.1"));
+    static final XdsCertificateExtension certFoo =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("foo.example.com"));
 
     @RegisterExtension
     @Order(1)
-    static final SelfSignedCertificateExtension userCert =
-            new SelfSignedCertificateExtension("127.0.0.1");
+    static final XdsCertificateExtension certBar =
+            new XdsCertificateExtension(new SelfSignedCertificateExtension("bar.example.com"));
 
     @RegisterExtension
     @Order(2)
@@ -85,8 +68,10 @@ class ServerFallbackTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final Path certPath = xdsCert.certificateFile().toPath();
-            final Path keyPath = xdsCert.privateKeyFile().toPath();
+            final Path certPathFoo = certFoo.certificateFile().toPath();
+            final Path keyPathFoo = certFoo.privateKeyFile().toPath();
+            final Path certPathBar = certBar.certificateFile().toPath();
+            final Path keyPathBar = certBar.privateKeyFile().toPath();
 
             //language=YAML
             final String yaml =
@@ -121,77 +106,84 @@ class ServerFallbackTest {
                                   filename: '%s'
                                 private_key:
                                   filename: '%s'
-                    """.formatted(LISTENER_NAME, certPath, keyPath);
+                              - certificate_chain:
+                                  filename: '%s'
+                                private_key:
+                                  filename: '%s'
+                    """.formatted(LISTENER_NAME, certPathFoo, keyPathFoo, certPathBar, keyPathBar);
             controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
-
-            // User-configured ConnectionAcceptor — should be called on all ports.
-            sb.connectionAcceptor(ConnectionAcceptor.of(ctx -> {
-                acceptorCallCount.incrementAndGet();
-                return true;
-            }));
-
-            // User-configured ServerTlsProvider for the unmanaged HTTPS port.
-            final ServerTlsSpec userTlsSpec = ServerTlsSpec.builder()
-                                                           .tlsKeyPair(userCert.tlsKeyPair())
-                                                           .build();
-            sb.tlsProvider(ServerTlsProvider.of(ctx -> userTlsSpec));
-
-            // Explicit unmanaged HTTPS port (not controlled by xDS).
-            sb.port(unmanagedPort);
-
-            sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), LISTENER_NAME)
-                                     .port(xdsPort)
-                                     .build());
+            sb.plugin(XdsServerPlugin.of(controlPlane.bootstrap(), LISTENER_NAME));
             sb.service("/hello", (ctx, req) -> HttpResponse.of("hello"));
         }
     };
 
     @Test
-    void connectionAcceptorCalledOnManagedPort() {
-        acceptorCallCount.set(0);
+    void exactSniMatch() {
+        final int port = server.httpsPort();
+
+        // SNI "foo.example.com" → certFoo should be presented.
+        // Trust only certFoo: if certBar were presented, the handshake would fail.
+        final ClientTlsSpec fooTlsSpec = ClientTlsSpec.builder()
+                                                      .trustedCertificates(certFoo.certificate())
+                                                      .build();
+        final Endpoint fooEndpoint = Endpoint.of("foo.example.com", port).withIpAddr("127.0.0.1");
+        final BlockingWebClient fooClient =
+                WebClient.builder(SessionProtocol.HTTPS, fooEndpoint).build().blocking();
+        final AggregatedHttpResponse fooRes = fooClient.execute(
+                HttpRequest.of(HttpMethod.GET, "/hello"),
+                RequestOptions.builder().clientTlsSpec(fooTlsSpec).build());
+        assertThat(fooRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(fooRes.contentUtf8()).isEqualTo("hello");
+
+        // SNI "bar.example.com" → certBar should be presented.
+        // Trust only certBar: if certFoo were presented, the handshake would fail.
+        final ClientTlsSpec barTlsSpec = ClientTlsSpec.builder()
+                                                      .trustedCertificates(certBar.certificate())
+                                                      .build();
+        final Endpoint barEndpoint = Endpoint.of("bar.example.com", port).withIpAddr("127.0.0.1");
+        final BlockingWebClient barClient =
+                WebClient.builder(SessionProtocol.HTTPS, barEndpoint).build().blocking();
+        final AggregatedHttpResponse barRes = barClient.execute(
+                HttpRequest.of(HttpMethod.GET, "/hello"),
+                RequestOptions.builder().clientTlsSpec(barTlsSpec).build());
+        assertThat(barRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(barRes.contentUtf8()).isEqualTo("hello");
+    }
+
+    @Test
+    void fallbackToFirstCert() {
+        // Unknown SNI → first cert (certFoo) should be presented.
+        // Trust only certFoo, disable hostname verification since the cert CN
+        // (foo.example.com) won't match the SNI (unknown.example.com).
         final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
-                                                   .trustedCertificates(xdsCert.certificate())
+                                                   .trustedCertificates(certFoo.certificate())
+                                                   .endpointIdentificationAlgorithm("")
                                                    .build();
+        final int port = server.httpsPort();
+        final Endpoint endpoint = Endpoint.of("unknown.example.com", port).withIpAddr("127.0.0.1");
         final BlockingWebClient client =
-                WebClient.of("https://127.0.0.1:" + xdsPort.actualPort()).blocking();
+                WebClient.builder(SessionProtocol.HTTPS, endpoint).build().blocking();
         final AggregatedHttpResponse res = client.execute(
                 HttpRequest.of(HttpMethod.GET, "/hello"),
                 RequestOptions.builder().clientTlsSpec(tlsSpec).build());
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("hello");
-        assertThat(acceptorCallCount.get()).isGreaterThanOrEqualTo(1);
     }
 
     @Test
-    void tlsProviderFallbackOnUnmanagedPort() {
-        // The unmanaged HTTPS port should use the user-configured TLS provider (userCert),
-        // not the xDS certificate. Also verify the user-configured ConnectionAcceptor is called.
-        acceptorCallCount.set(0);
-        final ClientTlsSpec userTlsSpec = ClientTlsSpec.builder()
-                                                       .trustedCertificates(userCert.certificate())
-                                                       .build();
-        final BlockingWebClient client =
-                WebClient.of("https://127.0.0.1:" + unmanagedPort.actualPort()).blocking();
+    void noSniReturnsFirstCert() {
+        // Connect by IP (127.0.0.1) — no SNI hostname is sent.
+        // Server should present the first cert (certFoo).
+        // Disable hostname verification since the cert CN (foo.example.com) won't match 127.0.0.1.
+        final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
+                                                   .trustedCertificates(certFoo.certificate())
+                                                   .endpointIdentificationAlgorithm("")
+                                                   .build();
+        final BlockingWebClient client = WebClient.of(server.httpsUri()).blocking();
         final AggregatedHttpResponse res = client.execute(
                 HttpRequest.of(HttpMethod.GET, "/hello"),
-                RequestOptions.builder().clientTlsSpec(userTlsSpec).build());
+                RequestOptions.builder().clientTlsSpec(tlsSpec).build());
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("hello");
-        assertThat(acceptorCallCount.get()).isGreaterThanOrEqualTo(1);
-    }
-
-    @Test
-    void xdsCertNotTrustedOnUnmanagedPort() {
-        // The xDS certificate should NOT work on the unmanaged port — that port uses
-        // userCert, so trusting xdsCert should fail the TLS handshake.
-        final ClientTlsSpec xdsTlsSpec = ClientTlsSpec.builder()
-                                                      .trustedCertificates(xdsCert.certificate())
-                                                      .build();
-        final BlockingWebClient client =
-                WebClient.of("https://127.0.0.1:" + unmanagedPort.actualPort()).blocking();
-        assertThatThrownBy(() -> client.execute(
-                HttpRequest.of(HttpMethod.GET, "/hello"),
-                RequestOptions.builder().clientTlsSpec(xdsTlsSpec).build()))
-                .hasCauseInstanceOf(SSLHandshakeException.class);
     }
 }

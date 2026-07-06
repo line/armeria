@@ -179,9 +179,9 @@ class DataSourcePolicyTest {
                           common_tls_context:
                             tls_certificates:
                               - private_key:
-                                  filename: %s
+                                  filename: '%s'
                                 certificate_chain:
-                                  filename: %s
+                                  filename: '%s'
                 """.formatted(certsDir.resolve("private_key.pem"),
                               certsDir.resolve("certificate.pem"));
         return XdsResourceReader.fromYaml(bootstrapStr, Bootstrap.class);

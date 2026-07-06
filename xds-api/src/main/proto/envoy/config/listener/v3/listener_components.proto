@@ -115,6 +115,7 @@ message FilterChainMatch {
 
   // Optional destination port to consider when use_original_dst is set on the
   // listener in determining a filter chain match.
+  option (armeria.xds.supported.field) = 8;
   google.protobuf.UInt32Value destination_port = 8 [(validate.rules).uint32 = {lte: 65535 gte: 1}];
 
   // If non-empty, an IP address and prefix length to match addresses when the
@@ -163,6 +164,7 @@ message FilterChainMatch {
   //
   //   See the :ref:`FAQ entry <faq_how_to_setup_sni>` on how to configure SNI for more
   //   information.
+  option (armeria.xds.supported.field) = 11;
   repeated string server_names = 11;
 
   // If non-empty, a transport protocol to consider when determining a filter chain match.
@@ -174,6 +176,7 @@ message FilterChainMatch {
   // * ``raw_buffer`` - default, used when no transport protocol is detected,
   // * ``tls`` - set by :ref:`envoy.filters.listener.tls_inspector <config_listener_filters_tls_inspector>`
   //   when TLS protocol is detected.
+  option (armeria.xds.supported.field) = 9;
   string transport_protocol = 9;
 
   // If non-empty, a list of application protocols (e.g. ALPN for TLS protocol) to consider when
@@ -195,6 +198,7 @@ message FilterChainMatch {
   //   However, the use of ALPN is pretty much limited to the HTTP/2 traffic on the Internet,
   //   and matching on values other than ``h2`` is going to lead to a lot of false negatives,
   //   unless all connecting clients are known to use ALPN.
+  option (armeria.xds.supported.field) = 10;
   repeated string application_protocols = 10;
 }
 
