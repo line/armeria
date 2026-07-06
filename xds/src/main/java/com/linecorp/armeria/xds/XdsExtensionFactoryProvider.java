@@ -23,7 +23,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <p>Implement this interface and register it via {@link java.util.ServiceLoader} to supply
  * a custom extension factory (HTTP filter, config source, cluster type, etc.) without
- * passing it through {@link XdsBootstrapBuilder#extensionFactories}.
+ * passing it through {@link XdsBootstrapBuilder#extensionFactories(XdsExtensionFactory...)}.
+ *
+ * <p>The returned factory must implement one of the following supported sub-interfaces:
+ * <ul>
+ *   <li>{@link com.linecorp.armeria.xds.filter.HttpFilterFactory}</li>
+ *   <li>{@link com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory}</li>
+ *   <li>{@link com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory}</li>
+ * </ul>
  *
  * <p>Example usage:
  * <pre>{@code
@@ -42,11 +49,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * }</pre>
  */
 @UnstableApi
+@FunctionalInterface
 public interface XdsExtensionFactoryProvider {
 
     /**
      * Creates a new {@link XdsExtensionFactory} instance.
-     * The returned factory may be any subtype of {@link XdsExtensionFactory}, such as
+     * The returned factory must implement one of the supported sub-interfaces:
      * {@link com.linecorp.armeria.xds.filter.HttpFilterFactory},
      * {@link com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory}, or
      * {@link com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory}.

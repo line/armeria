@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * }</pre>
  */
 @UnstableApi
+@FunctionalInterface
 public interface XdsTypeRegistryPackageProvider {
 
     /**
