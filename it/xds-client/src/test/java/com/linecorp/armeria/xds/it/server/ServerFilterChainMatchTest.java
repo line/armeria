@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientTlsSpec;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -266,6 +268,116 @@ class ServerFilterChainMatchTest {
                 RequestOptions.builder().clientTlsSpec(wrongTlsSpec).build()))
                 .isInstanceOf(UnprocessedRequestException.class)
                 .hasCauseInstanceOf(SSLHandshakeException.class);
+    }
+
+    @Test
+    void wildcardServerNameMatch() {
+        final Path certPathA = certA.certificateFile().toPath();
+        final Path keyPathA = certA.privateKeyFile().toPath();
+        final Path certPathDefault = certDefault.certificateFile().toPath();
+        final Path keyPathDefault = certDefault.privateKeyFile().toPath();
+
+        // Chain with wildcard server_names=["*.example.com"] and certA.
+        // Default chain with certDefault.
+        //language=YAML
+        final String yaml =
+                """
+                name: %s
+                filter_chains:
+                  - filter_chain_match:
+                      server_names:
+                        - "*.example.com"
+                      transport_protocol: "tls"
+                    filters:
+                      - name: envoy.filters.network.http_connection_manager
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters\
+                .network.http_connection_manager.v3.HttpConnectionManager
+                          stat_prefix: ingress_http
+                          route_config:
+                            name: local_route
+                            virtual_hosts:
+                              - name: local_service
+                                domains: ["*"]
+                                routes:
+                                  - match:
+                                      prefix: "/"
+                                    non_forwarding_action: {}
+                          http_filters:
+                            - name: envoy.filters.http.router
+                    transport_socket:
+                      name: envoy.transport_sockets.downstream_tls
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.DownstreamTlsContext
+                        common_tls_context:
+                          tls_certificates:
+                            - certificate_chain:
+                                filename: '%s'
+                              private_key:
+                                filename: '%s'
+                default_filter_chain:
+                  filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters\
+                .network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                            - name: local_service
+                              domains: ["*"]
+                              routes:
+                                - match:
+                                    prefix: "/"
+                                  non_forwarding_action: {}
+                        http_filters:
+                          - name: envoy.filters.http.router
+                  transport_socket:
+                    name: envoy.transport_sockets.downstream_tls
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.DownstreamTlsContext
+                      common_tls_context:
+                        tls_certificates:
+                          - certificate_chain:
+                              filename: '%s'
+                            private_key:
+                              filename: '%s'
+                """.formatted(LISTENER_NAME, certPathA, keyPathA, certPathDefault, keyPathDefault);
+        final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
+        controlPlane.awaitListener(LISTENER_NAME, ver);
+
+        final int port = server.httpsPort();
+
+        // SNI "test.example.com" should match "*.example.com" chain → certA
+        final ClientTlsSpec wildcardTlsSpec = ClientTlsSpec.builder()
+                                                            .trustedCertificates(certA.certificate())
+                                                            .endpointIdentificationAlgorithm("")
+                                                            .build();
+        final Endpoint wildcardEndpoint = Endpoint.of("test.example.com", port).withIpAddr("127.0.0.1");
+        final BlockingWebClient wildcardClient =
+                WebClient.builder(SessionProtocol.HTTPS, wildcardEndpoint).build().blocking();
+        final AggregatedHttpResponse wildcardRes = wildcardClient.execute(
+                HttpRequest.of(HttpMethod.GET, "/hello"),
+                RequestOptions.builder().clientTlsSpec(wildcardTlsSpec).build());
+        assertThat(wildcardRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(wildcardRes.contentUtf8()).isEqualTo("hello");
+
+        // SNI "other.net" should NOT match "*.example.com" → default chain → certDefault
+        final ClientTlsSpec defaultTlsSpec = ClientTlsSpec.builder()
+                                                           .trustedCertificates(certDefault.certificate())
+                                                           .endpointIdentificationAlgorithm("")
+                                                           .build();
+        final Endpoint otherEndpoint = Endpoint.of("other.net", port).withIpAddr("127.0.0.1");
+        final BlockingWebClient defaultClient =
+                WebClient.builder(SessionProtocol.HTTPS, otherEndpoint).build().blocking();
+        final AggregatedHttpResponse defaultRes = defaultClient.execute(
+                HttpRequest.of(HttpMethod.GET, "/hello"),
+                RequestOptions.builder().clientTlsSpec(defaultTlsSpec).build());
+        assertThat(defaultRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(defaultRes.contentUtf8()).isEqualTo("hello");
     }
 
     @Test

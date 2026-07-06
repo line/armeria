@@ -168,7 +168,10 @@ final class FilterChainMatcher {
         }
     }
 
-    // Exact-match only; wildcard domain suffix matching (e.g. *.example.com) is not implemented.
+    // Supports exact and wildcard (e.g. *.example.com) server name matching following Envoy's
+    // findFilterChainForServerName semantics: exact match first, then progressively less specific
+    // wildcard suffixes (".example.com" before ".com"), then catch-all (no server_names).
+    // https://github.com/envoyproxy/envoy/blob/74ef415/source/common/listener_manager/filter_chain_manager_impl.cc#L608-L637
     private static final class ServerNamesStep extends NarrowStep {
 
         ServerNamesStep(List<FilterChainSnapshot> allChains) {
@@ -187,13 +190,46 @@ final class FilterChainMatcher {
                 return ImmutableList.of();
             }
             final String normalizedSni = sniHostname.toLowerCase(Locale.ROOT);
-            final ImmutableList.Builder<FilterChainSnapshot> matched = ImmutableList.builder();
+            // exact match
+            final ImmutableList.Builder<FilterChainSnapshot> exactMatched = ImmutableList.builder();
             for (FilterChainSnapshot fcs : specifics) {
                 if (fcs.filterChainMatch().getServerNamesList().contains(normalizedSni)) {
-                    matched.add(fcs);
+                    exactMatched.add(fcs);
                 }
             }
-            return matched.build();
+            final ImmutableList<FilterChainSnapshot> exact = exactMatched.build();
+            if (!exact.isEmpty()) {
+                return exact;
+            }
+            // wildcard match
+            int pos = normalizedSni.indexOf('.', 1);
+            while (pos > 0 && pos < normalizedSni.length() - 1) {
+                final String suffix = normalizedSni.substring(pos);
+                final ImmutableList.Builder<FilterChainSnapshot> wildcardMatched = ImmutableList.builder();
+                for (FilterChainSnapshot fcs : specifics) {
+                    if (hasWildcardServerName(fcs.filterChainMatch().getServerNamesList(), suffix)) {
+                        wildcardMatched.add(fcs);
+                    }
+                }
+                final ImmutableList<FilterChainSnapshot> wildcard = wildcardMatched.build();
+                if (!wildcard.isEmpty()) {
+                    return wildcard;
+                }
+                pos = normalizedSni.indexOf('.', pos + 1);
+            }
+            return ImmutableList.of();
+        }
+
+        // Checks if any server name in the list is a wildcard that matches the given suffix.
+        // e.g., "*.example.com" matches suffix ".example.com" but not ".com".
+        private static boolean hasWildcardServerName(List<String> serverNames, String suffix) {
+            for (String name : serverNames) {
+                if (name.charAt(0) == '*' && name.length() == suffix.length() + 1 &&
+                    name.endsWith(suffix)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

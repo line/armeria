@@ -16,21 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.server.ConnectionContext;
 import com.linecorp.armeria.server.ServerTlsSpec;
 
@@ -75,7 +72,10 @@ final class ServerTlsSpecSelector {
             if (exact != null) {
                 return exact;
             }
-            // Wildcard match: "www.example.com" → ".example.com"
+            // Wildcard match: "www.example.com" → look up ".example.com"
+            // Follows Envoy's DefaultTlsCertificateSelector: strip the first DNS label and
+            // look up the suffix.
+            // https://github.com/envoyproxy/envoy/blob/74ef415/source/common/tls/default_tls_certificate_selector.cc#L254-L260
             final int dotPos = normalizedSni.indexOf('.', 1);
             if (dotPos > 0 && dotPos < normalizedSni.length() - 1) {
                 final ServerTlsSpec wildcard = serverNameMap.get(normalizedSni.substring(dotPos));
@@ -97,47 +97,11 @@ final class ServerTlsSpecSelector {
             }
             final ServerTlsSpec spec = specs.get(i);
             final X509Certificate firstCert = keyPair.certificateChain().get(0);
-            for (String name : extractDnsNames(firstCert)) {
+            for (String name : CertificateUtil.extractDnsNames(firstCert)) {
                 final String key = name.startsWith("*.") ? name.substring(1) : name;
                 nameMap.putIfAbsent(key, spec);
             }
         }
         return ImmutableMap.copyOf(nameMap);
-    }
-
-    // Uses DNS SANs if present; falls back to CN per RFC 6125 §6.4.4.
-    static List<String> extractDnsNames(X509Certificate cert) {
-        final Collection<List<?>> sans;
-        try {
-            sans = cert.getSubjectAlternativeNames();
-        } catch (CertificateParsingException e) {
-            return Exceptions.throwUnsafely(e);
-        }
-        if (sans != null) {
-            final ImmutableList.Builder<String> dnsNames = ImmutableList.builder();
-            for (List<?> san : sans) {
-                if (san.size() >= 2 && Objects.equals(2, san.get(0))) {
-                    dnsNames.add(((String) san.get(1)).toLowerCase(Locale.ROOT));
-                }
-            }
-            return dnsNames.build();
-        }
-        final String cn = extractCn(cert);
-        if (cn != null) {
-            return ImmutableList.of(cn.toLowerCase(Locale.ROOT));
-        }
-        return ImmutableList.of();
-    }
-
-    @Nullable
-    private static String extractCn(X509Certificate cert) {
-        final String dn = cert.getSubjectX500Principal().getName();
-        for (String rdn : dn.split(",")) {
-            final String trimmed = rdn.trim();
-            if (trimmed.toUpperCase(Locale.ROOT).startsWith("CN=")) {
-                return trimmed.substring(3);
-            }
-        }
-        return null;
     }
 }
