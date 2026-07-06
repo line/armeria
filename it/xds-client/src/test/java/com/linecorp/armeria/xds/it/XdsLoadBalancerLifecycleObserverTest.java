@@ -30,6 +30,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -623,8 +626,216 @@ class XdsLoadBalancerLifecycleObserverTest {
         });
     }
 
+    @Test
+    void selectionCounterBasicCase() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(
+                dynamicBootstrapYaml.formatted(server.httpPort()), Bootstrap.class);
+
+        //language=YAML
+        final String listenerYaml =
+                """
+                    name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                    .v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                    """;
+
+        //language=YAML
+        final String clusterYaml =
+                """
+                    name: my-cluster
+                    type: EDS
+                    eds_cluster_config:
+                      eds_config:
+                        ads: {}
+                    """;
+
+        //language=YAML
+        final String endpointYaml =
+                """
+                  cluster_name: my-cluster
+                  endpoints:
+                  - locality:
+                      region: us-east-1
+                      zone: us-east-1a
+                    lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: 127.0.0.1
+                            port_value: %s
+                """.formatted(server.httpPort());
+
+        final Listener listener = XdsResourceReader.fromYaml(listenerYaml, Listener.class);
+        final Cluster cluster = XdsResourceReader.fromYaml(clusterYaml, Cluster.class);
+        final ClusterLoadAssignment endpoint = XdsResourceReader.fromYaml(endpointYaml,
+                                                                          ClusterLoadAssignment.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(endpoint),
+                                                     ImmutableList.of(listener), ImmutableList.of(),
+                                                     ImmutableList.of(), version.toString()));
+
+            try (XdsHttpPreprocessor preprocessor =
+                         XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+                final BlockingWebClient client = WebClient.of(preprocessor).blocking();
+
+                // Send 3 requests
+                for (int i = 0; i < 3; i++) {
+                    assertThat(client.get("/hello").contentUtf8()).isEqualTo("world");
+                }
+
+                // Verify selection counters
+                await().untilAsserted(() -> {
+                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.request"));
+                    assertThat(lbMetrics).containsEntry(
+                            "armeria.xds.lb.request#count" +
+                            "{cluster=my-cluster,priority=0,region=,result=hit,sub_zone=,zone=}",
+                            3.0);
+                });
+            }
+        }
+    }
+
+    @Test
+    void selectionCounterWithSubsets() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(
+                dynamicBootstrapYaml.formatted(server.httpPort()), Bootstrap.class);
+
+        //language=YAML
+        final String listenerYaml =
+                """
+                    name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                    .v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                                  metadata_match:
+                                    filter_metadata:
+                                      "envoy.lb":
+                                        version: v1
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                    """;
+
+        //language=YAML
+        final String clusterYaml =
+                """
+                    name: my-cluster
+                    type: EDS
+                    eds_cluster_config:
+                      eds_config:
+                        ads: {}
+                    lb_subset_config:
+                      fallback_policy: ANY_ENDPOINT
+                      subset_selectors:
+                      - keys:
+                        - version
+                    """;
+
+        //language=YAML
+        final String endpointYaml =
+                """
+                  cluster_name: my-cluster
+                  endpoints:
+                  - lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: 127.0.0.1
+                            port_value: %s
+                      metadata:
+                        filter_metadata:
+                          "envoy.lb":
+                            version: v1
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: 127.0.0.1
+                            port_value: %s
+                      metadata:
+                        filter_metadata:
+                          "envoy.lb":
+                            version: v2
+                """.formatted(server.httpPort(), server.httpPort());
+
+        final Listener listener = XdsResourceReader.fromYaml(listenerYaml, Listener.class);
+        final Cluster cluster = XdsResourceReader.fromYaml(clusterYaml, Cluster.class);
+        final ClusterLoadAssignment endpoint = XdsResourceReader.fromYaml(endpointYaml,
+                                                                          ClusterLoadAssignment.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(endpoint),
+                                                     ImmutableList.of(listener), ImmutableList.of(),
+                                                     ImmutableList.of(), version.toString()));
+
+            try (XdsHttpPreprocessor preprocessor =
+                         XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+                final BlockingWebClient client = WebClient.of(preprocessor).blocking();
+
+                // Send 2 requests - route metadata_match selects subset version=v1
+                for (int i = 0; i < 2; i++) {
+                    assertThat(client.get("/hello").contentUtf8()).isEqualTo("world");
+                }
+
+                // Verify subset selection counter
+                await().untilAsserted(() -> {
+                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.request"));
+                    // Subset counter should record "version=v1"
+                    assertThat(lbMetrics).containsEntry(
+                            "armeria.xds.lb.request.subset#count" +
+                            "{cluster=my-cluster,result=hit,subset=version=v1}",
+                            2.0);
+                    // Priority/locality counter should also be recorded
+                    assertThat(lbMetrics).containsEntry(
+                            "armeria.xds.lb.request#count" +
+                            "{cluster=my-cluster,priority=0,region=,result=hit,sub_zone=,zone=}",
+                            2.0);
+                });
+            }
+        }
+    }
+
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry) {
-        return measureAll(meterRegistry, key -> key.startsWith("armeria.xds.lb"));
+        return measureAll(meterRegistry, key -> key.startsWith("armeria.xds.lb") &&
+                                                !key.contains("lb.request"));
     }
 
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry,

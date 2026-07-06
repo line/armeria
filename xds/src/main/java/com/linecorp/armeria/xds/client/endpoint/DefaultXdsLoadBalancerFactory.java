@@ -42,6 +42,8 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
     private final EventExecutor eventLoop;
     private final Locality locality;
     private final XdsLoadBalancerLifecycleObserver observer;
+    private final LbSelectionRecorder selectionRecorder;
+    private final SubsetSelectionRecorder subsetRecorder;
 
     DefaultXdsLoadBalancerFactory(FactoryContext context, String clusterName) {
         factoryContext = context;
@@ -49,6 +51,10 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
         locality = context.bootstrap().getNode().getLocality();
         observer = new DefaultXdsLoadBalancerLifecycleObserver(
                 context.meterIdPrefix(), context.meterRegistry(), clusterName);
+        selectionRecorder = new LbSelectionRecorder(context.meterRegistry(), context.meterIdPrefix(),
+                                                    clusterName);
+        subsetRecorder = new SubsetSelectionRecorder(context.meterRegistry(),
+                                                     context.meterIdPrefix(), clusterName);
     }
 
     @Override
@@ -161,10 +167,12 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
                         new PriorityStateManager(clusterXdsResource, endpointSnapshot, endpoints).build();
 
                 XdsLoadBalancer loadBalancer =
-                        new DefaultLoadBalancer(prioritySet, locality, localLoadBalancer);
+                        new DefaultLoadBalancer(prioritySet, locality, localLoadBalancer,
+                                                selectionRecorder);
                 if (clusterXdsResource.resource().hasLbSubsetConfig()) {
                     loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer, locality,
-                                                          localLoadBalancer);
+                                                          localLoadBalancer, selectionRecorder,
+                                                          subsetRecorder);
                 }
                 observer.stateUpdated(clusterXdsResource, loadBalancer);
                 watcher.onUpdate(loadBalancer, null);
