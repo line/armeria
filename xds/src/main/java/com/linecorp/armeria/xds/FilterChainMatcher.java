@@ -224,7 +224,7 @@ final class FilterChainMatcher {
         // e.g., "*.example.com" matches suffix ".example.com" but not ".com".
         private static boolean hasWildcardServerName(List<String> serverNames, String suffix) {
             for (String name : serverNames) {
-                if (name.charAt(0) == '*' && name.length() == suffix.length() + 1 &&
+                if (name.length() == suffix.length() + 1 && name.charAt(0) == '*' &&
                     name.endsWith(suffix)) {
                     return true;
                 }
