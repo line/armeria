@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.AbstractAsyncSelector;
@@ -26,11 +28,16 @@ import com.linecorp.armeria.xds.SnapshotWatcher;
 final class RouteConfigSelector extends AbstractAsyncSelector<RouteConfig>
         implements SnapshotWatcher<ListenerSnapshot> {
 
+    private final CompletableFuture<Void> readyFuture = new CompletableFuture<>();
     @Nullable
     private volatile RouteConfig routeConfig;
 
     RouteConfigSelector(ListenerRoot listenerRoot) {
         listenerRoot.addSnapshotWatcher(this);
+    }
+
+    CompletableFuture<Void> whenReady() {
+        return readyFuture;
     }
 
     @Override
@@ -46,5 +53,6 @@ final class RouteConfigSelector extends AbstractAsyncSelector<RouteConfig>
         }
         routeConfig = new RouteConfig(snapshot);
         refresh();
+        readyFuture.complete(null);
     }
 }
