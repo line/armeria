@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.Any;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
@@ -30,10 +31,15 @@ import com.linecorp.armeria.xds.stream.RefCountedStream;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.TransportSocketMatch;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions;
 
 final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
+
+    private static final String HTTP_PROTOCOL_OPTIONS_KEY =
+            "envoy.extensions.upstreams.http.v3.HttpProtocolOptions";
 
     @Nullable
     private final ClusterXdsResource clusterXdsResource;
@@ -103,8 +109,23 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
             lbStream = lbFactory.register(resource, input.transportSocket,
                                           input.transportSocketMatches, null);
         }
-        return lbStream.map(lb -> new ClusterSnapshot(
-                resource, lb, input.transportSocket, input.transportSocketMatches));
+        final HttpProtocolOptions httpProtocolOptions = parseHttpProtocolOptions(resource.resource());
+        return lbStream.map(lb -> {
+            final ClusterFilterFactory factory =
+                    new ClusterFilterFactory(lb, httpProtocolOptions, input.transportSocket);
+            return new ClusterSnapshot(resource, lb, input.transportSocket, input.transportSocketMatches,
+                                       factory);
+        });
+    }
+
+    @Nullable
+    private HttpProtocolOptions parseHttpProtocolOptions(Cluster cluster) {
+        final Any any = cluster.getTypedExtensionProtocolOptionsMap()
+                               .get(HTTP_PROTOCOL_OPTIONS_KEY);
+        if (any == null) {
+            return null;
+        }
+        return context.extensionRegistry().unpack(any, HttpProtocolOptions.class);
     }
 
     private static class TransportSocketMatchesStream

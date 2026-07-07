@@ -18,6 +18,8 @@ package com.linecorp.armeria.xds;
 
 import java.util.Set;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientTlsSpec;
@@ -43,6 +45,9 @@ import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 import com.linecorp.armeria.xds.internal.XdsEndpoint;
+
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions;
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions.ExplicitHttpConfig;
 
 /**
  * A factory which injects cluster-related filters.
@@ -71,12 +76,21 @@ final class ClusterFilterFactory {
 
     private final XdsEndpointGroup endpointGroup;
     private final SessionProtocol sessionProtocol;
+    @Nullable
+    private final HttpProtocolOptions httpProtocolOptions;
 
     ClusterFilterFactory(XdsLoadBalancer loadBalancer,
+                         @Nullable HttpProtocolOptions httpProtocolOptions,
                          TransportSocketSnapshot transportSocket) {
         endpointGroup = XdsEndpointGroup.of(loadBalancer);
-        sessionProtocol = transportSocket.clientTlsSpec() != null ?
-                          SessionProtocol.HTTPS : SessionProtocol.HTTP;
+        this.httpProtocolOptions = httpProtocolOptions;
+        final boolean tls = transportSocket.clientTlsSpec() != null;
+        sessionProtocol = sessionProtocol(tls, httpProtocolOptions);
+    }
+
+    @Nullable
+    HttpProtocolOptions httpProtocolOptions() {
+        return httpProtocolOptions;
     }
 
     HttpPreprocessor httpPreprocessor() {
@@ -148,5 +162,26 @@ final class ClusterFilterFactory {
             clientTlsSpec = clientTlsSpec.toBuilder().alpnProtocols(alpnOverride).build();
         }
         ctx.setClientTlsSpec(clientTlsSpec);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("sessionProtocol", sessionProtocol)
+                          .toString();
+    }
+
+    private static SessionProtocol sessionProtocol(boolean tls,
+                                                   @Nullable HttpProtocolOptions httpProtocolOptions) {
+        if (httpProtocolOptions != null && httpProtocolOptions.hasExplicitHttpConfig()) {
+            final ExplicitHttpConfig explicitConfig = httpProtocolOptions.getExplicitHttpConfig();
+            if (explicitConfig.hasHttp2ProtocolOptions()) {
+                return tls ? SessionProtocol.H2 : SessionProtocol.H2C;
+            }
+            if (explicitConfig.hasHttpProtocolOptions()) {
+                return tls ? SessionProtocol.H1 : SessionProtocol.H1C;
+            }
+        }
+        return tls ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
     }
 }
