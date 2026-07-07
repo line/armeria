@@ -707,9 +707,9 @@ class XdsLoadBalancerLifecycleObserverTest {
 
                 // Verify selection counters
                 await().untilAsserted(() -> {
-                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.request"));
+                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.select"));
                     assertThat(lbMetrics).containsEntry(
-                            "armeria.xds.lb.request#count" +
+                            "armeria.xds.lb.select#count" +
                             "{cluster=my-cluster,priority=0,region=,result=hit,sub_zone=,zone=}",
                             3.0);
                 });
@@ -817,15 +817,15 @@ class XdsLoadBalancerLifecycleObserverTest {
 
                 // Verify subset selection counter
                 await().untilAsserted(() -> {
-                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.request"));
+                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.select"));
                     // Subset counter should record "version=v1"
                     assertThat(lbMetrics).containsEntry(
-                            "armeria.xds.lb.request.subset#count" +
+                            "armeria.xds.lb.select.subset#count" +
                             "{cluster=my-cluster,result=hit,subset=version=v1}",
                             2.0);
                     // Priority/locality counter should also be recorded
                     assertThat(lbMetrics).containsEntry(
-                            "armeria.xds.lb.request#count" +
+                            "armeria.xds.lb.select#count" +
                             "{cluster=my-cluster,priority=0,region=,result=hit,sub_zone=,zone=}",
                             2.0);
                 });
@@ -835,7 +835,7 @@ class XdsLoadBalancerLifecycleObserverTest {
 
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry) {
         return measureAll(meterRegistry, key -> key.startsWith("armeria.xds.lb") &&
-                                                !key.contains("lb.request"));
+                                                !key.contains("lb.select"));
     }
 
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry,

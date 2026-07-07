@@ -44,7 +44,7 @@ final class SubsetSelectionRecorder {
     SubsetSelectionRecorder(MeterRegistry meterRegistry, MeterIdPrefix prefix, String clusterName) {
         this.meterRegistry = meterRegistry;
         this.prefix = prefix.withTags("cluster", clusterName);
-        noMatchCounter = Counter.builder(this.prefix.name("lb.request.subset"))
+        noMatchCounter = Counter.builder(this.prefix.name("lb.select.subset"))
                                 .tags(this.prefix.tags())
                                 .tag("result", "miss")
                                 .tag("subset", "_no_match_")
@@ -65,12 +65,12 @@ final class SubsetSelectionRecorder {
     }
 
     private XdsLoadBalancer createRecordingLoadBalancer(XdsLoadBalancer delegate, String subsetValue) {
-        final Counter hitCounter = Counter.builder(prefix.name("lb.request.subset"))
+        final Counter hitCounter = Counter.builder(prefix.name("lb.select.subset"))
                                               .tags(prefix.tags())
                                               .tag("result", "hit")
                                               .tag("subset", subsetValue)
                                               .register(meterRegistry);
-        final Counter missCounter = Counter.builder(prefix.name("lb.request.subset"))
+        final Counter missCounter = Counter.builder(prefix.name("lb.select.subset"))
                                            .tags(prefix.tags())
                                            .tag("result", "miss")
                                            .tag("subset", subsetValue)

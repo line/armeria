@@ -60,7 +60,7 @@ final class LbSelectionRecorder {
             zone = "";
             subZone = "";
         }
-        return Counter.builder(prefix.name("lb.request"))
+        return Counter.builder(prefix.name("lb.select"))
                       .tags(prefix.tags())
                       .tag("priority", Integer.toString(key.priority))
                       .tag("region", region)
