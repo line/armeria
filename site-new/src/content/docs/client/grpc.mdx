@@ -146,6 +146,17 @@ HelloServiceBlockingStub helloService =
                .build(HelloServiceBlockingStub.class);
 ```
 
+:::warning
+
+Because [RetryingClient](type) operates at the HTTP layer, it cannot see gRPC-level exceptions such as
+`StatusRuntimeException`. Those are thrown by the stub only after the HTTP response has been fully
+received and processed — after the retry decision point. Use `onException()` only for HTTP-layer
+exceptions like [ResponseTimeoutException](type) or [UnprocessedRequestException](type).
+
+To retry based on gRPC status codes, inspect the gRPC trailers instead.
+
+:::
+
 To retry based on gRPC status codes, use [RetryRuleWithContent](type) with
 `onGrpcTrailers()`:
 
