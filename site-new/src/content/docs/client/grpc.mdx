@@ -123,6 +123,59 @@ As you might have noticed already, we decorated the client using [LoggingClient]
 requests and responses. You might be interested in decorating a client using other decorators, for example
 to gather metrics. Please also refer to [ClientBuilder](type) for more configuration options.
 
+## Retrying failed requests
+
+Use [RetryingClient](type) as a decorator to automatically retry failed gRPC requests.
+
+:::note
+
+gRPC clients use HTTP/2 under the hood, so you should use [RetryingClient](type) (HTTP-level),
+not [RetryingRpcClient](type).
+
+:::
+
+For simple cases, [RetryRule.failsafe()](type) retries on connection errors and unprocessed requests:
+
+```java
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
+
+HelloServiceBlockingStub helloService =
+    GrpcClients.builder("http://127.0.0.1:8080/")
+               .decorator(RetryingClient.newDecorator(RetryRule.failsafe()))
+               .build(HelloServiceBlockingStub.class);
+```
+
+To retry based on gRPC status codes, use [RetryRuleWithContent](type) with
+`onGrpcTrailers()`:
+
+```java
+import com.linecorp.armeria.client.retry.RetryRuleWithContent;
+import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+
+import io.grpc.Status;
+
+RetryRuleWithContent<HttpResponse> retryRule =
+    RetryRuleWithContent.<HttpResponse>builder()
+                        .onGrpcTrailers((ctx, trailers) -> {
+                            int grpcStatus = trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1);
+                            return grpcStatus == Status.UNAVAILABLE.getCode().value() ||
+                                   grpcStatus == Status.RESOURCE_EXHAUSTED.getCode().value();
+                        })
+                        .thenBackoff();
+
+HelloServiceBlockingStub helloService =
+    GrpcClients.builder("http://127.0.0.1:8080/")
+               .decorator(RetryingClient.builder(retryRule)
+                                        .newDecorator())
+               .build(HelloServiceBlockingStub.class);
+```
+
+Please refer to [Automatic retry](/docs/client/retry) for more information, including how to configure
+`maxTotalAttempts`, per-attempt timeouts, backoff strategies, and integration with circuit breakers.
+
 ## Exception propagation
 
 If you have enabled `Flags.verboseResponses()` in the server being accessed by specifying
@@ -169,6 +222,7 @@ try {
 
 - [Running a gRPC service](/docs/server/grpc)
 - [Decorating a client](/docs/client/decorator)
+- [Automatic retry](/docs/client/retry)
 - [Sending custom HTTP headers](/docs/client/custom-http-headers)
 - [Calling a gRPC kotlin service](/docs/advanced/kotlin#calling-a-grpc-kotlin-service)
 
