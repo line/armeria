@@ -30,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -355,6 +356,54 @@ public interface HttpRequest extends Request, HttpMessage {
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
         return of(headers, StreamMessage.of(stage, subscriberExecutor));
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} whose body can be reproduced on demand, so that
+     * {@code RetryingClient} and {@code RedirectingClient} can resend it without buffering the whole
+     * body in memory.
+     *
+     * <p>For streaming requests larger than about 2 GiB, buffering the body for replay is neither
+     * possible (an {@code int} size limit is exceeded) nor desirable. Instead, supply a factory that
+     * opens a fresh body {@link StreamMessage} on demand:
+     *
+     * <pre>{@code
+     * final RequestHeaders headers =
+     *         RequestHeaders.of(HttpMethod.POST, "/upload",
+     *                           HttpHeaderNames.CONTENT_TYPE, "application/octet-stream");
+     * final HttpRequest req = HttpRequest.reproducible(headers, () -> StreamMessage.of(path));
+     * final RequestOptions options =
+     *         RequestOptions.builder()
+     *                       .exchangeType(ExchangeType.REQUEST_STREAMING)
+     *                       .build();
+     * client.execute(req, options);
+     * }</pre>
+     *
+     * <p>The {@code bodyFactory} is invoked once per attempt (initial request, retry attempt, or
+     * redirect hop). The fixed {@code headers} are reused for every attempt; the factory regenerates
+     * only the body {@link StreamMessage}, so the request method and headers cannot drift between
+     * attempts. The body each factory invocation produces must match the declared
+     * {@link HttpHeaderNames#CONTENT_LENGTH} (if any), exactly as for any streaming
+     * {@link HttpRequest}.
+     *
+     * <p>Reproducible replay applies only to the outermost duplicating decorator (typically
+     * {@code RetryingClient}). Each attempt handed downstream is an ordinary {@link HttpRequest};
+     * an inner decorator (e.g. a redirect within a single retry attempt) treats it as a normal
+     * request and may buffer it. It is honored for streaming requests
+     * ({@link ExchangeType#isRequestStreaming()}); an aggregated exchange type buffers the body as
+     * usual.
+     *
+     * @param headers the fixed {@link RequestHeaders} reused for every attempt
+     * @param bodyFactory produces a fresh body {@link StreamMessage} for each attempt; it must not
+     *                    return {@code null}
+     */
+    @UnstableApi
+    static HttpRequest reproducible(
+            RequestHeaders headers,
+            Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory) {
+        requireNonNull(headers, "headers");
+        requireNonNull(bodyFactory, "bodyFactory");
+        return new ReproducibleHttpRequest(headers, bodyFactory);
     }
 
     /**

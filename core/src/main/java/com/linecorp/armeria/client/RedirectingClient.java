@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
@@ -61,7 +60,6 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.ClientUtil;
-import com.linecorp.armeria.internal.client.RequestFactoryHttpRequestDuplicator;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.NetUtil;
@@ -144,10 +142,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
         final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
         if (ctx.exchangeType().isRequestStreaming()) {
-            final Supplier<HttpRequest> bodyFactory = ctx.attr(ClientRequestBodyFactory.REQUEST_BODY_FACTORY);
-            final HttpRequestDuplicator reqDuplicator =
-                    bodyFactory != null ? new RequestFactoryHttpRequestDuplicator(req, bodyFactory)
-                                        : req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
+            final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             execute0(ctx, redirectCtx, reqDuplicator, true);
         } else {
             req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
@@ -190,9 +185,12 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return;
         }
 
-        final HttpRequest duplicateReq = reqDuplicator.duplicate();
+        final HttpRequest duplicateReq;
         final ClientRequestContext derivedCtx;
         try {
+            // duplicate() may throw if the request body cannot be reproduced (see
+            // HttpRequest.reproducible); fail the request instead of following the redirect.
+            duplicateReq = reqDuplicator.duplicate();
             derivedCtx = ClientUtil.newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, reqDuplicator, responseFuture, t, initialAttempt);
