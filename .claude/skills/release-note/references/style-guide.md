@@ -159,7 +159,7 @@ Rules:
 - **`🗑 Maybe ignore` section**: Must be fully triaged and removed
 - **Build-only dependencies**: `- Build` sub-section from dependency PRs
 - **Internal refactoring details**: Changes with no user-facing impact
-- **Site/docs dependency bumps**: npm bumps for `site-new/` or `docs-client/` (e.g., webpack, lodash)
+- **Site/docs dependency bumps**: npm bumps for `site/` or `docs-client/` (e.g., webpack, lodash)
 
 ## Type Link Rules
 
