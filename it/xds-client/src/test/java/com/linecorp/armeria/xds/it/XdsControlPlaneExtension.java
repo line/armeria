@@ -121,18 +121,15 @@ public final class XdsControlPlaneExtension extends AbstractAllOrEachExtension {
         final String yaml =
                 """
                 dynamic_resources:
+                  ads_config:
+                    api_type: AGGREGATED_GRPC
+                    grpc_services:
+                      - envoy_grpc:
+                          cluster_name: xds-cluster
                   lds_config:
-                    api_config_source:
-                      api_type: GRPC
-                      grpc_services:
-                        - envoy_grpc:
-                            cluster_name: xds-cluster
+                    ads: {}
                   cds_config:
-                    api_config_source:
-                      api_type: GRPC
-                      grpc_services:
-                        - envoy_grpc:
-                            cluster_name: xds-cluster
+                    ads: {}
                 static_resources:
                   clusters:
                     - name: xds-cluster

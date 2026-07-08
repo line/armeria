@@ -34,10 +34,10 @@ public final class DelegatingRpcClient implements RpcClient, RpcPreClient {
     private static final DelegatingRpcClient INSTANCE = new DelegatingRpcClient();
 
     private static final AttributeKey<Client<RpcRequest, RpcResponse>> CLIENT_DELEGATE_KEY =
-            AttributeKey.valueOf(DelegatingRpcClient.class, "DELEGATE_KEY");
+            AttributeKey.valueOf(DelegatingRpcClient.class, "CLIENT_DELEGATE_KEY");
 
     private static final AttributeKey<PreClient<RpcRequest, RpcResponse>> PRECLIENT_DELEGATE_KEY =
-            AttributeKey.valueOf(DelegatingRpcClient.class, "DELEGATE_KEY");
+            AttributeKey.valueOf(DelegatingRpcClient.class, "PRECLIENT_DELEGATE_KEY");
 
     public static DelegatingRpcClient of() {
         return INSTANCE;

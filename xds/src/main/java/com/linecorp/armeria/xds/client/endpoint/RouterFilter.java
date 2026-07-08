@@ -23,7 +23,7 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.xds.ClusterSnapshot;
-import com.linecorp.armeria.xds.RouteEntry;
+import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 final class RouterFilter<I extends Request, O extends Response> implements Preprocessor<I, O> {
@@ -36,29 +36,17 @@ final class RouterFilter<I extends Request, O extends Response> implements Prepr
 
     @Override
     public O execute(PreClient<I, O> delegate, PreClientRequestContext ctx, I req) throws Exception {
-        final RouteEntry selectedRoute = ctx.attr(XdsCommonUtil.SELECTED_ROUTE);
-        if (selectedRoute == null) {
+        final RouteCluster routeCluster = ctx.attr(XdsCommonUtil.ROUTE_CLUSTER);
+        if (routeCluster == null) {
             final UnprocessedRequestException e = UnprocessedRequestException.of(
                     new IllegalArgumentException(
-                            "SELECTED_ROUTE is not set for the ctx. If a new ctx has been used, " +
+                            "ROUTE_CLUSTER is not set for the ctx. If a new ctx has been used, " +
                             "please make sure to use ctx.newDerivedContext()."));
             ctx.cancel(e);
             throw e;
         }
-        final ClusterSnapshot clusterSnapshot = selectedRoute.clusterSnapshot();
-        if (clusterSnapshot == null) {
-            final UnprocessedRequestException e = UnprocessedRequestException.of(
-                    new IllegalArgumentException("No cluster is specified for selected route '" +
-                                                 selectedRoute + "'."));
-            ctx.cancel(e);
-            throw e;
-        }
-
-        final long responseTimeoutMillis =
-                XdsCommonUtil.durationToMillis(selectedRoute.route().getRoute().getTimeout(), -1);
-        if (responseTimeoutMillis > 0) {
-            ctx.setResponseTimeoutMillis(responseTimeoutMillis);
-        }
+        final ClusterSnapshot clusterSnapshot = routeCluster.clusterSnapshot();
+        ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH, routeCluster.metadataMatch());
 
         @SuppressWarnings("unchecked")
         final Preprocessor<I, O> preprocessor = (Preprocessor<I, O>) (isRpc ?

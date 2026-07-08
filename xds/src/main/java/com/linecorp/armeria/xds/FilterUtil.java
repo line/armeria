@@ -29,6 +29,10 @@ import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpPreClient;
+import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -38,6 +42,8 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
+import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
@@ -47,13 +53,25 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 final class FilterUtil {
 
     static Map<String, Any> mergeFilterConfigs(
-            Map<String, Any> routeConfigFilterConfigs,
-            Map<String, Any> vhostFilterConfigs,
-            Map<String, Any> routeFilterConfigs) {
+            Map<String, Any> first,
+            Map<String, Any> second) {
+        if (second.isEmpty()) {
+            return first;
+        }
         return ImmutableMap.<String, Any>builder()
-                           .putAll(routeConfigFilterConfigs)
-                           .putAll(vhostFilterConfigs)
-                           .putAll(routeFilterConfigs)
+                           .putAll(first)
+                           .putAll(second)
+                           .buildKeepingLast();
+    }
+
+    static Map<String, Any> mergeFilterConfigs(
+            Map<String, Any> first,
+            Map<String, Any> second,
+            Map<String, Any> third) {
+        return ImmutableMap.<String, Any>builder()
+                           .putAll(first)
+                           .putAll(second)
+                           .putAll(third)
                            .buildKeepingLast();
     }
 
@@ -187,6 +205,29 @@ final class FilterUtil {
                       httpFilter.getConfigTypeCase());
         return factory.createStream(httpFilter, filterConfig, factoryContext)
                       .rescheduleEventsOn(factoryContext.eventLoop());
+    }
+
+    static HttpPreClient buildHttpPreClient(ClientPreprocessors downstreamPreprocessors) {
+        return downstreamPreprocessors.decorate(DelegatingHttpClient.of());
+    }
+
+    static RpcPreClient buildRpcPreClient(ClientPreprocessors downstreamPreprocessors) {
+        return downstreamPreprocessors.rpcDecorate(DelegatingRpcClient.of());
+    }
+
+    static HttpClient buildHttpClient(@Nullable ClientDecoration retryDecoration,
+                                      ClientDecoration upstreamDecoration) {
+        HttpClient clusterHttp = ClusterFilterFactory.DECORATION.decorate(
+                upstreamDecoration.decorate(DelegatingHttpClient.of()));
+        if (retryDecoration != null) {
+            clusterHttp = retryDecoration.decorate(clusterHttp);
+        }
+        return clusterHttp;
+    }
+
+    static RpcClient buildRpcClient(ClientDecoration upstreamDecoration) {
+        return ClusterFilterFactory.DECORATION.rpcDecorate(
+                upstreamDecoration.rpcDecorate(DelegatingRpcClient.of()));
     }
 
     private FilterUtil() {}

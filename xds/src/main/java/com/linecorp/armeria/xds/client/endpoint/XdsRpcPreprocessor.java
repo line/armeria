@@ -21,14 +21,12 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreprocessor;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.xds.RouteEntry;
+import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
-import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
  * An {@link RpcPreprocessor} implementation which allows clients to execute requests based on
@@ -62,15 +60,8 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
 
     @Override
     RpcResponse execute1(PreClient<RpcRequest, RpcResponse> delegate, PreClientRequestContext ctx,
-                         RpcRequest req, RouteConfig routeConfig) throws Exception {
-        final RouteEntry selectedRoute = routeConfig.select(ctx);
-        if (selectedRoute == null) {
-            throw UnprocessedRequestException.of(
-                    new IllegalArgumentException("No route for listener '" +
-                                                 routeConfig.listenerSnapshot() + "'."));
-        }
-        ctx.setAttr(XdsCommonUtil.SELECTED_ROUTE, selectedRoute);
+                         RpcRequest req, RouteCluster routeCluster) throws Exception {
         DelegatingRpcClient.setDelegate(ctx, delegate);
-        return selectedRoute.rpcPreClient().execute(ctx, req);
+        return routeCluster.rpcPreClient().execute(ctx, req);
     }
 }

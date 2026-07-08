@@ -33,9 +33,9 @@ public final class DelegatingHttpClient implements HttpClient, HttpPreClient {
     private static final DelegatingHttpClient INSTANCE = new DelegatingHttpClient();
 
     private static final AttributeKey<Client<HttpRequest, HttpResponse>> CLIENT_DELEGATE_KEY =
-            AttributeKey.valueOf(DelegatingHttpClient.class, "DELEGATE_KEY");
+            AttributeKey.valueOf(DelegatingHttpClient.class, "CLIENT_DELEGATE_KEY");
     private static final AttributeKey<PreClient<HttpRequest, HttpResponse>> PRECLIENT_DELEGATE_KEY =
-            AttributeKey.valueOf(DelegatingHttpClient.class, "DELEGATE_KEY");
+            AttributeKey.valueOf(DelegatingHttpClient.class, "PRECLIENT_DELEGATE_KEY");
 
     public static DelegatingHttpClient of() {
         return INSTANCE;
