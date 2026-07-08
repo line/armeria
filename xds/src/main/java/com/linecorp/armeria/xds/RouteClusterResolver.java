@@ -39,8 +39,8 @@ final class RouteClusterResolver {
     private final SimpleLoadBalancer<WeightedClusterSnapshot> loadBalancer;
 
     private RouteClusterResolver(@Nullable RouteCluster singleCluster,
-                            @Nullable List<WeightedClusterSnapshot> weightedClusters,
-                            @Nullable SimpleLoadBalancer<WeightedClusterSnapshot> loadBalancer) {
+                                 @Nullable List<WeightedClusterSnapshot> weightedClusters,
+                                 @Nullable SimpleLoadBalancer<WeightedClusterSnapshot> loadBalancer) {
         this.singleCluster = singleCluster;
         this.weightedClusters = weightedClusters;
         this.loadBalancer = loadBalancer;
@@ -54,7 +54,7 @@ final class RouteClusterResolver {
     static RouteClusterResolver ofWeighted(List<WeightedClusterSnapshot> weightedClusters) {
         requireNonNull(weightedClusters, "weightedClusters");
         return new RouteClusterResolver(null, weightedClusters,
-                                   LoadBalancer.ofWeightedRoundRobin(weightedClusters));
+                                        LoadBalancer.ofWeightedRoundRobin(weightedClusters));
     }
 
     static RouteClusterResolver empty() {
