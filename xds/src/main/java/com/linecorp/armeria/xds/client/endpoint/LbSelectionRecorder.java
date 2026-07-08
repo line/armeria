@@ -29,8 +29,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 final class LbSelectionRecorder {
 
-    private static final String RESULT_HIT = "hit";
-    private static final String RESULT_MISS = "miss";
+    static final String RESULT_HIT = "hit";
+    static final String RESULT_MISS = "miss";
+    static final String RESULT_NO_ENDPOINTS = "no_endpoints";
+    static final String RESULT_NO_HOST_SOURCE = "no_host_source";
 
     private final MeterIdPrefix prefix;
     private final MeterRegistry meterRegistry;
@@ -42,7 +44,11 @@ final class LbSelectionRecorder {
     }
 
     void record(int priority, @Nullable Locality locality, @Nullable Endpoint endpoint) {
-        requestCounters.computeIfAbsent(RequestKey.of(priority, locality, endpoint != null),
+        record(priority, locality, endpoint != null ? RESULT_HIT : RESULT_MISS);
+    }
+
+    void record(int priority, @Nullable Locality locality, String result) {
+        requestCounters.computeIfAbsent(RequestKey.of(priority, locality, result),
                                         this::createRequestCounter)
                        .increment();
     }
@@ -65,7 +71,7 @@ final class LbSelectionRecorder {
                       .tag("priority", Integer.toString(key.priority))
                       .tag("region", region)
                       .tag("result", key.result)
-                      .tag("sub_zone", subZone)
+                      .tag("sub.zone", subZone)
                       .tag("zone", zone)
                       .register(meterRegistry);
     }
@@ -79,11 +85,16 @@ final class LbSelectionRecorder {
         final Locality locality;
         final String result;
 
-        static RequestKey of(int priority, @Nullable Locality locality, boolean hit) {
+        static RequestKey of(int priority, @Nullable Locality locality, String result) {
             if (priority == 0 && locality == null) {
-                return hit ? PRIORITY_0_HIT : PRIORITY_0_MISS;
+                if (RESULT_HIT.equals(result)) {
+                    return PRIORITY_0_HIT;
+                }
+                if (RESULT_MISS.equals(result)) {
+                    return PRIORITY_0_MISS;
+                }
             }
-            return new RequestKey(priority, locality, hit ? RESULT_HIT : RESULT_MISS);
+            return new RequestKey(priority, locality, result);
         }
 
         private RequestKey(int priority, @Nullable Locality locality, String result) {

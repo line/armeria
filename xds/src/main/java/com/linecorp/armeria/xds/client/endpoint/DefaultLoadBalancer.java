@@ -66,6 +66,7 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
     public Endpoint selectNow(ClientRequestContext ctx) {
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
+            selectionRecorder.record(-1, null, LbSelectionRecorder.RESULT_NO_ENDPOINTS);
             return null;
         }
         XdsRandom random = ctx.attr(XdsAttributeKeys.XDS_RANDOM);
@@ -74,6 +75,7 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
         }
         final HostsSource hostsSource = hostSourceToUse(lbState, random, localityRoutingState);
         if (hostsSource == null) {
+            selectionRecorder.record(-1, null, LbSelectionRecorder.RESULT_NO_HOST_SOURCE);
             return null;
         }
         final HostSet hostSet = prioritySet.hostSets().get(hostsSource.priority);

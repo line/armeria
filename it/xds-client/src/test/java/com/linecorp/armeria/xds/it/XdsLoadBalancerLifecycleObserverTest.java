@@ -165,11 +165,11 @@ class XdsLoadBalancerLifecycleObserverTest {
                                 .put("armeria.xds.lb.state.rejected.count#count{cluster=my-cluster}", 0.0)
                                 // Membership metrics
                                 .put("armeria.xds.lb.membership.healthy#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 1.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 1.0)
                                 .put("armeria.xds.lb.membership.total#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 1.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 1.0)
                                 .put("armeria.xds.lb.membership.degraded#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 0.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 0.0)
                                 // Load balancer state metrics
                                 .put("armeria.xds.lb.state.load.degraded#value" +
                                      "{cluster=my-cluster,priority=0}", 0.0)
@@ -179,11 +179,11 @@ class XdsLoadBalancerLifecycleObserverTest {
                                 .put("armeria.xds.lb.state.subsets#value{cluster=my-cluster}", 0.0)
                                 // Locality and zone metrics
                                 .put("armeria.xds.lb.locality.weight#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 0.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 0.0)
                                 .put("armeria.xds.lb.zar.local.percentage#value" +
                                      "{cluster=my-cluster,priority=0}", 0.0)
                                 .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 0.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 0.0)
                                 .build());
             });
         }
@@ -548,33 +548,33 @@ class XdsLoadBalancerLifecycleObserverTest {
                     // Priority 0 locality-specific membership metrics
                     assertThat(lbMetrics).containsAllEntriesOf(ImmutableMap.<String, Double>builder()
                             .put("armeria.xds.lb.membership.healthy#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.total#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 2.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 2.0)
                             .put("armeria.xds.lb.membership.degraded#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.healthy#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.total#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.degraded#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 0.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 0.0)
                             .put("armeria.xds.lb.membership.healthy#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.total#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.degraded#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 0.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 0.0)
                             .build());
 
                     // Priority 1 locality-specific membership metrics (us-west-2: 1 healthy endpoint)
                     assertThat(lbMetrics).containsAllEntriesOf(ImmutableMap.of(
                             "armeria.xds.lb.membership.healthy#value" +
-                            "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 1.0,
+                            "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 1.0,
                             "armeria.xds.lb.membership.total#value" +
-                            "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 1.0,
+                            "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 1.0,
                             "armeria.xds.lb.membership.degraded#value" +
-                            "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 0.0
+                            "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 0.0
                     ));
 
                     // Verify load balancer state metrics per priority
@@ -594,14 +594,14 @@ class XdsLoadBalancerLifecycleObserverTest {
                     assertThat(lbMetrics).containsAllEntriesOf(ImmutableMap.<String, Double>builder()
                             // Priority 0 locality weights (actual values from test output)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 50.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 50.0)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 200.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 200.0)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 200.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 200.0)
                             // Priority 1 locality weight (weight=300 for us-west-2)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 300.0)
+                                 "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 300.0)
                             .build());
 
                     // Zone-aware routing (ZAR) metrics
@@ -609,11 +609,11 @@ class XdsLoadBalancerLifecycleObserverTest {
                             .put("armeria.xds.lb.zar.local.percentage#value" +
                                  "{cluster=my-cluster,priority=0}", 0.5)
                             .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 0.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 0.0)
                             .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 0.5)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 0.5)
                             .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 0.5)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 0.5)
                             .build());
                 });
             }
@@ -710,7 +710,7 @@ class XdsLoadBalancerLifecycleObserverTest {
                     final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.select"));
                     assertThat(lbMetrics).containsEntry(
                             "armeria.xds.lb.select#count" +
-                            "{cluster=my-cluster,priority=0,region=,result=hit,sub_zone=,zone=}",
+                            "{cluster=my-cluster,priority=0,region=,result=hit,sub.zone=,zone=}",
                             3.0);
                 });
             }
@@ -826,7 +826,7 @@ class XdsLoadBalancerLifecycleObserverTest {
                     // Priority/locality counter should also be recorded
                     assertThat(lbMetrics).containsEntry(
                             "armeria.xds.lb.select#count" +
-                            "{cluster=my-cluster,priority=0,region=,result=hit,sub_zone=,zone=}",
+                            "{cluster=my-cluster,priority=0,region=,result=hit,sub.zone=,zone=}",
                             2.0);
                 });
             }
