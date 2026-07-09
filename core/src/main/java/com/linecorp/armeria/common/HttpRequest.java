@@ -368,6 +368,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * opens a fresh body {@link StreamMessage} on demand:
      *
      * <pre>{@code
+     * final Path path = Paths.get("/tmp/large-upload.bin");
      * final RequestHeaders headers =
      *         RequestHeaders.of(HttpMethod.POST, "/upload",
      *                           HttpHeaderNames.CONTENT_TYPE, "application/octet-stream");

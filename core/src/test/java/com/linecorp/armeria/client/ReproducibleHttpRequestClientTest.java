@@ -239,5 +239,7 @@ class ReproducibleHttpRequestClientTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("redir-body");
+        // Body regenerated for the initial request and the redirected hop.
+        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
     }
 }
