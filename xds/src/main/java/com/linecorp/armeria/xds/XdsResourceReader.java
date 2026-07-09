@@ -84,6 +84,7 @@ public final class XdsResourceReader {
                     "io.envoyproxy",
                     "com.github.udpa",
                     "com.github.xds",
+                    "com.linecorp.armeria.xds.api",
             };
             for (String pkg : defaultPackages) {
                 addPackage(pkg, configuration, filterBuilder);

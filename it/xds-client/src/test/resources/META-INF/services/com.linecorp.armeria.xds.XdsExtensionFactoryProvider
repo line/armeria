@@ -1,2 +1,3 @@
+com.linecorp.armeria.xds.it.athenz.AthenzAccessTokenFilterFactoryProvider
 com.linecorp.armeria.xds.it.TestXdsExtensionFactoryProvider$ClusterType
 com.linecorp.armeria.xds.it.TestXdsExtensionFactoryProvider$ConfigSource

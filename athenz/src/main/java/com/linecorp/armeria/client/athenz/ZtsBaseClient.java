@@ -19,30 +19,14 @@ package com.linecorp.armeria.client.athenz;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.net.URL;
-import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
-import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryingClient;
-import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.LogWriter;
-import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.athenz.AthenzService;
 
@@ -61,12 +45,12 @@ import com.linecorp.armeria.server.athenz.AthenzService;
  * }</pre>
  */
 @UnstableApi
-public final class ZtsBaseClient implements SafeCloseable {
+public interface ZtsBaseClient extends SafeCloseable {
 
     /**
      * Returns a new {@link ZtsBaseClientBuilder} for the specified ZTS URI.
      */
-    public static ZtsBaseClientBuilder builder(String ztsUri) {
+    static ZtsBaseClientBuilder builder(String ztsUri) {
         requireNonNull(ztsUri, "ztsUri");
         return builder(URI.create(ztsUri));
     }
@@ -74,7 +58,7 @@ public final class ZtsBaseClient implements SafeCloseable {
     /**
      * Returns a new {@link ZtsBaseClientBuilder} for the specified ZTS {@link URI}.
      */
-    public static ZtsBaseClientBuilder builder(URI ztsUri) {
+    static ZtsBaseClientBuilder builder(URI ztsUri) {
         requireNonNull(ztsUri, "ztsUri");
         return new ZtsBaseClientBuilder(normalizeZtsUri(ztsUri));
     }
@@ -91,120 +75,59 @@ public final class ZtsBaseClient implements SafeCloseable {
         return URI.create(rawUri);
     }
 
-    private final TlsKeyPairListener tlsKeyPairListener = new TlsKeyPairListener();
-    private final URI ztsUri;
-    @Nullable
-    private final URI proxyUri;
-    private final ClientFactory clientFactory;
-    @Nullable
-    private final Consumer<WebClientBuilder> webClientConfigurer;
-    private final WebClient defaultWebClient;
-
-    ZtsBaseClient(URI ztsUri, @Nullable URI proxyUri, Supplier<TlsKeyPair> keyPairSupplier,
-                  List<X509Certificate> trustedCertificates, int autoKeyRefreshIntervalMillis,
-                  @Nullable Consumer<ClientFactoryBuilder> clientFactoryConfigurer,
-                  @Nullable Consumer<WebClientBuilder> webClientConfigurer) {
-
-        this.ztsUri = ztsUri;
-        this.proxyUri = proxyUri;
-        final TlsProvider tlsProvider =
-                TlsProvider.ofScheduled(keyPairSupplier,
-                                        trustedCertificates,
-                                        tlsKeyPairListener::onTlsKeyPairUpdated,
-                                        Duration.ofMillis(autoKeyRefreshIntervalMillis),
-                                        CommonPools.blockingTaskExecutor());
-
-        final ClientFactoryBuilder factoryBuilder = ClientFactory.builder().tlsProvider(tlsProvider);
-        if (clientFactoryConfigurer != null) {
-            clientFactoryConfigurer.accept(factoryBuilder);
-        }
-        clientFactory = factoryBuilder.build();
-        this.webClientConfigurer = webClientConfigurer;
-        defaultWebClient = webClient(builder -> {});
+    /**
+     * Returns the ZTS {@link URI} that this client connects to.
+     *
+     * @deprecated Use {@code webClient().uri()} instead.
+     */
+    @Deprecated
+    default URI ztsUri() {
+        return webClient().uri();
     }
 
     /**
-     * Returns the ZTS {@link URL} that this client connects to.
+     * Returns the proxy {@link URI} if it was configured, or {@code null} if no proxy is set.
+     *
+     * @deprecated The proxy is configured at the {@link ClientFactory} level via
+     *             {@link ZtsBaseClientBuilder#proxyUri(URI)} and is already applied to the {@link WebClient}.
      */
-    public URI ztsUri() {
-        return ztsUri;
-    }
-
-    /**
-     * Returns the proxy {@link URL} if it was configured, or {@code null} if no proxy is set.
-     */
+    @Deprecated
     @Nullable
-    public URI proxyUri() {
-        return proxyUri;
+    default URI proxyUri() {
+        return null;
     }
 
     /**
      * Returns the {@link ClientFactory} that is used to create the {@link WebClient} instances.
      */
-    public ClientFactory clientFactory() {
-        return clientFactory;
+    default ClientFactory clientFactory() {
+        return webClient().options().factory();
     }
 
     /**
      * Returns the {@link WebClient} that can connect to the ZTS server.
      */
-    public WebClient webClient() {
-        return defaultWebClient;
-    }
+    WebClient webClient();
 
     /**
      * Returns a new {@link WebClient} that can connect to the ZTS server with the specified configurer.
      */
-    public WebClient webClient(Consumer<? super WebClientBuilder> configurer) {
+    default WebClient webClient(Consumer<? super WebClientBuilder> configurer) {
         requireNonNull(configurer, "configurer");
-
-        final WebClientBuilder clientBuilder =
-                WebClient.builder(ztsUri)
-                         .decorator(RetryingClient.newDecorator(RetryRule.failsafe()));
-
-        clientBuilder.factory(clientFactory);
-
-        if (LoggerFactory.getLogger(ZtsBaseClient.class).isTraceEnabled()) {
-            final LogWriter logWriter = LogWriter.builder()
-                                                 .logger(ZtsBaseClient.class.getName())
-                                                 .requestLogLevel(LogLevel.TRACE)
-                                                 .successfulResponseLogLevel(LogLevel.TRACE)
-                                                 .build();
-            clientBuilder.decorator(LoggingClient.builder()
-                                                 .logWriter(logWriter)
-                                                 .newDecorator());
-        }
-        if (webClientConfigurer != null) {
-            webClientConfigurer.accept(clientBuilder);
-        }
-        configurer.accept(clientBuilder);
-        return clientBuilder.build();
+        return webClient();
     }
 
     /**
      * Adds a listener that will be notified when the {@link TlsKeyPair} is updated.
      */
-    public void addTlsKeyPairListener(Consumer<TlsKeyPair> listener) {
+    default void addTlsKeyPairListener(Consumer<TlsKeyPair> listener) {
         requireNonNull(listener, "listener");
-        tlsKeyPairListener.addListener(listener);
     }
 
     /**
      * Removes a listener that was previously added with {@link #addTlsKeyPairListener(Consumer)}.
      */
-    public void removeTlsKeyPairListener(Consumer<TlsKeyPair> listener) {
+    default void removeTlsKeyPairListener(Consumer<TlsKeyPair> listener) {
         requireNonNull(listener, "listener");
-        tlsKeyPairListener.removeListener(listener);
-    }
-
-    @Override
-    public void close() {
-        defaultWebClient.options().factory().closeAsync();
-    }
-
-    private static final class TlsKeyPairListener extends AbstractListenable<TlsKeyPair> {
-        void onTlsKeyPairUpdated(TlsKeyPair newTlsKeyPair) {
-            notifyListeners(newTlsKeyPair);
-        }
     }
 }
