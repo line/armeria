@@ -1028,6 +1028,7 @@ message Cluster {
   // specific options.
   // [#next-major-version: make this a list of typed extensions.]
   // [#extension-category: envoy.upstream_options]
+  option (armeria.xds.supported.field) = 36;
   map<string, google.protobuf.Any> typed_extension_protocol_options = 36;
 
   // If the DNS refresh rate is specified and the cluster type is either
