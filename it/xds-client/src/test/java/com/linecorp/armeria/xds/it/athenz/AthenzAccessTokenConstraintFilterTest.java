@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds.it.athenz;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
 import java.net.URI;
 
 import org.junit.jupiter.api.Order;
@@ -74,7 +75,8 @@ class AthenzAccessTokenConstraintFilterTest {
 
     @RegisterExtension
     @Order(1)
-    static final AthenzExtension athenz = new AthenzExtension();
+    static final AthenzExtension athenz =
+            new AthenzExtension(new File("gen-src/test/resources/docker/docker-compose.yml"));
 
     @RegisterExtension
     @Order(2)
