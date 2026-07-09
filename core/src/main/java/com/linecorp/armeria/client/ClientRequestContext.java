@@ -628,10 +628,20 @@ public interface ClientRequestContext extends RequestContext {
     ClientTlsSpec clientTlsSpec();
 
     /**
-     * Sets the request-specific TLS configuration.
+     * Sets the request-specific TLS configuration and ensures the {@link SessionProtocol}
+     * is a TLS variant. If the current session protocol is not TLS, it will be switched
+     * to the equivalent TLS variant (e.g. {@code HTTP} to {@code HTTPS}, {@code H2C} to {@code H2}).
      */
     @UnstableApi
     void setClientTlsSpec(ClientTlsSpec clientTlsSpec);
+
+    /**
+     * Clears the request-specific TLS configuration and ensures the {@link SessionProtocol}
+     * is a non-TLS variant. If the current session protocol uses TLS, it will be switched
+     * to the equivalent cleartext variant (e.g. {@code HTTPS} to {@code HTTP}, {@code H2} to {@code H2C}).
+     */
+    @UnstableApi
+    void clearClientTlsSpec();
 
     /**
      * Returns the local address that was requested to be bound when making a connection for this request.

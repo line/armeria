@@ -444,6 +444,113 @@ class DefaultClientRequestContextTest {
         assertThat(ctxWithNoChannel.toString()).isSameAs(strWithParentLog);
     }
 
+    @Test
+    void setSessionProtocolAfterInit_updatesSchemeAndUri() {
+        // Create a context with HTTP, init it, then switch to HTTPS.
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request,
+                                                           Endpoint.of("example.com", 8080));
+        ctx.init().join();
+
+        // Before: HTTP
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.H2C);
+        assertThat(ctx.uri().getScheme()).isEqualTo("http");
+        assertThat(ctx.internalRequestHeaders().get(HttpHeaderNames.SCHEME)).isEqualTo("http");
+
+        // Switch to HTTPS after init
+        ctx.setSessionProtocol(SessionProtocol.HTTPS);
+
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+        assertThat(ctx.uri().getScheme()).isEqualTo("https");
+        assertThat(ctx.uri().toString()).startsWith("https://example.com:8080/foo");
+        assertThat(ctx.internalRequestHeaders().get(HttpHeaderNames.SCHEME)).isEqualTo("https");
+    }
+
+    @Test
+    void setSessionProtocolAfterInit_updatesOriginHeader() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final ClientOptions options = ClientOptions.builder()
+                                                    .option(ClientOptions.AUTO_FILL_ORIGIN_HEADER, true)
+                                                    .build();
+        final DefaultClientRequestContext ctx = newContext(options, request,
+                                                           Endpoint.of("example.com", 8080));
+        ctx.init().join();
+
+        // Before: Origin uses http
+        assertThat(ctx.internalRequestHeaders().get(HttpHeaderNames.ORIGIN))
+                .isEqualTo("http://example.com:8080");
+
+        // Switch to HTTPS
+        ctx.setSessionProtocol(SessionProtocol.HTTPS);
+
+        assertThat(ctx.internalRequestHeaders().get(HttpHeaderNames.ORIGIN))
+                .isEqualTo("https://example.com:8080");
+    }
+
+    @Test
+    void setSessionProtocolAfterInit_derivedContextInheritsUpdatedProtocol() {
+        final DefaultClientRequestContext ctx = newContext();
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.H2C);
+
+        // Switch to HTTPS
+        ctx.setSessionProtocol(SessionProtocol.HTTPS);
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+
+        // Derived context should inherit the updated protocol
+        final ClientRequestContext derived = ctx.newDerivedContext(
+                RequestId.random(), ctx.request(), null, ctx.endpoint());
+        assertThat(derived.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+    }
+
+    @Test
+    void setSessionProtocolBeforeInit_noHeaderRecomputation() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request,
+                                                           Endpoint.of("example.com", 8080));
+
+        // Before init, the internal headers should not contain :scheme from endpoint
+        // because updateEndpoint hasn't been called yet.
+        assertThat(ctx.initializationTriggered()).isFalse();
+        ctx.setSessionProtocol(SessionProtocol.HTTPS);
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+
+        // After init, the headers should reflect HTTPS
+        ctx.init().join();
+        assertThat(ctx.internalRequestHeaders().get(HttpHeaderNames.SCHEME)).isEqualTo("https");
+        assertThat(ctx.uri().getScheme()).isEqualTo("https");
+    }
+
+    @Test
+    void setSessionProtocolAfterInit_httpToHttpsAndBack() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request,
+                                                           Endpoint.of("example.com", 8080));
+        ctx.init().join();
+        assertThat(ctx.sessionProtocol().isTls()).isFalse();
+
+        // HTTP -> HTTPS
+        ctx.setSessionProtocol(SessionProtocol.HTTPS);
+        assertThat(ctx.sessionProtocol().isTls()).isTrue();
+        assertThat(ctx.uri().getScheme()).isEqualTo("https");
+
+        // HTTPS -> HTTP
+        ctx.setSessionProtocol(SessionProtocol.HTTP);
+        assertThat(ctx.sessionProtocol().isTls()).isFalse();
+        assertThat(ctx.uri().getScheme()).isEqualTo("http");
+    }
+
     private static void mutateAdditionalHeaders(ClientRequestContext originalCtx) {
         final HttpHeaders headers1 = HttpHeaders.of(HttpHeaderNames.of("my-header#1"), "value#1");
         originalCtx.mutateAdditionalRequestHeaders(mutator -> mutator.add(headers1));
