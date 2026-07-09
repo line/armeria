@@ -18,6 +18,9 @@ package com.yahoo.athenz.auth.token.jwts;
 
 import javax.net.ssl.SSLContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.nimbusds.jose.util.ResourceRetriever;
 
 import com.linecorp.armeria.client.WebClient;
@@ -33,6 +36,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class ArmeriaJwtsSigningKeyResolver extends JwtsSigningKeyResolver {
+
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaJwtsSigningKeyResolver.class);
 
     private static final ThreadLocal<ArmeriaResourceRetriever> INIT_RETRIEVER = new ThreadLocal<>();
 
@@ -62,6 +67,8 @@ public final class ArmeriaJwtsSigningKeyResolver extends JwtsSigningKeyResolver 
         if (retriever != null) {
             return retriever;
         }
+        logger.warn("ArmeriaResourceRetriever is not available. " +
+                     "Falling back to the default resource retriever.");
         return super.getResourceRetriever(proxyUrl, sslContext);
     }
 }

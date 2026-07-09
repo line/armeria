@@ -112,10 +112,7 @@ public interface ZtsBaseClient extends SafeCloseable {
     /**
      * Returns a new {@link WebClient} that can connect to the ZTS server with the specified configurer.
      */
-    default WebClient webClient(Consumer<? super WebClientBuilder> configurer) {
-        requireNonNull(configurer, "configurer");
-        return webClient();
-    }
+    WebClient webClient(Consumer<? super WebClientBuilder> configurer);
 
     /**
      * Adds a listener that will be notified when the {@link TlsKeyPair} is updated.

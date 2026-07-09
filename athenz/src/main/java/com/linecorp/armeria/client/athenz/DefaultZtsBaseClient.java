@@ -97,9 +97,9 @@ final class DefaultZtsBaseClient implements ZtsBaseClient {
 
         clientBuilder.factory(clientFactory);
 
-        if (LoggerFactory.getLogger(DefaultZtsBaseClient.class).isTraceEnabled()) {
+        if (LoggerFactory.getLogger(ZtsBaseClient.class).isTraceEnabled()) {
             final LogWriter logWriter = LogWriter.builder()
-                                                 .logger(DefaultZtsBaseClient.class.getName())
+                                                 .logger(ZtsBaseClient.class.getName())
                                                  .requestLogLevel(LogLevel.TRACE)
                                                  .successfulResponseLogLevel(LogLevel.TRACE)
                                                  .build();
@@ -128,7 +128,7 @@ final class DefaultZtsBaseClient implements ZtsBaseClient {
 
     @Override
     public void close() {
-        defaultWebClient.options().factory().closeAsync();
+        clientFactory.closeAsync();
     }
 
     private static final class TlsKeyPairListener extends AbstractListenable<TlsKeyPair> {
