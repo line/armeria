@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.yahoo.athenz.auth.token.jwts.ArmeriaJwtsSigningKeyResolver;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
@@ -34,8 +35,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import com.yahoo.athenz.auth.token.jwts.ArmeriaJwtsSigningKeyResolver;
 
 class ArmeriaJwtsSigningKeyResolverTest {
 
