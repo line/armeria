@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package jp.co.lycorp.ftd.athenz.v1;
+
+import "validate/validate.proto";
+import "envoy/type/matcher/v3/string.proto";
+
+// Athenz authorization metadata carried in xDS filter_metadata under the
+// jp.co.lycorp.ftd.athenz.v1 namespace.
+// - AccessTokenTarget     (outbound): which domain/roles to fetch a token for.
+// - AccessTokenConstraint (inbound):  which domain to evaluate, plus an optional
+//                                     per-request action/resource mapping.
+
+// Request attributes usable in inbound mapping conditions and templates.
+// HTTP-level only: these are available to both a proxy and a library client.
+// Connection-level attributes (protocol/port/SNI/ALPN) are excluded because a
+// library data plane cannot supply them.
+enum WellKnownEndpointAttribute {
+  WELL_KNOWN_ENDPOINT_ATTRIBUTE_UNSPECIFIED = 0;
+  WELL_KNOWN_ENDPOINT_ATTRIBUTE_HOST = 1;          // :authority
+  WELL_KNOWN_ENDPOINT_ATTRIBUTE_METHOD = 2;        // :method
+  WELL_KNOWN_ENDPOINT_ATTRIBUTE_PATH = 3;          // :path, no query
+  // 4 was QUERY_STRING; deferred. Query attributes are out of v1 scope.
+}
+
+message EndpointAttribute {
+  oneof attribute {
+    option (validate.required) = true;
+    WellKnownEndpointAttribute well_known = 1
+    [(validate.rules).enum = {defined_only: true not_in: 0}];
+    // Implementation-specific attribute name, documented per syntax_version.
+    string custom = 2 [(validate.rules).string = {min_len: 1}];
+  }
+}
+
+// Placeholders: ${host|method|path}, ${custom.<name>},
+// ${match.<name>.<index>}; $$ is a literal $. Unknown or missing -> rule fails.
+message StringTemplate {
+  string template = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message MappingString {
+  oneof string_specifier {
+    option (validate.required) = true;
+    string literal = 1 [(validate.rules).string = {min_len: 1}];
+    StringTemplate template = 2 [(validate.rules).message = {required: true}];
+  }
+}
+
+message EndpointAttributeMatch {
+  // Capture namespace referenced from templates as ${match.<name>.<index>}.
+  string name = 1;
+  EndpointAttribute attribute = 2 [(validate.rules).message = {required: true}];
+  envoy.type.matcher.v3.StringMatcher matcher = 3
+  [(validate.rules).message = {required: true}];
+}
+
+// All conditions must match (empty = match all); rules are tried in order,
+// first match wins.
+message AssertionMappingRule {
+  string name = 1;
+  repeated EndpointAttributeMatch conditions = 2;
+  MappingString action = 3 [(validate.rules).message = {required: true}];
+  MappingString resource = 4 [(validate.rules).message = {required: true}];
+}
+
+// No matching rule, or a rule whose action/resource fails to resolve -> deny.
+message AssertionMapping {
+  repeated AssertionMappingRule rules = 1
+  [(validate.rules).repeated = {min_items: 1}];
+}
+
+// Outbound: token to acquire for a destination. Static per cluster; routing
+// selects the cluster, so there is no per-request mapping here.
+message AccessTokenTarget {
+  string target_domain = 1 [(validate.rules).string = {min_len: 1}];
+  // Roles included in the token scope; usually one.
+  repeated string target_roles = 2
+  [(validate.rules).repeated = {min_items: 1, items {string {min_len: 1}}}];
+  // Consumers reject versions they do not implement.
+  uint32 syntax_version = 3 [(validate.rules).uint32 = {gte: 1}];
+}
+
+// Inbound: token evaluation for a listener.
+message AccessTokenConstraint {
+  string constraint_domain = 1 [(validate.rules).string = {min_len: 1}];
+  uint32 syntax_version = 2 [(validate.rules).uint32 = {gte: 1}];
+  // Optional explicit rules for (action, resource). When unset, the default
+  // mapping applies: action = lower(method), resource = request path.
+  AssertionMapping assertion_mapping = 3;
+}
