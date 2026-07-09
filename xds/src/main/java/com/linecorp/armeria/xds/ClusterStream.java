@@ -89,13 +89,15 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
         final List<TransportSocketMatch> matches = resource.resource().getTransportSocketMatchesList();
         final TransportSocketMatchesStream socketMatchesStream =
                 new TransportSocketMatchesStream(context, configSource, matches);
-        return SnapshotStream.combineLatest(transportSocket, socketMatchesStream,
-                                            LoadBalancerInput::new)
-                             .switchMapEager(input -> clusterSnapshotStream(resource, input));
+        final HttpProtocolOptions httpProtocolOptions = parseHttpProtocolOptions(resource.resource());
+        return SnapshotStream.combineLatest(transportSocket, socketMatchesStream, LoadBalancerInput::new)
+                             .switchMapEager(input -> clusterSnapshotStream(resource,
+                                                                            httpProtocolOptions, input));
     }
 
-    private SnapshotStream<ClusterSnapshot> clusterSnapshotStream(ClusterXdsResource resource,
-                                                                  LoadBalancerInput input) {
+    private SnapshotStream<ClusterSnapshot> clusterSnapshotStream(
+            ClusterXdsResource resource, @Nullable HttpProtocolOptions httpProtocolOptions,
+            LoadBalancerInput input) {
         final SnapshotStream<XdsLoadBalancer> lbStream;
         if (context.clusterManager().hasLocalCluster() &&
             !resourceName.equals(context.clusterManager().localClusterName())) {
@@ -109,7 +111,6 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
             lbStream = lbFactory.register(resource, input.transportSocket,
                                           input.transportSocketMatches, null);
         }
-        final HttpProtocolOptions httpProtocolOptions = parseHttpProtocolOptions(resource.resource());
         return lbStream.map(lb -> {
             final ClusterFilterFactory factory =
                     new ClusterFilterFactory(lb, httpProtocolOptions, input.transportSocket);
