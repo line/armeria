@@ -66,6 +66,10 @@ public final class DefaultDnsResolver implements SafeCloseable {
     private final EventExecutor executor;
     private final long queryTimeoutMillis;
 
+    // Added only for testing. resolve do not check this condition.
+    @VisibleForTesting
+    private volatile boolean closed;
+
     public DefaultDnsResolver(DnsResolver delegate, DnsCache dnsCache, EventExecutor executor,
                               long queryTimeoutMillis) {
         this.delegate = delegate;
@@ -190,8 +194,14 @@ public final class DefaultDnsResolver implements SafeCloseable {
         return dnsCache;
     }
 
+    @VisibleForTesting
+    public boolean isClosed() {
+        return closed;
+    }
+
     @Override
     public void close() {
+        closed = true;
         delegate.close();
     }
 }
