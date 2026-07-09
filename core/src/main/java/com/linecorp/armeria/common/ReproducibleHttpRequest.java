@@ -90,15 +90,14 @@ final class ReproducibleHttpRequest
 
     @Override
     public HttpRequestDuplicator toDuplicator(EventExecutor executor) {
-        // Ignore the executor: the reproducible duplicator never buffers, so it needs no subscriber
-        // executor. Every duplicate() obtains a fresh body from the factory.
-        return new ReproducibleHttpRequestDuplicator(headers, bodyFactory);
+        return toDuplicator(executor, 0);
     }
 
     @Override
     public HttpRequestDuplicator toDuplicator(EventExecutor executor, long maxRequestLength) {
-        // maxRequestLength does not apply: this duplicator accumulates nothing, so there is no
-        // buffered length to cap. Each attempt streams a fresh body straight from the factory.
+        // Neither argument applies: the reproducible duplicator never buffers, so it needs no
+        // subscriber executor and has no accumulated length to cap. Each attempt streams a fresh
+        // body straight from the factory.
         return new ReproducibleHttpRequestDuplicator(headers, bodyFactory);
     }
 }
