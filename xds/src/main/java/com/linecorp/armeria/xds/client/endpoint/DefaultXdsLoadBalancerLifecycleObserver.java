@@ -232,7 +232,7 @@ final class DefaultXdsLoadBalancerLifecycleObserver implements XdsLoadBalancerLi
             this.locality = locality;
             prefix = prefix.withTags("region", locality.getRegion(),
                                      "zone", locality.getZone(),
-                                     "sub_zone", locality.getSubZone());
+                                     "sub.zone", locality.getSubZone());
             final ImmutableList.Builder<Meter> metersBuilder = ImmutableList.builder();
             metersBuilder.add(Gauge.builder(prefix.name("lb.membership.total"), () -> total)
                                    .tags(prefix.tags())

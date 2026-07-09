@@ -30,6 +30,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -162,11 +165,11 @@ class XdsLoadBalancerLifecycleObserverTest {
                                 .put("armeria.xds.lb.state.rejected.count#count{cluster=my-cluster}", 0.0)
                                 // Membership metrics
                                 .put("armeria.xds.lb.membership.healthy#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 1.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 1.0)
                                 .put("armeria.xds.lb.membership.total#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 1.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 1.0)
                                 .put("armeria.xds.lb.membership.degraded#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 0.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 0.0)
                                 // Load balancer state metrics
                                 .put("armeria.xds.lb.state.load.degraded#value" +
                                      "{cluster=my-cluster,priority=0}", 0.0)
@@ -176,11 +179,11 @@ class XdsLoadBalancerLifecycleObserverTest {
                                 .put("armeria.xds.lb.state.subsets#value{cluster=my-cluster}", 0.0)
                                 // Locality and zone metrics
                                 .put("armeria.xds.lb.locality.weight#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 0.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 0.0)
                                 .put("armeria.xds.lb.zar.local.percentage#value" +
                                      "{cluster=my-cluster,priority=0}", 0.0)
                                 .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                     "{cluster=my-cluster,priority=0,region=,sub_zone=,zone=}", 0.0)
+                                     "{cluster=my-cluster,priority=0,region=,sub.zone=,zone=}", 0.0)
                                 .build());
             });
         }
@@ -545,33 +548,33 @@ class XdsLoadBalancerLifecycleObserverTest {
                     // Priority 0 locality-specific membership metrics
                     assertThat(lbMetrics).containsAllEntriesOf(ImmutableMap.<String, Double>builder()
                             .put("armeria.xds.lb.membership.healthy#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.total#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 2.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 2.0)
                             .put("armeria.xds.lb.membership.degraded#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.healthy#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.total#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.degraded#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 0.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 0.0)
                             .put("armeria.xds.lb.membership.healthy#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.total#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 1.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 1.0)
                             .put("armeria.xds.lb.membership.degraded#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 0.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 0.0)
                             .build());
 
                     // Priority 1 locality-specific membership metrics (us-west-2: 1 healthy endpoint)
                     assertThat(lbMetrics).containsAllEntriesOf(ImmutableMap.of(
                             "armeria.xds.lb.membership.healthy#value" +
-                            "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 1.0,
+                            "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 1.0,
                             "armeria.xds.lb.membership.total#value" +
-                            "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 1.0,
+                            "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 1.0,
                             "armeria.xds.lb.membership.degraded#value" +
-                            "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 0.0
+                            "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 0.0
                     ));
 
                     // Verify load balancer state metrics per priority
@@ -591,14 +594,14 @@ class XdsLoadBalancerLifecycleObserverTest {
                     assertThat(lbMetrics).containsAllEntriesOf(ImmutableMap.<String, Double>builder()
                             // Priority 0 locality weights (actual values from test output)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 50.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 50.0)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 200.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 200.0)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 200.0)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 200.0)
                             // Priority 1 locality weight (weight=300 for us-west-2)
                             .put("armeria.xds.lb.locality.weight#value" +
-                                 "{cluster=my-cluster,priority=1,region=us-west-2,sub_zone=,zone=}", 300.0)
+                                 "{cluster=my-cluster,priority=1,region=us-west-2,sub.zone=,zone=}", 300.0)
                             .build());
 
                     // Zone-aware routing (ZAR) metrics
@@ -606,11 +609,11 @@ class XdsLoadBalancerLifecycleObserverTest {
                             .put("armeria.xds.lb.zar.local.percentage#value" +
                                  "{cluster=my-cluster,priority=0}", 0.5)
                             .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub_zone=,zone=}", 0.0)
+                                 "{cluster=my-cluster,priority=0,region=us-east-1,sub.zone=,zone=}", 0.0)
                             .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub_zone=,zone=}", 0.5)
+                                 "{cluster=my-cluster,priority=0,region=us-west-1,sub.zone=,zone=}", 0.5)
                             .put("armeria.xds.lb.zar.residual.percentage#value" +
-                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub_zone=,zone=}", 0.5)
+                                 "{cluster=my-cluster,priority=0,region=us-west-2,sub.zone=,zone=}", 0.5)
                             .build());
                 });
             }
@@ -623,8 +626,216 @@ class XdsLoadBalancerLifecycleObserverTest {
         });
     }
 
+    @Test
+    void selectionCounterBasicCase() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(
+                dynamicBootstrapYaml.formatted(server.httpPort()), Bootstrap.class);
+
+        //language=YAML
+        final String listenerYaml =
+                """
+                    name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                    .v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                    """;
+
+        //language=YAML
+        final String clusterYaml =
+                """
+                    name: my-cluster
+                    type: EDS
+                    eds_cluster_config:
+                      eds_config:
+                        ads: {}
+                    """;
+
+        //language=YAML
+        final String endpointYaml =
+                """
+                  cluster_name: my-cluster
+                  endpoints:
+                  - locality:
+                      region: us-east-1
+                      zone: us-east-1a
+                    lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: 127.0.0.1
+                            port_value: %s
+                """.formatted(server.httpPort());
+
+        final Listener listener = XdsResourceReader.fromYaml(listenerYaml, Listener.class);
+        final Cluster cluster = XdsResourceReader.fromYaml(clusterYaml, Cluster.class);
+        final ClusterLoadAssignment endpoint = XdsResourceReader.fromYaml(endpointYaml,
+                                                                          ClusterLoadAssignment.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(endpoint),
+                                                     ImmutableList.of(listener), ImmutableList.of(),
+                                                     ImmutableList.of(), version.toString()));
+
+            try (XdsHttpPreprocessor preprocessor =
+                         XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+                final BlockingWebClient client = WebClient.of(preprocessor).blocking();
+
+                // Send 3 requests
+                for (int i = 0; i < 3; i++) {
+                    assertThat(client.get("/hello").contentUtf8()).isEqualTo("world");
+                }
+
+                // Verify selection counters
+                await().untilAsserted(() -> {
+                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.select"));
+                    assertThat(lbMetrics).containsEntry(
+                            "armeria.xds.lb.select#count" +
+                            "{cluster=my-cluster,priority=0,region=,result=hit,sub.zone=,zone=}",
+                            3.0);
+                });
+            }
+        }
+    }
+
+    @Test
+    void selectionCounterWithSubsets() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(
+                dynamicBootstrapYaml.formatted(server.httpPort()), Bootstrap.class);
+
+        //language=YAML
+        final String listenerYaml =
+                """
+                    name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                    .v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                                  metadata_match:
+                                    filter_metadata:
+                                      "envoy.lb":
+                                        version: v1
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                    """;
+
+        //language=YAML
+        final String clusterYaml =
+                """
+                    name: my-cluster
+                    type: EDS
+                    eds_cluster_config:
+                      eds_config:
+                        ads: {}
+                    lb_subset_config:
+                      fallback_policy: ANY_ENDPOINT
+                      subset_selectors:
+                      - keys:
+                        - version
+                    """;
+
+        //language=YAML
+        final String endpointYaml =
+                """
+                  cluster_name: my-cluster
+                  endpoints:
+                  - lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: 127.0.0.1
+                            port_value: %s
+                      metadata:
+                        filter_metadata:
+                          "envoy.lb":
+                            version: v1
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: 127.0.0.1
+                            port_value: %s
+                      metadata:
+                        filter_metadata:
+                          "envoy.lb":
+                            version: v2
+                """.formatted(server.httpPort(), server.httpPort());
+
+        final Listener listener = XdsResourceReader.fromYaml(listenerYaml, Listener.class);
+        final Cluster cluster = XdsResourceReader.fromYaml(clusterYaml, Cluster.class);
+        final ClusterLoadAssignment endpoint = XdsResourceReader.fromYaml(endpointYaml,
+                                                                          ClusterLoadAssignment.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .meterRegistry(meterRegistry)
+                                                     .build()) {
+            version.incrementAndGet();
+            cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(endpoint),
+                                                     ImmutableList.of(listener), ImmutableList.of(),
+                                                     ImmutableList.of(), version.toString()));
+
+            try (XdsHttpPreprocessor preprocessor =
+                         XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+                final BlockingWebClient client = WebClient.of(preprocessor).blocking();
+
+                // Send 2 requests - route metadata_match selects subset version=v1
+                for (int i = 0; i < 2; i++) {
+                    assertThat(client.get("/hello").contentUtf8()).isEqualTo("world");
+                }
+
+                // Verify subset selection counter
+                await().untilAsserted(() -> {
+                    final var lbMetrics = measureAll(meterRegistry, key -> key.contains("lb.select"));
+                    // Subset counter should record "version=v1"
+                    assertThat(lbMetrics).containsEntry(
+                            "armeria.xds.lb.select.subset#count" +
+                            "{cluster=my-cluster,result=hit,subset=version=v1}",
+                            2.0);
+                    // Priority/locality counter should also be recorded
+                    assertThat(lbMetrics).containsEntry(
+                            "armeria.xds.lb.select#count" +
+                            "{cluster=my-cluster,priority=0,region=,result=hit,sub.zone=,zone=}",
+                            2.0);
+                });
+            }
+        }
+    }
+
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry) {
-        return measureAll(meterRegistry, key -> key.startsWith("armeria.xds.lb"));
+        return measureAll(meterRegistry, key -> key.startsWith("armeria.xds.lb") &&
+                                                !key.contains("lb.select"));
     }
 
     private static Map<String, Double> measureAll(final MeterRegistry meterRegistry,

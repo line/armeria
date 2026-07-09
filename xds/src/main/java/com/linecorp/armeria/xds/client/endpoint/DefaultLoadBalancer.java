@@ -45,11 +45,14 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
     private final XdsLoadBalancer localLoadBalancer;
     @Nullable
     private final LocalityRoutingState localityRoutingState;
+    private final LbSelectionRecorder selectionRecorder;
 
     DefaultLoadBalancer(PrioritySet prioritySet, Locality locality,
-                        @Nullable XdsLoadBalancer localLoadBalancer) {
+                        @Nullable XdsLoadBalancer localLoadBalancer,
+                        LbSelectionRecorder selectionRecorder) {
         lbState = DefaultLbStateFactory.newInstance(prioritySet);
         this.localLoadBalancer = localLoadBalancer;
+        this.selectionRecorder = selectionRecorder;
         if (localLoadBalancer != null) {
             localityRoutingState = new LocalityRoutingStateFactory(locality)
                     .create(prioritySet, localLoadBalancer);
@@ -63,6 +66,7 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
     public Endpoint selectNow(ClientRequestContext ctx) {
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
+            selectionRecorder.record(-1, null, LbSelectionRecorder.RESULT_NO_ENDPOINTS);
             return null;
         }
         XdsRandom random = ctx.attr(XdsAttributeKeys.XDS_RANDOM);
@@ -71,6 +75,7 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
         }
         final HostsSource hostsSource = hostSourceToUse(lbState, random, localityRoutingState);
         if (hostsSource == null) {
+            selectionRecorder.record(-1, null, LbSelectionRecorder.RESULT_NO_HOST_SOURCE);
             return null;
         }
         final HostSet hostSet = prioritySet.hostSets().get(hostsSource.priority);
@@ -80,33 +85,34 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
                                             prioritySet.cluster().getName() + "), hostsSource(" +
                                             hostsSource + ')');
         }
+        final Endpoint endpoint;
         switch (hostsSource.sourceType) {
             case ALL_HOSTS:
-                return hostSet.hostsEndpointGroup().selectNow(ctx);
+                endpoint = hostSet.hostsEndpointGroup().selectNow(ctx);
+                break;
             case HEALTHY_HOSTS:
-                return hostSet.healthyHostsEndpointGroup().selectNow(ctx);
+                endpoint = hostSet.healthyHostsEndpointGroup().selectNow(ctx);
+                break;
             case DEGRADED_HOSTS:
-                return hostSet.degradedHostsEndpointGroup().selectNow(ctx);
+                endpoint = hostSet.degradedHostsEndpointGroup().selectNow(ctx);
+                break;
             case LOCALITY_HEALTHY_HOSTS:
                 final Map<Locality, EndpointGroup> healthyLocalities =
                         hostSet.healthyEndpointGroupPerLocality();
                 final EndpointGroup healthyEndpointGroup = healthyLocalities.get(hostsSource.locality);
-                if (healthyEndpointGroup != null) {
-                    return healthyEndpointGroup.selectNow(ctx);
-                }
+                endpoint = healthyEndpointGroup != null ? healthyEndpointGroup.selectNow(ctx) : null;
                 break;
             case LOCALITY_DEGRADED_HOSTS:
                 final Map<Locality, EndpointGroup> degradedLocalities =
                         hostSet.degradedEndpointGroupPerLocality();
                 final EndpointGroup degradedEndpointGroup = degradedLocalities.get(hostsSource.locality);
-                if (degradedEndpointGroup != null) {
-                    return degradedEndpointGroup.selectNow(ctx);
-                }
+                endpoint = degradedEndpointGroup != null ? degradedEndpointGroup.selectNow(ctx) : null;
                 break;
             default:
                 throw new Error();
         }
-        return null;
+        selectionRecorder.record(hostsSource.priority, hostsSource.locality, endpoint);
+        return endpoint;
     }
 
     @Nullable
