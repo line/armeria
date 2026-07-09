@@ -1,11 +1,11 @@
 ---
 name: release-note
-description: Generate and polish release notes for an Armeria version. Runs site-new/release-note.ts to collect PR data from a GitHub milestone, then rewrites the skeletal output into publication-ready MDX. Invoked as `/release-note <version>` (e.g., `/release-note 1.38.0`).
+description: Generate and polish release notes for an Armeria version. Runs site/release-note.ts to collect PR data from a GitHub milestone, then rewrites the skeletal output into publication-ready MDX. Invoked as `/release-note <version>` (e.g., `/release-note 1.38.0`).
 ---
 
 # Release Note Generator
 
-Generates skeletal release notes from a GitHub milestone using `site-new/release-note.ts`,
+Generates skeletal release notes from a GitHub milestone using `site/release-note.ts`,
 then rewrites them into polished, publication-ready MDX with rich descriptions, code examples,
 and proper formatting.
 
@@ -14,8 +14,8 @@ and proper formatting.
 - The `gh` CLI must be authenticated with access to `line/armeria`. Verify with `gh auth status`.
 - A `GITHUB_ACCESS_TOKEN` environment variable is recommended for higher GitHub API rate limits.
   If not set, the script falls back to anonymous access (lower rate limits).
-- Node.js and npm must be available. The `site-new/` directory must have dependencies installed
-  (`npm install` in `site-new/`).
+- Node.js and npm must be available. The `site/` directory must have dependencies installed
+  (`npm install` in `site/`).
 
 ## Invocation
 
@@ -37,12 +37,12 @@ Example: `/release-note 1.38.0`
    ```
    cd site-new && npm run release-note <version>
    ```
-3. Verify the output file was created at `site-new/src/content/release-notes/<version>.mdx`.
+3. Verify the output file was created at `site/src/content/release-notes/<version>.mdx`.
 4. If the script fails (e.g., milestone not found, network error), report the error and stop.
 
 ## Phase 1: Load Draft and Study Style
 
-1. Read the generated draft file at `site-new/src/content/release-notes/<version>.mdx`.
+1. Read the generated draft file at `site/src/content/release-notes/<version>.mdx`.
 2. Read 3-4 recent polished release notes (e.g., `1.36.0.mdx`, `1.37.0.mdx`) to calibrate tone and style.
 3. Read the style guide at `references/style-guide.md` for formatting rules.
 4. Extract all PR/issue references (`#NNNN`) from every line of the draft.
@@ -177,7 +177,7 @@ The raw script includes the full dependency update PR body, which uses a structu
    `CLAassistant`). Core maintainers listed in `.github/CODEOWNERS` must always be included
    in the Thank You section, even if they don't appear in the PR participant lists.
 4. **Ensure consistent bullet style**: Use `-` (dash) for all bullets, not `*`.
-5. **Write the final file** to `site-new/src/content/release-notes/<version>.mdx`.
+5. **Write the final file** to `site/src/content/release-notes/<version>.mdx`.
 6. **Show a summary** to the user: list the sections, entry count per section, and any entries
    flagged as uncertain (where PR context was insufficient to write a confident description).
 
