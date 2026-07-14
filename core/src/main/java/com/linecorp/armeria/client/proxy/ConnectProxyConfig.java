@@ -16,18 +16,32 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.handler.ssl.ApplicationProtocolNames;
 
 /**
  * CONNECT proxy configuration.
  */
 public final class ConnectProxyConfig extends ProxyConfig {
+
+    private static final Set<String> HTTP1_ALPN =
+            Collections.singleton(ApplicationProtocolNames.HTTP_1_1);
+    private static final ClientTlsSpec DEFAULT_PROXY_TLS_SPEC =
+            ClientTlsSpec.builder().alpnProtocols(SessionProtocol.H1).build();
 
     private final InetSocketAddress proxyAddress;
 
@@ -39,15 +53,31 @@ public final class ConnectProxyConfig extends ProxyConfig {
 
     private final HttpHeaders headers;
 
-    private final boolean useTls;
+    @Nullable
+    private final ClientTlsSpec clientTlsSpec;
 
     ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
                        @Nullable String password, HttpHeaders headers, boolean useTls) {
+        this(proxyAddress, username, password, headers, useTls ? DEFAULT_PROXY_TLS_SPEC : null);
+    }
+
+    ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
+                       @Nullable String password, HttpHeaders headers,
+                       @Nullable ClientTlsSpec clientTlsSpec) {
+        if (clientTlsSpec != null) {
+            final Set<String> alpn = clientTlsSpec.alpnProtocols();
+            checkArgument(alpn.isEmpty() || alpn.equals(HTTP1_ALPN),
+                          "CONNECT proxy only supports HTTP/1.1 ALPN, but got: %s", alpn);
+            // Rewrite empty ALPN to HTTP/1.1.
+            if (alpn.isEmpty()) {
+                clientTlsSpec = clientTlsSpec.toBuilder().alpnProtocols(SessionProtocol.H1).build();
+            }
+        }
         this.proxyAddress = proxyAddress;
         this.username = username;
         this.password = password;
         this.headers = headers;
-        this.useTls = useTls;
+        this.clientTlsSpec = clientTlsSpec;
     }
 
     @Override
@@ -82,7 +112,16 @@ public final class ConnectProxyConfig extends ProxyConfig {
      * Returns whether ssl is enabled.
      */
     public boolean useTls() {
-        return useTls;
+        return clientTlsSpec != null;
+    }
+
+    /**
+     * Returns the {@link ClientTlsSpec} for the proxy connection, or {@code null} if TLS is not used.
+     */
+    @UnstableApi
+    @Nullable
+    public ClientTlsSpec clientTlsSpec() {
+        return clientTlsSpec;
     }
 
     @Override
@@ -93,7 +132,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
     @Override
     public ProxyConfig withProxyAddress(InetSocketAddress newProxyAddress) {
         return new ConnectProxyConfig(newProxyAddress, this.username,
-                                      this.password, this.headers, this.useTls);
+                                      this.password, this.headers, this.clientTlsSpec);
     }
 
     @Override
@@ -105,16 +144,16 @@ public final class ConnectProxyConfig extends ProxyConfig {
             return false;
         }
         final ConnectProxyConfig that = (ConnectProxyConfig) o;
-        return useTls == that.useTls &&
-               proxyAddress.equals(that.proxyAddress) &&
+        return proxyAddress.equals(that.proxyAddress) &&
                Objects.equals(username, that.username) &&
                Objects.equals(password, that.password) &&
-               headers.equals(that.headers);
+               headers.equals(that.headers) &&
+               Objects.equals(clientTlsSpec, that.clientTlsSpec);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(proxyAddress, username, password, headers, useTls);
+        return Objects.hash(proxyAddress, username, password, headers, clientTlsSpec);
     }
 
     @Override

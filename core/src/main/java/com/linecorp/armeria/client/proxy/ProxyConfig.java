@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -143,6 +144,38 @@ public abstract class ProxyConfig {
         requireNonNull(password, "password");
         requireNonNull(headers, "headers");
         return new ConnectProxyConfig(proxyAddress, username, password, headers, useTls);
+    }
+
+    /**
+     * Creates a {@code ProxyConfig} configuration for CONNECT protocol with a custom
+     * {@link ClientTlsSpec} for the proxy connection.
+     *
+     * @param proxyAddress the proxy address
+     * @param clientTlsSpec the TLS spec for the proxy connection
+     */
+    @UnstableApi
+    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress,
+                                             ClientTlsSpec clientTlsSpec) {
+        requireNonNull(proxyAddress, "proxyAddress");
+        requireNonNull(clientTlsSpec, "clientTlsSpec");
+        return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), clientTlsSpec);
+    }
+
+    /**
+     * Creates a {@code ProxyConfig} configuration for CONNECT protocol with a custom
+     * {@link ClientTlsSpec} for the proxy connection.
+     *
+     * @param proxyAddress the proxy address
+     * @param headers the {@link HttpHeaders} to send to the proxy
+     * @param clientTlsSpec the TLS spec for the proxy connection
+     */
+    @UnstableApi
+    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, HttpHeaders headers,
+                                             ClientTlsSpec clientTlsSpec) {
+        requireNonNull(proxyAddress, "proxyAddress");
+        requireNonNull(headers, "headers");
+        requireNonNull(clientTlsSpec, "clientTlsSpec");
+        return new ConnectProxyConfig(proxyAddress, null, null, headers, clientTlsSpec);
     }
 
     /**

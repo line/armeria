@@ -187,6 +187,24 @@ public class ClientRequestContextWrapper
 
     @Override
     @UnstableApi
+    public void clearClientTlsSpec() {
+        unwrap().clearClientTlsSpec();
+    }
+
+    @Override
+    @UnstableApi
+    public @Nullable String sniHostname() {
+        return unwrap().sniHostname();
+    }
+
+    @Override
+    @UnstableApi
+    public void setSniHostname(String sniHostname) {
+        unwrap().setSniHostname(sniHostname);
+    }
+
+    @Override
+    @UnstableApi
     public @Nullable InetSocketAddress localBindAddress() {
         return unwrap().localBindAddress();
     }
