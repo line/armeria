@@ -42,12 +42,7 @@ import com.linecorp.armeria.xds.stream.SnapshotStream;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.AccessTokenTarget;
 
-/**
- * An {@link HttpFilterFactory} that injects Athenz access tokens into outbound requests.
- */
-public final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
-
-    AccessTokenTargetFilterFactory() {}
+final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
 
     private static final String NAME = "athenz.access_token_target";
     private static final String TYPE_URL =

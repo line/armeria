@@ -21,7 +21,7 @@ import com.linecorp.armeria.xds.XdsExtensionFactory;
 import com.linecorp.armeria.xds.XdsExtensionFactoryProvider;
 
 /**
- * Provides the {@link AccessTokenTargetFilterFactory} for xDS extension discovery.
+ * Provides the Athenz access token target filter for xDS extension discovery.
  */
 @UnstableApi
 public final class AccessTokenTargetFilterFactoryProvider implements XdsExtensionFactoryProvider {

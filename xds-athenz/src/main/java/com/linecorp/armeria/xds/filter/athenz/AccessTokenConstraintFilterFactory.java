@@ -54,12 +54,7 @@ import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttribute.AttributeC
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttributeMatch;
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.WellKnownEndpointAttribute;
 
-/**
- * An {@link HttpFilterFactory} that authorizes inbound requests using Athenz access tokens.
- */
-public final class AccessTokenConstraintFilterFactory implements HttpFilterFactory {
-
-    AccessTokenConstraintFilterFactory() {}
+final class AccessTokenConstraintFilterFactory implements HttpFilterFactory {
 
     private static final String NAME = "athenz.access_token_constraint";
     private static final String TYPE_URL =
