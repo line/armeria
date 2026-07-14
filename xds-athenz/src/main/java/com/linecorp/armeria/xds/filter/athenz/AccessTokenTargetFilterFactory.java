@@ -21,11 +21,16 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
+import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.athenz.AthenzTokenClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.xds.filter.FactoryContext;
@@ -93,12 +98,54 @@ public final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
             this.tokenClient = tokenClient;
         }
 
+        private void setToken(ClientRequestContext ctx, String token) {
+            ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
+        }
+
         @Override
         public HttpPreprocessor httpPreprocessor() {
             return (delegate, ctx, req) -> HttpResponse.of(
                     tokenClient.getToken().thenApply(token -> {
-                        ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORIZATION,
-                                                       "Bearer " + token);
+                        setToken(ctx, token);
+                        try {
+                            return delegate.execute(ctx, req);
+                        } catch (Exception e) {
+                            return Exceptions.throwUnsafely(e);
+                        }
+                    }));
+        }
+
+        @Override
+        public RpcPreprocessor rpcPreprocessor() {
+            return (delegate, ctx, req) -> RpcResponse.from(
+                    tokenClient.getToken().thenApply(token -> {
+                        setToken(ctx, token);
+                        try {
+                            return delegate.execute(ctx, req);
+                        } catch (Exception e) {
+                            return Exceptions.throwUnsafely(e);
+                        }
+                    }));
+        }
+
+        @Override
+        public DecoratingHttpClientFunction httpDecorator() {
+            return (delegate, ctx, req) -> HttpResponse.of(
+                    tokenClient.getToken().thenApply(token -> {
+                        setToken(ctx, token);
+                        try {
+                            return delegate.execute(ctx, req);
+                        } catch (Exception e) {
+                            return Exceptions.throwUnsafely(e);
+                        }
+                    }));
+        }
+
+        @Override
+        public DecoratingRpcClientFunction rpcDecorator() {
+            return (delegate, ctx, req) -> RpcResponse.from(
+                    tokenClient.getToken().thenApply(token -> {
+                        setToken(ctx, token);
                         try {
                             return delegate.execute(ctx, req);
                         } catch (Exception e) {
