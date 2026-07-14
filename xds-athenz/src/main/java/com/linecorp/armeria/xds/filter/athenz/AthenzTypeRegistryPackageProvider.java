@@ -16,17 +16,19 @@
 
 package com.linecorp.armeria.xds.filter.athenz;
 
-import java.util.List;
+import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsTypeRegistryPackageProvider;
 
 /**
  * Provides the Athenz protobuf package for xDS type registry discovery.
  */
+@UnstableApi
 public final class AthenzTypeRegistryPackageProvider implements XdsTypeRegistryPackageProvider {
 
     @Override
     public Iterable<String> packages() {
-        return List.of("jp.co.lycorp.ftd.athenz.v1");
+        return ImmutableList.of("jp.co.lycorp.ftd.athenz.v1", "com.linecorp.armeria.xds.athenz");
     }
 }

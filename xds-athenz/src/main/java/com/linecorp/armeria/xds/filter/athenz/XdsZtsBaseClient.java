@@ -38,7 +38,7 @@ final class XdsZtsBaseClient implements ZtsBaseClient {
 
     @Override
     public WebClient webClient(Consumer<? super WebClientBuilder> configurer) {
-        return webClient;
+        throw new UnsupportedOperationException();
     }
 
     @Override

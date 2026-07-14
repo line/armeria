@@ -142,8 +142,8 @@ class AthenzAccessTokenFilterTest {
                           http_filters:
                             - name: athenz.access_token_target
                               typed_config:
-                                "@type": type.googleapis.com/jp.co.lycorp.ftd.athenz\
-                .v1.AccessTokenTargetConfig
+                                "@type": type.googleapis.com/armeria.xds.athenz\
+                .AccessTokenTargetConfig
                                 zts_cluster_name: zts-cluster
                                 access_token_target:
                                   target_domain: %s
@@ -231,8 +231,8 @@ class AthenzAccessTokenFilterTest {
                                 upstream_http_filters:
                                   - name: athenz.access_token_target
                                     typed_config:
-                                      "@type": type.googleapis.com/jp.co.lycorp.ftd.athenz\
-                .v1.AccessTokenTargetConfig
+                                      "@type": type.googleapis.com/armeria.xds.athenz\
+                .AccessTokenTargetConfig
                                       zts_cluster_name: zts-cluster
                                       access_token_target:
                                         target_domain: %s

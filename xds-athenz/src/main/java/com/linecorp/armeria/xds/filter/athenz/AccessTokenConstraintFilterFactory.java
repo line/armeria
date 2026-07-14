@@ -38,6 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.athenz.AccessCheckStatus;
 import com.linecorp.armeria.server.athenz.AthenzAuthorizer;
 import com.linecorp.armeria.server.athenz.AthenzPolicyConfig;
+import com.linecorp.armeria.xds.athenz.AthenzFilterConfig.AccessTokenConstraintConfig;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
@@ -52,7 +53,6 @@ import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttribute;
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttribute.AttributeCase;
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttributeMatch;
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.WellKnownEndpointAttribute;
-import jp.co.lycorp.ftd.athenz.v1.AthenzFilterConfig.AccessTokenConstraintConfig;
 
 /**
  * An {@link HttpFilterFactory} that authorizes inbound requests using Athenz access tokens.
@@ -63,7 +63,7 @@ public final class AccessTokenConstraintFilterFactory implements HttpFilterFacto
 
     private static final String NAME = "athenz.access_token_constraint";
     private static final String TYPE_URL =
-            "type.googleapis.com/jp.co.lycorp.ftd.athenz.v1.AccessTokenConstraintConfig";
+            "type.googleapis.com/armeria.xds.athenz.AccessTokenConstraintConfig";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
     @Override
@@ -90,6 +90,9 @@ public final class AccessTokenConstraintFilterFactory implements HttpFilterFacto
                 context.validator().unpack(config, AccessTokenConstraintConfig.class);
         final String ztsClusterName = filterConfig.getZtsClusterName();
         final AccessTokenConstraint constraint = filterConfig.getAccessTokenConstraint();
+        if (constraint.getSyntaxVersion() != 1) {
+            throw new IllegalArgumentException("Unsupported version: " + constraint.getSyntaxVersion());
+        }
         final String domain = constraint.getConstraintDomain();
 
         return context.clusterStream(ztsClusterName).switchMapEager(clusterSnapshot -> {

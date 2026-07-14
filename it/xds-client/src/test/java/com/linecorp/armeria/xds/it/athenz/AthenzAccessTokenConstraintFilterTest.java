@@ -163,8 +163,8 @@ class AthenzAccessTokenConstraintFilterTest {
                                         non_forwarding_action: {}
                                         typed_per_filter_config:
                                           athenz.access_token_constraint:
-                                            "@type": type.googleapis.com/jp.co.lycorp\
-                .ftd.athenz.v1.AccessTokenConstraintConfig
+                                            "@type": type.googleapis.com/armeria.xds\
+                .athenz.AccessTokenConstraintConfig
                                             zts_cluster_name: zts-cluster
                                             access_token_constraint:
                                               constraint_domain: %s
@@ -180,8 +180,8 @@ class AthenzAccessTokenConstraintFilterTest {
                                         non_forwarding_action: {}
                                         typed_per_filter_config:
                                           athenz.access_token_constraint:
-                                            "@type": type.googleapis.com/jp.co.lycorp\
-                .ftd.athenz.v1.AccessTokenConstraintConfig
+                                            "@type": type.googleapis.com/armeria.xds\
+                .athenz.AccessTokenConstraintConfig
                                             zts_cluster_name: zts-cluster
                                             access_token_constraint:
                                               constraint_domain: %s
@@ -209,8 +209,8 @@ class AthenzAccessTokenConstraintFilterTest {
                                         non_forwarding_action: {}
                                         typed_per_filter_config:
                                           athenz.access_token_constraint:
-                                            "@type": type.googleapis.com/jp.co.lycorp\
-                .ftd.athenz.v1.AccessTokenConstraintConfig
+                                            "@type": type.googleapis.com/armeria.xds\
+                .athenz.AccessTokenConstraintConfig
                                             zts_cluster_name: zts-cluster
                                             access_token_constraint:
                                               constraint_domain: %s
@@ -227,8 +227,8 @@ class AthenzAccessTokenConstraintFilterTest {
                               http_filters:
                                 - name: athenz.access_token_constraint
                                   typed_config:
-                                    "@type": type.googleapis.com/jp.co.lycorp.ftd\
-                .athenz.v1.AccessTokenConstraintConfig
+                                    "@type": type.googleapis.com/armeria.xds\
+                .athenz.AccessTokenConstraintConfig
                                     zts_cluster_name: zts-cluster
                                     access_token_constraint:
                                       constraint_domain: %s

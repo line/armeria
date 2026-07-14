@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.xds.athenz.AthenzFilterConfig.AccessTokenTargetConfig;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
@@ -40,7 +41,6 @@ import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.AccessTokenTarget;
-import jp.co.lycorp.ftd.athenz.v1.AthenzFilterConfig.AccessTokenTargetConfig;
 
 /**
  * An {@link HttpFilterFactory} that injects Athenz access tokens into outbound requests.
@@ -51,7 +51,7 @@ public final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
 
     private static final String NAME = "athenz.access_token_target";
     private static final String TYPE_URL =
-            "type.googleapis.com/jp.co.lycorp.ftd.athenz.v1.AccessTokenTargetConfig";
+            "type.googleapis.com/armeria.xds.athenz.AccessTokenTargetConfig";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
     @Override
@@ -78,6 +78,9 @@ public final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
                 context.validator().unpack(config, AccessTokenTargetConfig.class);
         final String ztsClusterName = filterConfig.getZtsClusterName();
         final AccessTokenTarget target = filterConfig.getAccessTokenTarget();
+        if (target.getSyntaxVersion() != 1) {
+            throw new IllegalArgumentException("Unsupported version: " + target.getSyntaxVersion());
+        }
 
         return context.clusterStream(ztsClusterName).map(clusterSnapshot -> {
             final ZtsBaseClient ztsBaseClient = new XdsZtsBaseClient(clusterSnapshot.preprocessor());
@@ -98,7 +101,7 @@ public final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
             this.tokenClient = tokenClient;
         }
 
-        private void setToken(ClientRequestContext ctx, String token) {
+        private static void setToken(ClientRequestContext ctx, String token) {
             ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
         }
 

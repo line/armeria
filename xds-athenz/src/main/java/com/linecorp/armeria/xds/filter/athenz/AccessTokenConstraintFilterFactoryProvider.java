@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.xds.filter.athenz;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsExtensionFactory;
 import com.linecorp.armeria.xds.XdsExtensionFactoryProvider;
 
 /**
  * Provides the {@link AccessTokenConstraintFilterFactory} for xDS extension discovery.
  */
+@UnstableApi
 public final class AccessTokenConstraintFilterFactoryProvider implements XdsExtensionFactoryProvider {
 
     @Override
