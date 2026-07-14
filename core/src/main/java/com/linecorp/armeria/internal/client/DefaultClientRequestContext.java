@@ -1163,7 +1163,24 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
-        this.clientTlsSpec = requireNonNull(clientTlsSpec, "clientTlsSpec");
+        requireNonNull(clientTlsSpec, "clientTlsSpec");
+        if (clientTlsSpec.alpnProtocols().isEmpty()) {
+            clientTlsSpec = clientTlsSpec.toBuilder()
+                                         .alpnProtocols(sessionProtocol.withTls())
+                                         .build();
+        }
+        this.clientTlsSpec = clientTlsSpec;
+        if (!sessionProtocol.isTls()) {
+            setSessionProtocol0(sessionProtocol.withTls());
+        }
+    }
+
+    @Override
+    public void clearClientTlsSpec() {
+        clientTlsSpec = null;
+        if (sessionProtocol.isTls()) {
+            setSessionProtocol0(sessionProtocol.withoutTls());
+        }
     }
 
     @Override

@@ -24,6 +24,8 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientTlsProvider;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -44,6 +47,9 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
+
+import io.netty.util.NetUtil;
 
 public final class ClientUtil {
 
@@ -120,6 +126,7 @@ public final class ClientUtil {
             throws Exception {
 
         if (succeeded) {
+            resolveClientTlsSpec(ctx);
             return pushAndExecute(delegate, ctx, req);
         } else {
             final Throwable cause = ctx.log().partial().requestCause();
@@ -156,6 +163,7 @@ public final class ClientUtil {
 
         O response;
         try {
+            resolveClientTlsSpec(ctx);
             response = pushAndExecute(delegate, ctx, req);
         } catch (Throwable cause) {
             fail(ctx, cause);
@@ -286,6 +294,59 @@ public final class ClientUtil {
         }
         ctx.logBuilder().addChild(derived.log());
         return derived;
+    }
+
+    /**
+     * Resolves the {@link ClientTlsSpec} for the given context using the
+     * {@link ClientTlsProvider ClientTlsProvider} from options.
+     * Called after endpoint selection and before decorator execution.
+     */
+    private static void resolveClientTlsSpec(ClientRequestContext ctx) {
+        final SessionProtocol sessionProtocol = ctx.sessionProtocol();
+        final ClientTlsSpec existing = ctx.clientTlsSpec();
+        if (existing != null) {
+            if (!sessionProtocol.isTls()) {
+                ctx.clearClientTlsSpec();
+                return;
+            }
+            // Already set by request options or a preprocessor.
+            // Rewrite empty ALPN protocols based on session protocol.
+            if (existing.alpnProtocols().isEmpty()) {
+                ctx.setClientTlsSpec(existing);
+            }
+            return;
+        }
+        if (!sessionProtocol.isTls()) {
+            return;
+        }
+        final Endpoint endpoint = ctx.endpoint();
+        if (endpoint == null) {
+            return;
+        }
+
+        final ClientTlsSpec tlsSpec =
+                ctx.options().factory().options().clientTlsProvider().clientTlsSpec(ctx);
+        ctx.setClientTlsSpec(tlsSpec);
+    }
+
+    /**
+     * Extracts a non-IP server name from the given authority string.
+     * Returns {@code null} if the authority is {@code null}, empty, or an IP address.
+     */
+    @Nullable
+    static String authorityToServerName(@Nullable String authority) {
+        if (authority == null) {
+            return null;
+        }
+        String serverName = SchemeAndAuthority.of(null, authority).host();
+        if (NetUtil.isValidIpV4Address(serverName) || NetUtil.isValidIpV6Address(serverName)) {
+            return null;
+        }
+        serverName = serverName.trim();
+        if (serverName.isEmpty()) {
+            return null;
+        }
+        return serverName;
     }
 
     private ClientUtil() {}

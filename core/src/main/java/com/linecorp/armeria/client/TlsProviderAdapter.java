@@ -26,6 +26,11 @@ import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 
+/**
+ * Adapts a {@link TlsProvider} to the {@link ClientTlsProvider} interface.
+ * This absorbs the TlsProvider-based TLS resolution logic that was previously in
+ * {@code HttpClientDelegate.determineTlsSpec()}.
+ */
 final class TlsProviderAdapter implements ClientTlsProvider {
 
     private final TlsProvider tlsProvider;
