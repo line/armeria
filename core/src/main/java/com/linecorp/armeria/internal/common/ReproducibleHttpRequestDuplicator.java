@@ -114,7 +114,7 @@ public final class ReproducibleHttpRequestDuplicator implements HttpRequestDupli
             // body is released, then report the closed state to the caller.
             abortCause = this.abortCause;
         }
-        abort(produced, abortCause);
+        abortQuietly(produced, abortCause);
         throw new IllegalStateException("duplicator is closed or aborted.");
     }
 
@@ -153,11 +153,11 @@ public final class ReproducibleHttpRequestDuplicator implements HttpRequestDupli
         // the lock to remove the child, so holding it here would extend the critical section across every
         // child's teardown and contend needlessly. The children set was already cleared above.
         for (HttpRequest child : toAbort) {
-            abort(child, cause);
+            abortQuietly(child, cause);
         }
     }
 
-    private static void abort(HttpRequest request, @Nullable Throwable cause) {
+    private static void abortQuietly(HttpRequest request, @Nullable Throwable cause) {
         // Aborting an already-subscribed stream is a no-op; otherwise this releases a
         // produced-but-unsubscribed body (e.g. an open file).
         if (cause != null) {
