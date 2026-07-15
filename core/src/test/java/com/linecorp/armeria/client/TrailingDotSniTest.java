@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TlsProvider;
@@ -76,7 +75,7 @@ class TrailingDotSniTest {
     }
 
     @Test
-    void usesAuthorityHeader() {
+    void sniRespected() {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .tlsCustomizer(b -> b.trustManager(ssc.certificate()))
                                                   .build()) {
@@ -85,7 +84,7 @@ class TrailingDotSniTest {
                     WebClient.builder(server.httpsUri())
                              .factory(factory)
                              .decorator((delegate, ctx, req) -> {
-                                 ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "example.com");
+                                 ctx.setSniHostname("example.com");
                                  return delegate.execute(ctx, req);
                              })
                              .build()

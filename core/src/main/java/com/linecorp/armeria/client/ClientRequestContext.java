@@ -634,6 +634,25 @@ public interface ClientRequestContext extends RequestContext {
     void setClientTlsSpec(ClientTlsSpec clientTlsSpec);
 
     /**
+     * Returns the SNI (Server Name Indication) hostname for the TLS handshake.
+     * This is precomputed from the endpoint and authority: for IP-only endpoints, the
+     * authority-derived server name is used; otherwise the endpoint host is used.
+     * Trailing dots are stripped.
+     *
+     * <p>Returns {@code null} if the session protocol is not TLS or the hostname could not be determined.
+     */
+    @UnstableApi
+    @Nullable
+    String sniHostname();
+
+    /**
+     * Sets the SNI (Server Name Indication) hostname for the TLS handshake.
+     * This overrides the automatically precomputed value.
+     */
+    @UnstableApi
+    void setSniHostname(String sniHostname);
+
+    /**
      * Returns the local address that was requested to be bound when making a connection for this request.
      * This represents the intent set before the connection is established, unlike
      * {@link #localAddress()} which returns the actual local socket address read from the
