@@ -165,16 +165,19 @@ public abstract class ProxyConfig {
      * {@link ClientTlsSpec} for the proxy connection.
      *
      * @param proxyAddress the proxy address
+     * @param username the username
+     * @param password the password
      * @param headers the {@link HttpHeaders} to send to the proxy
      * @param clientTlsSpec the TLS spec for the proxy connection
      */
     @UnstableApi
-    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, HttpHeaders headers,
-                                             ClientTlsSpec clientTlsSpec) {
+    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress,
+                                             @Nullable String username, @Nullable String password,
+                                             HttpHeaders headers, ClientTlsSpec clientTlsSpec) {
         requireNonNull(proxyAddress, "proxyAddress");
         requireNonNull(headers, "headers");
         requireNonNull(clientTlsSpec, "clientTlsSpec");
-        return new ConnectProxyConfig(proxyAddress, null, null, headers, clientTlsSpec);
+        return new ConnectProxyConfig(proxyAddress, username, password, headers, clientTlsSpec);
     }
 
     /**
