@@ -33,11 +33,19 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * <p>See {@link HttpRequest#reproducible(RequestHeaders, Supplier)} for details and usage.
  *
- * <p>The body factory is invoked lazily: when this request is duplicated (the retry/redirect path),
- * {@link #toDuplicator(EventExecutor, long)} returns a {@link ReproducibleHttpRequestDuplicator} that
- * calls the factory once per attempt and this request's own delegate is never subscribed. When this
- * request is subscribed directly (no retry/redirect decorator), the factory is invoked exactly once,
- * on subscription, to produce the single body. Either way the factory is never called eagerly.
+ * <p>The body factory is invoked lazily: it is never called during construction. On the
+ * retry/redirect path {@link #toDuplicator(EventExecutor, long)} returns a
+ * {@link ReproducibleHttpRequestDuplicator} that calls the factory once per attempt, and this
+ * request's own delegate is never subscribed. When this request is instead consumed directly (no
+ * retry/redirect decorator), the factory is invoked once when the delegate is first subscribed to
+ * produce the single body.
+ *
+ * <p>"First subscription" here includes {@link #abort()}/{@link #abort(Throwable)} called before any
+ * real subscriber arrives: the underlying {@link StreamMessage} subscribes an aborting subscriber,
+ * which runs the factory once so the produced body can be aborted and released. This means aborting a
+ * directly-consumed request that was never sent still invokes the factory exactly once (it does not
+ * regenerate on a subsequent subscribe, because a stream permits only one subscription). The factory
+ * therefore runs at most once on the direct path.
  */
 final class ReproducibleHttpRequest
         extends NonOverridableStreamMessageWrapper<HttpObject, HttpRequestDuplicator> implements HttpRequest {
@@ -73,6 +81,12 @@ final class ReproducibleHttpRequest
             }
             @SuppressWarnings("unchecked")
             final StreamMessage<HttpObject> cast = (StreamMessage<HttpObject>) body;
+            // This single-arg subscribe forwards neither the caller's SubscriptionOptions
+            // (WITH_POOLED_OBJECTS / NOTIFY_CANCELLATION) nor the requested executor to the produced
+            // body. That is acceptable only because this is a cold path: a reproducible request is
+            // meant to be driven by a retry/redirect decorator, which uses toDuplicator(...) and never
+            // subscribes this delegate. This branch is reached only when a reproducible request is
+            // consumed directly, with no such decorator.
             cast.subscribe(subscriber);
         });
     }

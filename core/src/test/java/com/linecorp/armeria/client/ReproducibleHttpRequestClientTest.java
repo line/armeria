@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -71,6 +72,20 @@ class ReproducibleHttpRequestClientTest {
                     req.aggregate().thenApply(agg -> AggregatedHttpResponse.of(
                             HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                             agg.contentUtf8()).toHttpResponse())));
+            // Echoes the concatenated body plus the received trailer, failing the first attempt so the
+            // multi-chunk body is reproduced across a retry.
+            sb.service("/multi", (ctx, req) -> HttpResponse.of(
+                    req.aggregate().thenApply(agg -> {
+                        final int hit = serverHits.incrementAndGet();
+                        if (hit == 1) {
+                            return AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                         .toHttpResponse();
+                        }
+                        final String trailer = agg.trailers().get("x-trailer", "<none>");
+                        return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                                                         agg.contentUtf8() + '|' + trailer)
+                                                     .toHttpResponse();
+                    })));
             // 303 See Other: method rewritten to GET and body dropped.
             sb.service("/see-other", (ctx, req) -> HttpResponse.of(
                     ResponseHeaders.of(HttpStatus.SEE_OTHER, HttpHeaderNames.LOCATION, "/target")));
@@ -136,6 +151,39 @@ class ReproducibleHttpRequestClientTest {
     }
 
     @Test
+    void retryReproducesMultiChunkBodyAndTrailers() {
+        final AtomicInteger bodyCalls = new AtomicInteger();
+        final RequestHeaders headers =
+                RequestHeaders.of(HttpMethod.POST, "/multi",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        // A genuinely multi-chunk body terminated by a trailer, the shape a streaming upload takes.
+        // Each attempt must reproduce every interior chunk in order plus the trailer.
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            bodyCalls.incrementAndGet();
+            return StreamMessage.of(HttpData.ofUtf8("a"),
+                                    HttpData.ofUtf8("b"),
+                                    HttpData.ofUtf8("c"),
+                                    HttpHeaders.of("x-trailer", "v"));
+        };
+
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(RetryingClient.newDecorator(
+                                 RetryRule.builder().onServerErrorStatus().thenBackoff()))
+                         .build();
+
+        final AggregatedHttpResponse res =
+                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                      .aggregate().join();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        // Concatenated interior chunks (in order) plus the reproduced trailer, on the re-sent attempt.
+        assertThat(res.contentUtf8()).isEqualTo("abc|v");
+        assertThat(serverHits).hasValueGreaterThanOrEqualTo(2);
+        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
+    }
+
+    @Test
     void factoryThrowingOnRetryFailsFast() {
         final AtomicInteger bodyCalls = new AtomicInteger();
         final RequestHeaders headers =
@@ -155,10 +203,14 @@ class ReproducibleHttpRequestClientTest {
                                  RetryRule.builder().onServerErrorStatus().thenBackoff()))
                          .build();
 
+        // The surfaced failure must carry the factory's own exception, not merely be "some Exception":
+        // a connection error, timeout, or unrelated bug would also satisfy isInstanceOf(Exception.class).
         assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
                                                 streamingOptions())
                                        .aggregate().join())
-                .isInstanceOf(Exception.class);
+                .getRootCause()
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cannot regenerate body");
         // The factory is consulted twice: once for the initial body (via reproducible()), once for the
         // failing retry. It fails fast rather than looping through the whole retry budget.
         assertThat(bodyCalls).hasValue(2);

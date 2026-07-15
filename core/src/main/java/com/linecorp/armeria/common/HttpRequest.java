@@ -387,10 +387,13 @@ public interface HttpRequest extends Request, HttpMessage {
      * {@link HttpHeaderNames#CONTENT_LENGTH} (if any), exactly as for any streaming
      * {@link HttpRequest}.
      *
-     * <p>Reproducible replay applies only to the outermost duplicating decorator (typically
-     * {@code RetryingClient}). Each attempt handed downstream is an ordinary {@link HttpRequest};
-     * an inner decorator (e.g. a redirect within a single retry attempt) treats it as a normal
-     * request and may buffer it. It is honored for streaming requests
+     * <p>Reproducible replay applies only at the outermost duplicating decorator, which for a
+     * {@code WebClient} is {@code RedirectingClient} (it wraps the user-supplied decorators, including
+     * {@code RetryingClient}). Each attempt that the outermost decorator hands downstream is an
+     * ordinary {@link HttpRequest}, so an inner decorator treats it as a normal request and may buffer
+     * it: with both redirect and retry enabled, {@code RedirectingClient} replays reproducibly across
+     * redirect hops, but an inner {@code RetryingClient} re-buffers the body when retrying within a
+     * single hop. Reproducibility is honored for streaming requests
      * ({@link ExchangeType#isRequestStreaming()}); an aggregated exchange type buffers the body as
      * usual.
      *
