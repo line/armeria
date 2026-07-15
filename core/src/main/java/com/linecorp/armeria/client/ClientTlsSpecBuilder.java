@@ -59,7 +59,16 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
         endpointIdentificationAlgorithm = clientTlsSpec.endpointIdentificationAlgorithm();
     }
 
-    ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
+    /**
+     * Sets the ALPN protocol names based on the specified {@link SessionProtocol}.
+     * If the protocol is an explicit HTTP/1 variant, only {@code "http/1.1"} is used.
+     * Otherwise, both {@code "h2"} and {@code "http/1.1"} are used.
+     */
+    public ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        checkArgument(SessionProtocol.httpAndHttpsValues().contains(sessionProtocol),
+                      "sessionProtocol: %s (expected: one of %s)",
+                      sessionProtocol, SessionProtocol.httpAndHttpsValues());
         if (sessionProtocol.isExplicitHttp1()) {
             alpnProtocols = SslContextUtil.DEFAULT_HTTP1_ALPN_PROTOCOLS;
         } else {
