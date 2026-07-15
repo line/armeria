@@ -102,17 +102,51 @@ class ReproducibleHttpRequestDuplicatorTest {
     }
 
     @Test
-    void abortReleasesLastProducedUnsubscribedRequest() {
+    void abortReleasesAllOutstandingUnsubscribedRequests() {
+        final Supplier<StreamMessage<? extends HttpObject>> factory =
+                () -> StreamMessage.of(HttpData.ofUtf8("body"));
+        final ReproducibleHttpRequestDuplicator dup =
+                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+
+        // Multiple produced requests may be outstanding at once (e.g. hedging); abort() must tear
+        // down every one of them, not just the most recently produced, so no body is leaked.
+        final HttpRequest first = dup.duplicate();
+        final HttpRequest second = dup.duplicate();
+        final RuntimeException cause = new RuntimeException("cleanup");
+        dup.abort(cause);
+        assertThat(first.whenComplete()).isCompletedExceptionally();
+        assertThat(second.whenComplete()).isCompletedExceptionally();
+    }
+
+    @Test
+    void closeLeavesOutstandingRequestsActive() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
         final ReproducibleHttpRequestDuplicator dup =
                 new ReproducibleHttpRequestDuplicator(HEADERS, factory);
 
         final HttpRequest produced = dup.duplicate();
-        // The produced request was never subscribed (e.g. endpoint selection threw); abort() must
-        // tear it down so its body is not leaked.
-        final RuntimeException cause = new RuntimeException("cleanup");
-        dup.abort(cause);
-        assertThat(produced.whenComplete()).isCompletedExceptionally();
+        // StreamMessageDuplicator contract: close() prevents further duplication but must not abort
+        // requests that were already produced — they keep streaming until they complete on their own.
+        dup.close();
+        assertThat(produced.whenComplete()).isNotDone();
+    }
+
+    @Test
+    void completedRequestIsUntrackedSoAbortDoesNotAffectIt() {
+        final Supplier<StreamMessage<? extends HttpObject>> factory =
+                () -> StreamMessage.of(HttpData.ofUtf8("body"));
+        final ReproducibleHttpRequestDuplicator dup =
+                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+
+        // Draining a produced request completes it; it is then removed from the tracked set so the set
+        // does not grow unbounded and a later abort() leaves the already-completed request untouched.
+        final HttpRequest produced = dup.duplicate();
+        produced.aggregate().join();
+        assertThat(produced.whenComplete()).isCompleted();
+
+        dup.abort(new RuntimeException("cleanup"));
+        assertThat(produced.whenComplete()).isCompleted()
+                                           .isNotCompletedExceptionally();
     }
 }
