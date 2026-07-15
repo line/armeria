@@ -154,8 +154,7 @@ public abstract class ProxyConfig {
      * @param clientTlsSpec the TLS spec for the proxy connection
      */
     @UnstableApi
-    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress,
-                                             ClientTlsSpec clientTlsSpec) {
+    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, ClientTlsSpec clientTlsSpec) {
         requireNonNull(proxyAddress, "proxyAddress");
         requireNonNull(clientTlsSpec, "clientTlsSpec");
         return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), clientTlsSpec);
