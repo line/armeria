@@ -133,6 +133,24 @@ class ReproducibleHttpRequestDuplicatorTest {
     }
 
     @Test
+    void streamsBodyWithoutAccumulatingIt() {
+        // The whole point of the reproducible duplicator is to avoid buffering the body for replay (and
+        // thus the ~2 GiB int32 cap of DefaultStreamMessageDuplicator). A produced request must stream
+        // its body straight through rather than accumulate it; here we simply assert a large body is
+        // delivered intact. See ReproducibleHttpRequestClientTest#toDuplicatorIgnoresMaxRequestLength
+        // for the companion proof that the maxRequestLength cap is not applied.
+        final byte[] large = new byte[64 * 1024];
+        final Supplier<StreamMessage<? extends HttpObject>> factory =
+                () -> StreamMessage.of(HttpData.wrap(large));
+        final ReproducibleHttpRequestDuplicator dup =
+                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+
+        final HttpRequest produced = dup.duplicate();
+        final int received = produced.aggregate().join().content().length();
+        assertThat(received).isEqualTo(large.length);
+    }
+
+    @Test
     void completedRequestIsUntrackedSoAbortDoesNotAffectIt() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));

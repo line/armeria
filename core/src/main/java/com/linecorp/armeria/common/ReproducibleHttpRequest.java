@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -94,6 +96,21 @@ final class ReproducibleHttpRequest
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public HttpRequest withHeaders(RequestHeaders newHeaders) {
+        requireNonNull(newHeaders, "newHeaders");
+        if (headers == newHeaders) {
+            return this;
+        }
+        // Preserve reproducibility across a header rewrite (e.g. a base-URI path prefix applied by
+        // DefaultWebClient, or a redirect/retry decorator overriding the path). The default
+        // HttpRequest.withHeaders wraps this in a HeaderOverridingHttpRequest, which does not override
+        // toDuplicator and would therefore fall back to the buffering DefaultHttpRequestDuplicator,
+        // reintroducing the ~2 GiB size limit this request type exists to avoid. Rebinding the same
+        // factory to the new headers keeps the non-buffering toDuplicator path.
+        return new ReproducibleHttpRequest(newHeaders, bodyFactory);
     }
 
     @SuppressWarnings("unchecked")

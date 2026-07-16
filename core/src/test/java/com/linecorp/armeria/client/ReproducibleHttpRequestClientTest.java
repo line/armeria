@@ -28,7 +28,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -44,6 +47,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.util.concurrent.EventExecutor;
 
 class ReproducibleHttpRequestClientTest {
 
@@ -93,6 +98,24 @@ class ReproducibleHttpRequestClientTest {
                     req.aggregate().thenApply(agg -> AggregatedHttpResponse.of(
                             HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                             req.method() + ":" + agg.contentUtf8()).toHttpResponse())));
+            // Plain echo that always succeeds, for exercising the request without any retry/redirect
+            // decorator (the direct-consume path) and for a base-path-prefixed client.
+            sb.service("/echo", (ctx, req) -> HttpResponse.of(
+                    req.aggregate().thenApply(agg -> AggregatedHttpResponse.of(
+                            HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                            agg.contentUtf8()).toHttpResponse())));
+            // Same fail-once-then-echo behavior as /upload, reached only when a base-URI path prefix
+            // ("/api") rewrites the request path — the scenario that must keep the reproducible body.
+            sb.service("/api/upload", (ctx, req) -> HttpResponse.of(
+                    req.aggregate().thenApply(agg -> {
+                        final int hit = serverHits.incrementAndGet();
+                        if (hit == 1) {
+                            return AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                         .toHttpResponse();
+                        }
+                        return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                                                         agg.contentUtf8()).toHttpResponse();
+                    })));
         }
     };
 
@@ -145,9 +168,12 @@ class ReproducibleHttpRequestClientTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("hello-body");
-        assertThat(serverHits).hasValueGreaterThanOrEqualTo(2);
+        // The server fails exactly once, so the attempt count is deterministic: initial + one retry.
+        // Assert exactly 2 so a double-subscription bug that regenerates the body 3+ times (leaking a
+        // fresh factory resource per attempt) is caught rather than masked by a >= assertion.
+        assertThat(serverHits).hasValue(2);
         // Body regenerated for the initial attempt and the retry.
-        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
+        assertThat(bodyCalls).hasValue(2);
     }
 
     @Test
@@ -179,8 +205,9 @@ class ReproducibleHttpRequestClientTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         // Concatenated interior chunks (in order) plus the reproduced trailer, on the re-sent attempt.
         assertThat(res.contentUtf8()).isEqualTo("abc|v");
-        assertThat(serverHits).hasValueGreaterThanOrEqualTo(2);
-        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
+        // Deterministic: initial + one retry. Exact assertion guards against over-regeneration.
+        assertThat(serverHits).hasValue(2);
+        assertThat(bodyCalls).hasValue(2);
     }
 
     @Test
@@ -238,8 +265,9 @@ class ReproducibleHttpRequestClientTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("redir-body");
-        // Body regenerated for the initial request and the redirected hop.
-        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
+        // Deterministic: initial request + one redirect hop (no server error, so no retry). Exact
+        // assertion guards against over-regeneration.
+        assertThat(bodyCalls).hasValue(2);
     }
 
     @Test
@@ -291,7 +319,124 @@ class ReproducibleHttpRequestClientTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("redir-body");
-        // Body regenerated for the initial request and the redirected hop.
-        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
+        // Deterministic: initial request + one redirect hop (no server error, so no retry). Exact
+        // assertion guards against over-regeneration.
+        assertThat(bodyCalls).hasValue(2);
+    }
+
+    @Test
+    void directConsumeWithoutDecoratorSendsBodyOnce() {
+        // No retry/redirect decorator, so the request is consumed directly via its lazyBody delegate
+        // (never through toDuplicator). This path is otherwise unexercised — every other test drives a
+        // decorator. The factory must be invoked exactly once and the body delivered intact.
+        final AtomicInteger bodyCalls = new AtomicInteger();
+        final RequestHeaders headers =
+                RequestHeaders.of(HttpMethod.POST, "/echo",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            bodyCalls.incrementAndGet();
+            return StreamMessage.of(HttpData.ofUtf8("direct-body"));
+        };
+
+        final WebClient client = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res =
+                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                      .aggregate().join();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("direct-body");
+        assertThat(bodyCalls).hasValue(1);
+    }
+
+    @Test
+    void directConsumeSurfacesThrowingFactory() {
+        // On the direct path, a throwing factory must surface its own cause to the subscriber rather
+        // than hang or swallow the error.
+        final RequestHeaders headers =
+                RequestHeaders.of(HttpMethod.POST, "/echo",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            throw new IllegalStateException("cannot produce body");
+        };
+
+        final WebClient client = WebClient.of(server.httpUri());
+        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+                                                streamingOptions())
+                                       .aggregate().join())
+                .getRootCause()
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cannot produce body");
+    }
+
+    @Test
+    void directConsumeSurfacesNullFactory() {
+        // On the direct path, a factory returning null must surface an NPE, matching the duplicator
+        // path's null handling.
+        final RequestHeaders headers =
+                RequestHeaders.of(HttpMethod.POST, "/echo",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> null;
+
+        final WebClient client = WebClient.of(server.httpUri());
+        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+                                                streamingOptions())
+                                       .aggregate().join())
+                .getRootCause()
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void toDuplicatorIgnoresMaxRequestLength() {
+        // The reproducible duplicator never buffers, so it must ignore the maxRequestLength cap that a
+        // buffering DefaultStreamMessageDuplicator would enforce. A body far larger than a tiny cap must
+        // still stream to completion; a regression that fell back to a buffering duplicator would throw
+        // ContentTooLargeException here.
+        final byte[] large = new byte[64 * 1024];
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory =
+                () -> StreamMessage.of(HttpData.wrap(large));
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/echo");
+
+        final EventExecutor executor = CommonPools.workerGroup().next();
+        final HttpRequestDuplicator duplicator =
+                HttpRequest.reproducible(headers, bodyFactory).toDuplicator(executor, 8);
+
+        final AggregatedHttpRequest produced = duplicator.duplicate().aggregate().join();
+        assertThat(produced.content().length()).isEqualTo(large.length);
+        duplicator.close();
+    }
+
+    @Test
+    void basePathPrefixRemainsReproducible() {
+        // A WebClient built with a base-URI path prefix rewrites the request path via
+        // req.withHeaders(...). If ReproducibleHttpRequest did not override withHeaders, the rewritten
+        // request would be a plain HeaderOverridingHttpRequest whose toDuplicator falls back to the
+        // buffering DefaultStreamMessageDuplicator — silently reintroducing the ~2 GiB limit. This test
+        // pins that the rewritten request still regenerates its body per attempt (non-buffering path).
+        final AtomicInteger bodyCalls = new AtomicInteger();
+        // Header path is "/upload"; the base URI prefix "/api" makes the effective path "/api/upload",
+        // forcing a path rewrite. Route the server so /api/upload retries once like /upload does.
+        final RequestHeaders headers =
+                RequestHeaders.of(HttpMethod.POST, "/upload",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            bodyCalls.incrementAndGet();
+            return StreamMessage.of(HttpData.ofUtf8("prefixed-body"));
+        };
+
+        final WebClient client =
+                WebClient.builder(server.httpUri() + "/api")
+                         .decorator(RetryingClient.newDecorator(
+                                 RetryRule.builder().onServerErrorStatus().thenBackoff()))
+                         .build();
+
+        final AggregatedHttpResponse res =
+                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                      .aggregate().join();
+
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("prefixed-body");
+        // Regenerated for the initial attempt and the retry — proving the path-rewritten request kept
+        // the reproducible (non-buffering) duplicator rather than falling back to buffering.
+        assertThat(bodyCalls).hasValue(2);
     }
 }
