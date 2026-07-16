@@ -50,6 +50,20 @@ class SchemeAndAuthorityTest {
         });
     }
 
+    @Test
+    void longHostWithPortShouldNotFail() {
+        final String authority =
+                "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg:4567";
+
+        assertThat(SchemeAndAuthority.of(null, authority))
+                .satisfies(uri -> {
+                    assertThat(uri.authority()).isEqualTo(authority);
+                    assertThat(uri.host())
+                            .isEqualTo("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg");
+                    assertThat(uri.port()).isEqualTo(4567);
+                });
+    }
+
     @ParameterizedTest
     @CsvSource({
             "foo:bar",                 // Invalid port
