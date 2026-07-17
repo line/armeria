@@ -80,6 +80,18 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   def patch(pathPattern: String): ScalaRestClientPreparation = path(HttpMethod.PATCH, pathPattern)
 
   /**
+   * Sets the `path` with `HttpMethod.QUERY` and returns a fluent request builder.
+   * {{{
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
+   * val response: Future[ResponseEntity[Result]] =
+   *   restClient.query("/api/v1/customers")
+   *             .contentJson(new CustomerQuery(...))
+   *             .execute[Result]()
+   * }}}
+   */
+  def query(pathPattern: String): ScalaRestClientPreparation = path(HttpMethod.QUERY, pathPattern)
+
+  /**
    * Sets the `path` an `HttpMethod.DELETE` and returns a fluent request builder.
    * {{{
    * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")

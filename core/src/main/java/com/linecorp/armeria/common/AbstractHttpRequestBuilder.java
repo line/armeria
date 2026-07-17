@@ -76,6 +76,11 @@ public abstract class AbstractHttpRequestBuilder
     }
 
     @Override
+    public AbstractHttpRequestBuilder query(String path) {
+        return method(HttpMethod.QUERY).path(path);
+    }
+
+    @Override
     public AbstractHttpRequestBuilder options(String path) {
         return method(HttpMethod.OPTIONS).path(path);
     }

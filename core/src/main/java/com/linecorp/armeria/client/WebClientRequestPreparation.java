@@ -453,6 +453,11 @@ public final class WebClientRequestPreparation
     }
 
     @Override
+    public WebClientRequestPreparation query(String path) {
+        return (WebClientRequestPreparation) super.query(path);
+    }
+
+    @Override
     public WebClientRequestPreparation options(String path) {
         return (WebClientRequestPreparation) super.options(path);
     }

@@ -3707,6 +3707,13 @@
     "parameterTypes" : [ ]
   } ]
 }, {
+  "name" : "com.linecorp.armeria.server.annotation.Query",
+  "queryAllPublicMethods" : true,
+  "methods" : [ {
+    "name" : "value",
+    "parameterTypes" : [ ]
+  } ]
+}, {
   "name" : "com.linecorp.armeria.server.annotation.Path",
   "queryAllPublicMethods" : true,
   "methods" : [ {

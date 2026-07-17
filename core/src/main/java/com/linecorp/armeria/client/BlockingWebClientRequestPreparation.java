@@ -389,6 +389,12 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation query(String path) {
+        delegate.query(path);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation options(String path) {
         delegate.options(path);
         return this;

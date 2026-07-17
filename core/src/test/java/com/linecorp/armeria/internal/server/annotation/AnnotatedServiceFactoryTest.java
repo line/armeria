@@ -50,6 +50,7 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.Query;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.Markup;
@@ -95,7 +96,7 @@ class AnnotatedServiceFactoryTest {
 
         final List<Route> routes = Stream.of(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.HEAD, HttpMethod.PUT,
                                              HttpMethod.OPTIONS, HttpMethod.PATCH, HttpMethod.POST,
-                                             HttpMethod.TRACE)
+                                             HttpMethod.TRACE, HttpMethod.QUERY)
                                          .map(m -> Route.builder().path("/").methods(m).build())
                                          .collect(toImmutableList());
 
@@ -425,6 +426,11 @@ class AnnotatedServiceFactoryTest {
 
         @Trace
         public HttpResponse trace() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Query
+        public HttpResponse query() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

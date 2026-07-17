@@ -65,6 +65,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
+    public HttpRequestBuilder query(String path) {
+        return (HttpRequestBuilder) super.query(path);
+    }
+
+    @Override
     public HttpRequestBuilder options(String path) {
         return (HttpRequestBuilder) super.options(path);
     }

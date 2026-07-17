@@ -92,6 +92,7 @@ import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.Query;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -119,6 +120,7 @@ public final class AnnotatedServiceFactory {
      *   <li>{@link Post} -> {@link HttpMethod#POST}
      *   <li>{@link Put} -> {@link HttpMethod#PUT}
      *   <li>{@link Patch} -> {@link HttpMethod#PATCH}
+     *   <li>{@link Query} -> {@link HttpMethod#QUERY}
      *   <li>{@link Delete} -> {@link HttpMethod#DELETE}
      *   <li>{@link Trace} -> {@link HttpMethod#TRACE}
      * </ul>
@@ -131,6 +133,7 @@ public final class AnnotatedServiceFactory {
                         .put(Post.class, HttpMethod.POST)
                         .put(Put.class, HttpMethod.PUT)
                         .put(Patch.class, HttpMethod.PATCH)
+                        .put(Query.class, HttpMethod.QUERY)
                         .put(Delete.class, HttpMethod.DELETE)
                         .put(Trace.class, HttpMethod.TRACE)
                         .build();
@@ -427,6 +430,7 @@ public final class AnnotatedServiceFactory {
      * @see Patch
      * @see Delete
      * @see Trace
+     * @see Query
      */
     private static Set<Annotation> httpMethodAnnotations(Method method) {
         return AnnotationUtil.getAnnotations(method, FindOption.LOOKUP_SUPER_CLASSES)
