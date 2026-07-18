@@ -24,12 +24,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Annotation for mapping {@link HttpMethod#QUERY} onto specific method.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
+@UnstableApi
 public @interface Query {
 
     /**

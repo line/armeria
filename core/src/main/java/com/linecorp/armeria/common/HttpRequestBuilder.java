@@ -22,6 +22,7 @@ import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds a new {@link HttpRequest}.
@@ -64,7 +65,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
         return (HttpRequestBuilder) super.patch(path);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
+    @UnstableApi
     public HttpRequestBuilder query(String path) {
         return (HttpRequestBuilder) super.query(path);
     }
