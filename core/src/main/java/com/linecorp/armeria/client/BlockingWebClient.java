@@ -391,6 +391,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, HttpData content) {
         return query(path, null, content);
     }
@@ -399,6 +400,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP QUERY request with the specified content by appending the provided
      * query parameters to the path.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.QUERY,
                                          WebClientUtil.addQueryParams(path, params)), content);
@@ -407,6 +409,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, byte[] content) {
         return query(path, null, content);
     }
@@ -414,6 +417,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content, appending the given query parameters to the path.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.QUERY,
                                          WebClientUtil.addQueryParams(path, params)), content);
@@ -422,6 +426,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, String content) {
         return query(path, null, content);
     }
@@ -429,6 +434,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content, appending the given query parameters to the path.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.QUERY,
                                          WebClientUtil.addQueryParams(path, params)), content);
@@ -437,6 +443,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, String content, Charset charset) {
         return query(path, null, content, charset);
     }
@@ -444,6 +451,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP QUERY request with the specified content, appending the given query parameters to the path.
      */
+    @UnstableApi
     default AggregatedHttpResponse query(String path, @Nullable QueryParams params, String content,
                                          Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.QUERY,
