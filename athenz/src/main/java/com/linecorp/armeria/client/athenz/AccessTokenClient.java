@@ -31,10 +31,12 @@ import com.yahoo.athenz.auth.AuthorityConsts;
 import com.linecorp.armeria.client.auth.oauth2.AccessTokenRequest;
 import com.linecorp.armeria.client.auth.oauth2.OAuth2AuthorizationGrant;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.athenz.AccessDeniedException;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
+import com.linecorp.armeria.common.auth.oauth2.InvalidResponseException;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class AccessTokenClient implements AthenzTokenClient {
@@ -104,9 +106,15 @@ final class AccessTokenClient implements AthenzTokenClient {
         return authorizationGrant.getAccessToken().handle((token, cause) -> {
             if (cause != null) {
                 cause = Exceptions.peel(cause);
-                throw new AccessDeniedException("Failed to obtain an Athenz access token. (domain: " +
-                                                domainName + ", roles: " + ROLE_JOINER.join(roleNames) + ')',
-                                                cause);
+                if (cause instanceof InvalidResponseException) {
+                    final InvalidResponseException exception = (InvalidResponseException) cause;
+                    if (HttpStatus.FORBIDDEN.toString().equals(exception.getStatus())) {
+                        throw new AccessDeniedException("Failed to obtain an Athenz access token. (domain: " +
+                                                        domainName + ", roles: " +
+                                                        ROLE_JOINER.join(roleNames) + ')', exception);
+                    }
+                }
+                return Exceptions.throwUnsafely(cause);
             }
             return token.accessToken();
         }).toCompletableFuture();
