@@ -1,0 +1,169 @@
+---
+sidebar_position: 4
+---
+
+# Client
+
+The xDS client module lets Armeria clients discover endpoints, match routes, and
+apply policies — retries, timeouts, load balancing, mTLS — all driven by xDS
+configuration.
+
+## Basics
+
+**HTTP:**
+
+```java
+XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+WebClient client = WebClient.of(preprocessor);
+```
+
+**gRPC:**
+
+```java
+XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+MyServiceBlockingStub stub = GrpcClients.newClient(preprocessor, MyServiceBlockingStub.class);
+```
+
+**Thrift:**
+
+```java
+XdsRpcPreprocessor rpcPreprocessor = XdsRpcPreprocessor.ofListener("my-listener", xdsBootstrap);
+HelloService.Iface iface = ThriftClients.newClient(rpcPreprocessor, HelloService.Iface.class);
+```
+
+[XdsHttpPreprocessor](type) / [XdsRpcPreprocessor](type)
+consumes xDS updates and applies them to each outgoing request (route matching,
+endpoint selection, timeouts, retries, mTLS). Passed directly to the Armeria client,
+replacing the usual scheme, host, and port.
+
+The client expects an `api_listener` — a listener that embeds the
+`HttpConnectionManager` directly rather than binding to a network socket:
+
+```yaml
+listeners:
+  - name: my-listener
+    api_listener:
+      api_listener:
+        "@type": ...HttpConnectionManager
+        # ...
+```
+
+### Why a preprocessor?
+
+In traditional Armeria, a client selects an endpoint from an
+[EndpointGroup](type) and sends the request directly:
+
+```java
+EndpointGroup endpointGroup = EndpointGroup.of(Endpoint.of("host1", 8080),
+                                               Endpoint.of("host2", 8080));
+WebClient client = WebClient.of(SessionProtocol.HTTP, endpointGroup);
+```
+
+With xDS, endpoint selection is no longer the first step. A request must first be
+matched to a route — which determines which cluster (and therefore which set of
+endpoints) the request should be sent to. TLS parameters and per-route policies
+like retries and timeouts also depend on the matched route.
+
+The preprocessor handles this pipeline: it matches the route, selects an endpoint
+from the resolved cluster, and applies the appropriate policies — all before the
+request reaches the wire. HTTP filters (both downstream and upstream) run as
+decorators within the preprocessor's decorator chain.
+
+## Request flow
+
+When a request is sent via `WebClient#execute`, it passes through four stages:
+
+```bob-svg
+  WebClient#execute(HttpRequest)
+     |
+     v
+  Downstream HTTP Filters    (from http_filters)
+     |
+     v
+  Router                      (route match, retry, endpoint select, TLS)
+     |
+     v
+  Upstream HTTP Filters       (from upstream_http_filters)
+     |
+     v
+  User Decorators    (user-defined decorators)
+     |
+     v
+  remote service
+```
+
+1. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`
+   (e.g. RBAC, rate limiting).
+2. **Router** — matches the request to a route, applies retry policy, selects an endpoint
+   using the cluster's load balancing policy, and determines the protocol and TLS parameters.
+3. **Upstream HTTP filters** — per-route filters declared on the router.
+4. **User decorators** — any decorators added via `WebClient.builder(preprocessor).decorator(...)` by the user.
+
+### Example
+
+The following listener defines an RBAC downstream filter, a router with an upstream
+filter, and two routes pointing to different clusters:
+
+```yaml
+listeners:
+  - name: my-listener
+    api_listener:
+      api_listener:
+        "@type": ...HttpConnectionManager
+        http_filters:                        # ← downstream filters
+          - name: envoy.filters.http.rbac
+            typed_config: { ... }
+          - name: envoy.filters.http.router  # ← route match + endpoint select
+            typed_config:
+              "@type": ...Router
+              upstream_http_filters:         # ← upstream filters
+                - name: my.custom.upstream.filter
+                  typed_config: { ... }
+        route_config:
+          virtual_hosts:
+            - name: my-vhost
+              domains: ["*"]
+              routes:
+                - match: { prefix: "/api" }
+                  route:
+                    cluster: api-cluster
+                    timeout: 5s
+                - match: { prefix: "/" }
+                  route:
+                    cluster: default-cluster
+                    timeout: 10s
+```
+
+A client that subscribes to this listener and adds a user-defined `LoggingClient` decorator:
+
+```java
+Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.class);
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+
+WebClient client = WebClient.builder(preprocessor)
+                            .decorator(LoggingClient.newDecorator())
+                            .build();
+client.execute(HttpRequest.of(HttpMethod.GET, "/hello"));
+```
+
+The resulting request flow would be:
+
+```bob-svg
+  WebClient#execute(HttpRequest)
+     |
+     v
+  envoy.filters.http.rbac  (downstream, from http_filters)
+     |
+     v
+  envoy.filters.http.router (route match → api-cluster or default-cluster)
+     |
+     v
+  my.custom.upstream.filter (upstream, from upstream_http_filters)
+     |
+     v
+  LoggingClient             (user-defined decorator)
+     |
+     v
+  remote service
+```

@@ -1,0 +1,188 @@
+---
+sidebar_position: 3
+---
+
+# Bootstrap
+
+The xDS module is driven by an Envoy
+[Bootstrap](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto)
+protobuf message. The bootstrap tells Armeria where to find xDS resources — whether
+they are declared inline, fetched from a control plane, or loaded from files on disk.
+
+## Envoy's Bootstrap
+
+A bootstrap commonly consists of the following:
+
+```yaml
+node:                    # ← zone information
+  locality:
+    region: us-east-1
+    zone: us-east-1a
+
+static_resources:        # ← inline resource declarations
+  listeners: [...]
+  clusters: [...]
+  secrets: [...]
+
+dynamic_resources:       # ← config source definitions
+  ads_config: { ... }
+  lds_config: { ... }
+  cds_config: { ... }
+```
+
+- **`node.locality`** (optional) — identifies this application's region and zone. Used by the
+  control plane to return locality-aware configuration, and by Armeria's load
+  balancer for zone-aware routing.
+- **`static_resources`** — listeners, clusters, and secrets declared inline. These
+  are available immediately without contacting a control plane.
+- **`dynamic_resources`** — defines how Armeria fetches resources dynamically.
+
+## XdsBootstrap
+
+[XdsBootstrap](type) keeps track of xDS resources that users are interested in.
+It takes an Envoy `Bootstrap` protobuf message, which can be loaded using
+[XdsResourceReader](#xdsresourcereader).
+
+```java
+Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.class);
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+```
+
+When a preprocessor or server plugin is created with a listener name, it opens a
+watch on the [XdsBootstrap](type) for that listener:
+
+```java
+// Opens a watch for "my-listener" on xdsBootstrap
+XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+
+// Opens a watch for "server-listener" on xdsBootstrap
+XdsServerPlugin plugin = XdsServerPlugin.of(xdsBootstrap, "server-listener");
+```
+
+The bootstrap then resolves the listener's dependencies — routes, clusters,
+endpoints, secrets — and opens additional watches as needed. Static resources
+declared in the bootstrap are returned right away, while dynamic resources are
+lazily fetched from the control plane on demand. Once all dependencies are
+resolved, the bootstrap produces a snapshot and feeds it to the preprocessor
+or server plugin.
+
+```bob-svg
+                                +-------------------+
+                                |                   |
+                                |   Control Plane   |
+                                |                   |
+                                +--------+----------+
+                                         |
+                                         | xDS (dynamic)
+                                         v
++---------------+          +-------------+-------------+
+|               |  watch   |                           |
+| Preprocessor  +--------->|       XdsBootstrap        |
+|               |<---------+                           |
++---------------+ snapshot |  +---------------------+  |
+                           |  | static_resources    |  |
++---------------+  watch   |  |  listeners, clusters|  |
+|               +--------->|  |  secrets            |  |
+| ServerPlugin  |          |  +---------------------+  |
+|               |<---------+                           |
++---------------+ snapshot +---------------------------+
+```
+
+See [Snapshots](/docs/advanced/xds/concepts#snapshots) for details on how
+snapshots work.
+
+It is recommended to share a single [XdsBootstrap](type) instance across multiple
+clients and servers rather than creating one per client. This avoids duplicate
+connections to the control plane and ensures all components see the same
+resource state.
+
+```java
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+
+// Share across clients and servers
+XdsHttpPreprocessor preprocessor1 = XdsHttpPreprocessor.ofListener("listener-a", xdsBootstrap);
+XdsHttpPreprocessor preprocessor2 = XdsHttpPreprocessor.ofListener("listener-b", xdsBootstrap);
+XdsServerPlugin plugin = XdsServerPlugin.of(xdsBootstrap, "server-listener");
+```
+
+An [XdsBootstrap](type) connected to a control plane maintains an active stream to poll
+for resource updates, so it must be closed when no longer needed:
+
+```java
+xdsBootstrap.close();
+```
+
+
+### XdsResourceReader
+
+[XdsResourceReader](type) parses a YAML or JSON file into a protobuf message.
+
+```java
+// Load from a string
+Bootstrap bootstrap = XdsResourceReader.from(yamlString, Bootstrap.class);
+```
+
+:::note
+
+Protobuf requires a type registry to resolve `@type` URLs in YAML/JSON. Standard
+Envoy types are registered by default. If you use custom protobuf definitions,
+register a [XdsTypeRegistryPackageProvider](type) via `ServiceLoader` to add your
+packages to the type registry.
+
+:::
+
+## Connecting to a control plane
+
+In a typical deployment, the bootstrap defines the control plane connection in
+`static_resources` and lets everything else be discovered dynamically:
+
+```yaml
+node:
+  locality:
+    region: us-east-1
+    zone: us-east-1a
+static_resources:
+  clusters:
+    - name: xds-cluster                    # ← control plane address (static)
+      type: STATIC
+      load_assignment:
+        cluster_name: xds-cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: control-plane.example.com
+                      port_value: 15010
+      transport_socket:                    # ← TLS to the control plane
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          common_tls_context:
+            tls_certificates:
+              - certificate_chain:
+                  filename: /certs/tls.crt
+                private_key:
+                  filename: /certs/tls.key
+dynamic_resources:
+  ads_config:                              # ← use xds-cluster to reach the control plane
+    api_type: GRPC
+    grpc_services:
+      - envoy_grpc:
+          cluster_name: xds-cluster
+        initial_metadata:                  # ← access token
+          - key: authorization
+            value: "Bearer <token>"
+  lds_config:
+    ads: {}                                # ← fetch listeners via ADS
+  cds_config:
+    ads: {}                                # ← fetch clusters via ADS
+```
+
+The control plane cluster must be static — it is the bootstrap's only
+hard-coded dependency. Everything else (listeners, routes, clusters, endpoints)
+is fetched dynamically through the ADS stream.
+
+Refer to Envoy's [dynamic control plane configuration guide](https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/configuration-dynamic-control-plane)
+for more details.
+

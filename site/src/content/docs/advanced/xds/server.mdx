@@ -1,0 +1,204 @@
+---
+sidebar_position: 5
+---
+
+# Server
+
+The Armeria server itself becomes an xDS-managed workload. A control plane pushes
+configuration that governs how the server accepts connections, negotiates TLS, and
+enforces policies — while the user's services and routing remain entirely under
+their control.
+
+## Conceptual model
+
+In Envoy's inbound pipeline, a typical HTTP request flows through:
+
+```
+connection → filter chain match → TLS → network filters → HCM → HTTP filters → router
+```
+
+Armeria is an HTTP framework, so network filters are not supported. The
+following table shows the rough equivalents between Envoy concepts and
+Armeria APIs:
+
+| Envoy | Armeria |
+|---|---|
+| `listener` | `XdsServerPlugin` |
+| `filter_chain_match` | `ConnectionAcceptor` |
+| `downstream_tls_context` | `ServerTlsProvider` |
+| `http_filters` (HCM) | Per-filter-chain `HttpService` decorator |
+| `router` | User's `ServerBuilder` config |
+
+The key distinction is the **router**. In Envoy, the router is a built-in
+http_filter that evaluates VirtualHost/Route matching and dispatches to upstream
+clusters. In Armeria, the router is your application — the VirtualHosts, Routes,
+and services you register via `ServerBuilder`. xDS never generates, translates,
+or modifies your routing or service definitions. It manages the layers above:
+TLS and HTTP filters.
+
+```
+xDS Listener
+ ├── FilterChain: mTLS (port 8443)
+ │    ├── match: destination_port=8443, transport_protocol="tls"
+ │    ├── TLS: SDS certs + client cert required
+ │    └── http_filters:
+ │         ├── jwt_authn
+ │         ├── rbac
+ │         └── router ─────────────┐
+ │                                 │
+ ├── FilterChain: plaintext (port 8080)
+ │    ├── match: destination_port=8080
+ │    └── http_filters:            │
+ │         └── router ─────────────┤
+ │                                 │
+ └── FilterChain: internal (port 9090)
+      ├── match: destination_port=9090, transport_protocol="tls"
+      ├── TLS: internal certs      │
+      └── http_filters:            │
+           └── router ─────────────┤
+                                   │
+                                   v
+              user's Armeria server (= router)
+              ├── VirtualHost("api.example.com")
+              │    ├── Route("/api/users")  → userService
+              │    └── Route("/api/admin")  → adminService
+              └── defaultVirtualHost()
+                   └── Route("/health")     → healthCheckService
+```
+
+```java
+Server server = Server.builder()
+                      .plugin(XdsServerPlugin.builder(xdsBootstrap, "server-listener")
+                                             .port(8443)
+                                             .port(8080)
+                                             .port(9090)
+                                             .build())
+                      .virtualHost("api.example.com")
+                          .service("/api/users", userService)
+                          .service("/api/admin", adminService)
+                          .and()
+                      .service("/health", healthCheckService)
+                      .build();
+```
+
+### Connection-time binding
+
+The matched filter chain — TLS config and HTTP filter decorators — is determined
+once at connection establishment and does not change for the lifetime of that
+connection, even if the xDS snapshot updates. New connections pick up the latest
+snapshot; existing connections continue with the policy they were accepted with.
+
+### Decorator ordering
+
+xDS decorators are outermost (run first), so that policies like RBAC reject
+before user decorators or services see the request:
+
+```
+[xDS jwt_authn] → [xDS rbac] → [user's service decorators] → service
+```
+
+Per-route filter configuration is supported via `typed_per_filter_config`,
+allowing different filter behavior for different paths. For example, you can
+skip filters on a health check path by disabling the filter for that route:
+
+```yaml
+route_config:
+  virtual_hosts:
+    - name: default
+      domains: ["*"]
+      routes:
+        - match: { prefix: "/healthcheck" }
+          non_forwarding_action: {}
+          typed_per_filter_config:
+            envoy.filters.http.rbac:
+              "@type": type.googleapis.com/my.custom.FilterConfig
+              disabled: true
+        - match: { prefix: "/" }
+          non_forwarding_action: {}
+```
+
+Requests to `/healthcheck` bypass the filter; all other requests are
+subject to it.
+
+## Setting up
+
+The server uses a standard listener with `filter_chains`.
+Routes should use `non_forwarding_action` since the server does not forward
+requests to upstream clusters — it serves them directly:
+
+```yaml
+listeners:
+  - name: server-listener
+    filter_chains:
+      - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": ...HttpConnectionManager
+              route_config:
+                virtual_hosts:
+                  - name: default
+                    domains: ["*"]
+                    routes:
+                      - match: { prefix: "/" }
+                        non_forwarding_action: {}
+```
+
+Install the plugin on your server. Your services are registered normally —
+xDS controls how connections are accepted and filtered, not what your services do.
+
+```java
+import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsResourceReader;
+import com.linecorp.armeria.xds.server.XdsServerPlugin;
+
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+
+Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.class);
+XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+
+Server server = Server.builder()
+                      .plugin(XdsServerPlugin.of(xdsBootstrap, "server-listener"))
+                      .service("/hello", (ctx, req) -> HttpResponse.of("hello"))
+                      .build();
+server.start().join();
+```
+
+The server blocks during startup until the first xDS snapshot arrives (default
+timeout: 30 seconds), so it never serves with stale or missing configuration.
+
+### Port binding
+
+Dynamic port management is not supported — xDS listeners are matched to ports
+the user already configured. The listener's `address` and `port_value` in xDS
+configuration are ignored. Only the port registered with [XdsServerPlugin](type)
+matters.
+
+For example, suppose the xDS listener is configured with port 8080:
+
+```yaml
+name: server-listener
+address:
+  socket_address:
+    address: 0.0.0.0
+    port_value: 8080
+```
+
+And the server also listens on port 8080, but the plugin is configured with
+port 8443:
+
+```java
+XdsServerPlugin plugin = XdsServerPlugin.builder(xdsBootstrap, "server-listener")
+                                        .port(8443)
+                                        .readyTimeout(Duration.ofSeconds(10))
+                                        .build();
+
+Server server = Server.builder()
+                      .http(8080)
+                      .plugin(plugin)
+                      .service("/hello", (ctx, req) -> HttpResponse.of("hello"))
+                      .build();
+```
+
+Port 8080 is **not** managed by xDS — even though it matches the listener's
+`port_value`. The plugin only manages port 8443. Connections on port 8080
+serve normally through Armeria's standard routing, unaffected by xDS.

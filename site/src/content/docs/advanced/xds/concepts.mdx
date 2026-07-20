@@ -1,0 +1,203 @@
+---
+sidebar_position: 2
+---
+
+# Concepts
+
+## Architecture overview
+
+Armeria implements the xDS protocol directly in the application. Both inbound
+(server) and outbound (client) traffic can be managed by xDS — there is no
+sidecar proxy.
+
+```bob-svg
+                                    +--------------------+
+                                    |                    |
+               request              |   Control Plane    |
+                  |                 |                    |
+                  v                 +---+------------+---+
+  +---------------------------------------------+  |   |
+  |                JVM Runtime                   |  |   |
+  |                                              |  |   |
+  |  +---------------+----------------+          +<-+   |
+  |  |                                |          |      |
+  |  |  xDS Inbound (XdsServerPlugin) |          |      |
+  |  |  (mTLS, filter chains)         |          |      |
+  |  |                                |          |      |
+  |  +---------------+----------------+          |      |
+  |                  |                            |      |
+  |                  v                            |      |
+  |  +---------------+----------------+          |      |
+  |  |                                |          |      |
+  |  |      User Application          |          |      |
+  |  |                                |          |      |
+  |  +---------------+----------------+          |      |
+  |                  |                            |      |
+  |                  v                            |      |
+  |  +---------------+----------------+          +<-----+
+  |  |                                |          |
+  |  |  xDS Outbound (Preprocessor)   |          |
+  |  |  (discovery, LB, retry, mTLS)  |          |
+  |  |                                |          |
+  |  +---------------+----------------+          |
+  |                  |                            |
+  +---------------------------------------------+
+                     |
+                     v
+               remote service
+```
+
+- **xDS Inbound** — handles incoming connections. Controls filter chain matching,
+  dynamic TLS, and HTTP filter policies. See [Server](/docs/advanced/xds/server).
+- **User Application** — your business logic.
+- **xDS Outbound** — handles outgoing requests. Controls endpoint discovery, load
+  balancing, retries, timeouts, and mTLS. See [Client](/docs/advanced/xds/client).
+
+Both layers receive their configuration from the control plane via xDS, so policies
+can be updated at runtime without redeploying the application.
+
+## xDS and Armeria
+
+Armeria implements the semantics of Envoy's xDS schema using Armeria's own
+primitives and APIs. Fields in xDS resources map to their Armeria equivalents:
+
+**Armeria:**
+
+```java
+WebClient client = WebClient.builder("http://my-service:8080")
+                            .responseTimeout(Duration.ofSeconds(5))
+                            .build();
+```
+
+**xDS — endpoint address and port** (in a Cluster):
+
+```yaml
+clusters:
+  - name: my-cluster
+    load_assignment:
+      endpoints:
+        - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: my-service
+                    port_value: 8080
+```
+
+**xDS — response timeout** (in a VirtualHost route):
+
+```yaml
+virtual_hosts:
+  - name: my-vhost
+    routes:
+      - match: { prefix: "/" }
+        route:
+          cluster: my-cluster
+          timeout: 5s
+```
+
+For any field **not** explicitly set in the xDS configuration, the original Armeria
+defaults apply. In the example above, `timeout: 5s` on the route overrides the
+client's `responseTimeoutMillis(3000)`. If `timeout` were omitted from the route,
+the client's 3-second default would be used instead.
+
+```java
+XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap);
+WebClient client =
+        WebClient.builder(preprocessor)
+                 .responseTimeoutMillis(3000)
+                 .build();
+```
+
+## Threading model
+
+xDS resource management and request processing run on separate threads:
+
+```bob-svg
+                              +-------------------------+
+                              |   xDS Event Loop        |
++-------------------+  xDS   |   (xds-common-worker)   |
+|  Control Plane    +-------->|                         |
++-------------------+         |   - resource parsing    |
+                              |   - snapshot updates    |
+                              +------------+------------+
+                                           |
+                                           | snapshot
+                                           |
+                              +------------+------------+
+  request  ---------------->  |   Application Thread    +--------->  response
+                              |                         |
+                              |   - filter execution    |
+                              |   - routing             |
+                              |   - load balancing      |
+                              +-------------------------+
+```
+
+- **xDS event loop** — a single dedicated thread (`xds-common-worker`) handles all
+  communication with the control plane, resource parsing, and snapshot updates. This
+  thread is created automatically and shared across all [XdsBootstrap](type) instances.
+- **Application thread** — request processing (filter execution, routing, load
+  balancing) runs on whatever thread the client or server executes on.
+
+The two are connected through a thread-safe handoff — when a new snapshot arrives
+on the xDS event loop, it is published and becomes visible to all subsequent
+requests. There is no locking on the request path.
+
+This means:
+- xDS updates do not block request processing.
+- Request processing does not block xDS updates.
+- No additional threads are introduced beyond the single xDS event loop.
+
+## Snapshots
+
+A snapshot is an immutable, point-in-time view of the xDS resource tree. When the
+control plane pushes an update, Armeria rebuilds the affected part of the tree and
+produces a new snapshot. Snapshots form a tree that mirrors the xDS resource hierarchy:
+
+```bob-svg
+  ListenerSnapshot
+  |
+  +---> RouteSnapshot
+        |
+        +---> ClusterSnapshot
+        |     |
+        |     +---> EndpointSnapshot
+        |
+        +---> ClusterSnapshot
+              |
+              +---> EndpointSnapshot
+```
+
+Snapshots have the following guarantees:
+
+- **Complete** — partial snapshots are never published. A snapshot is only produced
+  once all dependent resources (routes, clusters, endpoints) have been resolved.
+- **Error-free** — if any resource in the tree fails to load, the snapshot is not
+  published. The last successful snapshot continues to be used.
+- **Immutable** — once published, a snapshot never changes. It can be read on any
+  thread without synchronization. When a new snapshot is produced, it simply
+  replaces the previous reference.
+
+## Error handling
+
+- **Unknown fields** — if the control plane sends a protobuf with fields
+  that are not present in Armeria's proto definitions (e.g. due to a newer
+  xDS version), the unknown fields are silently ignored.
+- **Validation failures** — if an update from the control plane fails
+  validation, no new snapshot is emitted. The previous snapshot continues
+  to be used.
+- **Missing resources** — if a resource does not exist on the control plane,
+  no new snapshot is emitted.
+- **Default watcher** — [XdsBootstrap](type) registers a default watcher that logs
+  a warning when errors or missing resources are detected. A custom watcher
+  can be set via the builder for application-specific handling:
+
+```java
+XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                        .defaultSnapshotWatcher((snapshot, error) -> {
+                                            if (error != null) {
+                                                // handle error
+                                            }
+                                        })
+                                        .build();
+```
