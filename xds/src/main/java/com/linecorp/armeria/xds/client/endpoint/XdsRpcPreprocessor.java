@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
  * An {@link RpcPreprocessor} implementation which allows clients to execute requests based on
@@ -61,7 +61,7 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
     @Override
     RpcResponse execute1(PreClient<RpcRequest, RpcResponse> delegate, PreClientRequestContext ctx,
                          RpcRequest req, RouteCluster routeCluster) throws Exception {
-        DelegatingRpcClient.setDelegate(ctx, delegate);
-        return routeCluster.rpcPreClient().execute(ctx, req);
+        ctx.setAttr(XdsCommonUtil.ROUTE_METADATA_MATCH, routeCluster.metadataMatch());
+        return routeCluster.clusterSnapshot().rpcPreprocessor().execute(delegate, ctx, req);
     }
 }

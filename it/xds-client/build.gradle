@@ -8,4 +8,6 @@ dependencies {
     api(libs.controlplane.cache) {
         exclude group: 'io.envoyproxy.controlplane', module: 'api'
     }
+
+    testImplementation project(':thrift0.18')
 }

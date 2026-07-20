@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.xds.client.endpoint.RouterFilterFactory;
@@ -45,7 +44,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 final class HcmContext {
 
     private final HttpConnectionManager hcm;
-    private final Function<Map<String, Any>, SnapshotStream<ClientPreprocessors>> downstream;
+    private final Function<Map<String, Any>, SnapshotStream<ClientDecoration>> downstream;
     private final Function<Map<String, Any>, SnapshotStream<ClientDecoration>> upstream;
     private final Function<Map<String, Any>, SnapshotStream<HttpService>> server;
 
@@ -73,10 +72,10 @@ final class HcmContext {
                 router != null ? router.getUpstreamHttpFiltersList() : ImmutableList.of();
 
         downstream = SnapshotStream.caching(
-                filterConfigs -> FilterUtil.buildDownstreamFilter(
+                filterConfigs -> FilterUtil.buildFilter(
                         registry, context, hcmHttpFilters, filterConfigs));
         upstream = SnapshotStream.caching(
-                filterConfigs -> FilterUtil.buildUpstreamFilter(
+                filterConfigs -> FilterUtil.buildFilter(
                         registry, context, upstreamFilters, filterConfigs));
         server = SnapshotStream.caching(
                 filterConfigs -> FilterUtil.buildDownstreamServerFilter(
@@ -87,7 +86,7 @@ final class HcmContext {
         return hcm;
     }
 
-    SnapshotStream<ClientPreprocessors> downstream(Map<String, Any> filterConfigs) {
+    SnapshotStream<ClientDecoration> downstream(Map<String, Any> filterConfigs) {
         return downstream.apply(filterConfigs);
     }
 
