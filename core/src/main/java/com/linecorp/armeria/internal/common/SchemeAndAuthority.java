@@ -82,15 +82,16 @@ public final class SchemeAndAuthority {
             final HostAndPort hostAndPort = HostAndPort.fromString(rawAuthority);
 
             String host = IDN.toASCII(hostAndPort.getHost(), IDN.ALLOW_UNASSIGNED);
+
+            if (isIpv6) {
+                host = '[' + host + ']';
+            }
+
             final int port = hostAndPort.getPortOrDefault(-1);
 
             String normalizedAuthority = host;
             if (port >= 0) {
                 normalizedAuthority += ':' + port;
-            }
-
-            if (isIpv6) {
-                host = '[' + host + ']';
             }
 
             return new SchemeAndAuthority(scheme, normalizedAuthority, host, port);
