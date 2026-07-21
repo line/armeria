@@ -26,7 +26,6 @@ import com.google.protobuf.Any;
 import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
@@ -69,7 +68,7 @@ final class RouteClusterFactory {
         final Metadata routeMetadataMatch = routeAction.getMetadataMatch();
         final SnapshotStream<ClusterSnapshot> clusterStream =
                 w -> context.clusterManager().register(clusterName, context, w);
-        final SnapshotStream<ClientPreprocessors> downstreamStream = hcmContext.downstream(routeFilterConfigs);
+        final SnapshotStream<ClientDecoration> downstreamStream = hcmContext.downstream(routeFilterConfigs);
         final SnapshotStream<ClientDecoration> upstreamStream = hcmContext.upstream(routeFilterConfigs);
         return SnapshotStream.combineLatest(
                 clusterStream, downstreamStream, upstreamStream,
@@ -97,7 +96,7 @@ final class RouteClusterFactory {
             final Map<String, Any> merged =
                     FilterUtil.mergeFilterConfigs(routeFilterConfigs,
                                                   clusterWeight.getTypedPerFilterConfigMap());
-            final SnapshotStream<ClientPreprocessors> downstreamStream = hcmContext.downstream(merged);
+            final SnapshotStream<ClientDecoration> downstreamStream = hcmContext.downstream(merged);
             final SnapshotStream<ClientDecoration> upstreamStream = hcmContext.upstream(merged);
 
             wcStreams.add(SnapshotStream.combineLatest(
