@@ -81,26 +81,19 @@ public final class SchemeAndAuthority {
 
             final HostAndPort hostAndPort = HostAndPort.fromString(rawAuthority);
 
-            final String originalHost = hostAndPort.getHost();
+            String host = IDN.toASCII(hostAndPort.getHost(), IDN.ALLOW_UNASSIGNED);
+            final int port = hostAndPort.getPortOrDefault(-1);
 
-            String host = originalHost;
-            if (!isIpv6) {
-                host = IDN.toASCII(host, IDN.ALLOW_UNASSIGNED);
-
-                if (!host.equals(originalHost)) {
-                    rawAuthority = rawAuthority.replaceFirst(
-                            java.util.regex.Pattern.quote(originalHost),
-                            java.util.regex.Matcher.quoteReplacement(host));
-                }
+            String normalizedAuthority = host;
+            if (port >= 0) {
+                normalizedAuthority += ':' + port;
             }
 
             if (isIpv6) {
                 host = '[' + host + ']';
             }
 
-            final int port = hostAndPort.getPortOrDefault(-1);
-
-            return new SchemeAndAuthority(scheme, rawAuthority, host, port);
+            return new SchemeAndAuthority(scheme, normalizedAuthority, host, port);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
