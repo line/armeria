@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds.filter.athenz;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -160,6 +162,7 @@ final class MappingTemplate {
         private final int index;
 
         CaptureSegment(String name, int index) {
+            checkArgument(index >= 0, "index: %s (expected: >= 0) for name: %s", index, name);
             this.name = name;
             this.index = index;
         }
@@ -168,7 +171,7 @@ final class MappingTemplate {
         @Nullable
         public String resolve(ServiceRequestContext ctx, Map<String, List<String>> captures) {
             final List<String> groups = captures.get(name);
-            if (groups == null || index < 0 || index >= groups.size()) {
+            if (groups == null || index >= groups.size()) {
                 return null;
             }
             return groups.get(index);
