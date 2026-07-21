@@ -19,10 +19,7 @@ package com.linecorp.armeria.xds.filter;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreprocessor;
-import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
@@ -41,28 +38,14 @@ public interface XdsHttpFilter {
     }
 
     /**
-     * Returns the {@link HttpPreprocessor} for downstream filter usage.
-     */
-    default HttpPreprocessor httpPreprocessor() {
-        return PreClient::execute;
-    }
-
-    /**
-     * Returns the {@link RpcPreprocessor} for downstream filter usage.
-     */
-    default RpcPreprocessor rpcPreprocessor() {
-        return PreClient::execute;
-    }
-
-    /**
-     * Returns the {@link DecoratingHttpClientFunction} for upstream filter usage.
+     * Returns the {@link DecoratingHttpClientFunction} for this filter.
      */
     default DecoratingHttpClientFunction httpDecorator() {
         return HttpClient::execute;
     }
 
     /**
-     * Returns the {@link DecoratingRpcClientFunction} for upstream filter usage.
+     * Returns the {@link DecoratingRpcClientFunction} for this filter.
      */
     default DecoratingRpcClientFunction rpcDecorator() {
         return RpcClient::execute;
