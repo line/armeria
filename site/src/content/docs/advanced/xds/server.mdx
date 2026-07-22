@@ -32,9 +32,10 @@ Armeria APIs:
 The key distinction is the **router**. In Envoy, the router is a built-in
 http_filter that evaluates VirtualHost/Route matching and dispatches to upstream
 clusters. In Armeria, the router is your application — the VirtualHosts, Routes,
-and services you register via `ServerBuilder`. xDS never generates, translates,
-or modifies your routing or service definitions. It manages the layers above:
-TLS and HTTP filters.
+and services you register via `ServerBuilder`. The xDS layer manages cross-cutting concerns
+such as TLS and HTTP filters traffic reaches your application.
+
+### Example
 
 ```
 xDS Listener
@@ -80,67 +81,7 @@ Server server = Server.builder()
                       .build();
 ```
 
-### Connection-time binding
-
-The matched filter chain — TLS config and HTTP filter decorators — is determined
-once at connection establishment and does not change for the lifetime of that
-connection, even if the xDS snapshot updates. New connections pick up the latest
-snapshot; existing connections continue with the policy they were accepted with.
-
-### Decorator ordering
-
-xDS decorators are outermost (run first), so that filters run before
-user decorators or services see the request:
-
-```
-[xDS filters] → [user's service decorators] → service
-```
-
-Per-route filter configuration is supported via `typed_per_filter_config`,
-allowing different filter behavior for different paths. For example, you can
-disable a filter on a health check path:
-
-```yaml
-route_config:
-  virtual_hosts:
-    - name: default
-      domains: ["*"]
-      routes:
-        - match: { prefix: "/healthcheck" }
-          non_forwarding_action: {}
-          typed_per_filter_config:
-            my.custom.filter:
-              "@type": type.googleapis.com/my.custom.filter.v1.Config
-              disabled: true
-        - match: { prefix: "/" }
-          non_forwarding_action: {}
-```
-
-Requests to `/healthcheck` bypass the filter; all other requests are
-subject to it.
-
-## Setting up
-
-The server uses a standard listener with `filter_chains`.
-Routes should use `non_forwarding_action` since the server does not forward
-requests to upstream clusters — it serves them directly:
-
-```yaml
-listeners:
-  - name: server-listener
-    filter_chains:
-      - filters:
-          - name: envoy.filters.network.http_connection_manager
-            typed_config:
-              "@type": ...HttpConnectionManager
-              route_config:
-                virtual_hosts:
-                  - name: default
-                    domains: ["*"]
-                    routes:
-                      - match: { prefix: "/" }
-                        non_forwarding_action: {}
-```
+## Basics
 
 Install the plugin on your server. Your services are registered normally —
 xDS controls how connections are accepted and filtered, not what your services do.
@@ -161,6 +102,32 @@ Server server = Server.builder()
                       .build();
 server.start().join();
 ```
+
+### Specifying routes
+
+The server uses a standard listener with `filter_chains`.
+Routes should use `non_forwarding_action` since the server does not forward
+requests to upstream clusters — it serves them directly. Requests that do not
+match any route will be rejected.
+
+```yaml
+listeners:
+  - name: server-listener
+    filter_chains:
+      - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": ...HttpConnectionManager
+              route_config:
+                virtual_hosts:
+                  - name: default
+                    domains: ["*"]
+                    routes:
+                      - match: { prefix: "/" }
+                        non_forwarding_action: {}
+```
+
+### Startup behavior
 
 The server blocks during startup until the first complete xDS snapshot arrives
 (default timeout: 30 seconds). If a later update cannot be resolved, the last
@@ -202,3 +169,42 @@ Server server = Server.builder()
 Port 8080 is **not** managed by xDS — even though it matches the listener's
 `port_value`. The plugin only manages port 8443. Connections on port 8080
 serve normally through Armeria's standard routing, unaffected by xDS.
+
+### Connection-time binding
+
+The matched filter chain — TLS config and HTTP filter decorators — is determined
+once at connection establishment and does not change for the lifetime of that
+connection, even if the xDS snapshot updates. New connections pick up the latest
+snapshot; existing connections continue with the policy they were accepted with.
+
+### Decorator ordering
+
+xDS decorators are outermost (run first), so that filters run before
+user decorators or services see the request:
+
+```
+[xDS filters] → [user's service decorators] → service
+```
+
+Per-route filter configuration is supported via `typed_per_filter_config`,
+allowing different filter behavior for different paths. For example, you can
+disable a filter on a health check path:
+
+```yaml
+route_config:
+  virtual_hosts:
+    - name: default
+      domains: ["*"]
+      routes:
+        - match: { prefix: "/healthcheck" }
+          non_forwarding_action: {}
+          typed_per_filter_config:
+            my.custom.filter:
+              "@type": type.googleapis.com/my.custom.filter.v1.Config
+              disabled: true
+        - match: { prefix: "/" }
+          non_forwarding_action: {}
+```
+
+Requests to `/healthcheck` bypass the filter; all other requests are
+subject to it.

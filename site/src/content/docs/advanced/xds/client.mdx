@@ -92,8 +92,7 @@ When a request is sent via `WebClient#execute`, it passes through four stages:
   remote service
 ```
 
-1. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`
-   (see [Built-in filters](/docs/advanced/xds/extensions#built-in-filters) for available filters).
+1. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`.
 2. **Router** — matches the request to a route, applies retry policy, selects an endpoint
    using the cluster's load balancing policy, and determines the protocol and TLS parameters.
 3. **Upstream HTTP filters** — per-route filters declared on the router.

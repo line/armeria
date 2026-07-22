@@ -12,8 +12,8 @@ and encrypt traffic between them. Implementing this logic in every service is
 error-prone and hard to keep consistent — especially as the number of services
 grows.
 
-A **service mesh** moves these concerns out of application code and into a dedicated
-infrastructure layer. It has two parts:
+A **service mesh** moves these concerns out of individual application call sites
+and into a shared data-plane implementation. It has two parts:
 
 - **Control plane** — a centralized component that watches for service changes
   (new instances, removed endpoints, updated routing rules) and computes the
@@ -23,71 +23,65 @@ infrastructure layer. It has two parts:
   balancing, retrying failures, enforcing timeouts, and encrypting traffic
   with mutual TLS.
 
-The control plane pushes configuration to the data plane using the
-**xDS protocol** — originally designed for Envoy but now a
-[CNCF standard](https://github.com/cncf/xds) adopted by multiple projects.
+The control plane delivers configuration to the data plane using the
+**xDS APIs** — originally developed for Envoy and now maintained by the
+[CNCF xDS API Working Group](https://github.com/cncf/xds).
 
 ## Sidecar vs. proxyless
 
 In a traditional service mesh, the data plane is a **sidecar proxy** — a separate
 process (typically Envoy) deployed alongside every application instance. An
-orchestrator like Kubernetes injects the sidecar automatically, and all inbound
-and outbound traffic is intercepted by it.
+orchestrator like Kubernetes injects the sidecar automatically, and application
+traffic is typically redirected through it.
 
 This model has clear strengths: it is **language-agnostic** (any process gets
-mesh features regardless of its runtime), provides a **strong security
-boundary** (policy is enforced by the sidecar even if the application is
-compromised), and keeps mesh concerns **completely transparent** to application
-code. For organizations already running on Kubernetes with a platform team to
-manage the mesh infrastructure, sidecars are a well-proven choice.
+mesh features regardless of its runtime) and does not require
+**application-library integration**. For organizations already running on
+Kubernetes with a platform team to manage the mesh infrastructure, sidecars
+are a well-proven choice.
 
 That said, some organizations face challenges with this model:
 
-- **Platform dependency** — while sidecars can run outside Kubernetes, the
-  operational tooling for injection, traffic interception (via iptables),
-  lifecycle management, and health checking is largely Kubernetes-specific.
-  Running a sidecar fleet on bare metal or VMs requires significant custom
-  automation.
+- **Platform dependency** — the Kubernetes ecosystem provides mature automation
+  for sidecar injection and traffic interception. Equivalent deployment and
+  lifecycle automation may require additional work in VM or bare-metal
+  environments.
 - **Operational overhead** — running a full control plane plus a proxy per
-  service instance requires a dedicated team to deploy, upgrade, monitor, and
-  troubleshoot the mesh infrastructure alongside the applications.
-- **Incremental adoption** — for organizations with large legacy deployments,
-  migrating everything to Kubernetes and a service mesh at once is rarely a
-  realistic first step.
+  service instance introduces an additional proxy fleet that must be deployed,
+  upgraded, monitored, and troubleshot alongside the applications.
 
 A **proxyless** approach offers an alternative. Instead of routing traffic
-through an external proxy, the application implements the xDS protocol directly
-and applies the configuration in-process:
+through an external proxy, the application's networking framework implements
+the xDS APIs and applies the configuration in-process:
 
-- **No orchestrator required** — service mesh features work on bare metal, VMs,
-  and containers alike. There is no dependency on Kubernetes for sidecar injection
-  or traffic interception.
-- **Simpler deployment** — there is no sidecar fleet to deploy or upgrade.
-  The mesh logic is part of the application, versioned and shipped together
-  with it.
-- **Lower latency** — requests are routed directly to the remote service without
-  passing through an intermediate proxy, eliminating two extra process traversals.
-- **Fewer resources** — no separate proxy process per instance means less memory
-  and CPU overhead.
+- **No traffic-interception infrastructure** — applications can use xDS on
+  containers, VMs, or bare metal without sidecar injection or transparent
+  traffic redirection.
+- **No separate proxy lifecycle** — there is no sidecar fleet to deploy or
+  upgrade. The data-plane implementation is instead versioned and deployed as
+  an application dependency.
+- **Direct request path** — requests do not traverse separate client-side and
+  server-side proxy processes, which can reduce latency.
+- **No separate proxy overhead** — proxyless operation avoids the baseline
+  memory and CPU cost of running an additional proxy process for each
+  application instance.
 - **Incremental adoption** — you can add xDS support to individual services
   without migrating your entire infrastructure. Services with and without xDS
   can coexist.
 
 ### Trade-offs
 
-Proxyless is not a strict upgrade over the sidecar model — it shifts
-responsibilities rather than eliminating them:
+Proxyless is not a strict upgrade over the sidecar model. It makes different
+integration and operational choices:
 
-- **Language-specific** — proxyless only works for languages that have an xDS
-  implementation. A polyglot organization may still need sidecars for services
-  written in languages without library support.
-- **Weaker security boundary** — with sidecars, policy enforcement happens
-  outside the application process. In the proxyless model, the application
-  itself must be trusted to enforce mTLS and routing policy correctly.
-- **Debugging shifts to application teams** — routing and load balancing
-  decisions happen inside the application's process rather than in a separate
-  proxy with its own admin interface and stats. Application developers need to
-  understand xDS semantics when troubleshooting.
+- **Runtime and framework dependency** — proxyless operation requires xDS support
+  in the application's language and networking framework. A polyglot
+  organization may still need sidecars for services without compatible library
+  support.
+- **Application release coupling** — upgrading or fixing the proxyless data-plane
+  implementation generally requires updating and redeploying the application.
+- **Feature availability** — a proxyless implementation may support a smaller
+  subset of Envoy resources, fields, and filters than an Envoy sidecar.
 
 The two models are not mutually exclusive — proxyless services and sidecar-based
 services can coexist in the same mesh, so you can adopt either approach
@@ -95,17 +89,19 @@ incrementally.
 
 ## Landscape
 
-There are different approaches to solving the same set of problems in Java:
+Other Java technologies address overlapping service-discovery, routing, and
+resiliency concerns:
 
 - [**Spring Cloud**](https://spring.io/projects/spring-cloud) — provides
-  client-side service discovery, load balancing, and circuit breaking for Java
-  applications using its own ecosystem (Eureka, Consul, Ribbon) rather than the
-  xDS protocol.
+  Java abstractions and integrations for service discovery, load balancing,
+  circuit breaking, and other distributed-system patterns. Unlike Armeria's
+  xDS module, these capabilities are not primarily configured through the
+  xDS APIs.
 - [**gRPC xDS**](https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md)
-  — gRPC clients and servers can speak xDS natively to receive routing and load
-  balancing configuration from a control plane like Istio.
+  — supported gRPC clients and servers can receive service discovery, routing,
+  load-balancing, and security configuration from an xDS control plane.
 
-Armeria's xDS module occupies a similar space — it speaks the xDS protocol and
+Armeria's xDS module occupies a similar space — it speaks the xDS APIs and
 supports HTTP, gRPC, and Thrift.
 See [Concepts](/docs/advanced/xds/concepts) for a deeper look at the architecture.
 
@@ -122,7 +118,7 @@ See [Concepts](/docs/advanced/xds/concepts) for a deeper look at the architectur
 - [Metrics](/docs/advanced/xds/metrics) — control plane, resource, and load balancer
   metrics exposed by the xDS module
 - [Extensions](/docs/advanced/xds/extensions) — adding custom HTTP filter extensions
-  via the [HttpFilterFactory](type) SPI
+  via [HttpFilterFactory](type)
 - [Supported features](/docs/advanced/xds/supported-features) — which xDS fields
   Armeria recognizes and how unsupported fields are handled
 - [Control planes](/docs/advanced/xds/control-planes) — java-control-plane,
