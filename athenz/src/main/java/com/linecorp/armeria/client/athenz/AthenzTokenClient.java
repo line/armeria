@@ -1,7 +1,7 @@
 /*
  * Copyright 2026 LY Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
+ * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.athenz.AccessDeniedException;
 
 /**
  * A client that fetches a token from Athenz ZTS and refreshes it when necessary.
@@ -68,8 +69,9 @@ public interface AthenzTokenClient {
 
     /**
      * Returns a token. The returned {@link CompletableFuture} is completed when the token is successfully
-     * fetched from Athenz ZTS. The returned {@link CompletableFuture} is completed exceptionally if the token
-     * cannot be fetched from Athenz ZTS.
+     * fetched from Athenz ZTS. The returned {@link CompletableFuture} is completed exceptionally with
+     * an {@link AccessDeniedException} if Athenz ZTS rejected the request with a 403 Forbidden response,
+     * or with the original cause for any other failure.
      */
     CompletableFuture<String> getToken();
 }
