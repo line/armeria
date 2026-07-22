@@ -51,6 +51,14 @@ public final class XdsServerPluginBuilder {
     }
 
     /**
+     * Adds a port to listen on. The port will support both HTTP and HTTPS.
+     */
+    public XdsServerPluginBuilder port(int port) {
+        serverPorts.add(new ServerPort(port, SessionProtocol.HTTP, SessionProtocol.HTTPS));
+        return this;
+    }
+
+    /**
      * Adds a {@link ServerPort} to listen on.
      */
     public XdsServerPluginBuilder port(ServerPort serverPort) {

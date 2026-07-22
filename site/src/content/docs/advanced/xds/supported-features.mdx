@@ -1,0 +1,378 @@
+---
+sidebar_position: 8
+---
+
+# Supported features
+
+Armeria does not implement every field in the xDS specification. Resources from the
+control plane are validated before being applied, and unsupported fields are rejected
+by default.
+
+## Validation
+
+Armeria validates every xDS resource — both static and dynamic — using two layers:
+
+1. **Structural validation (pgv)** — protoc-gen-validate rules embedded in the xDS
+   proto definitions enforce required fields, value ranges, and other constraints.
+2. **Supported field validation** — each field Armeria implements is annotated with
+   `(armeria.xds.supported) = true` in the proto files. Any field that is **not**
+   annotated as supported but contains a non-default value is rejected.
+
+By default, unsupported fields cause the resource to be rejected. This behavior can
+be customized via [UnsupportedFieldHandler](type):
+
+| Handler | Behavior |
+|---|---|
+| `UnsupportedFieldHandler.reject()` | Throws an exception (default) |
+| `UnsupportedFieldHandler.warn()` | Logs a warning |
+| `UnsupportedFieldHandler.ignore()` | Silently ignores the field |
+
+:::caution
+
+While supported field validation can be relaxed, it is strongly recommended to keep
+pgv (structural) validation enabled. Disabling it may allow malformed resources to be
+applied, leading to unexpected behavior.
+
+:::
+
+### Pre-validating a bootstrap
+
+By default, Armeria uses [StrictXdsValidatorIndex](type) which rejects any xDS resource
+that sets unsupported fields. You can use it directly to validate any xDS protobuf message —
+a `Bootstrap`, `Listener`, `Cluster`, or any other resource Armeria consumes. This
+is useful for catching unsupported fields early — for example, in a CI pipeline or
+unit test:
+
+```java
+import com.linecorp.armeria.xds.XdsResourceReader;
+import com.linecorp.armeria.xds.api.StrictXdsValidatorIndex;
+
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
+
+Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.class);
+StrictXdsValidatorIndex.of().assertValid(bootstrap);
+
+Listener listener = XdsResourceReader.fromFile("listener.yaml", Listener.class);
+StrictXdsValidatorIndex.of().assertValid(listener);
+```
+
+### Custom validator
+
+The validation pipeline is pluggable via [XdsValidatorIndex](type) SPI. To override
+the default behavior, implement `XdsValidatorIndex` and register it via `ServiceLoader`
+with a higher `priority()`:
+
+```java
+public class MyValidatorIndex implements XdsValidatorIndex {
+
+    @Override
+    public void assertValid(Message message) {
+        // custom validation logic
+    }
+
+    @Override
+    public int priority() {
+        return 1; // higher than the default (0)
+    }
+}
+```
+
+## Supported fields
+
+The list below is a summary and may become stale. The
+[annotation definition](https://github.com/line/armeria/blob/main/xds-api/src/main/proto/armeria/xds/supported.proto)
+and [annotations on the proto files](https://github.com/line/armeria/tree/main/xds-api/src/main/proto/envoy)
+are the source of truth for which fields are supported.
+
+### Bootstrap
+
+```yaml
+node:
+  locality:
+    region:
+    zone:
+    sub_zone:
+static_resources:
+  listeners: [...]
+  clusters: [...]
+  secrets: [...]
+dynamic_resources:
+  lds_config: ConfigSource
+  cds_config: ConfigSource
+  ads_config: ApiConfigSource
+cluster_manager:
+  local_cluster_name:
+```
+
+### Listener
+
+```yaml
+name:
+filter_chains:
+  - filter_chain_match:
+      destination_port:
+      transport_protocol:
+      application_protocols: [...]
+      server_names: [...]
+    filters:
+      - name:
+        typed_config: Any
+    transport_socket:
+      name:
+      typed_config: Any
+default_filter_chain: FilterChain
+api_listener: ApiListener
+```
+
+### HttpConnectionManager
+
+```yaml
+stat_prefix:
+rds:
+  config_source: ConfigSource
+  route_config_name:
+route_config: RouteConfiguration
+http_filters:
+  - name:
+    typed_config: Any
+    is_optional:
+    disabled:
+```
+
+### RouteConfiguration
+
+```yaml
+name:
+virtual_hosts:
+  - name:
+    domains: [...]
+    routes:
+      - name:
+        match:
+          prefix:
+          path:
+          safe_regex:
+            regex:
+          path_separated_prefix:
+          case_sensitive:
+          headers:
+            - name:
+              range_match:
+                start:
+                end:
+              present_match:
+              string_match: StringMatcher
+              invert_match:
+              treat_missing_header_as_empty:
+          query_parameters:
+            - name:
+              string_match: StringMatcher
+              present_match:
+          grpc:
+        route:
+          cluster:
+          weighted_clusters:
+            clusters:
+              - name:
+                weight:
+                metadata_match: Metadata
+                typed_per_filter_config: {<name>: Any}
+          metadata_match: Metadata
+          timeout:
+          retry_policy: RetryPolicy
+        non_forwarding_action: {}
+        typed_per_filter_config: {<name>: Any}
+    typed_per_filter_config: {<name>: Any}
+    retry_policy: RetryPolicy
+ignore_port_in_host_matching:
+```
+
+### RetryPolicy
+
+```yaml
+retry_on:
+num_retries:
+retry_back_off:
+  base_interval:
+  max_interval:
+retriable_status_codes: [...]
+retriable_headers:
+  - name:
+    string_match: StringMatcher
+retriable_request_headers:
+  - name:
+    string_match: StringMatcher
+retry_host_predicate: [...]
+retry_priority: [...]
+rate_limited_retry_back_off:
+  reset_headers:
+    - name:
+  max_interval:
+```
+
+### Cluster
+
+```yaml
+name:
+type: STATIC | STRICT_DNS | EDS
+cluster_type:                          # custom cluster type
+  name:
+  typed_config: Any
+eds_cluster_config:
+  eds_config: ConfigSource
+  service_name:
+connect_timeout:
+lb_policy: ROUND_ROBIN | LEAST_REQUEST | RANDOM
+lb_config:
+  least_request_lb_config: LeastRequestLbConfig
+  round_robin_lb_config: RoundRobinLbConfig
+load_assignment: ClusterLoadAssignment
+health_checks:
+  - http_health_check:
+      host:
+      path:
+      method:
+lb_subset_config:
+  fallback_policy: NO_FALLBACK | ANY_ENDPOINT | DEFAULT_SUBSET
+  subset_selectors:
+    - keys: [...]
+common_lb_config:
+  healthy_panic_threshold:
+    value:
+  zone_aware_lb_config:
+    routing_enabled:
+      value:
+    min_cluster_size:
+    fail_traffic_on_panic:
+  locality_weighted_lb_config: {}
+dns_refresh_rate:
+dns_failure_refresh_rate:
+  base_interval:
+  max_interval:
+respect_dns_ttl:
+transport_socket_matches:
+  - name:
+    match: Struct
+    transport_socket: TransportSocket
+transport_socket: TransportSocket
+typed_extension_protocol_options: {<name>: Any}
+slow_start_config:
+  slow_start_window:
+  aggression:
+  min_weight_percent:
+```
+
+### ClusterLoadAssignment
+
+```yaml
+cluster_name:
+endpoints:
+  - locality:
+      region:
+      zone:
+      sub_zone:
+    lb_endpoints:
+      - endpoint:
+          address:
+            socket_address:
+              address:
+              port_value:
+            pipe:
+              path:
+          health_check_config:
+            port_value:
+            hostname:
+            address: Address
+            disable_active_health_check:
+          hostname:
+        health_status: HEALTHY | UNHEALTHY | DRAINING | DEGRADED
+        metadata: Metadata
+        load_balancing_weight:
+    load_balancing_weight:
+    priority:
+    metadata: Metadata
+policy:
+  overprovisioning_factor:
+  weighted_priority_health:
+```
+
+### TLS
+
+```yaml
+# UpstreamTlsContext (client)
+common_tls_context: CommonTlsContext
+sni:
+
+# DownstreamTlsContext (server)
+common_tls_context: CommonTlsContext
+require_client_certificate:
+
+# CommonTlsContext
+tls_certificates:
+  - certificate_chain: DataSource
+    private_key: DataSource
+    password: DataSource
+    watched_directory:
+      path:
+tls_certificate_sds_secret_configs:
+  - name:
+    sds_config: ConfigSource
+validation_context:
+  trusted_ca: DataSource
+  system_root_certs: {}
+  verify_certificate_hash: [...]
+  verify_certificate_spki: [...]
+  watched_directory:
+    path:
+  match_typed_subject_alt_names:
+    - san_type: EMAIL | DNS | URI | IP_ADDRESS
+      matcher: StringMatcher
+```
+
+### Secret
+
+```yaml
+name:
+tls_certificate: TlsCertificate
+validation_context: CertificateValidationContext
+generic_secret:
+  secret: DataSource
+```
+
+### ConfigSource
+
+```yaml
+ads: {}
+api_config_source:
+  api_type: GRPC | DELTA_GRPC | AGGREGATED_GRPC | AGGREGATED_DELTA_GRPC
+  grpc_services:
+    - envoy_grpc:
+        cluster_name:
+      initial_metadata:
+        - key:
+          value:
+  transport_api_version: AUTO | V3
+path_config_source: PathConfigSource
+initial_fetch_timeout:
+```
+
+### StringMatcher
+
+```yaml
+exact:
+prefix:
+suffix:
+safe_regex:
+  regex:
+contains:
+ignore_case:
+```
+
+### DataSource
+
+```yaml
+filename:
+inline_bytes:
+inline_string:
+```

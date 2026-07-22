@@ -28,19 +28,25 @@ import com.linecorp.armeria.xds.validator.XdsValidationException;
 import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
 
 /**
- * A strict {@link XdsValidatorIndex} that composes pgv (protoc-gen-validate) structural validation
+ * The default {@link XdsValidatorIndex} that composes pgv (protoc-gen-validate) structural validation
  * with supported-field validation. All unsupported field violations are collected and reported
  * together in a single {@link XdsValidationException}.
  *
- * <p>This validator is intended for use in test environments via SPI to catch unsupported
- * field usage early. Its {@link #priority()} is {@code 1}, which is higher than
- * {@link DefaultXdsValidatorIndex} ({@code 0}), so it wins SPI selection when present
- * on the classpath.
+ * <p>To log warnings instead of rejecting unsupported fields, use {@link WarningXdsValidatorIndex}.
  */
 @UnstableApi
 public final class StrictXdsValidatorIndex implements XdsValidatorIndex {
 
+    private static final StrictXdsValidatorIndex INSTANCE = new StrictXdsValidatorIndex();
+
     private final PgvValidator pgvValidator = PgvValidator.of();
+
+    /**
+     * Returns the default singleton instance.
+     */
+    public static StrictXdsValidatorIndex of() {
+        return INSTANCE;
+    }
 
     @Override
     public void assertValid(Message message) {
@@ -55,10 +61,5 @@ public final class StrictXdsValidatorIndex implements XdsValidatorIndex {
             throw XdsValidationException.of(
                     message, "Unsupported xDS fields detected: " + String.join(", ", violations));
         }
-    }
-
-    @Override
-    public int priority() {
-        return 1;
     }
 }
