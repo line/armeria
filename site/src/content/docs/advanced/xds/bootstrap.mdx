@@ -154,16 +154,19 @@ static_resources:
                     socket_address:
                       address: control-plane.example.com
                       port_value: 15010
-      transport_socket:                    # ← TLS to the control plane
+      transport_socket:                    # ← mTLS to the control plane
         name: envoy.transport_sockets.tls
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
           common_tls_context:
-            tls_certificates:
+            tls_certificates:              # ← client certificate (for mTLS)
               - certificate_chain:
                   filename: /certs/tls.crt
                 private_key:
                   filename: /certs/tls.key
+            validation_context:            # ← server trust (verifies the control plane)
+              trusted_ca:
+                filename: /certs/ca.crt
 dynamic_resources:
   ads_config:                              # ← use xds-cluster to reach the control plane
     api_type: GRPC

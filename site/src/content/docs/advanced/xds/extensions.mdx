@@ -19,6 +19,22 @@ HTTP filters are the most common extension point. They intercept requests on bot
 client side (see [Client — Request flow](/docs/advanced/xds/client#request-flow)) and
 the server side (see [Server](/docs/advanced/xds/server)).
 
+### Built-in filters
+
+The following HTTP filters are bundled with Armeria:
+
+| Name | Description |
+|---|---|
+| `envoy.filters.http.router` | Route matching and endpoint selection (client), route gating (server). Always required as the last filter in `http_filters`. |
+| `envoy.filters.http.credential_injector` | Injects credentials (e.g. from SDS secrets) into outgoing requests. |
+
+Any other filter name referenced in `http_filters` or `upstream_http_filters`
+must be registered as a custom extension (see below), or marked `is_optional: true`
+in the xDS config to be silently skipped. An unregistered, non-optional filter
+causes configuration resolution to fail.
+
+### Custom filters
+
 To create a custom HTTP filter, implement
 [HttpFilterFactory](type) and
 [XdsHttpFilter](type).
@@ -60,6 +76,12 @@ public class MyFilterFactory implements HttpFilterFactory {
 
 The resolved filter returned by the factory. Override the methods relevant to
 your use case:
+
+| Method | Used for |
+|---|---|
+| `httpDecorator()` | Client-side filtering (both downstream `http_filters` and upstream `upstream_http_filters`) |
+| `rpcDecorator()` | Client-side RPC filtering (Thrift) |
+| `serviceDecorator()` | Server-side filtering |
 
 ```java
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;

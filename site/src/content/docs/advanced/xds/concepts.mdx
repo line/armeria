@@ -96,8 +96,9 @@ virtual_hosts:
           timeout: 5s
 ```
 
-For any field **not** explicitly set in the xDS configuration, the original Armeria
-defaults apply. In the example above, `timeout: 5s` on the route overrides the
+For fields that Armeria explicitly maps (see
+[Supported features](/docs/advanced/xds/supported-features)), omitting the field
+in xDS configuration leaves the corresponding Armeria default in effect. In the example above, `timeout: 5s` on the route overrides the
 client's `responseTimeoutMillis(3000)`. If `timeout` were omitted from the route,
 the client's 3-second default would be used instead.
 
@@ -133,9 +134,10 @@ xDS resource management and request processing run on separate threads:
                               +-------------------------+
 ```
 
-- **xDS event loop** — a single dedicated thread (`xds-common-worker`) handles all
-  communication with the control plane, resource parsing, and snapshot updates. This
-  thread is created automatically and shared across all [XdsBootstrap](type) instances.
+- **xDS event loop** — by default, a single dedicated thread (`xds-common-worker`)
+  handles all communication with the control plane, resource parsing, and snapshot
+  updates. This thread is created automatically and shared across all
+  [XdsBootstrap](type) instances. A custom executor can be supplied via the builder.
 - **Application thread** — request processing (filter execution, routing, load
   balancing) runs on whatever thread the client or server executes on.
 
@@ -146,7 +148,7 @@ requests. There is no locking on the request path.
 This means:
 - xDS updates do not block request processing.
 - Request processing does not block xDS updates.
-- No additional threads are introduced beyond the single xDS event loop.
+- By default, no additional threads are introduced beyond the single xDS event loop.
 
 ## Snapshots
 

@@ -42,8 +42,7 @@ xDS Listener
  │    ├── match: destination_port=8443, transport_protocol="tls"
  │    ├── TLS: SDS certs + client cert required
  │    └── http_filters:
- │         ├── jwt_authn
- │         ├── rbac
+ │         ├── my.custom.filter
  │         └── router ─────────────┐
  │                                 │
  ├── FilterChain: plaintext (port 8080)
@@ -90,16 +89,16 @@ snapshot; existing connections continue with the policy they were accepted with.
 
 ### Decorator ordering
 
-xDS decorators are outermost (run first), so that policies like RBAC reject
-before user decorators or services see the request:
+xDS decorators are outermost (run first), so that filters run before
+user decorators or services see the request:
 
 ```
-[xDS jwt_authn] → [xDS rbac] → [user's service decorators] → service
+[xDS filters] → [user's service decorators] → service
 ```
 
 Per-route filter configuration is supported via `typed_per_filter_config`,
 allowing different filter behavior for different paths. For example, you can
-skip filters on a health check path by disabling the filter for that route:
+disable a filter on a health check path:
 
 ```yaml
 route_config:
@@ -110,8 +109,8 @@ route_config:
         - match: { prefix: "/healthcheck" }
           non_forwarding_action: {}
           typed_per_filter_config:
-            envoy.filters.http.rbac:
-              "@type": type.googleapis.com/my.custom.FilterConfig
+            my.custom.filter:
+              "@type": type.googleapis.com/my.custom.filter.v1.Config
               disabled: true
         - match: { prefix: "/" }
           non_forwarding_action: {}
@@ -157,14 +156,15 @@ Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.cla
 XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
 
 Server server = Server.builder()
-                      .plugin(XdsServerPlugin.of(xdsBootstrap, "server-listener"))
+                      .plugin(XdsServerPlugin.of(xdsBootstrap, "server-listener", 8080))
                       .service("/hello", (ctx, req) -> HttpResponse.of("hello"))
                       .build();
 server.start().join();
 ```
 
-The server blocks during startup until the first xDS snapshot arrives (default
-timeout: 30 seconds), so it never serves with stale or missing configuration.
+The server blocks during startup until the first complete xDS snapshot arrives
+(default timeout: 30 seconds). If a later update cannot be resolved, the last
+successful snapshot remains active.
 
 ### Port binding
 

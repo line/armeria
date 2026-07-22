@@ -66,7 +66,7 @@ and applies the configuration in-process:
   The mesh logic is part of the application, versioned and shipped together
   with it.
 - **Lower latency** — requests are routed directly to the remote service without
-  passing through an intermediate proxy, eliminating two extra network hops.
+  passing through an intermediate proxy, eliminating two extra process traversals.
 - **Fewer resources** — no separate proxy process per instance means less memory
   and CPU overhead.
 - **Incremental adoption** — you can add xDS support to individual services

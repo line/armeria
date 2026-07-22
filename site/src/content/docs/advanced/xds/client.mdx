@@ -93,7 +93,7 @@ When a request is sent via `WebClient#execute`, it passes through four stages:
 ```
 
 1. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`
-   (e.g. RBAC, rate limiting).
+   (see [Built-in filters](/docs/advanced/xds/extensions#built-in-filters) for available filters).
 2. **Router** — matches the request to a route, applies retry policy, selects an endpoint
    using the cluster's load balancing policy, and determines the protocol and TLS parameters.
 3. **Upstream HTTP filters** — per-route filters declared on the router.
@@ -101,8 +101,10 @@ When a request is sent via `WebClient#execute`, it passes through four stages:
 
 ### Example
 
-The following listener defines an RBAC downstream filter, a router with an upstream
-filter, and two routes pointing to different clusters:
+The following listener defines a custom downstream filter, a router with an upstream
+filter, and two routes pointing to different clusters. See
+[Built-in filters](/docs/advanced/xds/extensions#built-in-filters) for which
+filters are bundled and how to register custom ones.
 
 ```yaml
 listeners:
@@ -111,7 +113,7 @@ listeners:
       api_listener:
         "@type": ...HttpConnectionManager
         http_filters:                        # ← downstream filters
-          - name: envoy.filters.http.rbac
+          - name: my.custom.downstream.filter
             typed_config: { ... }
           - name: envoy.filters.http.router  # ← route match + endpoint select
             typed_config:
@@ -153,16 +155,16 @@ The resulting request flow would be:
   WebClient#execute(HttpRequest)
      |
      v
-  envoy.filters.http.rbac  (downstream, from http_filters)
+  my.custom.downstream.filter (downstream, from http_filters)
      |
      v
-  envoy.filters.http.router (route match → api-cluster or default-cluster)
+  envoy.filters.http.router   (route match → api-cluster or default-cluster)
      |
      v
-  my.custom.upstream.filter (upstream, from upstream_http_filters)
+  my.custom.upstream.filter   (upstream, from upstream_http_filters)
      |
      v
-  LoggingClient             (user-defined decorator)
+  LoggingClient               (user-defined decorator)
      |
      v
   remote service
