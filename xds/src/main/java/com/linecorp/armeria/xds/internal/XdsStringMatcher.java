@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.internal;
 
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -28,7 +28,7 @@ import io.envoyproxy.envoy.type.matcher.v3.RegexMatcher;
 import io.envoyproxy.envoy.type.matcher.v3.StringMatcher;
 import io.envoyproxy.envoy.type.matcher.v3.StringMatcher.MatchPatternCase;
 
-class StringMatcherImpl {
+public final class XdsStringMatcher {
 
     private final boolean ignoreCase;
     private final MatchPatternCase patternCase;
@@ -38,7 +38,7 @@ class StringMatcherImpl {
     @Nullable
     private final String patternValue;
 
-    StringMatcherImpl(StringMatcher stringMatcher) {
+    public XdsStringMatcher(StringMatcher stringMatcher) {
         ignoreCase = stringMatcher.getIgnoreCase();
         patternCase = stringMatcher.getMatchPatternCase();
         switch (patternCase) {
@@ -99,7 +99,7 @@ class StringMatcherImpl {
         }
     }
 
-    boolean match(@Nullable String input) {
+    public boolean match(@Nullable String input) {
         if (input == null) {
             return false;
         }
@@ -109,16 +109,16 @@ class StringMatcherImpl {
         return predicate.test(input);
     }
 
-    boolean ignoreCase() {
+    public boolean ignoreCase() {
         return ignoreCase;
     }
 
-    boolean isExact() {
+    public boolean isExact() {
         return patternCase == MatchPatternCase.EXACT;
     }
 
     @Nullable
-    String exact() {
+    public String exact() {
         return exact;
     }
 
@@ -143,10 +143,10 @@ class StringMatcherImpl {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof StringMatcherImpl)) {
+        if (!(obj instanceof XdsStringMatcher)) {
             return false;
         }
-        final StringMatcherImpl that = (StringMatcherImpl) obj;
+        final XdsStringMatcher that = (XdsStringMatcher) obj;
         return patternCase == that.patternCase &&
                ignoreCase == that.ignoreCase &&
                Objects.equals(patternValue, that.patternValue);

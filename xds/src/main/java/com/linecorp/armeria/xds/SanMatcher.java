@@ -26,15 +26,16 @@ import java.util.Objects;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.internal.XdsStringMatcher;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SubjectAltNameMatcher;
 
 final class SanMatcher {
 
     private final SubjectAltNameMatcher.SanType type;
-    private final StringMatcherImpl matcher;
+    private final XdsStringMatcher matcher;
 
-    SanMatcher(SubjectAltNameMatcher.SanType type, StringMatcherImpl matcher) {
+    SanMatcher(SubjectAltNameMatcher.SanType type, XdsStringMatcher matcher) {
         this.type = Objects.requireNonNull(type, "type");
         this.matcher = Objects.requireNonNull(matcher, "matcher");
     }
