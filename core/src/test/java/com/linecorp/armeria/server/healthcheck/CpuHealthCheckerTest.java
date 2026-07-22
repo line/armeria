@@ -16,6 +16,8 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,5 +29,12 @@ class CpuHealthCheckerTest {
                 (CpuHealthChecker) HealthChecker.ofCpu(0.1, 0.3);
         assertThat(healthChecker.targetSystemCpuUsage).isNotNaN();
         assertThat(healthChecker.targetProcessCpuLoad).isNotNaN();
+    }
+
+    @Test
+    void degradedCpuUsageShouldNotBeLowerThanTargetCpuUsage() {
+        assertDoesNotThrow(() -> HealthChecker.ofCpu(0.5, 0.5, 0.6, 0.6));
+        assertThrows(IllegalArgumentException.class,
+                     () -> HealthChecker.ofCpu(0.5, 0.5, 0.4, 0.4));
     }
 }

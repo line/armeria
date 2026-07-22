@@ -23,6 +23,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,6 +92,12 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  *   <li>{@code Prefer: wait=<seconds>}</li>
  * </ul>
  *
+ * <p>To wait for specific server {@link HealthStatus}, send an HTTP request with two additional headers:
+ * <ul>
+ *   <li>{@code If-None-Match: "status=DEGRADED"}</li>
+ *   <li>{@code Prefer: wait=<seconds>}</li>
+ * </ul>
+ *
  * <p>The {@link Server} will wait up to the amount of seconds specified in the {@code "Prefer"} header
  * and respond with {@code "200 OK"}, {@code "503 Service Unavailable"} or {@code "304 Not Modified"}.
  * {@code "304 Not Modifies"} signifies that the healthiness of the {@link Server} did not change.
@@ -106,6 +115,8 @@ public final class HealthCheckService implements TransientHttpService {
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckService.class);
     private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");
     private static final PendingResponse[] EMPTY_PENDING_RESPONSES = new PendingResponse[0];
+    private static final Pattern IF_NONE_MATCH_SPECIFIC_STATUS =
+            Pattern.compile("\"status=(healthy|degraded|stopping|unhealthy|under_maintenance)\"");
 
     /**
      * Returns a newly created {@link HealthCheckService} with the specified {@link HealthChecker}s.
@@ -131,7 +142,9 @@ public final class HealthCheckService implements TransientHttpService {
     private final SettableHealthChecker serverHealth;
     private final Set<HealthChecker> healthCheckers;
     private final AggregatedHttpResponse healthyResponse;
+    private final AggregatedHttpResponse degradedResponse;
     private final AggregatedHttpResponse unhealthyResponse;
+    private final AggregatedHttpResponse underMaintenanceResponse;
     private final AggregatedHttpResponse stoppingResponse;
     private final ResponseHeaders ping;
     private final ResponseHeaders notModifiedHeaders;
@@ -143,10 +156,7 @@ public final class HealthCheckService implements TransientHttpService {
     private final Consumer<HealthChecker> healthCheckerListener;
     @Nullable
     @VisibleForTesting
-    final Set<PendingResponse> pendingHealthyResponses;
-    @Nullable
-    @VisibleForTesting
-    final Set<PendingResponse> pendingUnhealthyResponses;
+    final Set<PendingResponse> pendingResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
     private final boolean startHealthy;
@@ -154,20 +164,21 @@ public final class HealthCheckService implements TransientHttpService {
 
     @Nullable
     private Server server;
-    private boolean serverStopping;
 
     HealthCheckService(Set<HealthChecker> healthCheckers,
-                       AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
-                       long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
-                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
+                       AggregatedHttpResponse healthyResponse, AggregatedHttpResponse degradedResponse,
+                       AggregatedHttpResponse stoppingResponse, AggregatedHttpResponse unhealthyResponse,
+                       AggregatedHttpResponse underMaintenanceResponse, long maxLongPollingTimeoutMillis,
+                       double longPollingTimeoutJitterRate, long pingIntervalMillis,
+                       @Nullable HealthCheckUpdateHandler updateHandler,
                        List<HealthCheckUpdateListener> updateListeners, boolean startHealthy,
                        Set<TransientServiceOption> transientServiceOptions) {
-        serverHealth = new SettableHealthChecker(false);
+        serverHealth = new SettableHealthChecker(HealthStatus.UNHEALTHY);
         if (!updateListeners.isEmpty()) {
             addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
         }
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
-                .add(serverHealth).addAll(healthCheckers).build();
+                                          .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
         this.startHealthy = startHealthy;
         this.transientServiceOptions = transientServiceOptions;
@@ -178,15 +189,13 @@ public final class HealthCheckService implements TransientHttpService {
             this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
             this.pingIntervalMillis = pingIntervalMillis;
             healthCheckerListener = this::onHealthCheckerUpdate;
-            pendingHealthyResponses = new ObjectLinkedOpenHashSet<>();
-            pendingUnhealthyResponses = new ObjectLinkedOpenHashSet<>();
+            pendingResponses = new ObjectLinkedOpenHashSet<>();
         } else {
             this.maxLongPollingTimeoutMillis = 0;
             this.longPollingTimeoutJitterRate = 0;
             this.pingIntervalMillis = 0;
             healthCheckerListener = null;
-            pendingHealthyResponses = null;
-            pendingUnhealthyResponses = null;
+            pendingResponses = null;
 
             if (maxLongPollingTimeoutMillis > 0 && logger.isWarnEnabled()) {
                 logger.warn("Long-polling support has been disabled " +
@@ -200,8 +209,10 @@ public final class HealthCheckService implements TransientHttpService {
         }
 
         this.healthyResponse = setCommonHeaders(healthyResponse);
+        this.degradedResponse = setCommonHeaders(degradedResponse);
         this.unhealthyResponse = setCommonHeaders(unhealthyResponse);
-        stoppingResponse = clearCommonHeaders(unhealthyResponse);
+        this.underMaintenanceResponse = setCommonHeaders(underMaintenanceResponse);
+        this.stoppingResponse = clearCommonHeaders(stoppingResponse);
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
                                             .endOfStream(true)
@@ -216,7 +227,7 @@ public final class HealthCheckService implements TransientHttpService {
         serverHealth.addListener(healthChecker -> {
             updateListeners.forEach(updateListener -> {
                 try {
-                    updateListener.healthUpdated(healthChecker.isHealthy());
+                    updateListener.healthStatusUpdated(healthChecker.healthStatus());
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
                 }
@@ -280,7 +291,6 @@ public final class HealthCheckService implements TransientHttpService {
         server.addListener(new ServerListenerAdapter() {
             @Override
             public void serverStarting(Server server) throws Exception {
-                serverStopping = false;
                 if (healthCheckerListener != null) {
                     healthCheckers.stream().map(ListenableHealthChecker.class::cast).forEach(c -> {
                         c.addListener(healthCheckerListener);
@@ -295,14 +305,13 @@ public final class HealthCheckService implements TransientHttpService {
             @Override
             public void serverStarted(Server server) {
                 if (startHealthy) {
-                    serverHealth.setHealthy(true);
+                    serverHealth.setHealthStatus(HealthStatus.HEALTHY);
                 }
             }
 
             @Override
             public void serverStopping(Server server) {
-                serverStopping = true;
-                serverHealth.setHealthy(false);
+                serverHealth.setHealthStatus(HealthStatus.STOPPING);
             }
 
             @Override
@@ -323,17 +332,24 @@ public final class HealthCheckService implements TransientHttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final long longPollingTimeoutMillis = getLongPollingTimeoutMillis(req);
-        final boolean isHealthy = isHealthy();
+        final HealthStatus healthStatus = healthStatus();
         final boolean useLongPolling;
+        boolean pollHealthStatus = false;
         if (longPollingTimeoutMillis > 0) {
             final String expectedState =
                     Ascii.toLowerCase(req.headers().get(HttpHeaderNames.IF_NONE_MATCH, ""));
             if ("\"healthy\"".equals(expectedState) || "w/\"healthy\"".equals(expectedState)) {
-                useLongPolling = isHealthy;
+                useLongPolling = healthStatus.isHealthy();
             } else if ("\"unhealthy\"".equals(expectedState) || "w/\"unhealthy\"".equals(expectedState)) {
-                useLongPolling = !isHealthy;
+                useLongPolling = !healthStatus.isHealthy();
             } else {
-                useLongPolling = false;
+                final Matcher matcher = IF_NONE_MATCH_SPECIFIC_STATUS.matcher(expectedState);
+                if (matcher.matches()) {
+                    useLongPolling = matcher.group(1).equalsIgnoreCase(healthStatus.name());
+                    pollHealthStatus = true;
+                } else {
+                    useLongPolling = false;
+                }
             }
         } else {
             useLongPolling = false;
@@ -351,18 +367,14 @@ public final class HealthCheckService implements TransientHttpService {
             }
 
             assert healthCheckerListener != null : "healthCheckerListener is null.";
-            assert pendingHealthyResponses != null : "pendingHealthyResponses is null.";
-            assert pendingUnhealthyResponses != null : "pendingUnhealthyResponses is null.";
+            assert pendingResponses != null : "pendingResponses is null.";
 
             // If healthy, wait until it becomes unhealthy, and vice versa.
             lock.lock();
             try {
-                final boolean currentHealthiness = isHealthy();
-                if (isHealthy == currentHealthiness) {
+                final HealthStatus currentHealthStatus = healthStatus();
+                if (healthStatus == currentHealthStatus) {
                     final HttpResponseWriter res = HttpResponse.streaming();
-
-                    final Set<PendingResponse> pendingResponses = isHealthy ? pendingUnhealthyResponses
-                                                                            : pendingHealthyResponses;
 
                     // Send the initial ack (102 Processing) to let the client know that the request
                     // was accepted.
@@ -382,8 +394,8 @@ public final class HealthCheckService implements TransientHttpService {
                     final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
                             new TimeoutTask(res), longPollingTimeoutMillis, TimeUnit.MILLISECONDS);
 
-                    final PendingResponse pendingResponse =
-                            new PendingResponse(method, res, pingFuture, timeoutFuture);
+                    final PendingResponse pendingResponse = new PendingResponse(
+                            method, res, pingFuture, timeoutFuture, healthStatus, pollHealthStatus);
                     pendingResponses.add(pendingResponse);
                     timeoutFuture.addListener((FutureListener<Object>) f -> {
                         lock.lock();
@@ -415,7 +427,7 @@ public final class HealthCheckService implements TransientHttpService {
         switch (method) {
             case HEAD:
             case GET:
-                return newResponse(method, isHealthy);
+                return newResponse(method, healthStatus);
             case CONNECT:
             case DELETE:
             case OPTIONS:
@@ -435,24 +447,24 @@ public final class HealthCheckService implements TransientHttpService {
             if (updateResult != null) {
                 switch (updateResult) {
                     case HEALTHY:
-                        serverHealth.setHealthy(true);
+                        serverHealth.setHealthStatus(HealthStatus.HEALTHY);
+                        break;
+                    case DEGRADED:
+                        serverHealth.setHealthStatus(HealthStatus.DEGRADED);
+                        break;
+                    case STOPPING:
+                        serverHealth.setHealthStatus(HealthStatus.STOPPING);
                         break;
                     case UNHEALTHY:
-                        serverHealth.setHealthy(false);
+                        serverHealth.setHealthStatus(HealthStatus.UNHEALTHY);
+                        break;
+                    case UNDER_MAINTENANCE:
+                        serverHealth.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
                         break;
                 }
             }
-            return HttpResponse.of(newResponse(method, isHealthy()));
+            return HttpResponse.of(newResponse(method, healthStatus()));
         }));
-    }
-
-    private boolean isHealthy() {
-        for (HealthChecker healthChecker : healthCheckers) {
-            if (!healthChecker.isHealthy()) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private long getLongPollingTimeoutMillis(HttpRequest req) {
@@ -491,6 +503,17 @@ public final class HealthCheckService implements TransientHttpService {
         return (long) (Math.min(timeoutMillisHolder.value, maxLongPollingTimeoutMillis) * multiplier);
     }
 
+    private HealthStatus healthStatus() {
+        HealthStatus status = HealthStatus.HEALTHY;
+        for (HealthChecker healthChecker : healthCheckers) {
+            if (healthChecker.healthStatus().priority() < status.priority()) {
+                status = healthChecker.healthStatus();
+            }
+        }
+
+        return status;
+    }
+
     private boolean isLongPollingEnabled() {
         return healthCheckerListener != null;
     }
@@ -507,8 +530,8 @@ public final class HealthCheckService implements TransientHttpService {
         }
     }
 
-    private HttpResponse newResponse(HttpMethod method, boolean isHealthy) {
-        final AggregatedHttpResponse aRes = getResponse(isHealthy);
+    private HttpResponse newResponse(HttpMethod method, HealthStatus healthStatus) {
+        final AggregatedHttpResponse aRes = getResponse(healthStatus);
 
         if (method == HttpMethod.HEAD) {
             return HttpResponse.of(aRes.headers());
@@ -517,32 +540,46 @@ public final class HealthCheckService implements TransientHttpService {
         }
     }
 
-    private AggregatedHttpResponse getResponse(boolean isHealthy) {
-        if (isHealthy) {
-            return healthyResponse;
+    private AggregatedHttpResponse getResponse(HealthStatus healthStatus) {
+        switch (healthStatus) {
+            case HEALTHY:
+                return healthyResponse;
+            case DEGRADED:
+                return degradedResponse;
+            case STOPPING:
+                return stoppingResponse;
+            case UNDER_MAINTENANCE:
+                return underMaintenanceResponse;
+            default:
+                return unhealthyResponse;
         }
-
-        if (serverStopping) {
-            return stoppingResponse;
-        }
-
-        return unhealthyResponse;
     }
 
     private void onHealthCheckerUpdate(HealthChecker unused) {
         assert healthCheckerListener != null : "healthCheckerListener is null.";
-        assert pendingHealthyResponses != null : "pendingHealthyResponses is null.";
-        assert pendingUnhealthyResponses != null : "pendingUnhealthyResponses is null.";
+        assert pendingResponses != null : "pendingResponses is null.";
 
-        final boolean isHealthy = isHealthy();
+        final HealthStatus healthStatus = healthStatus();
         final PendingResponse[] pendingResponses;
         lock.lock();
         try {
-            final Set<PendingResponse> set = isHealthy ? pendingHealthyResponses
-                                                       : pendingUnhealthyResponses;
+            final List<PendingResponse> set =
+                    this.pendingResponses.stream()
+                                         .filter(res -> {
+                                             if (res.pollHealthStatus) {
+                                                 return res.interestedStatus != healthStatus;
+                                             } else {
+                                                 return res.interestedStatus.isHealthy() !=
+                                                        healthStatus.isHealthy();
+                                             }
+                                         })
+                                         .collect(Collectors.toList());
+
             if (!set.isEmpty()) {
                 pendingResponses = set.toArray(EMPTY_PENDING_RESPONSES);
-                set.clear();
+                for (PendingResponse res : pendingResponses) {
+                    this.pendingResponses.remove(res);
+                }
             } else {
                 pendingResponses = EMPTY_PENDING_RESPONSES;
             }
@@ -550,7 +587,7 @@ public final class HealthCheckService implements TransientHttpService {
             lock.unlock();
         }
 
-        final AggregatedHttpResponse res = getResponse(isHealthy);
+        final AggregatedHttpResponse res = getResponse(healthStatus);
         for (PendingResponse e : pendingResponses) {
             if (e.cancelAllScheduledFutures()) {
                 if (e.method == HttpMethod.HEAD) {
@@ -575,15 +612,21 @@ public final class HealthCheckService implements TransientHttpService {
         @Nullable
         private final ScheduledFuture<?> pingFuture;
         private final ScheduledFuture<?> timeoutFuture;
+        final HealthStatus interestedStatus;
+        final boolean pollHealthStatus;
 
         PendingResponse(HttpMethod method,
                         HttpResponseWriter res,
                         @Nullable ScheduledFuture<?> pingFuture,
-                        ScheduledFuture<?> timeoutFuture) {
+                        ScheduledFuture<?> timeoutFuture,
+                        HealthStatus interestedStatus,
+                        boolean pollHealthStatus) {
             this.method = method;
             this.res = res;
             this.pingFuture = pingFuture;
             this.timeoutFuture = timeoutFuture;
+            this.interestedStatus = interestedStatus;
+            this.pollHealthStatus = pollHealthStatus;
         }
 
         boolean cancelAllScheduledFutures() {
