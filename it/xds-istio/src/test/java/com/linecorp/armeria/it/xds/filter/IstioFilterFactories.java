@@ -19,7 +19,7 @@ package com.linecorp.armeria.it.xds.filter;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 
-import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
@@ -71,7 +71,7 @@ public final class IstioFilterFactories {
         private static class AlpnFilter implements XdsHttpFilter {
 
             @Override
-            public HttpPreprocessor httpPreprocessor() {
+            public DecoratingHttpClientFunction httpDecorator() {
                 return (delegate, ctx, req) -> {
                     ctx.setAttr(XdsCommonUtil.ALPN_OVERRIDE_KEY, ImmutableSet.of("istio-h2", "istio", "h2"));
                     return delegate.execute(ctx, req);

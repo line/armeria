@@ -29,6 +29,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
@@ -298,15 +299,12 @@ class WeightedClusterFilterConfigTest {
                 assertThat(wc).isNotNull().hasSize(2);
                 // All RouteCluster instances must have non-null chain accessors
                 for (var entry : wc) {
-                    assertThat(entry.httpPreClient()).isNotNull();
-                    assertThat(entry.rpcPreClient()).isNotNull();
                     assertThat(entry.httpClient()).isNotNull();
                     assertThat(entry.rpcClient()).isNotNull();
                 }
                 // Single-cluster select also returns chains
                 final var selected = routeEntries.get(0).resolve();
                 assertThat(selected).isNotNull();
-                assertThat(selected.httpPreClient()).isNotNull();
                 assertThat(selected.httpClient()).isNotNull();
             });
         }
@@ -361,7 +359,7 @@ class WeightedClusterFilterConfigTest {
                 }
                 return new XdsHttpFilter() {
                     @Override
-                    public com.linecorp.armeria.client.HttpPreprocessor httpPreprocessor() {
+                    public DecoratingHttpClientFunction httpDecorator() {
                         return (delegate, ctx, req) -> {
                             final HttpRequest newReq = req.withHeaders(
                                     req.headers().toBuilder()

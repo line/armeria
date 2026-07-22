@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
  * An {@link HttpPreprocessor} implementation which allows clients to execute requests based on
@@ -61,7 +61,7 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
     @Override
     HttpResponse execute1(PreClient<HttpRequest, HttpResponse> delegate, PreClientRequestContext ctx,
                           HttpRequest req, RouteCluster routeCluster) throws Exception {
-        DelegatingHttpClient.setDelegate(ctx, delegate);
-        return routeCluster.httpPreClient().execute(ctx, req);
+        ctx.setAttr(XdsCommonUtil.ROUTE_METADATA_MATCH, routeCluster.metadataMatch());
+        return routeCluster.clusterSnapshot().preprocessor().execute(delegate, ctx, req);
     }
 }
