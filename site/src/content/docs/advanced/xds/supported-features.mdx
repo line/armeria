@@ -37,7 +37,8 @@ applied, leading to unexpected behavior.
 
 ### Pre-validating a bootstrap
 
-You can use [StrictXdsValidatorIndex](type) to validate any xDS protobuf message —
+By default, Armeria uses [StrictXdsValidatorIndex](type) which rejects any xDS resource
+that sets unsupported fields. You can use it directly to validate any xDS protobuf message —
 a `Bootstrap`, `Listener`, `Cluster`, or any other resource Armeria consumes. This
 is useful for catching unsupported fields early — for example, in a CI pipeline or
 unit test:

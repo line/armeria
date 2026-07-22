@@ -1,1 +1,1 @@
-com.linecorp.armeria.xds.api.DefaultXdsValidatorIndex
+com.linecorp.armeria.xds.api.StrictXdsValidatorIndex
