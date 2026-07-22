@@ -24,8 +24,6 @@ import com.google.protobuf.Any;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
-import com.linecorp.armeria.client.HttpPreprocessor;
-import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.athenz.AthenzTokenClient;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -98,32 +96,6 @@ final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
 
         private static void setToken(ClientRequestContext ctx, String token) {
             ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORIZATION, "Bearer " + token);
-        }
-
-        @Override
-        public HttpPreprocessor httpPreprocessor() {
-            return (delegate, ctx, req) -> HttpResponse.of(
-                    tokenClient.getToken().thenApply(token -> {
-                        setToken(ctx, token);
-                        try {
-                            return delegate.execute(ctx, req);
-                        } catch (Exception e) {
-                            return Exceptions.throwUnsafely(e);
-                        }
-                    }));
-        }
-
-        @Override
-        public RpcPreprocessor rpcPreprocessor() {
-            return (delegate, ctx, req) -> RpcResponse.from(
-                    tokenClient.getToken().thenApply(token -> {
-                        setToken(ctx, token);
-                        try {
-                            return delegate.execute(ctx, req);
-                        } catch (Exception e) {
-                            return Exceptions.throwUnsafely(e);
-                        }
-                    }));
         }
 
         @Override
