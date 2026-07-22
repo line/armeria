@@ -185,6 +185,10 @@ public final class DefaultClientRequestContext
     @Nullable
     private ClientTlsSpec clientTlsSpec;
     @Nullable
+    private String sniHostname;
+    @Nullable
+    private String defaultSniHostname;
+    @Nullable
     private InetSocketAddress localBindAddress;
 
     public DefaultClientRequestContext(SessionProtocol sessionProtocol, HttpRequest httpRequest,
@@ -518,6 +522,35 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
+        defaultSniHostname = computeDefaultSniHostname(endpoint);
+        updateInternalHeaders();
+    }
+
+    @Nullable
+    private String computeDefaultSniHostname(@Nullable Endpoint endpoint) {
+        if (endpoint == null) {
+            return null;
+        }
+        String hostname;
+        if (endpoint.isIpAddrOnly()) {
+            hostname = ClientUtil.authorityToServerName(authority());
+            if (hostname == null) {
+                return null;
+            }
+        } else {
+            hostname = endpoint.host();
+        }
+        // Strip trailing dot — not allowed in SNI.
+        if (hostname.endsWith(".")) {
+            hostname = hostname.substring(0, hostname.length() - 1);
+        }
+        if (hostname.isEmpty()) {
+            return null;
+        }
+        return hostname;
+    }
+
+    private void updateInternalHeaders() {
         internalRequestHeaders = computeInternalHeaders(defaultInternalRequestHeaders,
                                                         endpoint, sessionProtocol,
                                                         options().autoFillOriginHeader());
@@ -644,6 +677,7 @@ public final class DefaultClientRequestContext
         additionalRequestHeaders = ctx.additionalRequestHeaders();
         responseTimeoutMode = ctx.responseTimeoutMode();
         clientTlsSpec = ctx.clientTlsSpec();
+        sniHostname = ctx.sniHostname;
         localBindAddress = ctx.localBindAddress();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
@@ -726,8 +760,13 @@ public final class DefaultClientRequestContext
     @Override
     public void setSessionProtocol(SessionProtocol sessionProtocol) {
         checkState(!initializationTriggered(), "Cannot update sessionProtocol after initialization");
+        setSessionProtocol0(sessionProtocol);
+    }
+
+    private void setSessionProtocol0(SessionProtocol sessionProtocol) {
         this.sessionProtocol = desiredSessionProtocol(requireNonNull(sessionProtocol, "sessionProtocol"),
                                                       options);
+        updateInternalHeaders();
     }
 
     @Override
@@ -1107,7 +1146,37 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
-        this.clientTlsSpec = requireNonNull(clientTlsSpec, "clientTlsSpec");
+        requireNonNull(clientTlsSpec, "clientTlsSpec");
+        if (clientTlsSpec.alpnProtocols().isEmpty()) {
+            clientTlsSpec = clientTlsSpec.toBuilder()
+                                         .alpnProtocols(sessionProtocol.withTls())
+                                         .build();
+        }
+        this.clientTlsSpec = clientTlsSpec;
+        if (!sessionProtocol.isTls()) {
+            setSessionProtocol0(sessionProtocol.withTls());
+        }
+    }
+
+    @Override
+    public void clearClientTlsSpec() {
+        clientTlsSpec = null;
+        if (sessionProtocol.isTls()) {
+            setSessionProtocol0(sessionProtocol.withoutTls());
+        }
+    }
+
+    @Override
+    public @Nullable String sniHostname() {
+        if (sniHostname != null) {
+            return sniHostname;
+        }
+        return defaultSniHostname;
+    }
+
+    @Override
+    public void setSniHostname(String sniHostname) {
+        this.sniHostname = requireNonNull(sniHostname, "sniHostname");
     }
 
     @Override

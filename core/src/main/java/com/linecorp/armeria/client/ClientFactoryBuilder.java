@@ -131,6 +131,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Nullable
     private TlsProvider tlsProvider;
     @Nullable
+    private ClientTlsProvider clientTlsProvider;
+    @Nullable
     private ClientTlsConfig tlsConfig;
     private ClientTlsSpec clientTlsSpec = ClientTlsSpec.of();
     private boolean staticTlsSettingsSet;
@@ -490,6 +492,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
         checkState(!staticTlsSettingsSet,
                    "Cannot configure the TlsProvider because static TLS settings have been set already.");
         this.tlsProvider = tlsProvider;
+        clientTlsProvider = null;
         tlsConfig = null;
         return this;
     }
@@ -504,8 +507,24 @@ public final class ClientFactoryBuilder implements TlsSetters {
         return this;
     }
 
+    /**
+     * Sets the {@link ClientTlsProvider} which resolves TLS configuration per request.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder tlsProvider(ClientTlsProvider clientTlsProvider) {
+        requireNonNull(clientTlsProvider, "clientTlsProvider");
+        checkState(!staticTlsSettingsSet,
+                   "Cannot configure the ClientTlsProvider because static TLS settings have been set " +
+                   "already.");
+        this.clientTlsProvider = clientTlsProvider;
+        tlsProvider = null;
+        tlsConfig = null;
+        return this;
+    }
+
     private void ensureNoTlsProvider() {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
+        checkState(tlsProvider == null && clientTlsProvider == null,
+                   "Cannot configure TLS settings because a TlsProvider has been set.");
     }
 
     /**
@@ -1124,21 +1143,42 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
-        final ClientFactoryOptions options = buildOptions();
-        final ClientTlsSpec baseClientTlsSpec = buildTlsSpec(clientTlsSpec, tlsNoVerifySet, insecureHosts);
-        return new DefaultClientFactory(new HttpClientFactory(
-                options, autoCloseConnectionPoolListener, baseClientTlsSpec));
+        final ClientFactoryOptions baseOptions = buildOptions();
+        final BootstrapSslContexts bootstrapSslContexts = buildBootstrapSslContexts(baseOptions);
+        final ClientFactoryOptions options = buildTlsOptions(baseOptions, bootstrapSslContexts);
+        return new DefaultClientFactory(new HttpClientFactory(options, bootstrapSslContexts,
+                                                              autoCloseConnectionPoolListener));
     }
 
-    private static ClientTlsSpec buildTlsSpec(
-            ClientTlsSpec clientTlsSpec, boolean tlsNoVerifySet, Set<String> insecureHosts) {
+    private ClientFactoryOptions buildTlsOptions(ClientFactoryOptions baseOptions,
+                                                 BootstrapSslContexts bootstrapSslContexts) {
+        final ClientTlsProvider delegate;
+        if (clientTlsProvider != null) {
+            delegate = clientTlsProvider;
+        } else if (tlsProvider != null) {
+            delegate = new TlsProviderAdapter(tlsProvider, tlsConfig, baseOptions.tlsEngineType());
+        } else {
+            delegate = new BootstrapClientTlsProvider(bootstrapSslContexts);
+        }
+        final ClientTlsProvider effectiveProvider = new DefaultClientTlsProvider(delegate);
+        return ClientFactoryOptions.of(
+                baseOptions,
+                ImmutableList.of(ClientFactoryOptions.CLIENT_TLS_PROVIDER.newValue(effectiveProvider)));
+    }
+
+    private BootstrapSslContexts buildBootstrapSslContexts(ClientFactoryOptions options) {
         final ClientTlsSpecBuilder builder = clientTlsSpec.toBuilder();
         if (tlsNoVerifySet) {
             builder.verifierFactories(TlsPeerVerifierFactory.noVerify());
         } else if (!insecureHosts.isEmpty()) {
             builder.verifierFactories(TlsPeerVerifierFactory.insecureHosts(insecureHosts));
         }
-        return builder.build();
+        boolean allowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
+        if (options.tlsConfig() != ClientTlsConfig.NOOP) {
+            allowUnsafeCiphers = options.tlsConfig().allowsUnsafeCiphers();
+        }
+        builder.allowUnsafeCiphers(allowUnsafeCiphers);
+        return new BootstrapSslContexts(builder.build(), options);
     }
 
     @Override

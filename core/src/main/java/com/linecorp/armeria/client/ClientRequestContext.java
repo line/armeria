@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -628,10 +629,39 @@ public interface ClientRequestContext extends RequestContext {
     ClientTlsSpec clientTlsSpec();
 
     /**
-     * Sets the request-specific TLS configuration.
+     * Sets the request-specific TLS configuration and ensures the {@link SessionProtocol}
+     * is a TLS variant. If the current session protocol is not TLS, it will be switched
+     * to the equivalent TLS variant (e.g. {@code HTTP} to {@code HTTPS}, {@code H2C} to {@code H2}).
      */
     @UnstableApi
     void setClientTlsSpec(ClientTlsSpec clientTlsSpec);
+
+    /**
+     * Clears the request-specific TLS configuration and ensures the {@link SessionProtocol}
+     * is a non-TLS variant. If the current session protocol uses TLS, it will be switched
+     * to the equivalent cleartext variant (e.g. {@code HTTPS} to {@code HTTP}, {@code H2} to {@code H2C}).
+     */
+    @UnstableApi
+    void clearClientTlsSpec();
+
+    /**
+     * Returns the SNI (Server Name Indication) hostname for the TLS handshake.
+     * This is precomputed from the endpoint and authority: for IP-only endpoints, the
+     * authority-derived server name is used; otherwise the endpoint host is used.
+     * Trailing dots are stripped.
+     *
+     * <p>Returns {@code null} if the session protocol is not TLS or the hostname could not be determined.
+     */
+    @UnstableApi
+    @Nullable
+    String sniHostname();
+
+    /**
+     * Sets the SNI (Server Name Indication) hostname for the TLS handshake.
+     * This overrides the automatically precomputed value.
+     */
+    @UnstableApi
+    void setSniHostname(String sniHostname);
 
     /**
      * Returns the local address that was requested to be bound when making a connection for this request.
