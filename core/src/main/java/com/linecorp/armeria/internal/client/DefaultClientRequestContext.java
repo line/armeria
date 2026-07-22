@@ -518,6 +518,10 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
+        updateInternalHeaders();
+    }
+
+    private void updateInternalHeaders() {
         internalRequestHeaders = computeInternalHeaders(defaultInternalRequestHeaders,
                                                         endpoint, sessionProtocol,
                                                         options().autoFillOriginHeader());
@@ -725,9 +729,9 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setSessionProtocol(SessionProtocol sessionProtocol) {
-        checkState(!initializationTriggered(), "Cannot update sessionProtocol after initialization");
         this.sessionProtocol = desiredSessionProtocol(requireNonNull(sessionProtocol, "sessionProtocol"),
                                                       options);
+        updateInternalHeaders();
     }
 
     @Override
@@ -1108,6 +1112,17 @@ public final class DefaultClientRequestContext
     @Override
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
         this.clientTlsSpec = requireNonNull(clientTlsSpec, "clientTlsSpec");
+        if (!sessionProtocol.isTls()) {
+            setSessionProtocol(sessionProtocol.withTls());
+        }
+    }
+
+    @Override
+    public void clearClientTlsSpec() {
+        clientTlsSpec = null;
+        if (sessionProtocol.isTls()) {
+            setSessionProtocol(sessionProtocol.withoutTls());
+        }
     }
 
     @Override
