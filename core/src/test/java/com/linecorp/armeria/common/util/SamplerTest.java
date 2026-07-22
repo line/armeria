@@ -88,4 +88,100 @@ class SamplerTest {
         assertThatThrownBy(() -> Sampler.of("rate-limiting=")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Sampler.of("rate-limiting=x")).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void andOr() {
+        final Sampler<Object> alwaysAndAlwaysSampler = Sampler.always().and(Sampler.always());
+        for (int i = 0; i < 10; i++) {
+            assertThat(alwaysAndAlwaysSampler.isSampled(i)).isTrue();
+        }
+
+        final Sampler<Object> alwaysOrAlwaysSampler = Sampler.always().or(Sampler.always());
+        for (int i = 0; i < 10; i++) {
+            assertThat(alwaysOrAlwaysSampler.isSampled(i)).isTrue();
+        }
+
+        final Sampler<Object> neverOrAlwaysSampler = Sampler.never().or(Sampler.always());
+        for (int i = 0; i < 10; i++) {
+            assertThat(neverOrAlwaysSampler.isSampled(i)).isTrue();
+        }
+
+        final Sampler<Object> neverAndAlwaysSampler = Sampler.never().and(Sampler.always());
+        for (int i = 0; i < 10; i++) {
+            assertThat(neverAndAlwaysSampler.isSampled(i)).isFalse();
+        }
+
+        final Sampler<Object> notNeverSampler = Sampler.never().not();
+        for (int i = 0; i < 10; i++) {
+            assertThat(notNeverSampler.isSampled(i)).isTrue();
+        }
+
+        final Sampler<Object> notAlwaysSampler = Sampler.always().not();
+        for (int i = 0; i < 10; i++) {
+            assertThat(notAlwaysSampler.isSampled(i)).isFalse();
+        }
+    }
+
+    private static class SampleOnce implements Sampler<Object> {
+        int count;
+
+        @Override
+        public boolean isSampled(Object object) {
+            return count++ == 0;
+        }
+
+        public void reset() {
+            count = 0;
+        }
+    }
+
+    @Test
+    void andOrNotShortCircuited() {
+        final SampleOnce first = new SampleOnce();
+        final SampleOnce second = new SampleOnce();
+
+        assertThat(first.and(second).isSampled(0)).isTrue();
+        assertThat(first.isSampled(0)).isFalse();
+        assertThat(second.isSampled(0)).isFalse();
+
+        first.reset();
+        second.reset();
+
+        assertThat(first.or(second).isSampled(0)).isTrue();
+        assertThat(first.isSampled(0)).isFalse();
+        assertThat(second.isSampled(0)).isFalse();
+
+        first.reset();
+        second.reset();
+
+        assertThat(second.and(second).isSampled(0)).isFalse();
+    }
+
+    @Test
+    void compare() {
+        final Sampler<Integer> greaterThanOne = Sampler.greaterThan(1);
+        assertThat(greaterThanOne.isSampled(0)).isFalse();
+        assertThat(greaterThanOne.isSampled(1)).isFalse();
+        assertThat(greaterThanOne.isSampled(2)).isTrue();
+
+        final Sampler<Integer> greaterThanOrEqualOne = Sampler.greaterThanOrEqual(1);
+        assertThat(greaterThanOrEqualOne.isSampled(0)).isFalse();
+        assertThat(greaterThanOrEqualOne.isSampled(1)).isTrue();
+        assertThat(greaterThanOrEqualOne.isSampled(2)).isTrue();
+
+        final Sampler<Integer> lessThanOne = Sampler.lessThan(1);
+        assertThat(lessThanOne.isSampled(0)).isTrue();
+        assertThat(lessThanOne.isSampled(1)).isFalse();
+        assertThat(lessThanOne.isSampled(2)).isFalse();
+
+        final Sampler<Integer> lessThanOrEqualOne = Sampler.lessThanOrEqual(1);
+        assertThat(lessThanOrEqualOne.isSampled(0)).isTrue();
+        assertThat(lessThanOrEqualOne.isSampled(1)).isTrue();
+        assertThat(lessThanOrEqualOne.isSampled(2)).isFalse();
+
+        final Sampler<Integer> equalOne = Sampler.equal(1);
+        assertThat(equalOne.isSampled(0)).isFalse();
+        assertThat(equalOne.isSampled(1)).isTrue();
+        assertThat(equalOne.isSampled(2)).isFalse();
+    }
 }
