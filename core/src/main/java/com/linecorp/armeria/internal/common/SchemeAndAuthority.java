@@ -91,7 +91,7 @@ public final class SchemeAndAuthority {
 
             String normalizedAuthority = host;
             if (port >= 0) {
-                normalizedAuthority += ':' + port;
+                normalizedAuthority += ":" + port;
             }
 
             return new SchemeAndAuthority(scheme, normalizedAuthority, host, port);
