@@ -200,6 +200,12 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> query(String path) {
+        delegate.query(path);
+        return this;
+    }
+
+    @Override
     public FutureTransformingRequestPreparation<T> options(String path) {
         delegate.options(path);
         return this;

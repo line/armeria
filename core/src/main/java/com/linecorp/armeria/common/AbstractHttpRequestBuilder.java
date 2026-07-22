@@ -32,6 +32,7 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -73,6 +74,15 @@ public abstract class AbstractHttpRequestBuilder
     @Override
     public AbstractHttpRequestBuilder patch(String path) {
         return method(HttpMethod.PATCH).path(path);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @UnstableApi
+    public AbstractHttpRequestBuilder query(String path) {
+        return method(HttpMethod.QUERY).path(path);
     }
 
     @Override

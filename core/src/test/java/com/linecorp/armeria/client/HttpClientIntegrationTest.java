@@ -197,15 +197,20 @@ class HttpClientIntegrationTest {
 
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return doGetOrPost(req);
+                    return doGetPostOrQuery(req);
                 }
 
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-                    return doGetOrPost(req);
+                    return doGetPostOrQuery(req);
                 }
 
-                private HttpResponse doGetOrPost(HttpRequest req) {
+                @Override
+                protected HttpResponse doQuery(ServiceRequestContext ctx, HttpRequest req) {
+                    return doGetPostOrQuery(req);
+                }
+
+                private HttpResponse doGetPostOrQuery(HttpRequest req) {
                     final MediaType contentType = req.contentType();
                     if (contentType != null) {
                         throw new IllegalArgumentException(
@@ -323,7 +328,7 @@ class HttpClientIntegrationTest {
                 // The client was able to send a request with an escaped path param. Armeria servers always
                 // decode the path so ctx.path == '/oneparam/foo%3Fbar' here.
                 if ("/oneparam/foo%3Fbar".equals(req.headers().path()) &&
-                    "/oneparam/foo%3Fbar".equals(ctx.path())) {
+                        "/oneparam/foo%3Fbar".equals(ctx.path())) {
                     return HttpResponse.of("routed");
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -387,7 +392,7 @@ class HttpClientIntegrationTest {
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/httptestbody",
-                                  HttpHeaderNames.ACCEPT, "utf-8"));
+                        HttpHeaderNames.ACCEPT, "utf-8"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
@@ -400,12 +405,39 @@ class HttpClientIntegrationTest {
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST, "/httptestbody",
-                                  HttpHeaderNames.ACCEPT, "utf-8"),
+                        HttpHeaderNames.ACCEPT, "utf-8"),
                 "requestbody日本語");
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
         assertThat(response.contentUtf8()).isEqualTo("METHOD: POST|ACCEPT: utf-8|BODY: requestbody日本語");
+    }
+
+    @Test
+    void testRequestQueryWithBody() throws Exception {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(
+                RequestHeaders.of(HttpMethod.QUERY, "/httptestbody",
+                                  HttpHeaderNames.ACCEPT, "utf-8"),
+                "querybody日本語");
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
+        assertThat(response.contentUtf8()).isEqualTo("METHOD: QUERY|ACCEPT: utf-8|BODY: querybody日本語");
+    }
+
+    @Test
+    void testRequestQueryWithoutBody() throws Exception {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(
+                RequestHeaders.of(HttpMethod.QUERY, "/httptestbody",
+                                  HttpHeaderNames.ACCEPT, "utf-8"));
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
+        assertThat(response.contentUtf8()).isEqualTo("METHOD: QUERY|ACCEPT: utf-8|BODY: ");
     }
 
     @Test

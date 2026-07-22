@@ -452,6 +452,15 @@ public final class WebClientRequestPreparation
         return (WebClientRequestPreparation) super.patch(path);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @UnstableApi
+    public WebClientRequestPreparation query(String path) {
+        return (WebClientRequestPreparation) super.query(path);
+    }
+
     @Override
     public WebClientRequestPreparation options(String path) {
         return (WebClientRequestPreparation) super.options(path);
