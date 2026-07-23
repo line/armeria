@@ -53,6 +53,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.metric.ClientRequestLifecycleListener;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
@@ -135,6 +136,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private ClientTlsSpec clientTlsSpec = ClientTlsSpec.of();
     private boolean staticTlsSettingsSet;
     private boolean autoCloseConnectionPoolListener = true;
+    private ClientRequestLifecycleListener clientRequestLifecycleListener =
+            ClientRequestLifecycleListener.noop();
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -258,6 +261,21 @@ public final class ClientFactoryBuilder implements TlsSetters {
         requireNonNull(option, "option");
         requireNonNull(value, "value");
         channelOptions(ImmutableMap.of(option, value));
+        return this;
+    }
+
+    /**
+     * Sets the {@link ClientRequestLifecycleListener} that listens to the lifecycle events of
+     * client requests created by the {@link ClientFactory}.
+     *
+     * <p>If not set, {@link ClientRequestLifecycleListener#noop()} is used by default.
+     *
+     * @param listener the listener to be notified of client request lifecycle events. Must not be {@code null}.
+     * @return {@code this} to support method chaining.
+     */
+    public ClientFactoryBuilder clientRequestLifecycleListener(ClientRequestLifecycleListener listener) {
+        requireNonNull(listener, "listener");
+        clientRequestLifecycleListener = listener;
         return this;
     }
 
@@ -1127,7 +1145,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
         final ClientFactoryOptions options = buildOptions();
         final ClientTlsSpec baseClientTlsSpec = buildTlsSpec(clientTlsSpec, tlsNoVerifySet, insecureHosts);
         return new DefaultClientFactory(new HttpClientFactory(
-                options, autoCloseConnectionPoolListener, baseClientTlsSpec));
+                options, autoCloseConnectionPoolListener, baseClientTlsSpec, clientRequestLifecycleListener));
     }
 
     private static ClientTlsSpec buildTlsSpec(
