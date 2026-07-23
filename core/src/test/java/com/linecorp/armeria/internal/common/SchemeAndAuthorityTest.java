@@ -27,7 +27,7 @@ class SchemeAndAuthorityTest {
     @ParameterizedTest
     @CsvSource({
             "0.0.0.0,           0.0.0.0,             0.0.0.0,            -1",    // IPv4
-            "0.0.0.0:,          0.0.0.0,            0.0.0.0,            -1",    // IPv4 with empty port
+            "0.0.0.0:,          0.0.0.0,            0.0.0.0,             -1",    // IPv4 with empty port
             "0.0.0.0:80,        0.0.0.0:80,          0.0.0.0,            80",    // IPv4 with port
             "[::1],             [::1],               [::1],              -1",    // IPv6
             "[::1]:,            [::1],              [::1],              -1",    // IPv6 with empty port
