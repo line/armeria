@@ -73,7 +73,6 @@ public final class SchemeAndAuthority {
             if (Strings.isNullOrEmpty(rawAuthority)) {
                 throw new IllegalArgumentException("Invalid authority: " + authority);
             }
-            rawAuthority = IDN.toASCII(rawAuthority, IDN.ALLOW_UNASSIGNED);
 
             final boolean isIpv6 = rawAuthority.charAt(0) == '[';
             if (isIpv6) {
@@ -81,13 +80,21 @@ public final class SchemeAndAuthority {
             }
 
             final HostAndPort hostAndPort = HostAndPort.fromString(rawAuthority);
-            String host = hostAndPort.getHost();
+
+            String host = IDN.toASCII(hostAndPort.getHost(), IDN.ALLOW_UNASSIGNED);
+
             if (isIpv6) {
                 host = '[' + host + ']';
             }
+
             final int port = hostAndPort.getPortOrDefault(-1);
 
-            return new SchemeAndAuthority(scheme, rawAuthority, host, port);
+            String normalizedAuthority = host;
+            if (port >= 0) {
+                normalizedAuthority += ":" + port;
+            }
+
+            return new SchemeAndAuthority(scheme, normalizedAuthority, host, port);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
