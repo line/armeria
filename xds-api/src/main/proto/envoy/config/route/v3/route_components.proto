@@ -1647,6 +1647,9 @@ message RetryPolicy {
     // of Envoy's back-off algorithm.
     option (armeria.xds.supported.field) = 2;
     google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {}}];
+
+    // Specifies the exponential backoff factor that Envoy doesn't support. (2x is by default).
+    google.protobuf.UInt32Value exponential_backoff_factor = 1000;
   }
 
   message ResetHeader {
