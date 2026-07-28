@@ -35,9 +35,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.xds.RouteEntryMatcher.HeaderMatcherImpl;
 import com.linecorp.armeria.xds.RouteEntryMatcher.QueryParamsMatcherImpl;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+import com.linecorp.armeria.xds.internal.XdsHeaderMatcher;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
 import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher;
@@ -485,7 +485,7 @@ class RouteEntryMatcherTest {
     @ParameterizedTest
     @MethodSource("headerMatch_args")
     void headerMatch(HeaderMatcher headerMatcher, RequestHeaders requestHeaders, boolean expectedResult) {
-        final HeaderMatcherImpl matcher = new HeaderMatcherImpl(headerMatcher);
+        final XdsHeaderMatcher matcher = XdsHeaderMatcher.of(headerMatcher);
         assertThat(matcher.matches(requestHeaders)).isEqualTo(expectedResult);
     }
 
@@ -804,7 +804,7 @@ class RouteEntryMatcherTest {
     @MethodSource("deprecatedHeaderMatcher_args")
     @DisplayName("Test that deprecated HeaderMatcher values throw IllegalArgumentException")
     void deprecatedHeaderMatcher(HeaderMatcher headerMatcher) {
-        assertThatThrownBy(() -> new HeaderMatcherImpl(headerMatcher))
+        assertThatThrownBy(() -> XdsHeaderMatcher.of(headerMatcher))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Using deprecated field")
                 .hasMessageContaining("Use 'STRING_MATCH' instead");

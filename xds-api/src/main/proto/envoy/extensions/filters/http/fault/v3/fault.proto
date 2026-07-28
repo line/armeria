@@ -13,6 +13,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.filters.http.fault.v3";
 option java_outer_classname = "FaultProto";
 option java_multiple_files = true;
@@ -42,6 +44,7 @@ message FaultAbort {
     option (validate.required) = true;
 
     // HTTP status code to use to abort the HTTP request.
+    option (armeria.xds.supported.oneof_field) = 2;
     uint32 http_status = 2 [(validate.rules).uint32 = {lt: 600 gte: 200}];
 
     // gRPC status code to use to abort the gRPC request.
@@ -53,6 +56,7 @@ message FaultAbort {
 
   // The percentage of requests/operations/connections that will be aborted with the error code
   // provided.
+  option (armeria.xds.supported.field) = 3;
   type.v3.FractionalPercent percentage = 3;
 }
 
@@ -63,10 +67,12 @@ message HTTPFault {
 
   // If specified, the filter will inject delays based on the values in the
   // object.
+  option (armeria.xds.supported.field) = 1;
   common.fault.v3.FaultDelay delay = 1;
 
   // If specified, the filter will abort requests based on the values in
   // the object. At least ``abort`` or ``delay`` must be specified.
+  option (armeria.xds.supported.field) = 2;
   FaultAbort abort = 2;
 
   // Specifies the name of the (destination) upstream cluster that the
@@ -83,6 +89,7 @@ message HTTPFault {
   // headers in the filter config. A match will happen if all the headers in the
   // config are present in the request with the same values (or based on
   // presence if the ``value`` field is not in the config).
+  option (armeria.xds.supported.field) = 4;
   repeated config.route.v3.HeaderMatcher headers = 4;
 
   // Faults are injected for the specified list of downstream hosts. If this
