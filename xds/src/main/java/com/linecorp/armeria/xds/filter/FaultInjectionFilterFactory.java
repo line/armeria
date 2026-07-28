@@ -18,7 +18,9 @@ package com.linecorp.armeria.xds.filter;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
@@ -30,6 +32,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.xds.internal.XdsHeaderMatcher;
 
@@ -172,7 +175,10 @@ public final class FaultInjectionFilterFactory implements HttpFilterFactory {
                 if (faultResponse != null) {
                     return maybeDelay(faultResponse, ctx.eventLoop());
                 }
-                return maybeDelay(delegate.execute(ctx, req), ctx.eventLoop());
+                if (shouldDelay()) {
+                    return delayedDispatch(() -> delegate.execute(ctx, req), ctx.eventLoop());
+                }
+                return delegate.execute(ctx, req);
             };
         }
 
@@ -186,7 +192,10 @@ public final class FaultInjectionFilterFactory implements HttpFilterFactory {
                 if (faultResponse != null) {
                     return maybeDelay(faultResponse, ctx.eventLoop());
                 }
-                return maybeDelay(delegate.serve(ctx, req), ctx.eventLoop());
+                if (shouldDelay()) {
+                    return delayedDispatch(() -> delegate.serve(ctx, req), ctx.eventLoop());
+                }
+                return delegate.serve(ctx, req);
             };
         }
 
@@ -202,11 +211,33 @@ public final class FaultInjectionFilterFactory implements HttpFilterFactory {
             return null;
         }
 
+        private boolean shouldDelay() {
+            return shouldApply(delayNumerator, delayDenominator) && delayMillis > 0;
+        }
+
         private HttpResponse maybeDelay(HttpResponse response, EventExecutor executor) {
-            if (shouldApply(delayNumerator, delayDenominator) && delayMillis > 0) {
+            if (shouldDelay()) {
                 return HttpResponse.delayed(response, Duration.ofMillis(delayMillis), executor);
             }
             return response;
+        }
+
+        private HttpResponse delayedDispatch(
+                ThrowingSupplier dispatch, EventExecutor executor) {
+            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            executor.schedule(() -> {
+                try {
+                    future.complete(dispatch.get());
+                } catch (Exception e) {
+                    future.completeExceptionally(Exceptions.peel(e));
+                }
+            }, delayMillis, TimeUnit.MILLISECONDS);
+            return HttpResponse.from(future);
+        }
+
+        @FunctionalInterface
+        private interface ThrowingSupplier {
+            HttpResponse get() throws Exception;
         }
     }
 }
