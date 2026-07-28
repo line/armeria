@@ -23,7 +23,6 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
-import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -113,23 +112,6 @@ public final class CredentialInjectorFilterFactory implements HttpFilterFactory 
             this.header = header;
             this.overwrite = overwrite;
             this.allowWithoutCredential = allowWithoutCredential;
-        }
-
-        @Override
-        public HttpPreprocessor httpPreprocessor() {
-            return (delegate, ctx, req) -> {
-                if (credential == null) {
-                    if (!allowWithoutCredential) {
-                        return HttpResponse.of(HttpStatus.UNAUTHORIZED);
-                    }
-                    return delegate.execute(ctx, req);
-                }
-                if (!overwrite && headerExists(ctx, req)) {
-                    return delegate.execute(ctx, req);
-                }
-                ctx.setAdditionalRequestHeader(header, credential);
-                return delegate.execute(ctx, req);
-            };
         }
 
         @Override

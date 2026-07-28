@@ -1,0 +1,125 @@
+---
+sidebar_position: 0
+---
+
+# Introduction
+
+## What is a service mesh?
+
+When an application is split into many services, each service needs to find the
+others, balance load across their instances, retry failed calls, enforce timeouts,
+and encrypt traffic between them. Implementing this logic in every service is
+error-prone and hard to keep consistent — especially as the number of services
+grows.
+
+A **service mesh** moves these concerns out of individual application call sites
+and into a shared data-plane implementation. It has two parts:
+
+- **Control plane** — a centralized component that watches for service changes
+  (new instances, removed endpoints, updated routing rules) and computes the
+  configuration that the data plane should enforce.
+- **Data plane** — the component that sits on the traffic path, applying the
+  configuration it receives: routing requests to the right endpoint, load
+  balancing, retrying failures, enforcing timeouts, and encrypting traffic
+  with mutual TLS.
+
+The control plane delivers configuration to the data plane using the
+**xDS APIs** — originally developed for Envoy and now maintained by the
+[CNCF xDS API Working Group](https://github.com/cncf/xds).
+
+## Sidecar vs. proxyless
+
+In a traditional service mesh, the data plane is a **sidecar proxy** — a separate
+process (typically Envoy) deployed alongside every application instance. An
+orchestrator like Kubernetes injects the sidecar automatically, and application
+traffic is typically redirected through it.
+
+This model has clear strengths: it is **language-agnostic** (any process gets
+mesh features regardless of its runtime) and does not require
+**application-library integration**. For organizations already running on
+Kubernetes with a platform team to manage the mesh infrastructure, sidecars
+are a well-proven choice.
+
+That said, some organizations face challenges with this model:
+
+- **Platform dependency** — the Kubernetes ecosystem provides mature automation
+  for sidecar injection and traffic interception. Equivalent deployment and
+  lifecycle automation may require additional work in VM or bare-metal
+  environments.
+- **Operational overhead** — running a full control plane plus a proxy per
+  service instance introduces an additional proxy fleet that must be deployed,
+  upgraded, monitored, and troubleshot alongside the applications.
+
+A **proxyless** approach offers an alternative. Instead of routing traffic
+through an external proxy, the application's networking framework implements
+the xDS APIs and applies the configuration in-process:
+
+- **No traffic-interception infrastructure** — applications can use xDS on
+  containers, VMs, or bare metal without sidecar injection or transparent
+  traffic redirection.
+- **No separate proxy lifecycle** — there is no sidecar fleet to deploy or
+  upgrade. The data-plane implementation is instead versioned and deployed as
+  an application dependency.
+- **Direct request path** — requests do not traverse separate client-side and
+  server-side proxy processes, which can reduce latency.
+- **No separate proxy overhead** — proxyless operation avoids the baseline
+  memory and CPU cost of running an additional proxy process for each
+  application instance.
+- **Incremental adoption** — you can add xDS support to individual services
+  without migrating your entire infrastructure. Services with and without xDS
+  can coexist.
+
+### Trade-offs
+
+Proxyless is not a strict upgrade over the sidecar model. It makes different
+integration and operational choices:
+
+- **Runtime and framework dependency** — proxyless operation requires xDS support
+  in the application's language and networking framework. A polyglot
+  organization may still need sidecars for services without compatible library
+  support.
+- **Application release coupling** — upgrading or fixing the proxyless data-plane
+  implementation generally requires updating and redeploying the application.
+- **Feature availability** — a proxyless implementation may support a smaller
+  subset of Envoy resources, fields, and filters than an Envoy sidecar.
+
+The two models are not mutually exclusive — proxyless services and sidecar-based
+services can coexist in the same mesh, so you can adopt either approach
+incrementally.
+
+## Landscape
+
+Other Java technologies address overlapping service-discovery, routing, and
+resiliency concerns:
+
+- [**Spring Cloud**](https://spring.io/projects/spring-cloud) — provides
+  Java abstractions and integrations for service discovery, load balancing,
+  circuit breaking, and other distributed-system patterns. Unlike Armeria's
+  xDS module, these capabilities are not primarily configured through the
+  xDS APIs.
+- [**gRPC xDS**](https://github.com/grpc/proposal/blob/master/A27-xds-global-load-balancing.md)
+  — supported gRPC clients and servers can receive service discovery, routing,
+  load-balancing, and security configuration from an xDS control plane.
+
+Armeria's xDS module occupies a similar space — it speaks the xDS APIs and
+supports HTTP, gRPC, and Thrift.
+See [Concepts](/docs/advanced/xds/concepts) for a deeper look at the architecture.
+
+## Documentation guide
+
+- [Bootstrap](/docs/advanced/xds/bootstrap) — config sources (static, ADS,
+  file-based) and how to combine them
+- [Concepts](/docs/advanced/xds/concepts) — architecture overview, snapshots, and
+  the threading model
+- [Client](/docs/advanced/xds/client) — how the preprocessor works,
+  downstream and upstream filters
+- [Server](/docs/advanced/xds/server) — XdsServerPlugin, filter chain
+  matching, dynamic TLS
+- [Metrics](/docs/advanced/xds/metrics) — control plane, resource, and load balancer
+  metrics exposed by the xDS module
+- [Extensions](/docs/advanced/xds/extensions) — adding custom HTTP filter extensions
+  via [HttpFilterFactory](type)
+- [Supported features](/docs/advanced/xds/supported-features) — which xDS fields
+  Armeria recognizes and how unsupported fields are handled
+- [Control planes](/docs/advanced/xds/control-planes) — java-control-plane,
+  go-control-plane

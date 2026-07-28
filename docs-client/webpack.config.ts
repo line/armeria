@@ -5,13 +5,13 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import CompressionWebpackPlugin from 'compression-webpack-plugin';
 import { Configuration, DefinePlugin, optimize } from 'webpack';
-import WebpackDevServer from 'webpack-dev-server';
+import type { Configuration as DevServerConfiguration } from 'webpack-dev-server';
 import { docServiceDebug } from './src/lib/header-provider';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 
 declare module 'webpack' {
   interface Configuration {
-    devServer?: WebpackDevServer.Configuration;
+    devServer?: DevServerConfiguration | undefined;
   }
 }
 

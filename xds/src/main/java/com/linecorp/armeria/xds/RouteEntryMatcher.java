@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+import com.linecorp.armeria.xds.internal.XdsStringMatcher;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher.HeaderMatchSpecifierCase;
@@ -102,7 +103,7 @@ final class RouteEntryMatcher {
                     predicate = params -> params.contains(matcher.getName()) == matcher.getPresentMatch();
                     break;
                 case STRING_MATCH:
-                    final StringMatcherImpl stringMatcher = new StringMatcherImpl(matcher.getStringMatch());
+                    final XdsStringMatcher stringMatcher = new XdsStringMatcher(matcher.getStringMatch());
                     predicate = params -> {
                         final String value = params.get(matcher.getName());
                         if (value == null) {
@@ -180,8 +181,8 @@ final class RouteEntryMatcher {
                     };
                     break;
                 case STRING_MATCH:
-                    final StringMatcherImpl stringMatcher =
-                            new StringMatcherImpl(headerMatcher.getStringMatch());
+                    final XdsStringMatcher stringMatcher =
+                            new XdsStringMatcher(headerMatcher.getStringMatch());
                     matcher = headers -> {
                         final List<String> allHeaders = headers.getAll(headerMatcher.getName());
                         if (allHeaders.isEmpty()) {
@@ -231,7 +232,7 @@ final class RouteEntryMatcher {
                                                                      .setPrefix(routeMatch.getPrefix())
                                                                      .setIgnoreCase(!caseSensitive)
                                                                      .build();
-                    final StringMatcherImpl prefixMatcherImpl = new StringMatcherImpl(prefixMatcher);
+                    final XdsStringMatcher prefixMatcherImpl = new XdsStringMatcher(prefixMatcher);
                     predicate = ctx -> prefixMatcherImpl.match(ctx.path());
                     break;
                 case PATH:
@@ -239,14 +240,14 @@ final class RouteEntryMatcher {
                                                                    .setExact(routeMatch.getPath())
                                                                    .setIgnoreCase(!caseSensitive)
                                                                    .build();
-                    final StringMatcherImpl pathMatcherImpl = new StringMatcherImpl(pathMatcher);
+                    final XdsStringMatcher pathMatcherImpl = new XdsStringMatcher(pathMatcher);
                     predicate = ctx -> pathMatcherImpl.match(ctx.path());
                     break;
                 case SAFE_REGEX:
                     final StringMatcher regexMatcher = StringMatcher.newBuilder()
                                                                     .setSafeRegex(routeMatch.getSafeRegex())
                                                                     .build();
-                    final StringMatcherImpl regexMatcherImpl = new StringMatcherImpl(regexMatcher);
+                    final XdsStringMatcher regexMatcherImpl = new XdsStringMatcher(regexMatcher);
                     predicate = ctx -> regexMatcherImpl.match(ctx.path());
                     break;
                 case CONNECT_MATCHER:
@@ -258,8 +259,8 @@ final class RouteEntryMatcher {
                                          .setPrefix(routeMatch.getPathSeparatedPrefix())
                                          .setIgnoreCase(!caseSensitive)
                                          .build();
-                    final StringMatcherImpl separatedPrefixMatcherImpl =
-                            new StringMatcherImpl(separatedPrefixMatcher);
+                    final XdsStringMatcher separatedPrefixMatcherImpl =
+                            new XdsStringMatcher(separatedPrefixMatcher);
                     predicate = ctx -> {
                         final String path = ctx.path();
                         final String pathSeparatedPrefix = routeMatch.getPathSeparatedPrefix();

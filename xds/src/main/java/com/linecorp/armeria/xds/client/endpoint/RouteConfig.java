@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ListenerSnapshot;
 import com.linecorp.armeria.xds.RouteEntry;
 import com.linecorp.armeria.xds.RouteSnapshot;
+import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 final class RouteConfig {
     private final ListenerSnapshot listenerSnapshot;
@@ -41,7 +42,7 @@ final class RouteConfig {
         }
         final RouteEntry entry = routeSnapshot.select(ctx);
         if (entry != null) {
-            ctx.setAttr(XdsAttributeKeys.ROUTE_METADATA_MATCH,
+            ctx.setAttr(XdsCommonUtil.ROUTE_METADATA_MATCH,
                         entry.route().getRoute().getMetadataMatch());
         }
         return entry;

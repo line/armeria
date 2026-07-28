@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.netty.util.AttributeKey;
 
 final class XdsAttributeKeys {
 
     static final AttributeKey<XdsRandom> XDS_RANDOM =
             AttributeKey.valueOf(XdsAttributeKeys.class, "XDS_RANDOM");
-    static final AttributeKey<Metadata> ROUTE_METADATA_MATCH =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "ROUTE_METADATA_MATCH");
 
     private XdsAttributeKeys() {}
 }

@@ -35,6 +35,7 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RefusedStreamException;
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryConfig;
@@ -43,12 +44,14 @@ import com.linecorp.armeria.client.retry.RetryConfigMapping;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -87,6 +90,7 @@ final class RetryStateFactory {
     private final List<HeaderMatcherImpl> retriableRequestHeadersMatchers;
     private final RetryStateImpl defaultRetryState;
     private final RetryConfig<HttpResponse> defaultRetryConfig;
+    private final RetryConfig<RpcResponse> defaultRpcRetryConfig;
 
     RetryStateFactory(RetryPolicy retryPolicy) {
         final Set<RetryPolicyTypes> policies = parseRetryOn(retryPolicy.getRetryOn());
@@ -102,17 +106,28 @@ final class RetryStateFactory {
         defaultRetryState = new RetryStateImpl(retryPolicy, policies, numRetries, retriableStatusCodes,
                                                retriableResponseHeaderMatchers);
         defaultRetryConfig = createRetryConfig(defaultRetryState);
+        defaultRpcRetryConfig = createRpcRetryConfig(defaultRetryState);
     }
 
     private static RetryConfig<HttpResponse> createRetryConfig(RetryStateImpl retryState) {
         final RetryConfigBuilder<HttpResponse> builder = RetryConfig.builder(retryState);
+        applyRetrySettings(builder, retryState);
+        return builder.build();
+    }
+
+    private static RetryConfig<RpcResponse> createRpcRetryConfig(RetryStateImpl retryState) {
+        final RetryConfigBuilder<RpcResponse> builder = RetryConfig.builderForRpc(retryState);
+        applyRetrySettings(builder, retryState);
+        return builder.build();
+    }
+
+    private static void applyRetrySettings(RetryConfigBuilder<?> builder, RetryStateImpl retryState) {
         if (retryState.perTryTimeoutMillis > 0) {
             builder.responseTimeoutMillisForEachAttempt(retryState.perTryTimeoutMillis);
         }
         if (retryState.numRetries > 0) {
             builder.maxTotalAttempts(retryState.numRetries + 1);
         }
-        return builder.build();
     }
 
     Function<? super HttpClient, RetryingClient> retryingDecorator() {
@@ -128,6 +143,10 @@ final class RetryStateFactory {
             return defaultRetryConfig;
         };
         return RetryingClient.builderWithMapping(mapping).newDecorator();
+    }
+
+    Function<? super RpcClient, RetryingRpcClient> retryingRpcDecorator() {
+        return RetryingRpcClient.newDecorator(defaultRpcRetryConfig);
     }
 
     private static RetryStateImpl createRetryState(RequestHeaders requestHeaders,

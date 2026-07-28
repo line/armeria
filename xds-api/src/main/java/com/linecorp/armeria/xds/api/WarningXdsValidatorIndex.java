@@ -24,21 +24,24 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
 
 /**
- * The default validator which applies pgv (protoc-gen-validate) structural validation
- * and warns usage of unsupported fields.
+ * A {@link XdsValidatorIndex} that applies pgv (protoc-gen-validate) structural validation
+ * and logs warnings for unsupported fields instead of rejecting them.
+ *
+ * <p>Use this validator when you want to be notified of unsupported fields without
+ * failing the resource. To reject unsupported fields, use {@link StrictXdsValidatorIndex}.
  */
 @UnstableApi
-public final class DefaultXdsValidatorIndex implements XdsValidatorIndex {
+public final class WarningXdsValidatorIndex implements XdsValidatorIndex {
 
-    private static final DefaultXdsValidatorIndex INSTANCE = new DefaultXdsValidatorIndex();
+    private static final WarningXdsValidatorIndex INSTANCE = new WarningXdsValidatorIndex();
 
     private final PgvValidator pgvValidator = PgvValidator.of();
     private final SupportedFieldValidator supportedFieldValidator = SupportedFieldValidator.of();
 
     /**
-     * Returns the default singleton instance.
+     * Returns the singleton instance.
      */
-    public static DefaultXdsValidatorIndex of() {
+    public static WarningXdsValidatorIndex of() {
         return INSTANCE;
     }
 
@@ -47,5 +50,10 @@ public final class DefaultXdsValidatorIndex implements XdsValidatorIndex {
         requireNonNull(message, "message");
         pgvValidator.assertValid(message);
         supportedFieldValidator.validate(message);
+    }
+
+    @Override
+    public int priority() {
+        return 1;
     }
 }

@@ -115,7 +115,7 @@ public final class SupportedFieldValidator {
 
     @SuppressWarnings("unchecked")
     private void doValidate(Message message, String descriptorName, String path) {
-        if (unsupportedPackage(message.getDescriptorForType().getFile().getPackage())) {
+        if (isGoogleApi(message.getDescriptorForType().getFile().getPackage())) {
             return;
         }
         final Descriptors.Descriptor descriptor = message.getDescriptorForType();
@@ -160,8 +160,7 @@ public final class SupportedFieldValidator {
                 doValidate((Message) value, descriptorName, fieldPath);
             }
         } else if (fd.getJavaType() == FieldDescriptor.JavaType.ENUM) {
-            if (!unsupportedPackage(fd.getEnumType().getFile().getPackage()) &&
-                value instanceof EnumValueDescriptor) {
+            if (value instanceof EnumValueDescriptor) {
                 final EnumValueDescriptor ev = (EnumValueDescriptor) value;
                 if (unsupportedEnumValue(ev)) {
                     handler.handle(descriptorName, fieldPath, ev);
@@ -177,8 +176,8 @@ public final class SupportedFieldValidator {
         return !supportedValues.isEmpty() && !supportedValues.contains(ev.getNumber());
     }
 
-    private static boolean unsupportedPackage(String pkg) {
-        return !(pkg.startsWith("envoy.") || pkg.startsWith("xds.") || pkg.startsWith("armeria."));
+    private static boolean isGoogleApi(String pkg) {
+        return pkg.startsWith("google.protobuf");
     }
 
     private Set<FieldDescriptor> supportedFields(Descriptors.Descriptor descriptor) {
