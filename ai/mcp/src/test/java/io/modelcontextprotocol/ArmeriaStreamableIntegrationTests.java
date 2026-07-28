@@ -53,6 +53,7 @@ import io.modelcontextprotocol.server.McpTransportContextExtractor;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.ClientCapabilities;
+import io.modelcontextprotocol.spec.McpSchema.ElicitFormRequest;
 import io.modelcontextprotocol.spec.McpSchema.ElicitRequest;
 import io.modelcontextprotocol.spec.McpSchema.ElicitResult;
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult;
@@ -99,7 +100,7 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
     void testCreateElicitationSuccess(String clientType) {
         final var clientBuilder = clientBuilders.get(clientType);
 
-        final Function<ElicitRequest, ElicitResult> elicitationHandler = request -> {
+        final Function<ElicitFormRequest, ElicitResult> elicitationHandler = request -> {
             assertThat(request.message()).isNotEmpty();
             assertThat(request.requestedSchema()).isNotNull();
             return new McpSchema.ElicitResult(McpSchema.ElicitResult.Action.ACCEPT,

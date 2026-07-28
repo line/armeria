@@ -261,7 +261,9 @@ final class RampingUpLoadBalancer<T> implements UpdatableLoadBalancer<T> {
         final Set<CandidateAndStep<T>> candidateAndSteps = entry.candidateAndSteps();
         updateWeightAndStep0(candidateAndSteps);
         if (candidateAndSteps.isEmpty()) {
-            rampingUpWindowsMap.remove(window).scheduledFuture.cancel(true);
+            final CandidatesRampingUpEntry<T> removed = rampingUpWindowsMap.remove(window);
+            assert removed != null;
+            removed.scheduledFuture.cancel(true);
         }
         buildLoadBalancer();
     }
