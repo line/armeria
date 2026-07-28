@@ -60,7 +60,7 @@ final class StateCoordinator implements SafeCloseable {
     <T extends XdsResource> boolean register(XdsType type, String resourceName,
                                              SnapshotWatcher<T> watcher) {
         final boolean updated = subscriberStorage.register(type, resourceName, watcher);
-        replayToWatcher(type, resourceName, watcher);
+        replayToWatcher(type, resourceName, watcher, updated);
         return updated;
     }
 
@@ -70,10 +70,20 @@ final class StateCoordinator implements SafeCloseable {
     }
 
     private <T extends XdsResource> void replayToWatcher(XdsType type, String resourceName,
-                                                         SnapshotWatcher<T> watcher) {
+                                                         SnapshotWatcher<T> watcher,
+                                                         boolean newSubscriber) {
         @SuppressWarnings("unchecked")
         final T cached = (T) stateStore.resource(type, resourceName);
-        if (cached != null) {
+        if (cached == null) {
+            return;
+        }
+        if (newSubscriber) {
+            final CompositeSnapshotWatcher<XdsResource> subscriber =
+                    subscriberStorage.subscriber(type, resourceName);
+            if (subscriber != null) {
+                subscriber.onUpdate(cached, null);
+            }
+        } else {
             watcher.onUpdate(cached, null);
         }
     }

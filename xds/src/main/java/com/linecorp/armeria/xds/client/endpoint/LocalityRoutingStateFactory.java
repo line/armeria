@@ -190,7 +190,7 @@ final class LocalityRoutingStateFactory {
             if (state == State.NO_LOCALITY_ROUTING) {
                 return 0;
             }
-            return 1.0 * localPercentageToRoute / MOD;
+            return 100.0 * localPercentageToRoute / MOD;
         }
 
         Locality tryChooseLocalLocalityHosts(HostSet hostSet, XdsRandom random) {
