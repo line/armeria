@@ -429,7 +429,7 @@ class ServerFilterChainMatchTest {
                                                    .trustedCertificates(certA.certificate())
                                                    .build();
         try (ClientFactory cf = ClientFactory.builder().build()) {
-            final BlockingWebClient httpsClient = WebClient.builder(server.httpUri())
+            final BlockingWebClient httpsClient = WebClient.builder(server.httpsUri())
                                                            .factory(cf)
                                                            .build()
                                                            .blocking();
