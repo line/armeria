@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
@@ -353,9 +354,9 @@ class ServerFilterChainMatchTest {
 
         // SNI "test.example.com" should match "*.example.com" chain → certA
         final ClientTlsSpec wildcardTlsSpec = ClientTlsSpec.builder()
-                                                            .trustedCertificates(certA.certificate())
-                                                            .endpointIdentificationAlgorithm("")
-                                                            .build();
+                                                           .trustedCertificates(certA.certificate())
+                                                           .endpointIdentificationAlgorithm("")
+                                                           .build();
         final Endpoint wildcardEndpoint = Endpoint.of("test.example.com", port).withIpAddr("127.0.0.1");
         final BlockingWebClient wildcardClient =
                 WebClient.builder(SessionProtocol.HTTPS, wildcardEndpoint).build().blocking();
@@ -367,9 +368,9 @@ class ServerFilterChainMatchTest {
 
         // SNI "other.net" should NOT match "*.example.com" → default chain → certDefault
         final ClientTlsSpec defaultTlsSpec = ClientTlsSpec.builder()
-                                                           .trustedCertificates(certDefault.certificate())
-                                                           .endpointIdentificationAlgorithm("")
-                                                           .build();
+                                                          .trustedCertificates(certDefault.certificate())
+                                                          .endpointIdentificationAlgorithm("")
+                                                          .build();
         final Endpoint otherEndpoint = Endpoint.of("other.net", port).withIpAddr("127.0.0.1");
         final BlockingWebClient defaultClient =
                 WebClient.builder(SessionProtocol.HTTPS, otherEndpoint).build().blocking();
@@ -427,16 +428,26 @@ class ServerFilterChainMatchTest {
         final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
                                                    .trustedCertificates(certA.certificate())
                                                    .build();
-        final BlockingWebClient httpsClient = WebClient.of(server.httpsUri()).blocking();
-        final AggregatedHttpResponse httpsRes = httpsClient.execute(
-                HttpRequest.of(HttpMethod.GET, "/hello"),
-                RequestOptions.builder().clientTlsSpec(tlsSpec).build());
-        assertThat(httpsRes.status()).isEqualTo(HttpStatus.OK);
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            final BlockingWebClient httpsClient = WebClient.builder(server.httpUri())
+                                                           .factory(cf)
+                                                           .build()
+                                                           .blocking();
+            final AggregatedHttpResponse httpsRes = httpsClient.execute(
+                    HttpRequest.of(HttpMethod.GET, "/hello"),
+                    RequestOptions.builder().clientTlsSpec(tlsSpec).build());
+            assertThat(httpsRes.status()).isEqualTo(HttpStatus.OK);
+        }
 
         // Plaintext HTTP should be rejected because the matched chain requires TLS.
-        final BlockingWebClient httpClient = WebClient.of(server.httpUri()).blocking();
-        assertThatThrownBy(() -> httpClient.get("/hello"))
-                .isInstanceOf(UnprocessedRequestException.class);
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            final BlockingWebClient httpClient = WebClient.builder(server.httpUri())
+                                                          .factory(cf)
+                                                          .build()
+                                                          .blocking();
+            assertThatThrownBy(() -> httpClient.get("/hello"))
+                    .isInstanceOf(UnprocessedRequestException.class);
+        }
     }
 
     @Test
