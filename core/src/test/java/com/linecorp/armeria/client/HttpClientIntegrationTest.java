@@ -328,7 +328,7 @@ class HttpClientIntegrationTest {
                 // The client was able to send a request with an escaped path param. Armeria servers always
                 // decode the path so ctx.path == '/oneparam/foo%3Fbar' here.
                 if ("/oneparam/foo%3Fbar".equals(req.headers().path()) &&
-                        "/oneparam/foo%3Fbar".equals(ctx.path())) {
+                    "/oneparam/foo%3Fbar".equals(ctx.path())) {
                     return HttpResponse.of("routed");
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -392,7 +392,7 @@ class HttpClientIntegrationTest {
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/httptestbody",
-                        HttpHeaderNames.ACCEPT, "utf-8"));
+                                  HttpHeaderNames.ACCEPT, "utf-8"));
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
@@ -405,7 +405,7 @@ class HttpClientIntegrationTest {
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST, "/httptestbody",
-                        HttpHeaderNames.ACCEPT, "utf-8"),
+                                  HttpHeaderNames.ACCEPT, "utf-8"),
                 "requestbody日本語");
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
