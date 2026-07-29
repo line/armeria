@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
+import com.linecorp.armeria.internal.client.TailHttpClient;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -363,7 +364,7 @@ final class HttpClientFactory implements ClientFactory {
         validateClientType(clientType);
 
         final ClientOptions options = params.options();
-        final HttpClient delegate = options.decoration().decorate(clientDelegate);
+        final HttpClient delegate = options.decoration().decorate(new TailHttpClient(clientDelegate));
 
         if (clientType == HttpClient.class) {
             return delegate;

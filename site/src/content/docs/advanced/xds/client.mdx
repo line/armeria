@@ -77,7 +77,10 @@ When a request is sent via `WebClient#execute`, it passes through four stages:
   WebClient#execute(HttpRequest)
      |
      v
-  Downstream HTTP Filters    (from http_filters)
+  User Decorators             (user-defined decorators)
+     |
+     v
+  Downstream HTTP Filters     (from http_filters)
      |
      v
   Router                      (route match, retry, endpoint select, TLS)
@@ -86,17 +89,14 @@ When a request is sent via `WebClient#execute`, it passes through four stages:
   Upstream HTTP Filters       (from upstream_http_filters)
      |
      v
-  User Decorators    (user-defined decorators)
-     |
-     v
   remote service
 ```
 
-1. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`.
-2. **Router** — matches the request to a route, applies retry policy, selects an endpoint
+1. **User decorators** — any decorators added via `WebClient.builder(preprocessor).decorator(...)` by the user.
+2. **Downstream HTTP filters** — xDS filters declared in the Listener's `http_filters`.
+3. **Router** — matches the request to a route, applies retry policy, selects an endpoint
    using the cluster's load balancing policy, and determines the protocol and TLS parameters.
-3. **Upstream HTTP filters** — per-route filters declared on the router.
-4. **User decorators** — any decorators added via `WebClient.builder(preprocessor).decorator(...)` by the user.
+4. **Upstream HTTP filters** — per-route filters declared on the router.
 
 ### Example
 
@@ -154,6 +154,9 @@ The resulting request flow would be:
   WebClient#execute(HttpRequest)
      |
      v
+  LoggingClient               (user-defined decorator)
+     |
+     v
   my.custom.downstream.filter (downstream, from http_filters)
      |
      v
@@ -161,9 +164,6 @@ The resulting request flow would be:
      |
      v
   my.custom.upstream.filter   (upstream, from upstream_http_filters)
-     |
-     v
-  LoggingClient               (user-defined decorator)
      |
      v
   remote service
