@@ -18,11 +18,11 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-final class DefaultClientTlsProvider implements ClientTlsProvider {
+final class NullCheckingClientTlsProvider implements ClientTlsProvider {
 
     private final ClientTlsProvider delegate;
 
-    DefaultClientTlsProvider(ClientTlsProvider delegate) {
+    NullCheckingClientTlsProvider(ClientTlsProvider delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 

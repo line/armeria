@@ -1166,7 +1166,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
         } else {
             delegate = new BootstrapClientTlsProvider(bootstrapSslContexts);
         }
-        final ClientTlsProvider effectiveProvider = new DefaultClientTlsProvider(delegate);
+        final ClientTlsProvider effectiveProvider = new NullCheckingClientTlsProvider(delegate);
         return ClientFactoryOptions.of(
                 baseOptions,
                 ImmutableList.of(ClientFactoryOptions.CLIENT_TLS_PROVIDER.newValue(effectiveProvider)));

@@ -42,18 +42,24 @@ final class TlsProviderAdapter implements ClientTlsProvider {
     @Override
     public ClientTlsSpec clientTlsSpec(ClientRequestContext ctx) {
         final SessionProtocol sessionProtocol = ctx.sessionProtocol();
-        // The SNI hostname is precomputed on the context by ClientUtil before this is called.
-        final String hostname = ctx.sniHostname();
+        final String sniHostname = ctx.sniHostname();
+        final String lookupKey;
+        if (sniHostname != null) {
+            lookupKey = sniHostname;
+        } else {
+            final Endpoint endpoint = ctx.endpoint();
+            lookupKey = endpoint != null ? endpoint.host() : null;
+        }
         TlsKeyPair keyPair = null;
-        if (hostname != null) {
-            keyPair = tlsProvider.keyPair(hostname);
+        if (lookupKey != null) {
+            keyPair = tlsProvider.keyPair(lookupKey);
         }
         if (keyPair == null) {
             keyPair = tlsProvider.keyPair("*");
         }
         List<X509Certificate> certs = null;
-        if (hostname != null) {
-            certs = tlsProvider.trustedCertificates(hostname);
+        if (lookupKey != null) {
+            certs = tlsProvider.trustedCertificates(lookupKey);
         }
         if (certs == null) {
             certs = tlsProvider.trustedCertificates("*");
