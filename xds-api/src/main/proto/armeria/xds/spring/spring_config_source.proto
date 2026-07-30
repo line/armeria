@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package armeria.xds.spring;
+
+option java_package = "com.linecorp.armeria.spring.xds";
+option java_multiple_files = true;
+
+import "validate/validate.proto";
+import "armeria/xds/supported.proto";
+
+// Configuration for the Spring Environment-backed xDS config source.
+//
+// This message is packed into the ``typed_config`` field of a
+// ``custom_config_source`` in the bootstrap configuration.
+message SpringConfigSource {
+  option (armeria.xds.supported.field) = 1;
+  // The prefix prepended to resource names to form Spring property keys.
+  // For example, with prefix ``armeria.xds.`` and resource name ``my-cluster``,
+  // the property key becomes ``armeria.xds.my-cluster``.
+  string prefix = 1 [(validate.rules).string = {min_len: 1}];
+}
