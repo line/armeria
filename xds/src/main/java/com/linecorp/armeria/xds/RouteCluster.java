@@ -17,9 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.core.v3.Metadata;
@@ -40,16 +38,6 @@ public interface RouteCluster {
      * Returns the metadata match criteria.
      */
     Metadata metadataMatch();
-
-    /**
-     * Returns the downstream {@link HttpPreClient} chain for this route.
-     */
-    HttpPreClient httpPreClient();
-
-    /**
-     * Returns the downstream {@link RpcPreClient} chain for this route.
-     */
-    RpcPreClient rpcPreClient();
 
     /**
      * Returns the pre-built {@link HttpClient} chain for this route.

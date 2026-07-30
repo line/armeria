@@ -30,9 +30,6 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreprocessor;
-import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -162,9 +159,9 @@ class HttpFilterOrderingTest {
     @Test
     void preprocessorOrdering() {
         final HttpFilterFactory filterA = headerAppendingFilterFactory(
-                "test.filter.a", "A", FilterType.PREPROCESSOR);
+                "test.filter.a", "A");
         final HttpFilterFactory filterB = headerAppendingFilterFactory(
-                "test.filter.b", "B", FilterType.PREPROCESSOR);
+                "test.filter.b", "B");
 
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml(), Bootstrap.class);
 
@@ -185,9 +182,9 @@ class HttpFilterOrderingTest {
     @Test
     void clientDecoratorOrdering() {
         final HttpFilterFactory filterA = headerAppendingFilterFactory(
-                "test.filter.a", "A", FilterType.DECORATOR);
+                "test.filter.a", "A");
         final HttpFilterFactory filterB = headerAppendingFilterFactory(
-                "test.filter.b", "B", FilterType.DECORATOR);
+                "test.filter.b", "B");
 
         // upstream_http_filters are specified inside the Router config
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(upstreamBootstrapYaml(),
@@ -318,13 +315,7 @@ class HttpFilterOrderingTest {
         };
     }
 
-    private enum FilterType {
-        PREPROCESSOR,
-        DECORATOR
-    }
-
-    private static HttpFilterFactory headerAppendingFilterFactory(String name, String marker,
-                                                                  FilterType type) {
+    private static HttpFilterFactory headerAppendingFilterFactory(String name, String marker) {
         return new HttpFilterFactory() {
             @Override
             public String name() {
@@ -336,26 +327,7 @@ class HttpFilterOrderingTest {
             public XdsHttpFilter create(HttpFilter httpFilter, Any config, FactoryContext context) {
                 return new XdsHttpFilter() {
                     @Override
-                    public HttpPreprocessor httpPreprocessor() {
-                        if (type != FilterType.PREPROCESSOR) {
-                            return PreClient::execute;
-                        }
-                        return (delegate, ctx, req) -> {
-                            final String existing = req.headers().get("x-order", "");
-                            final String newVal = existing.isEmpty() ? marker
-                                                                     : existing + ',' + marker;
-                            final HttpRequest newReq = req.withHeaders(
-                                    req.headers().toBuilder().set("x-order", newVal).build());
-                            ctx.updateRequest(newReq);
-                            return delegate.execute(ctx, newReq);
-                        };
-                    }
-
-                    @Override
                     public DecoratingHttpClientFunction httpDecorator() {
-                        if (type != FilterType.DECORATOR) {
-                            return HttpClient::execute;
-                        }
                         return (delegate, ctx, req) -> {
                             final String existing = req.headers().get("x-order", "");
                             final String newVal = existing.isEmpty() ? marker

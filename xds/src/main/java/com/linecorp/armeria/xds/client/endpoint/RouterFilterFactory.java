@@ -21,12 +21,6 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 
-import com.linecorp.armeria.client.HttpPreprocessor;
-import com.linecorp.armeria.client.RpcPreprocessor;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.xds.filter.FactoryContext;
@@ -48,11 +42,6 @@ public final class RouterFilterFactory implements HttpFilterFactory {
             "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
 
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
-
-    private static final RouterFilter<RpcRequest, RpcResponse> rpcFilter =
-            new RouterFilter<>(true);
-    private static final RouterFilter<HttpRequest, HttpResponse> httpFilter =
-            new RouterFilter<>(false);
 
     /**
      * Returns the extension name for the router filter.
@@ -106,16 +95,6 @@ public final class RouterFilterFactory implements HttpFilterFactory {
          */
         public Router router() {
             return router;
-        }
-
-        @Override
-        public HttpPreprocessor httpPreprocessor() {
-            return httpFilter::execute;
-        }
-
-        @Override
-        public RpcPreprocessor rpcPreprocessor() {
-            return rpcFilter::execute;
         }
 
         @Override

@@ -20,24 +20,18 @@ import static com.linecorp.armeria.xds.internal.DelegatingHttpClient.missingDele
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.PreClient;
-import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 import io.netty.util.AttributeKey;
 
-public final class DelegatingRpcClient implements RpcClient, RpcPreClient {
+public final class DelegatingRpcClient implements RpcClient {
 
     private static final DelegatingRpcClient INSTANCE = new DelegatingRpcClient();
 
     private static final AttributeKey<Client<RpcRequest, RpcResponse>> CLIENT_DELEGATE_KEY =
             AttributeKey.valueOf(DelegatingRpcClient.class, "CLIENT_DELEGATE_KEY");
-
-    private static final AttributeKey<PreClient<RpcRequest, RpcResponse>> PRECLIENT_DELEGATE_KEY =
-            AttributeKey.valueOf(DelegatingRpcClient.class, "PRECLIENT_DELEGATE_KEY");
 
     public static DelegatingRpcClient of() {
         return INSTANCE;
@@ -47,22 +41,9 @@ public final class DelegatingRpcClient implements RpcClient, RpcPreClient {
         ctx.setAttr(CLIENT_DELEGATE_KEY, delegate);
     }
 
-    public static void setDelegate(PreClientRequestContext ctx, PreClient<RpcRequest, RpcResponse> delegate) {
-        ctx.setAttr(PRECLIENT_DELEGATE_KEY, delegate);
-    }
-
     @Override
     public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final Client<RpcRequest, RpcResponse> delegate = ctx.attr(CLIENT_DELEGATE_KEY);
-        if (delegate == null) {
-            throw missingDelegateException();
-        }
-        return delegate.execute(ctx, req);
-    }
-
-    @Override
-    public RpcResponse execute(PreClientRequestContext ctx, RpcRequest req) throws Exception {
-        final PreClient<RpcRequest, RpcResponse> delegate = ctx.attr(PRECLIENT_DELEGATE_KEY);
         if (delegate == null) {
             throw missingDelegateException();
         }

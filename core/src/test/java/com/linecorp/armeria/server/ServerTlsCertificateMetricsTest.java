@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -26,7 +27,11 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.assertj.core.api.AbstractDoubleAssert;
+import org.bouncycastle.asn1.x500.X500NameBuilder;
+import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.CloseableMeterBinder;
@@ -34,6 +39,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.common.util.CertificateUtilTest;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 import io.micrometer.core.instrument.Gauge;
@@ -210,6 +216,40 @@ public class ServerTlsCertificateMetricsTest {
             assertThat(captured)
                     .containsEntry("test.tls.certificate.validity#value{hostname=san.name}", 0.0)
                     .containsEntry("test.tls.certificate.validity.days#value{hostname=san.name}", 9.0);
+        }
+    }
+
+    @Test
+    void distinguishesCertificatesWithoutCommonNameOrSubjectAltNameBySubjectDn() throws Exception {
+        // Two CA-like certificates that carry neither a common name nor a subject alternative name.
+        // Before the subject-DN fallback both resolved to an empty hostname, so their gauges collapsed
+        // into a single hostname="" series and could not be told apart.
+        final X500NameBuilder subject1 = new X500NameBuilder(BCStyle.INSTANCE);
+        subject1.addRDN(BCStyle.C, "TW");
+        subject1.addRDN(BCStyle.O, "Chunghwa Telecom Co., Ltd.");
+        subject1.addRDN(BCStyle.OU, "ePKI Root Certification Authority");
+        final X509Certificate cert1 = CertificateUtilTest.newCertificate(subject1.build(), null);
+
+        final X500NameBuilder subject2 = new X500NameBuilder(BCStyle.INSTANCE);
+        subject2.addRDN(BCStyle.C, "US");
+        subject2.addRDN(BCStyle.O, "Example Roots Inc.");
+        subject2.addRDN(BCStyle.OU, "Example Root CA");
+        final X509Certificate cert2 = CertificateUtilTest.newCertificate(subject2.build(), null);
+
+        final String dn1 = cert1.getSubjectX500Principal().getName();
+        final String dn2 = cert2.getSubjectX500Principal().getName();
+        assertThat(dn1).isNotEqualTo(dn2);
+
+        final String gaugeName = "test.tls.certificate.validity";
+        try (CloseableMeterBinder meterBinder = MoreMeterBinders.certificateMetrics(
+                ImmutableList.of(cert1, cert2), new MeterIdPrefix("test"))) {
+            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            meterBinder.bindTo(meterRegistry);
+
+            // Each certificate keeps its own hostname-tagged gauge instead of collapsing into one.
+            assertThat(meterRegistry.find(gaugeName).gauges()).hasSize(2);
+            assertThatGauge(meterRegistry, gaugeName, dn1).isOne();
+            assertThatGauge(meterRegistry, gaugeName, dn2).isOne();
         }
     }
 

@@ -27,12 +27,8 @@ import com.google.protobuf.Any;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
-import com.linecorp.armeria.client.ClientPreprocessors;
-import com.linecorp.armeria.client.ClientPreprocessorsBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -75,37 +71,7 @@ final class FilterUtil {
                            .buildKeepingLast();
     }
 
-    static SnapshotStream<ClientPreprocessors> buildDownstreamFilter(
-            XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
-            List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
-        if (httpFilters.isEmpty()) {
-            return SnapshotStream.just(ClientPreprocessors.of());
-        }
-        final ImmutableList.Builder<SnapshotStream<XdsHttpFilter>> streams = ImmutableList.builder();
-        for (int i = httpFilters.size() - 1; i >= 0; i--) {
-            final HttpFilter httpFilter = httpFilters.get(i);
-            final Any perRouteConfig = filterConfigs.get(httpFilter.getName());
-            final SnapshotStream<XdsHttpFilter> stream =
-                    resolveInstance(extensionRegistry, factoryContext, httpFilter, perRouteConfig);
-            if (stream != null) {
-                streams.add(stream);
-            }
-        }
-        final ImmutableList<SnapshotStream<XdsHttpFilter>> streamList = streams.build();
-        if (streamList.isEmpty()) {
-            return SnapshotStream.just(ClientPreprocessors.of());
-        }
-        return SnapshotStream.combineNLatest(streamList).map(filters -> {
-            final ClientPreprocessorsBuilder builder = ClientPreprocessors.builder();
-            for (XdsHttpFilter f : filters) {
-                builder.add(f.httpPreprocessor());
-                builder.addRpc(f.rpcPreprocessor());
-            }
-            return builder.build();
-        });
-    }
-
-    static SnapshotStream<ClientDecoration> buildUpstreamFilter(
+    static SnapshotStream<ClientDecoration> buildFilter(
             XdsExtensionRegistry extensionRegistry, FactoryContext factoryContext,
             List<HttpFilter> httpFilters, Map<String, Any> filterConfigs) {
         if (httpFilters.isEmpty()) {
@@ -140,8 +106,10 @@ final class FilterUtil {
         if (retryPolicy == null) {
             return null;
         }
+        final RetryStateFactory factory = new RetryStateFactory(retryPolicy);
         return ClientDecoration.builder()
-                               .add(new RetryStateFactory(retryPolicy).retryingDecorator())
+                               .add(factory.retryingDecorator())
+                               .addRpc(factory.retryingRpcDecorator())
                                .build();
     }
 
@@ -203,31 +171,35 @@ final class FilterUtil {
                       httpFilter.getConfigTypeCase() == ConfigTypeCase.CONFIGTYPE_NOT_SET,
                       "Only 'typed_config' is supported, but '%s' was supplied",
                       httpFilter.getConfigTypeCase());
+        if (httpFilter.getDisabled()) {
+            return null;
+        }
         return factory.createStream(httpFilter, filterConfig, factoryContext)
                       .rescheduleEventsOn(factoryContext.eventLoop());
     }
 
-    static HttpPreClient buildHttpPreClient(ClientPreprocessors downstreamPreprocessors) {
-        return downstreamPreprocessors.decorate(DelegatingHttpClient.of());
-    }
-
-    static RpcPreClient buildRpcPreClient(ClientPreprocessors downstreamPreprocessors) {
-        return downstreamPreprocessors.rpcDecorate(DelegatingRpcClient.of());
-    }
-
     static HttpClient buildHttpClient(@Nullable ClientDecoration retryDecoration,
+                                      ClientDecoration downstreamDecoration,
                                       ClientDecoration upstreamDecoration) {
-        HttpClient clusterHttp = ClusterFilterFactory.DECORATION.decorate(
+        // Envoy ordering: downstream → retry → upstream → cluster → delegate
+        HttpClient client = ClusterFilterFactory.DECORATION.decorate(
                 upstreamDecoration.decorate(DelegatingHttpClient.of()));
         if (retryDecoration != null) {
-            clusterHttp = retryDecoration.decorate(clusterHttp);
+            client = retryDecoration.decorate(client);
         }
-        return clusterHttp;
+        return downstreamDecoration.decorate(client);
     }
 
-    static RpcClient buildRpcClient(ClientDecoration upstreamDecoration) {
-        return ClusterFilterFactory.DECORATION.rpcDecorate(
+    static RpcClient buildRpcClient(@Nullable ClientDecoration retryDecoration,
+                                    ClientDecoration downstreamDecoration,
+                                    ClientDecoration upstreamDecoration) {
+        // Same ordering as HTTP: downstream → retry → cluster → upstream → delegate
+        RpcClient client = ClusterFilterFactory.DECORATION.rpcDecorate(
                 upstreamDecoration.rpcDecorate(DelegatingRpcClient.of()));
+        if (retryDecoration != null) {
+            client = retryDecoration.rpcDecorate(client);
+        }
+        return downstreamDecoration.rpcDecorate(client);
     }
 
     private FilterUtil() {}

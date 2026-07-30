@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.RouteCluster;
 
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.netty.util.AttributeKey;
 
 public final class XdsCommonUtil {
@@ -41,6 +42,9 @@ public final class XdsCommonUtil {
      */
     public static final AttributeKey<Set<String>> ALPN_OVERRIDE_KEY =
             AttributeKey.valueOf(XdsCommonUtil.class, "ALPN_OVERRIDE_KEY");
+
+    public static final AttributeKey<Metadata> ROUTE_METADATA_MATCH =
+            AttributeKey.valueOf(XdsCommonUtil.class, "ROUTE_METADATA_MATCH");
 
     public static long durationToMillis(Duration duration, long defaultValue) {
         if (duration == Duration.getDefaultInstance()) {

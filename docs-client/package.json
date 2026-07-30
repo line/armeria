@@ -75,7 +75,7 @@
     "html-webpack-plugin": "^5.6.3",
     "license-webpack-plugin": "^4.0.2",
     "prettier": "^2.8.8",
-    "sharp": "^0.33.5",
+    "sharp": "^0.35.3",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
@@ -84,6 +84,6 @@
     "webpack": "^5.105.0",
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.2.4"
+    "webpack-dev-server": "^6.0.0"
   }
 }

@@ -127,6 +127,13 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("TLS_CONFIG", ClientTlsConfig.NOOP);
 
     /**
+     * The {@link ClientTlsProvider} which resolves TLS configuration per request.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<ClientTlsProvider> CLIENT_TLS_PROVIDER =
+            ClientFactoryOption.define("CLIENT_TLS_PROVIDER", NullClientTlsProvider.INSTANCE);
+
+    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
@@ -730,6 +737,14 @@ public final class ClientFactoryOptions
     @UnstableApi
     public ClientTlsConfig tlsConfig() {
         return get(TLS_CONFIG);
+    }
+
+    /**
+     * Returns the {@link ClientTlsProvider} which resolves TLS configuration per request.
+     */
+    @UnstableApi
+    public ClientTlsProvider clientTlsProvider() {
+        return get(CLIENT_TLS_PROVIDER);
     }
 
     /**
