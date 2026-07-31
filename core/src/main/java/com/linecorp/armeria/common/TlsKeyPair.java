@@ -249,6 +249,10 @@ public final class TlsKeyPair {
     private static String signatureAlgorithm(String keyAlgorithm) {
         switch (Ascii.toUpperCase(keyAlgorithm)) {
             case "RSA":
+            case "RSASSA-PSS":
+                // RSASSA-PSS keys share the same underlying RSA key material as plain RSA keys, and the JDK
+                // accepts them for PKCS#1 v1.5 signing, so a plain RSA probe validates every RSA/RSASSA-PSS
+                // combination without requiring PSS parameters.
                 return "SHA256withRSA";
             case "EC":
             case "ECDSA":
