@@ -708,7 +708,7 @@ version.ref = "jetty11"
 
 [libraries.jetty12-server]
 module = "org.eclipse.jetty:jetty-server"
-javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/12.0.5/"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/12.0.37/"
 version.ref = "jetty12"
 [libraries.jetty12-ee10-apache-jsp]
 module = "org.eclipse.jetty.ee10:jetty-ee10-apache-jsp"
@@ -752,7 +752,7 @@ exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
 version.ref = "jetty94"
 [libraries.jetty94-server]
 module = "org.eclipse.jetty:jetty-server"
-javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.51.v20230217/"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.58.v20250814/"
 version.ref = "jetty94"
 # jetty-webapp for testing interoperability with other servers.
 [libraries.jetty94-webapp]
