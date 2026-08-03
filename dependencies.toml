@@ -631,6 +631,7 @@ javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datetime/2
 module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
 [libraries.jackson-kotlin]
 module = "com.fasterxml.jackson.module:jackson-module-kotlin"
+# Jackson parameter names is used only for testing in it:dgs module.
 [libraries.jackson-parameter-names]
 module = "com.fasterxml.jackson.module:jackson-module-parameter-names"
 [libraries.jackson-scala_v212]
