@@ -222,14 +222,6 @@ final class HttpClientDelegate implements HttpClient {
         }
         endpoint = endpoint.withoutTrailingDot();
 
-        final ClientTlsSpec tlsSpec;
-        try {
-            tlsSpec = determineTlsSpec(protocol, ctx);
-        } catch (RuntimeException e) {
-            earlyCancelRequest(e, ctx, timingsBuilder);
-            return;
-        }
-
         final InetSocketAddress localBindAddress = ctx.localBindAddress();
         if (localBindAddress != null) {
             final boolean remoteDomain = endpoint.isDomainSocket();
@@ -245,7 +237,7 @@ final class HttpClientDelegate implements HttpClient {
             }
         }
 
-        final PoolKey key = new PoolKey(endpoint, proxyConfig, tlsSpec, localBindAddress);
+        final PoolKey key = new PoolKey(endpoint, proxyConfig, ctx.clientTlsSpec(), localBindAddress);
         final HttpChannelPool pool;
         try {
             pool = factory.pool(ctx.eventLoop().withoutContext());
@@ -270,20 +262,6 @@ final class HttpClientDelegate implements HttpClient {
                     return null;
                 });
         }
-    }
-
-    private ClientTlsSpec determineTlsSpec(SessionProtocol sessionProtocol, ClientRequestContext ctx) {
-        final ClientTlsSpec reqTlsSpec = ctx.clientTlsSpec();
-        final ClientTlsSpec tlsSpec;
-        if (reqTlsSpec != null) {
-            tlsSpec = reqTlsSpec;
-        } else {
-            tlsSpec = factory.options().clientTlsProvider().clientTlsSpec(ctx);
-        }
-        if (tlsSpec.alpnProtocols().isEmpty()) {
-            return tlsSpec.toBuilder().alpnProtocols(sessionProtocol).build();
-        }
-        return tlsSpec;
     }
 
     private void resolveProxyConfig(SessionProtocol protocol, Endpoint endpoint, ClientRequestContext ctx,
