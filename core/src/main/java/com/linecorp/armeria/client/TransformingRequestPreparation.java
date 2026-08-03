@@ -148,6 +148,12 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
     }
 
     @Override
+    public TransformingRequestPreparation<T, R> query(String path) {
+        delegate.query(path);
+        return this;
+    }
+
+    @Override
     public TransformingRequestPreparation<T, R> options(String path) {
         delegate.options(path);
         return this;

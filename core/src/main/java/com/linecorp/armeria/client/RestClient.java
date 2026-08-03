@@ -329,6 +329,20 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sets an {@link HttpMethod#QUERY} and the {@code path} and returns a fluent request builder.
+     * <pre>{@code
+     * RestClient restClient = RestClient.of("...");
+     * CompletableFuture<ResponseEntity<Result>> response =
+     *     restClient.query("/api/v1/customers")
+     *               .contentJson(new CustomerQuery(...))
+     *               .execute(Result.class);
+     * }</pre>
+     */
+    default RestClientPreparation query(String path) {
+        return path(HttpMethod.QUERY, path);
+    }
+
+    /**
      * Sets an {@link HttpMethod#DELETE} and the {@code path} and returns a fluent request builder.
      * <pre>{@code
      * RestClient restClient = RestClient.of("...");

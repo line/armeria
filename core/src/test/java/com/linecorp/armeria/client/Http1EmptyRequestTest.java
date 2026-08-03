@@ -71,6 +71,7 @@ class Http1EmptyRequestTest {
             case POST:
             case PUT:
             case PATCH:
+            case QUERY:
                 return true;
             default:
                 return false;

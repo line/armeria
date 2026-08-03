@@ -65,6 +65,8 @@ public abstract class AbstractHttpService implements HttpService {
                 return doTrace(ctx, req);
             case CONNECT:
                 return doConnect(ctx, req);
+            case QUERY:
+                return doQuery(ctx, req);
             default:
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
@@ -142,6 +144,14 @@ public abstract class AbstractHttpService implements HttpService {
      * by default.
      */
     protected HttpResponse doConnect(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    /**
+     * Handles a {@link HttpMethod#QUERY QUERY} request.
+     * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
+     */
+    protected HttpResponse doQuery(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 }
