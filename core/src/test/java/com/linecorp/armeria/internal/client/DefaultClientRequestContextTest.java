@@ -510,7 +510,7 @@ class DefaultClientRequestContextTest {
         ctx.setClientTlsSpec(specWithoutAlpn);
         // ALPN should be filled from sessionProtocol.withTls() (H2)
         assertThat(ctx.clientTlsSpec()).isNotNull();
-        assertThat(ctx.clientTlsSpec().alpnProtocols()).isNotEmpty();
+        assertThat(ctx.clientTlsSpec().alpnProtocols()).containsExactly("h2", "http/1.1");
     }
 
     @Test

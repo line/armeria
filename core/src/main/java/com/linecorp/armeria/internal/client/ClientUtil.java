@@ -179,9 +179,9 @@ public final class ClientUtil {
         if (ctxExt != null) {
             ctxExt.runContextCustomizer();
         }
-        maybeSetClientTlsSpec(ctx);
         O res;
         try {
+            maybeSetClientTlsSpec(ctx);
             res = execution.execute(ctx, req);
         } catch (Exception e) {
             if (ctxExt != null && !ctxExt.initializationTriggered()) {
