@@ -601,6 +601,83 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Sends an HTTP QUERY request with the specified content.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, HttpData content) {
+        return query(path, null, content);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content by appending the provided
+     * query params to the path.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, @Nullable QueryParams params, HttpData content) {
+        return execute(RequestHeaders.of(HttpMethod.QUERY,
+                                         WebClientUtil.addQueryParams(path, params)), content);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, byte[] content) {
+        return query(path, null, content);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content, appending the given query parameters to the path.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, @Nullable QueryParams params, byte[] content) {
+        return execute(RequestHeaders.of(HttpMethod.QUERY,
+                                         WebClientUtil.addQueryParams(path, params)), content);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, String content) {
+        return query(path, null, content);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content, appending the given query parameters to the path.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, @Nullable QueryParams params, String content) {
+        return execute(RequestHeaders.of(HttpMethod.QUERY,
+                                         WebClientUtil.addQueryParams(path, params)), content);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, String content, Charset charset) {
+        return query(path, null, content, charset);
+    }
+
+    /**
+     * Sends an HTTP QUERY request with the specified content, appending the given query parameters to the path.
+     */
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse query(String path, @Nullable QueryParams params, String content, Charset charset) {
+        return execute(RequestHeaders.of(HttpMethod.QUERY,
+                                         WebClientUtil.addQueryParams(path, params)), content, charset);
+    }
+
+    /**
      * Sends an HTTP DELETE request.
      */
     @CheckReturnValue

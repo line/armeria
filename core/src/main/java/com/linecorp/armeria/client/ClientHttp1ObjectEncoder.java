@@ -97,6 +97,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
                 case "POST":
                 case "PUT":
                 case "PATCH":
+                case "QUERY":
                     nettyHeaders.set(HttpHeaderNames.CONTENT_LENGTH, "0");
                     break;
                 default:

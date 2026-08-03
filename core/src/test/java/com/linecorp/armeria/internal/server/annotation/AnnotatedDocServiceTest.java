@@ -91,6 +91,7 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.Query;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
@@ -621,6 +622,7 @@ class AnnotatedDocServiceTest {
         @Patch
         @Delete
         @Trace
+        @Query
         @Path("/allMethods")
         public CompletableFuture<?> allMethods() {
             return UnmodifiableFuture.completedFuture(HttpResponse.of("allMethods"));

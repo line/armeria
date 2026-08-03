@@ -53,6 +53,8 @@ class ServerXdsTest {
     private static final String LISTENER_NAME = "server-listener";
     private static final ServerPort xdsPort =
             new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+    private static final ServerPort unmanagedPort =
+            new ServerPort(0, SessionProtocol.HTTP, SessionProtocol.HTTPS);
 
     @RegisterExtension
     @Order(0)
@@ -119,6 +121,7 @@ class ServerXdsTest {
             sb.plugin(XdsServerPlugin.builder(controlPlane.bootstrap(), LISTENER_NAME)
                                      .port(xdsPort)
                                      .build());
+            sb.port(unmanagedPort);
             sb.service("/hello", (ctx, req) -> HttpResponse.of("hello from xds"));
         }
     };
@@ -200,7 +203,7 @@ class ServerXdsTest {
         // ServerExtension's own HTTP port is not managed by XdsServerPlugin.
         // Requests on this port should bypass xDS entirely and serve directly.
         final AggregatedHttpResponse res =
-                WebClient.of(server.httpUri()).blocking().get("/hello");
+                WebClient.of("http://127.0.0.1:" + unmanagedPort.actualPort()).blocking().get("/hello");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("hello from xds");
     }

@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -168,6 +169,16 @@ public final class XdsServerPlugin implements ServerPlugin {
             }
             final FilterChainSnapshot matched = watcher.match(ctx);
             if (matched != null) {
+                // Verify the matched filter chain's TLS config is consistent
+                // with the connection protocol.
+                final ServerTlsSpec spec = matched.transportSocketSnapshot().serverTlsSpec(ctx);
+                final boolean isTls = ctx.sessionProtocol() == SessionProtocol.HTTPS;
+                if (spec != null && !isTls) {
+                    return UnmodifiableFuture.completedFuture(false);
+                }
+                if (spec == null && isTls) {
+                    return UnmodifiableFuture.completedFuture(false);
+                }
                 ctx.setAttr(MATCHED_FILTER_CHAIN, matched);
                 return existingAcceptor.accept(ctx);
             }
