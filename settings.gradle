@@ -220,6 +220,7 @@ includeWithFlags ':tomcat8',                             'java', 'publish', 'rel
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
+includeWithFlags ':xds-athenz',                          'java11', 'publish', 'relocate'
 includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
 includeWithFlags ':xds-validator',                       'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':xds-pgv-shaded',                      'java', 'publish', 'relocate', 'no_aggregation'

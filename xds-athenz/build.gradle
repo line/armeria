@@ -1,0 +1,4 @@
+dependencies {
+    api project(':xds')
+    api project(':athenz')
+}

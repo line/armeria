@@ -71,6 +71,11 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
     /**
      * Sets the ALPN protocol names for TLS negotiation. If not set (empty), the ALPN protocols
      * are automatically derived from the {@link SessionProtocol} at connection time.
+     *
+     * <p><b>Warning</b>: This is an advanced feature. When custom ALPN protocols are set, they will
+     * <b>not</b> be overridden by the {@link SessionProtocol} defaults. You must ensure that the
+     * specified protocols are compatible with the target server and the session protocol being used;
+     * otherwise, TLS negotiation may fail or the connection may behave unexpectedly.
      */
     public ClientTlsSpecBuilder alpnProtocols(Collection<String> alpnProtocols) {
         requireNonNull(alpnProtocols, "alpnProtocols");

@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
@@ -87,7 +86,6 @@ final class HttpClientFactory implements ClientFactory {
     private final Bootstrap inetBaseBootstrap;
     @Nullable
     private final Bootstrap unixBaseBootstrap;
-    private final SslContextFactory sslContextFactory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -124,8 +122,8 @@ final class HttpClientFactory implements ClientFactory {
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
     private final BootstrapSslContexts bootstrapSslContexts;
 
-    HttpClientFactory(ClientFactoryOptions options, boolean autoCloseConnectionPoolListener,
-                      ClientTlsSpec baseClientTlsSpec) {
+    HttpClientFactory(ClientFactoryOptions options, BootstrapSslContexts bootstrapSslContexts,
+                      boolean autoCloseConnectionPoolListener) {
         workerGroup = options.workerGroup();
 
         @SuppressWarnings("unchecked")
@@ -164,17 +162,7 @@ final class HttpClientFactory implements ClientFactory {
             unixBaseBootstrap = null;
         }
 
-        MeterIdPrefix meterIdPrefix = null;
-        boolean allowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
-        if (options.tlsConfig() != ClientTlsConfig.NOOP) {
-            meterIdPrefix = options.tlsConfig().meterIdPrefix();
-            allowUnsafeCiphers = options.tlsConfig().allowsUnsafeCiphers();
-        }
-        final ClientTlsSpec resolvedTlsSpec = baseClientTlsSpec.toBuilder()
-                                                                .allowUnsafeCiphers(allowUnsafeCiphers)
-                                                                .build();
-        sslContextFactory = new SslContextFactory(meterIdPrefix, options.meterRegistry());
-        bootstrapSslContexts = new BootstrapSslContexts(resolvedTlsSpec, options, sslContextFactory);
+        this.bootstrapSslContexts = bootstrapSslContexts;
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
@@ -462,7 +450,7 @@ final class HttpClientFactory implements ClientFactory {
             if (autoCloseConnectionPoolListener) {
                 connectionPoolListener.close();
             }
-            bootstrapSslContexts.release(sslContextFactory);
+            bootstrapSslContexts.release();
             if (shutdownWorkerGroupOnClose) {
                 workerGroup.shutdownGracefully().addListener((FutureListener<Object>) f -> {
                     if (f.cause() != null) {
@@ -509,13 +497,14 @@ final class HttpClientFactory implements ClientFactory {
             return pool;
         }
 
-        return pools.computeIfAbsent(eventLoop,
-                                     e -> new HttpChannelPool(this, eventLoop, sslContextFactory));
+        return pools.computeIfAbsent(
+                eventLoop,
+                e -> new HttpChannelPool(this, eventLoop, bootstrapSslContexts.sslContextFactory()));
     }
 
     @VisibleForTesting
     SslContextFactory sslContextFactory() {
-        return sslContextFactory;
+        return bootstrapSslContexts.sslContextFactory();
     }
 
     BootstrapSslContexts defaultSslContexts() {

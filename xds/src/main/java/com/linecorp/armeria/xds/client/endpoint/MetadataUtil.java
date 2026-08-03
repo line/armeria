@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.ROUTE_METADATA_MATCH;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
+import static com.linecorp.armeria.xds.internal.XdsCommonUtil.ROUTE_METADATA_MATCH;
 
 import com.google.protobuf.Struct;
 

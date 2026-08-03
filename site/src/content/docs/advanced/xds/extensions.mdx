@@ -1,0 +1,187 @@
+---
+sidebar_position: 7
+---
+
+# Extensions
+
+Envoy's architecture is built around extensions — pluggable components that handle
+specific concerns like HTTP filtering, transport sockets, and config sources. Each
+extension is identified by a **name** (e.g. `envoy.filters.http.router`) and/or a
+**type URL** (e.g. `type.googleapis.com/envoy.extensions.filters.http.router.v3.Router`).
+
+Armeria follows the same model. Extensions are resolved from a registry by type URL
+(primary) or name (fallback). Built-in extensions cover the core xDS functionality,
+and custom extensions can be added via the Java `ServiceLoader` mechanism.
+
+## HTTP filter extensions
+
+HTTP filters are the most common extension point. They intercept requests on both the
+client side (see [Client — Request flow](/docs/advanced/xds/client#request-flow)) and
+the server side (see [Server](/docs/advanced/xds/server)).
+
+### Built-in filters
+
+The following HTTP filters are bundled with Armeria:
+
+| Name | Description |
+|---|---|
+| `envoy.filters.http.router` | Route matching and endpoint selection (client), route gating (server). Always required as the last filter in `http_filters`. |
+| `envoy.filters.http.credential_injector` | Injects credentials (e.g. from SDS secrets) into outgoing requests. |
+
+Any other filter name referenced in `http_filters` or `upstream_http_filters`
+must be registered as a custom extension (see below), or marked as optional
+in the xDS config to be silently skipped. An unregistered, non-optional filter
+causes configuration resolution to fail.
+
+### Custom filters
+
+To create a custom HTTP filter, implement
+[HttpFilterFactory](type) and
+[XdsHttpFilter](type).
+
+### HttpFilterFactory
+
+A factory that creates an [XdsHttpFilter](type) from an xDS `HttpFilter` config.
+Factories are responsible for all config parsing, including unwrapping per-route
+overrides. Returning `null` from `create` causes the filter to be silently skipped.
+
+```java
+import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+
+public class MyFilterFactory implements HttpFilterFactory {
+
+    @Override
+    public String name() {
+        return "my.custom.filter";
+    }
+
+    @Override
+    public List<String> typeUrls() {
+        return List.of("type.googleapis.com/my.custom.filter.v1.Config");
+    }
+
+    @Override
+    @Nullable
+    public XdsHttpFilter create(HttpFilter httpFilter, Any config,
+                                FactoryContext context) {
+        MyConfig myConfig = context.validator().unpack(config, MyConfig.class);
+        return new MyFilter(myConfig);
+    }
+}
+```
+
+### XdsHttpFilter
+
+The resolved filter returned by the factory. Override the methods relevant to
+your use case:
+
+| Method | Used for |
+|---|---|
+| `httpDecorator()` | Client-side filtering (both downstream `http_filters` and upstream `upstream_http_filters`) |
+| `rpcDecorator()` | Client-side RPC filtering (Thrift) |
+| `serviceDecorator()` | Server-side filtering |
+
+```java
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+
+public class MyFilter implements XdsHttpFilter {
+
+    @Override
+    public DecoratingHttpClientFunction httpDecorator() {
+        return (delegate, ctx, req) -> {
+            // client-side filter logic
+            return delegate.execute(ctx, req);
+        };
+    }
+
+    @Override
+    public DecoratingHttpServiceFunction serviceDecorator() {
+        return (delegate, ctx, req) -> {
+            // server-side filter logic
+            return delegate.serve(ctx, req);
+        };
+    }
+}
+```
+
+### Registration
+
+Register your factory using Java's `ServiceLoader` via
+[XdsExtensionFactoryProvider](type). Create a provider class:
+
+```java
+package com.example;
+
+import com.linecorp.armeria.xds.XdsExtensionFactory;
+import com.linecorp.armeria.xds.XdsExtensionFactoryProvider;
+
+public class MyFilterFactoryProvider implements XdsExtensionFactoryProvider {
+
+    @Override
+    public XdsExtensionFactory newFactory() {
+        return new MyFilterFactory();
+    }
+}
+```
+
+Then create the file:
+
+```
+META-INF/services/com.linecorp.armeria.xds.XdsExtensionFactoryProvider
+```
+
+With the fully qualified class name of your provider:
+
+```
+com.example.MyFilterFactoryProvider
+```
+
+The factory will be discovered automatically when [XdsBootstrap](type) is created.
+
+### Usage
+
+Once registered, reference your filter by name and type URL in either the
+`http_filters` list (downstream) or the Router's `upstream_http_filters` list
+(upstream):
+
+```yaml
+listeners:
+  - name: my-listener
+    api_listener:
+      api_listener:
+        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        http_filters:
+          - name: my.custom.filter              # ← downstream filter
+            typed_config:
+              "@type": type.googleapis.com/my.custom.filter.v1.Config
+              some_field: some_value
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              upstream_http_filters:
+                - name: my.custom.filter        # ← upstream filter
+                  typed_config:
+                    "@type": type.googleapis.com/my.custom.filter.v1.Config
+                    some_field: some_value
+        route_config:
+          name: route
+          virtual_hosts:
+            - name: my-vhost
+              domains: ["*"]
+              routes:
+                - match: { prefix: "/" }
+                  route: { cluster: my-cluster }
+```
+
+Downstream filters wrap the entire retry loop and are invoked once per request.
+Upstream filters run inside each retry attempt. Both are executed in the order
+they are declared.
+
+## Other extension points
+
+The same [XdsExtensionFactoryProvider](type) mechanism supports other extension types:
+
+- **Config sources** — [SotwConfigSourceSubscriptionFactory](type) for custom config source implementations
+- **Cluster types** — [ClusterTypeFactory](type) for custom cluster discovery logic

@@ -1,0 +1,2 @@
+com.linecorp.armeria.xds.filter.athenz.AccessTokenTargetFilterFactoryProvider
+com.linecorp.armeria.xds.filter.athenz.AccessTokenConstraintFilterFactoryProvider

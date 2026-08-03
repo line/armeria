@@ -23,11 +23,8 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientPreprocessors;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpPreClient;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.RpcPreClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.Metadata;
@@ -36,21 +33,17 @@ final class DefaultRouteCluster implements RouteCluster {
 
     private final ClusterSnapshot clusterSnapshot;
     private final Metadata metadataMatch;
-    private final HttpPreClient httpPreClient;
-    private final RpcPreClient rpcPreClient;
     private final HttpClient httpClient;
     private final RpcClient rpcClient;
 
     DefaultRouteCluster(ClusterSnapshot clusterSnapshot, Metadata metadataMatch,
                         @Nullable ClientDecoration retryDecoration,
-                        ClientPreprocessors downstreamPreprocessors,
+                        ClientDecoration downstreamDecoration,
                         ClientDecoration upstreamDecoration) {
         this.clusterSnapshot = requireNonNull(clusterSnapshot, "clusterSnapshot");
         this.metadataMatch = requireNonNull(metadataMatch, "metadataMatch");
-        httpPreClient = FilterUtil.buildHttpPreClient(downstreamPreprocessors);
-        rpcPreClient = FilterUtil.buildRpcPreClient(downstreamPreprocessors);
-        httpClient = FilterUtil.buildHttpClient(retryDecoration, upstreamDecoration);
-        rpcClient = FilterUtil.buildRpcClient(upstreamDecoration);
+        httpClient = FilterUtil.buildHttpClient(retryDecoration, downstreamDecoration, upstreamDecoration);
+        rpcClient = FilterUtil.buildRpcClient(retryDecoration, downstreamDecoration, upstreamDecoration);
     }
 
     @Override
@@ -61,16 +54,6 @@ final class DefaultRouteCluster implements RouteCluster {
     @Override
     public Metadata metadataMatch() {
         return metadataMatch;
-    }
-
-    @Override
-    public HttpPreClient httpPreClient() {
-        return httpPreClient;
-    }
-
-    @Override
-    public RpcPreClient rpcPreClient() {
-        return rpcPreClient;
     }
 
     @Override
