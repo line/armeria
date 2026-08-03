@@ -120,7 +120,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                     sslContextFactory, clientFactory.defaultSslContexts());
     }
 
-    private void configureProxy(Channel ch, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec) {
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig) {
         if (proxyConfig.proxyType() == ProxyType.DIRECT) {
             return;
         }
@@ -157,11 +157,14 @@ final class HttpChannelPool implements AsyncCloseable {
         proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
         ch.pipeline().addFirst(proxyHandler);
 
-        if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.getOrCreateSslContext(tlsSpec);
-            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc(), proxyAddress.getHostString(),
-                                                     proxyAddress.getPort()));
-            ch.closeFuture().addListener(unused -> bootstraps.release(sslCtx));
+        if (proxyConfig instanceof ConnectProxyConfig) {
+            final ClientTlsSpec proxyTlsSpec = ((ConnectProxyConfig) proxyConfig).clientTlsSpec();
+            if (proxyTlsSpec != null) {
+                final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyTlsSpec);
+                ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc(), proxyAddress.getHostString(),
+                                                         proxyAddress.getPort()));
+                ch.closeFuture().addListener(unused -> bootstraps.release(sslCtx));
+            }
         }
     }
 
@@ -407,7 +410,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 final Channel channel = registerFuture.channel();
                 ConnectionEventListener.setToChannelAttr(
                         desiredProtocol, clientFactory.connectionPoolListener(), channel);
-                configureProxy(channel, poolKey.proxyConfig, poolKey.tlsSpec);
+                configureProxy(channel, poolKey.proxyConfig);
 
                 if (desiredProtocol.isTls() && timingsBuilder != null) {
                     channel.attr(TIMINGS_BUILDER_KEY).set(timingsBuilder);
