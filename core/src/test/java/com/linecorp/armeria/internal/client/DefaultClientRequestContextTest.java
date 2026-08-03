@@ -576,6 +576,7 @@ class DefaultClientRequestContextTest {
     void requestOptionsClientTlsSpecUsedForTls() {
         final ClientTlsSpec spec = ClientTlsSpec.builder()
                                                 .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                .alpnProtocols(SessionProtocol.HTTPS)
                                                 .build();
         final RequestOptions reqOpts = RequestOptions.builder().clientTlsSpec(spec).build();
 

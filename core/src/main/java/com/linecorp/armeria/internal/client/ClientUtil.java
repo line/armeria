@@ -24,8 +24,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientTlsProvider;
-import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
@@ -38,7 +36,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -181,7 +178,6 @@ public final class ClientUtil {
         }
         O res;
         try {
-            maybeSetClientTlsSpec(ctx);
             res = execution.execute(ctx, req);
         } catch (Exception e) {
             if (ctxExt != null && !ctxExt.initializationTriggered()) {
@@ -290,24 +286,6 @@ public final class ClientUtil {
         }
         ctx.logBuilder().addChild(derived.log());
         return derived;
-    }
-
-    /**
-     * Resolves the {@link ClientTlsSpec} for the given context using the
-     * {@link ClientTlsProvider ClientTlsProvider} from options if not set yet.
-     */
-    private static void maybeSetClientTlsSpec(ClientRequestContext ctx) {
-        final SessionProtocol sessionProtocol = ctx.sessionProtocol();
-        if (!sessionProtocol.isTls()) {
-            return;
-        }
-        if (ctx.clientTlsSpec() != null) {
-            return;
-        }
-
-        final ClientTlsSpec tlsSpec =
-                ctx.options().factory().options().clientTlsProvider().clientTlsSpec(ctx);
-        ctx.setClientTlsSpec(tlsSpec);
     }
 
     private ClientUtil() {}

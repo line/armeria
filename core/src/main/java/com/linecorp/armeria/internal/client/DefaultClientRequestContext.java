@@ -435,6 +435,7 @@ public final class DefaultClientRequestContext
 
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         updateEndpoint(endpoint);
+        maybeResolveClientTlsSpec();
         acquireEventLoop(endpoint);
         maybeInitializeResponseCancellationScheduler();
         return initFuture(true, null);
@@ -445,6 +446,7 @@ public final class DefaultClientRequestContext
         final Endpoint endpoint = endpointGroup.selectNow(this);
         if (endpoint != null) {
             updateEndpoint(endpoint);
+            maybeResolveClientTlsSpec();
             acquireEventLoop(endpointGroup);
             maybeInitializeResponseCancellationScheduler();
             return initFuture(true, null);
@@ -454,6 +456,7 @@ public final class DefaultClientRequestContext
         final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
         return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
+            maybeResolveClientTlsSpec();
             acquireEventLoop(endpointGroup);
             maybeInitializeResponseCancellationScheduler();
 
@@ -525,6 +528,22 @@ public final class DefaultClientRequestContext
         this.endpoint = endpoint;
         defaultSniHostname = computeDefaultSniHostname(endpoint);
         updateInternalHeaders();
+    }
+
+    /**
+     * Resolves the {@link ClientTlsSpec} using the ClientTlsProvider from the factory options
+     * if the session protocol is TLS and no spec has been set yet.
+     */
+    private void maybeResolveClientTlsSpec() {
+        if (!sessionProtocol.isTls()) {
+            return;
+        }
+        if (clientTlsSpec != null) {
+            return;
+        }
+        final ClientTlsSpec tlsSpec =
+                options.factory().options().clientTlsProvider().clientTlsSpec(this);
+        setClientTlsSpec(tlsSpec);
     }
 
     @Nullable
@@ -714,6 +733,7 @@ public final class DefaultClientRequestContext
             acquireEventLoop(endpoint);
         }
         maybeInitializeResponseCancellationScheduler();
+        maybeResolveClientTlsSpec();
     }
 
     private void maybeInitializeResponseCancellationScheduler() {
