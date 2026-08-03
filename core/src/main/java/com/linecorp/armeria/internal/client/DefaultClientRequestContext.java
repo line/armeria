@@ -291,7 +291,7 @@ public final class DefaultClientRequestContext
         this.options = requireNonNull(options, "options");
         this.root = root;
         this.endpointGroup = endpointGroup;
-        clientTlsSpec = sessionProtocol.isTls() ? requestOptions.clientTlsSpec() : null;
+        clientTlsSpec = initialTlsSpec(sessionProtocol, requestOptions.clientTlsSpec());
         localBindAddress = requestOptions.localBindAddress();
 
         log = RequestLog.builder(this);
@@ -693,7 +693,7 @@ public final class DefaultClientRequestContext
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
         responseTimeoutMode = ctx.responseTimeoutMode();
-        clientTlsSpec = sessionProtocol.isTls() ? ctx.clientTlsSpec() : null;
+        clientTlsSpec = initialTlsSpec(sessionProtocol, ctx.clientTlsSpec());
         sniHostname = ctx.sniHostname;
         localBindAddress = ctx.localBindAddress();
 
@@ -1173,6 +1173,23 @@ public final class DefaultClientRequestContext
         if (!sessionProtocol.isTls()) {
             setSessionProtocol0(sessionProtocol.withTls());
         }
+    }
+
+    @Nullable
+    private static ClientTlsSpec initialTlsSpec(SessionProtocol sessionProtocol,
+                                                @Nullable ClientTlsSpec clientTlsSpec) {
+        if (!sessionProtocol.isTls()) {
+            return null;
+        }
+        if (clientTlsSpec == null) {
+            return null;
+        }
+        if (clientTlsSpec.alpnProtocols().isEmpty()) {
+            return clientTlsSpec.toBuilder()
+                                .alpnProtocols(sessionProtocol)
+                                .build();
+        }
+        return clientTlsSpec;
     }
 
     @Override
