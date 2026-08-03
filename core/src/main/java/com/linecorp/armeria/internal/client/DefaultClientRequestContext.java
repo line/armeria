@@ -291,7 +291,7 @@ public final class DefaultClientRequestContext
         this.options = requireNonNull(options, "options");
         this.root = root;
         this.endpointGroup = endpointGroup;
-        clientTlsSpec = initialTlsSpec(sessionProtocol, requestOptions.clientTlsSpec());
+        clientTlsSpec = initialTlsSpec(this.sessionProtocol, requestOptions.clientTlsSpec());
         localBindAddress = requestOptions.localBindAddress();
 
         log = RequestLog.builder(this);
@@ -712,7 +712,7 @@ public final class DefaultClientRequestContext
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
         responseTimeoutMode = ctx.responseTimeoutMode();
-        clientTlsSpec = initialTlsSpec(sessionProtocol, ctx.clientTlsSpec());
+        clientTlsSpec = initialTlsSpec(this.sessionProtocol, ctx.clientTlsSpec());
         sniHostname = ctx.sniHostname;
         localBindAddress = ctx.localBindAddress();
 
