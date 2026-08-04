@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,10 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestDuplicator;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -53,7 +49,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  * {@code duplicate}, and {@code duplicate} then throws instead of returning a request that would never
  * be torn down.
  */
-public final class ReproducibleHttpRequestDuplicator implements HttpRequestDuplicator {
+final class ReproducibleHttpRequestDuplicator implements HttpRequestDuplicator {
 
     private final RequestHeaders headers;
     private final Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory;
@@ -65,7 +61,7 @@ public final class ReproducibleHttpRequestDuplicator implements HttpRequestDupli
     @Nullable
     private Throwable abortCause;
 
-    public ReproducibleHttpRequestDuplicator(
+    ReproducibleHttpRequestDuplicator(
             RequestHeaders headers,
             Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory) {
         this.headers = requireNonNull(headers, "headers");

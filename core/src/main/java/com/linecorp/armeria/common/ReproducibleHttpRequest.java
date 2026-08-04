@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.common.ReproducibleHttpRequestDuplicator;
 import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
 import io.netty.util.concurrent.EventExecutor;

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,11 +24,6 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 class ReproducibleHttpRequestDuplicatorTest {
