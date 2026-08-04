@@ -130,6 +130,11 @@ Rules:
 - Group multi-version bumps: `- Spring 6.2.14 → 6.2.15, 7.0.2 → 7.0.3`
 - Omit build-only dependencies (anything under the `- Build` section in the raw dependency PR)
 - Sort alphabetically (A → Z)
+- Strip trailing release qualifiers from version numbers — `.Final`, `.RELEASE`, `-GA`,
+  `.vYYYYMMDD` and the like. They add no information a reader acts on:
+  - `Netty 4.2.15.Final → 4.2.16.Final` becomes `Netty 4.2.15 → 4.2.16`
+  - `Javassist 3.31.0-GA → 3.32.0-GA` becomes `Javassist 3.31.0 → 3.32.0`
+  - `Jetty 9.4.55.v20240627 → 9.4.58.v20250814` becomes `Jetty 9.4.55 → 9.4.58`
 
 ---
 
