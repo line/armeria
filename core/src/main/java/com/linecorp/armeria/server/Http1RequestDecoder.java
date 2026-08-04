@@ -179,7 +179,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
-                    assert msg instanceof NettyHttp1Request;
                     // Precompute values that rely on CONNECTION related headers since they will be cleaned
                     // after ArmeriaHttpUtil#toArmeria is called
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);

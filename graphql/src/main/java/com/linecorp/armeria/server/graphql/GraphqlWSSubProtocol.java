@@ -374,10 +374,11 @@ class GraphqlWSSubProtocol {
                 "id", operationId,
                 "payload", ImmutableList.of(
                         new GraphQLError() {
-                            @Nullable
                             @Override
                             public String getMessage() {
-                                return t.getMessage();
+                                // GraphQLError.getMessage() is non-null, but Throwable.getMessage() is not.
+                                final String message = t.getMessage();
+                                return message != null ? message : t.toString();
                             }
 
                             @Override

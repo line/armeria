@@ -57,6 +57,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.DNSResolverFacadeUtils;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
@@ -69,6 +70,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
@@ -531,9 +533,13 @@ class ProxyClientIntegrationTest {
     @ParameterizedTest
     @MethodSource("sessionAndEndpointProvider")
     void testHttpsProxy(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final ClientTlsSpec clientTlsSpec =
+                ClientTlsSpec.builder()
+                             .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                             .build();
         final ClientFactory clientFactory =
                 ClientFactory.builder().tlsNoVerify().proxyConfig(
-                        ProxyConfig.connect(httpsProxyServer.address(), true)).build();
+                        ProxyConfig.connect(httpsProxyServer.address(), clientTlsSpec)).build();
         final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())
@@ -550,17 +556,22 @@ class ProxyClientIntegrationTest {
     @ParameterizedTest
     @MethodSource("sessionAndEndpointProvider")
     void testMTlsHttpsProxyWithTlsProvider(SessionProtocol protocol, Endpoint endpoint) throws Exception {
+        final ClientTlsSpec clientTlsSpec =
+                ClientTlsSpec.builder()
+                             .tlsKeyPair(clientSsc.tlsKeyPair())
+                             .trustedCertificates(proxySsc.certificate())
+                             .build();
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
                            .keyPair(clientSsc.tlsKeyPair())
-                           .trustedCertificates(proxySsc.certificate(), backendSsc.certificate())
+                           .trustedCertificates(backendSsc.certificate())
                            .build();
 
         final ClientFactory clientFactory =
                 ClientFactory.builder()
                              .tlsProvider(tlsProvider)
-                             .proxyConfig(
-                                     ProxyConfig.connect(mTlsHttpsProxyServer.address(), true)).build();
+                             .proxyConfig(ProxyConfig.connect(mTlsHttpsProxyServer.address(), clientTlsSpec))
+                             .build();
         final WebClient webClient = WebClient.builder(protocol, endpoint)
                                              .factory(clientFactory)
                                              .decorator(LoggingClient.newDecorator())

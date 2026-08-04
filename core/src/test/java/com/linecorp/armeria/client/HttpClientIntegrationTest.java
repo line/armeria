@@ -197,15 +197,20 @@ class HttpClientIntegrationTest {
 
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return doGetOrPost(req);
+                    return doGetPostOrQuery(req);
                 }
 
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-                    return doGetOrPost(req);
+                    return doGetPostOrQuery(req);
                 }
 
-                private HttpResponse doGetOrPost(HttpRequest req) {
+                @Override
+                protected HttpResponse doQuery(ServiceRequestContext ctx, HttpRequest req) {
+                    return doGetPostOrQuery(req);
+                }
+
+                private HttpResponse doGetPostOrQuery(HttpRequest req) {
                     final MediaType contentType = req.contentType();
                     if (contentType != null) {
                         throw new IllegalArgumentException(
@@ -406,6 +411,33 @@ class HttpClientIntegrationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
         assertThat(response.contentUtf8()).isEqualTo("METHOD: POST|ACCEPT: utf-8|BODY: requestbody日本語");
+    }
+
+    @Test
+    void testRequestQueryWithBody() throws Exception {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(
+                RequestHeaders.of(HttpMethod.QUERY, "/httptestbody",
+                                  HttpHeaderNames.ACCEPT, "utf-8"),
+                "querybody日本語");
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
+        assertThat(response.contentUtf8()).isEqualTo("METHOD: QUERY|ACCEPT: utf-8|BODY: querybody日本語");
+    }
+
+    @Test
+    void testRequestQueryWithoutBody() throws Exception {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(
+                RequestHeaders.of(HttpMethod.QUERY, "/httptestbody",
+                                  HttpHeaderNames.ACCEPT, "utf-8"));
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("alwayscache");
+        assertThat(response.contentUtf8()).isEqualTo("METHOD: QUERY|ACCEPT: utf-8|BODY: ");
     }
 
     @Test

@@ -107,13 +107,20 @@ public enum HttpMethod {
     CONNECT,
 
     /**
+     * The QUERY method which is used to initiate a server-side query. It is safe and idempotent.
+     * See <a href="https://datatracker.ietf.org/doc/rfc10008">RFC 10008</a>.
+     */
+    QUERY,
+
+    /**
      * A special constant returned by {@link RequestHeaders#method()} to signify that a request has a method
      * not defined in this enum.
      */
     UNKNOWN;
 
     private static final Set<HttpMethod> knownMethods; // ImmutableEnumSet
-    private static final Set<HttpMethod> idempotentMethods = Sets.immutableEnumSet(GET, HEAD, PUT, DELETE);
+    private static final Set<HttpMethod> idempotentMethods =
+            Sets.immutableEnumSet(GET, HEAD, PUT, DELETE, QUERY);
 
     static {
         final Set<HttpMethod> allMethods = EnumSet.allOf(HttpMethod.class);
@@ -138,6 +145,7 @@ public enum HttpMethod {
             case "DELETE":
             case "TRACE":
             case "CONNECT":
+            case "QUERY":
                 return true;
         }
 
@@ -146,7 +154,7 @@ public enum HttpMethod {
 
     /**
      * Returns the <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotent</a>
-     * HTTP methods - {@link #GET}, {@link #HEAD}, {@link #PUT} and {@link #DELETE}.
+     * HTTP methods - {@link #GET}, {@link #HEAD}, {@link #PUT}, {@link #DELETE} and {@link #QUERY}.
      */
     public static Set<HttpMethod> idempotentMethods() {
         return idempotentMethods;
@@ -192,6 +200,8 @@ public enum HttpMethod {
                 return TRACE;
             case "CONNECT":
                 return CONNECT;
+            case "QUERY":
+                return QUERY;
             default:
                 return null;
         }

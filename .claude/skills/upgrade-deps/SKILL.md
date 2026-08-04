@@ -22,6 +22,11 @@ Java version required by the modules that use it.
 
 When in doubt, check `settings.gradle` for the `java`, `java11`, or `java17` flag on each subproject.
 
+**The table above lists published modules only.** Integration-test (`:it:*`) and example (`:examples:*`)
+modules carry their own flags in `settings.gradle` and are frequently `java17` already. A dependency
+consumed *only* by those modules is not held back by the Java 8 baseline at all — always resolve the
+actual consumer before assuming a Java constraint applies.
+
 ## Step 1: Run dependencyUpdates
 
 ```
@@ -55,8 +60,38 @@ reflections = "0.9.11"
 zookeeper = "3.9.3"
 ```
 
-If such a comment exists and the reason still applies, **skip the upgrade** and do not
-remove the comment.
+### Step 3.1: Validate the comment before trusting it
+
+A hold comment is a claim about this repository, and claims go stale. **Never treat a comment as
+proof — re-derive its reason every upgrade.** For each held entry:
+
+1. Find the aliases for the version key in the `[libraries.*]` / `[plugins]` sections.
+2. Grep the build scripts for each alias accessor (`libs.foo.bar` for alias `foo-bar`):
+   `git grep -n 'libs\.foo\.bar' -- '*.gradle' '*.gradle.kts'`
+3. Map each hit's build file to its project, and read that project's flags in `settings.gradle`.
+4. Compare the *consumer's* Java level against the new version's requirement — **not** the library's
+   requirement in isolation. "Library X requires Java 17" is not a blocker when every consumer is
+   already `java17`.
+
+If the reason no longer holds, **remove the comment and upgrade**. If it still holds, keep both.
+
+Two comments were found stale this way (`dgs` and `graphql-kotlin`, both consumed only by `java17`
+modules), so treat this step as mandatory rather than a spot check.
+
+### Step 3.2: Never write a hold reason you have not verified
+
+When you add a comment, the reason must be something you confirmed, with the evidence to hand:
+
+- **Java constraint** — confirmed against the consumer module's flag, per Step 3.1.
+- **Runtime/API breakage** — confirmed by actually building and running the affected module's tests,
+  and the comment names the concrete blocker (e.g. `# Don't upgrade graphql-kotlin to 10.x that
+  migrated to Jackson 3`), not a vague "major upgrade deferred".
+- **Version-sync constraint** — confirmed from the other project's POM *and* from this repo's history
+  (`git log -p -- dependencies.toml`). Do not invent a sync rule: check whether the two versions have
+  ever actually moved independently before claiming they must move together.
+
+A plausible-sounding reason that nobody verified is worse than no comment, because the next upgrade
+will trust it.
 
 If no comment exists, proceed with the Java version compatibility check:
 1. Find which modules use this dependency in `dependencies.toml`

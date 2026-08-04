@@ -59,7 +59,16 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
         endpointIdentificationAlgorithm = clientTlsSpec.endpointIdentificationAlgorithm();
     }
 
-    ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
+    /**
+     * Sets the ALPN protocol names based on the specified {@link SessionProtocol}.
+     * If the protocol is an explicit HTTP/1 variant, only {@code "http/1.1"} is used.
+     * Otherwise, both {@code "h2"} and {@code "http/1.1"} are used.
+     */
+    public ClientTlsSpecBuilder alpnProtocols(SessionProtocol sessionProtocol) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        checkArgument(SessionProtocol.httpAndHttpsValues().contains(sessionProtocol),
+                      "sessionProtocol: %s (expected: one of %s)",
+                      sessionProtocol, SessionProtocol.httpAndHttpsValues());
         if (sessionProtocol.isExplicitHttp1()) {
             alpnProtocols = SslContextUtil.DEFAULT_HTTP1_ALPN_PROTOCOLS;
         } else {
@@ -71,6 +80,11 @@ public final class ClientTlsSpecBuilder extends AbstractTlsSpecBuilder<ClientTls
     /**
      * Sets the ALPN protocol names for TLS negotiation. If not set (empty), the ALPN protocols
      * are automatically derived from the {@link SessionProtocol} at connection time.
+     *
+     * <p><b>Warning</b>: This is an advanced feature. When custom ALPN protocols are set, they will
+     * <b>not</b> be overridden by the {@link SessionProtocol} defaults. You must ensure that the
+     * specified protocols are compatible with the target server and the session protocol being used;
+     * otherwise, TLS negotiation may fail or the connection may behave unexpectedly.
      */
     public ClientTlsSpecBuilder alpnProtocols(Collection<String> alpnProtocols) {
         requireNonNull(alpnProtocols, "alpnProtocols");

@@ -50,6 +50,11 @@ public interface RequestMethodSetters {
     RequestMethodSetters patch(String path);
 
     /**
+     * Sets QUERY method and path.
+     */
+    RequestMethodSetters query(String path);
+
+    /**
      * Sets OPTIONS method and path.
      */
     RequestMethodSetters options(String path);

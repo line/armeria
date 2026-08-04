@@ -111,6 +111,9 @@ class ClientFactoryBuilderTest {
                 final ClientFactoryOption<?> option = optionValue.option();
                 if (option.compareTo(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS) == 0) {
                     assertThat(factory1Option.get(option)).isNotEqualTo(factory2Option.get(option));
+                } else if (option.compareTo(ClientFactoryOptions.CLIENT_TLS_PROVIDER) == 0) {
+                    // Always rebuilt by build(), so identity differs.
+                    continue;
                 } else {
                     assertThat(factory1Option.get(option)).isEqualTo(factory2Option.get(option));
                 }

@@ -52,6 +52,12 @@ class HttpHeaderNamesTest {
         assertThat(headerNames).containsAll(filtered);
     }
 
+    @Test
+    void testAcceptQueryConstant() {
+        assertThat(HttpHeaderNames.ACCEPT_QUERY.toString()).isEqualTo("accept-query");
+        assertThat((Object) HttpHeaderNames.of("Accept-Query")).isSameAs(HttpHeaderNames.ACCEPT_QUERY);
+    }
+
     private static ImmutableList<String> names(FluentIterable<Field> constantFields) {
         return constantFields.stream()
                              .map(Field::getName)
