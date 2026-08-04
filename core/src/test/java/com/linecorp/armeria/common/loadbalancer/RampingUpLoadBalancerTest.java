@@ -345,6 +345,8 @@ class RampingUpLoadBalancerTest {
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com")
                                       );
         assertThat(scheduledFutures).hasSize(2);
+        // The first future was already cancelled in setInitialEndpoints().
+        scheduledFutures.poll();
         verify(scheduledFutures.poll()).cancel(true);
     }
 

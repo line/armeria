@@ -44,6 +44,7 @@ final class ImmutableAttributesBuilder implements AttributesBuilder {
         return this;
     }
 
+    @Nullable
     @Override
     public <T> T getAndSet(AttributeKey<T> key, @Nullable T value) {
         requireNonNull(key, "key");
@@ -60,7 +61,7 @@ final class ImmutableAttributesBuilder implements AttributesBuilder {
             oldValue = attributes.put(key, value);
         }
         //noinspection unchecked
-        return (T) oldValue;
+        return oldValue == NULL_VALUE ? null : (T) oldValue;
     }
 
     @Override
