@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -143,6 +144,41 @@ class ReproducibleHttpRequestClientTest {
         final HttpRequest req = HttpRequest.reproducible(headers, bodyFactory);
         assertThat(bodyCalls).hasValue(0);
         req.abort();
+    }
+
+    @Test
+    void factoryInvokedOnceOnDirectConsumption() {
+        final AtomicInteger bodyCalls = new AtomicInteger();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/upload");
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            bodyCalls.incrementAndGet();
+            return StreamMessage.of(HttpData.ofUtf8("hello-body"));
+        };
+
+        // Consuming the request directly (no retry/redirect decorator) subscribes the lazy delegate,
+        // which invokes the factory exactly once to produce the single body.
+        final HttpRequest req = HttpRequest.reproducible(headers, bodyFactory);
+        assertThat(req.aggregate().join().contentUtf8()).isEqualTo("hello-body");
+        assertThat(bodyCalls).hasValue(1);
+    }
+
+    @Test
+    void abortBeforeSubscriptionInvokesFactoryOnce() {
+        final AtomicInteger bodyCalls = new AtomicInteger();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/upload");
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            bodyCalls.incrementAndGet();
+            return StreamMessage.of(HttpData.ofUtf8("hello-body"));
+        };
+
+        // Aborting a directly-consumed request that was never sent subscribes an aborting subscriber,
+        // which runs the factory once so the produced body can be released. It does not regenerate on a
+        // later subscribe (a stream permits only one subscription), so the factory runs at most once.
+        final HttpRequest req = HttpRequest.reproducible(headers, bodyFactory);
+        req.abort();
+        // abort() propagates asynchronously; join() blocks until completion before we assert the count.
+        assertThatThrownBy(() -> req.whenComplete().join()).isInstanceOf(CompletionException.class);
+        assertThat(bodyCalls).hasValue(1);
     }
 
     @Test
@@ -272,11 +308,14 @@ class ReproducibleHttpRequestClientTest {
 
     @Test
     void seeOtherRedirectDropsBody() {
+        final AtomicInteger bodyCalls = new AtomicInteger();
         final RequestHeaders headers =
                 RequestHeaders.of(HttpMethod.POST, "/see-other",
                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
-        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory =
-                () -> StreamMessage.of(HttpData.ofUtf8("see-other-body"));
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            bodyCalls.incrementAndGet();
+            return StreamMessage.of(HttpData.ofUtf8("see-other-body"));
+        };
 
         final WebClient client =
                 WebClient.builder(server.httpUri())
@@ -291,6 +330,9 @@ class ReproducibleHttpRequestClientTest {
         // and must not throw.
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("GET:");
+        // The factory is invoked once for the initial POST attempt; the SEE_OTHER hop drops the body
+        // (aborting the duplicator) instead of regenerating it, so it is never called again.
+        assertThat(bodyCalls).hasValue(1);
     }
 
     @Test
