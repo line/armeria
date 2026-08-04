@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 
@@ -28,29 +27,26 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+import com.linecorp.armeria.xds.internal.XdsHeaderMatcher;
 import com.linecorp.armeria.xds.internal.XdsStringMatcher;
 
-import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
-import io.envoyproxy.envoy.config.route.v3.HeaderMatcher.HeaderMatchSpecifierCase;
 import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher;
 import io.envoyproxy.envoy.config.route.v3.QueryParameterMatcher.QueryParameterMatchSpecifierCase;
 import io.envoyproxy.envoy.config.route.v3.RouteMatch;
 import io.envoyproxy.envoy.config.route.v3.RouteMatch.PathSpecifierCase;
 import io.envoyproxy.envoy.type.matcher.v3.StringMatcher;
-import io.envoyproxy.envoy.type.v3.Int64Range;
 
 final class RouteEntryMatcher {
 
-    private final List<HeaderMatcherImpl> headerMatchers;
+    private final List<XdsHeaderMatcher> headerMatchers;
     private final List<QueryParamsMatcherImpl> queryParamsMatchers;
     private final PathMatcherImpl pathMatcher;
     private final RouteMatch routeMatch;
 
     RouteEntryMatcher(RouteMatch routeMatch) {
         this.routeMatch = routeMatch;
-        headerMatchers = HeaderMatcherImpl.fromHeaderMatchers(routeMatch.getHeadersList());
+        headerMatchers = XdsHeaderMatcher.of(routeMatch.getHeadersList());
         queryParamsMatchers =
                 QueryParamsMatcherImpl.fromQueryParamsMatchers(routeMatch.getQueryParametersList());
         pathMatcher = new PathMatcherImpl(routeMatch);
@@ -64,10 +60,9 @@ final class RouteEntryMatcher {
             }
         }
 
-        for (HeaderMatcherImpl headerMatcher : headerMatchers) {
-            if (!headerMatcher.matches(req)) {
-                return false;
-            }
+        if (!XdsHeaderMatcher.matchAll(headerMatchers,
+                                       req != null ? req.headers() : HttpHeaders.of())) {
+            return false;
         }
 
         if (!queryParamsMatchers.isEmpty()) {
@@ -130,91 +125,6 @@ final class RouteEntryMatcher {
 
         boolean matches(QueryParams queryParams) {
             return predicate.test(queryParams);
-        }
-    }
-
-    static class HeaderMatcherImpl {
-
-        private final Predicate<HttpHeaders> matcher;
-        private final HeaderMatcher headerMatcher;
-        private static final Joiner COMMA_JOINER = Joiner.on(",");
-
-        static List<HeaderMatcherImpl> fromHeaderMatchers(List<HeaderMatcher> headerMatchers) {
-            final ImmutableList.Builder<HeaderMatcherImpl> builder = ImmutableList.builder();
-            for (HeaderMatcher headerMatcher : headerMatchers) {
-                builder.add(new HeaderMatcherImpl(headerMatcher));
-            }
-            return builder.build();
-        }
-
-        HeaderMatcherImpl(HeaderMatcher headerMatcher) {
-            this.headerMatcher = headerMatcher;
-
-            final HeaderMatchSpecifierCase matchCase = headerMatcher.getHeaderMatchSpecifierCase();
-            switch (matchCase) {
-                case EXACT_MATCH:
-                case SAFE_REGEX_MATCH:
-                case PREFIX_MATCH:
-                case SUFFIX_MATCH:
-                case CONTAINS_MATCH:
-                    throw new IllegalArgumentException("Using deprecated field: " + matchCase +
-                                                       ". Use 'STRING_MATCH' instead.");
-                case PRESENT_MATCH:
-                case HEADERMATCHSPECIFIER_NOT_SET:
-                    final boolean presentMatch = headerMatcher.hasPresentMatch() ?
-                                                 headerMatcher.getPresentMatch() : true;
-                    matcher = headers -> {
-                        if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
-                            return presentMatch;
-                        }
-                        return headers.contains(headerMatcher.getName()) == presentMatch;
-                    };
-                    break;
-                case RANGE_MATCH:
-                    matcher = headers -> {
-                        final Long value = headers.getLong(headerMatcher.getName());
-                        if (value == null) {
-                            return false;
-                        }
-                        final Int64Range rangeMatch = headerMatcher.getRangeMatch();
-                        return value >= rangeMatch.getStart() && value < rangeMatch.getEnd();
-                    };
-                    break;
-                case STRING_MATCH:
-                    final XdsStringMatcher stringMatcher =
-                            new XdsStringMatcher(headerMatcher.getStringMatch());
-                    matcher = headers -> {
-                        final List<String> allHeaders = headers.getAll(headerMatcher.getName());
-                        if (allHeaders.isEmpty()) {
-                            if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
-                                return stringMatcher.match("");
-                            } else {
-                                return false;
-                            }
-                        }
-                        if (allHeaders.size() == 1) {
-                            // happy path for most cases
-                            return stringMatcher.match(allHeaders.get(0));
-                        }
-                        final String joined = COMMA_JOINER.join(allHeaders);
-                        return stringMatcher.match(joined);
-                    };
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported header matchCase: " + matchCase + '.');
-            }
-        }
-
-        boolean matches(@Nullable HttpRequest req) {
-            if (req == null) {
-                return matches(HttpHeaders.of());
-            } else {
-                return matches(req.headers());
-            }
-        }
-
-        boolean matches(HttpHeaders headers) {
-            return matcher.test(headers) != headerMatcher.getInvertMatch();
         }
     }
 

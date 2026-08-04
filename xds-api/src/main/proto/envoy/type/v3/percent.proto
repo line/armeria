@@ -52,9 +52,11 @@ message FractionalPercent {
   }
 
   // Specifies the numerator. Defaults to 0.
+  option (armeria.xds.supported.field) = 1;
   uint32 numerator = 1;
 
   // Specifies the denominator. If the denominator specified is less than the numerator, the final
   // fractional percentage is capped at 1 (100%).
+  option (armeria.xds.supported.field) = 2;
   DenominatorType denominator = 2 [(validate.rules).enum = {defined_only: true}];
 }
