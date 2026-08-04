@@ -133,4 +133,57 @@ class Http1PipelineTest {
               .hasCauseInstanceOf(ClosedSessionException.class);
         }
     }
+
+    /**
+     * Regression test for the NPE in {@code Http1ObjectEncoder.doWriteReset()}.
+     *
+     * <p>{@code doWriteReset()} iterates over a contiguous range of request IDs
+     * ({@code minClosedId..maxIdWithPendingWrites}) to fail pending writes when a reset occurs.
+     * However, {@code pendingWritesMap} is <em>sparse</em> — only IDs that actually had out-of-order
+     * writes queued are stored. Previously, iterating over a gap ID returned {@code null} from the map,
+     * and calling {@code .poll()} on it caused a {@link NullPointerException}.
+     */
+    @Test
+    void resetShouldNotNpeWhenPendingWritesMapIsSparse() {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .useHttp1Pipelining(true)
+                                                  .build()) {
+            final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
+                                              .factory(factory)
+                                              .build();
+
+            // Pipeline 3 requests on the same connection:
+            //   id=1  /slow          – held open, forcing later responses to queue in pendingWritesMap
+            //   id=2  /length-limit  – violates the request size limit, triggering a connection reset
+            // The gap between the IDs that do and do not have pending-write entries is what previously
+            // caused the NPE.
+            final CompletableFuture<ResponseEntity<String>> slow =
+                    RestClient.of(client).get("/slow").execute(ResponseAs.string());
+
+            final StreamWriter<HttpData> stream = StreamMessage.streaming();
+            final HttpResponse limitResponse =
+                    client.prepare()
+                          .post("/length-limit")
+                          .content(MediaType.PLAIN_TEXT, stream)
+                          .execute();
+            final SplitHttpResponse splitLimit = limitResponse.split();
+
+            // Wait until the server has sent the initial 200 OK headers for /length-limit.
+            assertThat(splitLimit.headers().join().status()).isEqualTo(HttpStatus.OK);
+
+            // Exceed the request size limit → ContentTooLargeException → doWriteReset().
+            stream.write(HttpData.ofUtf8(Strings.repeat("x", 101)));
+            stream.close();
+
+            // The body of the length-limit response must fail with ClosedSessionException,
+            // NOT a NullPointerException from the sparse-map iteration in doWriteReset().
+            assertThatThrownBy(() -> splitLimit.body().collect().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ClosedSessionException.class);
+
+            // The slow request must also terminate cleanly (connection was closed).
+            assertThatThrownBy(slow::join)
+                    .isInstanceOf(CompletionException.class);
+        }
+    }
 }
