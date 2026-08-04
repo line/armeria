@@ -291,7 +291,7 @@ public final class DefaultClientRequestContext
         this.options = requireNonNull(options, "options");
         this.root = root;
         this.endpointGroup = endpointGroup;
-        clientTlsSpec = initialTlsSpec(this.sessionProtocol, requestOptions.clientTlsSpec());
+        clientTlsSpec = requestOptions.clientTlsSpec();
         localBindAddress = requestOptions.localBindAddress();
 
         log = RequestLog.builder(this);
@@ -435,7 +435,7 @@ public final class DefaultClientRequestContext
 
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         updateEndpoint(endpoint);
-        maybeResolveClientTlsSpec();
+        resolveClientTlsSpec();
         acquireEventLoop(endpoint);
         maybeInitializeResponseCancellationScheduler();
         return initFuture(true, null);
@@ -446,7 +446,7 @@ public final class DefaultClientRequestContext
         final Endpoint endpoint = endpointGroup.selectNow(this);
         if (endpoint != null) {
             updateEndpoint(endpoint);
-            maybeResolveClientTlsSpec();
+            resolveClientTlsSpec();
             acquireEventLoop(endpointGroup);
             maybeInitializeResponseCancellationScheduler();
             return initFuture(true, null);
@@ -456,7 +456,7 @@ public final class DefaultClientRequestContext
         final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
         return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
-            maybeResolveClientTlsSpec();
+            resolveClientTlsSpec();
             acquireEventLoop(endpointGroup);
             maybeInitializeResponseCancellationScheduler();
 
@@ -530,20 +530,15 @@ public final class DefaultClientRequestContext
         updateInternalHeaders();
     }
 
-    /**
-     * Resolves the {@link ClientTlsSpec} using the ClientTlsProvider from the factory options
-     * if the session protocol is TLS and no spec has been set yet.
-     */
-    private void maybeResolveClientTlsSpec() {
+    private void resolveClientTlsSpec() {
         if (!sessionProtocol.isTls()) {
+            clearClientTlsSpec();
             return;
         }
-        if (clientTlsSpec != null) {
-            return;
+        if (clientTlsSpec == null) {
+            clientTlsSpec = options.factory().options().clientTlsProvider().clientTlsSpec(this);
         }
-        final ClientTlsSpec tlsSpec =
-                options.factory().options().clientTlsProvider().clientTlsSpec(this);
-        setClientTlsSpec(tlsSpec);
+        setClientTlsSpec(clientTlsSpec);
     }
 
     @Nullable
@@ -712,7 +707,7 @@ public final class DefaultClientRequestContext
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
         responseTimeoutMode = ctx.responseTimeoutMode();
-        clientTlsSpec = initialTlsSpec(this.sessionProtocol, ctx.clientTlsSpec());
+        clientTlsSpec = ctx.clientTlsSpec();
         sniHostname = ctx.sniHostname;
         localBindAddress = ctx.localBindAddress();
 
@@ -733,7 +728,7 @@ public final class DefaultClientRequestContext
             acquireEventLoop(endpoint);
         }
         maybeInitializeResponseCancellationScheduler();
-        maybeResolveClientTlsSpec();
+        resolveClientTlsSpec();
     }
 
     private void maybeInitializeResponseCancellationScheduler() {
@@ -1193,23 +1188,6 @@ public final class DefaultClientRequestContext
         if (!sessionProtocol.isTls()) {
             setSessionProtocol0(sessionProtocol.withTls());
         }
-    }
-
-    @Nullable
-    private static ClientTlsSpec initialTlsSpec(SessionProtocol sessionProtocol,
-                                                @Nullable ClientTlsSpec clientTlsSpec) {
-        if (!sessionProtocol.isTls()) {
-            return null;
-        }
-        if (clientTlsSpec == null) {
-            return null;
-        }
-        if (clientTlsSpec.alpnProtocols().isEmpty()) {
-            return clientTlsSpec.toBuilder()
-                                .alpnProtocols(sessionProtocol)
-                                .build();
-        }
-        return clientTlsSpec;
     }
 
     @Override
