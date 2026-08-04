@@ -193,7 +193,8 @@ date: 2026-08-05
   `@Nullable` and returns `null` in that case instead of an internal sentinel. #6889
 - A failure to obtain an Athenz token now surfaces its original cause, such as
   [UnprocessedRequestException](type), instead of a `NullPointerException` or a misleading
-  [AccessDeniedException](type). #6866
+  [AccessDeniedException](type). Only a `403 Forbidden` from ZTS is wrapped now, so code that caught
+  [AccessDeniedException](type) for a `401` or `400` sees the original exception instead. #6866
 - Three xDS defects are fixed: server-side filter chain matching now rejects a connection whose
   protocol does not match the matched filter chain's TLS configuration; locality-aware routing now
   honors the configured locality weights, which were previously scaled by 100 and so produced
@@ -223,8 +224,6 @@ date: 2026-08-05
 - [ClientRequestContext#setClientTlsSpec(ClientTlsSpec)](type) now switches the
   [SessionProtocol](type) to its TLS variant; call [ClientRequestContext#clearClientTlsSpec()](type)
   for cleartext. [RequestOptions#clientTlsSpec()](type) is a default and does not switch it. #6895
-- Only a `403 Forbidden` from ZTS is wrapped in [AccessDeniedException](type); a `401` or `400` now
-  surfaces its original exception, so code catching it for those cases needs updating. #6866
 - The `:ai:mcp` module builds against MCP Java SDK 2.x. [ArmeriaStatelessServerTransport](type) and
   [ArmeriaStreamableServerTransportProvider](type) keep their API, but you must move your MCP SDK
   dependency to 2.0.0, which renames `ElicitRequest` to `ElicitFormRequest`. #6889
