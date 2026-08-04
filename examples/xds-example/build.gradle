@@ -1,0 +1,21 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':xds')
+    implementation project(':prometheus1')
+    implementation libs.jackson.databind
+    implementation libs.jackson.dataformat.yaml
+    implementation libs.micrometer.prometheus
+    implementation libs.protobuf.java.util
+    runtimeOnly libs.slf4j.simple
+
+    testImplementation project(':junit5')
+    testImplementation libs.assertj
+    testImplementation libs.junit5.jupiter.api
+}
+
+application {
+    mainClass.set('example.armeria.xds.Main')
+}

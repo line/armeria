@@ -1,0 +1,29 @@
+name: layer1-client-cluster
+type: EDS
+eds_cluster_config:
+  eds_config:
+    path_config_source:
+      path: ${config-dir}/layer1-endpoints.yaml
+  service_name: layer1-endpoints
+transport_socket:
+  name: envoy.transport_sockets.tls
+  typed_config:
+    "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+    common_tls_context:
+      tls_certificates:
+        - certificate_chain:
+            filename: "${client-cert-path}"
+          private_key:
+            filename: "${client-key-path}"
+      validation_context:
+        trusted_ca:
+          filename: "${ca-cert-path}"
+lb_subset_config:
+  fallback_policy: ANY_ENDPOINT
+  subset_selectors:
+    - keys: ["region"]
+common_lb_config:
+  zone_aware_lb_config:
+    routing_enabled:
+      value: 100
+    min_cluster_size: 1
