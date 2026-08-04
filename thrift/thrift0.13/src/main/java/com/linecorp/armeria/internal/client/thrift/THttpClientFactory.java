@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
+import com.linecorp.armeria.internal.client.TailRpcClient;
 
 /**
  * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
@@ -71,7 +72,8 @@ final class THttpClientFactory extends DecoratingClientFactory {
         final Class<?> clientType = params.clientType();
         final ClientOptions options = params.options();
         final RpcClient delegate = options.decoration().rpcDecorate(
-                new THttpClientDelegate(newHttpClient(params), options, params.scheme().serializationFormat()));
+                new TailRpcClient(new THttpClientDelegate(newHttpClient(params), options,
+                                                          params.scheme().serializationFormat())));
 
         if (clientType == THttpClient.class) {
             // Create a THttpClient with path.

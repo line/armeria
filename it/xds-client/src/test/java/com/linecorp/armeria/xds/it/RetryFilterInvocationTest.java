@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
@@ -56,16 +56,19 @@ class RetryFilterInvocationTest {
     void downstreamOnceUpstreamPerAttempt() {
         final AtomicInteger downstreamCount = new AtomicInteger();
         final AtomicInteger upstreamCount = new AtomicInteger();
+        final AtomicInteger userDecoratorCount = new AtomicInteger();
         final HttpFilterFactory downstreamFactory =
                 countingFilterFactory("test.downstream", downstreamCount);
         final HttpFilterFactory upstreamFactory =
                 countingFilterFactory("test.upstream", upstreamCount);
+        final HttpFilterFactory mockFactory = mockUpstreamFactory();
 
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(
                 bootstrapYaml("5xx"), Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
-                                                     .extensionFactories(downstreamFactory, upstreamFactory)
+                                                     .extensionFactories(downstreamFactory, upstreamFactory,
+                                                                         mockFactory)
                                                      .build();
              XdsHttpPreprocessor preprocessor =
                      XdsHttpPreprocessor.ofListener("test-listener", xdsBootstrap)) {
@@ -73,8 +76,10 @@ class RetryFilterInvocationTest {
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) ->
-                                                    HttpResponse.of(ResponseHeaders.of(503)))
+                                 .decorator((delegate, ctx0, req) -> {
+                                     userDecoratorCount.incrementAndGet();
+                                     return delegate.execute(ctx0, req);
+                                 })
                                  .build()
                                  .blocking()
                                  .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -84,6 +89,8 @@ class RetryFilterInvocationTest {
             // 1 original + 2 retries = 3 total attempts
             assertThat(ctx.log().children()).hasSize(3);
 
+            // User decorator wraps the entire xDS chain → invoked once
+            assertThat(userDecoratorCount.get()).isEqualTo(1);
             // Downstream wraps the entire retry loop → invoked once
             assertThat(downstreamCount.get()).isEqualTo(1);
             // Upstream runs inside each attempt → invoked 3 times
@@ -95,16 +102,19 @@ class RetryFilterInvocationTest {
     void rpcDownstreamOnceUpstreamPerAttempt() {
         final AtomicInteger downstreamCount = new AtomicInteger();
         final AtomicInteger upstreamCount = new AtomicInteger();
+        final AtomicInteger userDecoratorCount = new AtomicInteger();
         final HttpFilterFactory downstreamFactory =
                 countingFilterFactory("test.downstream", downstreamCount);
         final HttpFilterFactory upstreamFactory =
                 countingFilterFactory("test.upstream", upstreamCount);
+        final HttpFilterFactory mockFactory = mockUpstreamFactory();
 
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(
                 bootstrapYaml("reset"), Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
-                                                     .extensionFactories(downstreamFactory, upstreamFactory)
+                                                     .extensionFactories(downstreamFactory, upstreamFactory,
+                                                                         mockFactory)
                                                      .build();
              XdsRpcPreprocessor preprocessor =
                      XdsRpcPreprocessor.ofListener("test-listener", xdsBootstrap)) {
@@ -112,9 +122,10 @@ class RetryFilterInvocationTest {
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final EchoService.Iface client =
                         ThriftClients.builder(preprocessor)
-                                     .rpcDecorator((delegate, ctx0, req) ->
-                                                           RpcResponse.ofFailure(
-                                                                   new TException("always fail")))
+                                     .rpcDecorator((delegate, ctx0, req) -> {
+                                         userDecoratorCount.incrementAndGet();
+                                         return delegate.execute(ctx0, req);
+                                     })
                                      .build(EchoService.Iface.class);
                 assertThatThrownBy(client::echoAuth).isInstanceOf(TException.class);
                 ctx = captor.get();
@@ -122,10 +133,46 @@ class RetryFilterInvocationTest {
             // 1 original + 2 retries = 3 total attempts
             assertThat(ctx.log().children()).hasSize(3);
 
+            // User decorator wraps the entire xDS chain → invoked once
+            assertThat(userDecoratorCount.get()).isEqualTo(1);
             // Downstream wraps the entire retry loop → invoked once
             assertThat(downstreamCount.get()).isEqualTo(1);
             // Upstream runs inside each attempt → invoked 3 times
             assertThat(upstreamCount.get()).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void userDecoratorShortCircuitsBypassesXdsFilters() {
+        final AtomicInteger downstreamCount = new AtomicInteger();
+        final AtomicInteger upstreamCount = new AtomicInteger();
+        final HttpFilterFactory downstreamFactory =
+                countingFilterFactory("test.downstream", downstreamCount);
+        final HttpFilterFactory upstreamFactory =
+                countingFilterFactory("test.upstream", upstreamCount);
+        final HttpFilterFactory mockFactory = mockUpstreamFactory();
+
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(
+                bootstrapYaml("5xx"), Bootstrap.class);
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .extensionFactories(downstreamFactory, upstreamFactory,
+                                                                         mockFactory)
+                                                     .build();
+             XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("test-listener", xdsBootstrap)) {
+            final AggregatedHttpResponse res =
+                    WebClient.builder(preprocessor)
+                             .decorator((delegate, ctx0, req) ->
+                                                HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE))
+                             .build()
+                             .blocking()
+                             .execute(HttpRequest.of(HttpMethod.GET, "/"));
+            assertThat(res.status().code()).isEqualTo(503);
+
+            // User decorator short-circuits before xDS filters run
+            assertThat(downstreamCount.get()).isEqualTo(0);
+            assertThat(upstreamCount.get()).isEqualTo(0);
         }
     }
 
@@ -161,6 +208,7 @@ class RetryFilterInvocationTest {
                 .router.v3.Router
                             upstream_http_filters:
                             - name: test.upstream
+                            - name: test.mock-upstream
                   clusters:
                   - name: test-cluster
                     type: STATIC
@@ -174,6 +222,32 @@ class RetryFilterInvocationTest {
                                 address: 127.0.0.1
                                 port_value: 8080
                 """.formatted(retryOn);
+    }
+
+    private static HttpFilterFactory mockUpstreamFactory() {
+        return new HttpFilterFactory() {
+            @Override
+            public String name() {
+                return "test.mock-upstream";
+            }
+
+            @Override
+            public XdsHttpFilter create(HttpFilter httpFilter, Any config, FactoryContext context) {
+                return new XdsHttpFilter() {
+                    @Override
+                    public DecoratingHttpClientFunction httpDecorator() {
+                        return (delegate, ctx, req) ->
+                                HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                    }
+
+                    @Override
+                    public DecoratingRpcClientFunction rpcDecorator() {
+                        return (delegate, ctx, req) ->
+                                RpcResponse.ofFailure(new TException("always fail"));
+                    }
+                };
+            }
+        };
     }
 
     private static HttpFilterFactory countingFilterFactory(String name, AtomicInteger counter) {
