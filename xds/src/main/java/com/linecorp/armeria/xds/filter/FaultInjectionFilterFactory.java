@@ -232,7 +232,7 @@ public final class FaultInjectionFilterFactory implements HttpFilterFactory {
                     future.completeExceptionally(Exceptions.peel(e));
                 }
             }, delayMillis, TimeUnit.MILLISECONDS);
-            return HttpResponse.from(future);
+            return HttpResponse.of(future);
         }
 
         @FunctionalInterface
