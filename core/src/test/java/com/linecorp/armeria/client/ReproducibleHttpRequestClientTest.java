@@ -367,6 +367,36 @@ class ReproducibleHttpRequestClientTest {
     }
 
     @Test
+    void factoryThrowingOnRedirectHopFailsFast() {
+        // RedirectingClient calls reqDuplicator.duplicate() inside its try/catch, so a factory that
+        // throws while regenerating the body for a redirect hop fails the request via handleException
+        // rather than escaping or hanging. Mirror of factoryThrowingOnRetryFailsFast for the redirect
+        // path: the factory succeeds on the initial /first POST but throws on the /second hop.
+        final AtomicInteger bodyCalls = new AtomicInteger();
+        final RequestHeaders headers =
+                RequestHeaders.of(HttpMethod.POST, "/first",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
+            if (bodyCalls.incrementAndGet() == 1) {
+                return StreamMessage.of(HttpData.ofUtf8("redir-body"));
+            }
+            throw new IllegalStateException("cannot regenerate body for redirect");
+        };
+
+        final WebClient client =
+                WebClient.builder(server.httpUri())
+                         .followRedirects()
+                         .build();
+
+        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+                                                streamingOptions())
+                                       .aggregate().join())
+                .getRootCause()
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cannot regenerate body for redirect");
+    }
+
+    @Test
     void directConsumeWithoutDecoratorSendsBodyOnce() {
         // No retry/redirect decorator, so the request is consumed directly via its lazyBody delegate
         // (never through toDuplicator). This path is otherwise unexercised — every other test drives a

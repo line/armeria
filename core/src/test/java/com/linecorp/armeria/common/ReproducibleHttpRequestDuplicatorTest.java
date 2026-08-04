@@ -19,6 +19,9 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -94,6 +97,32 @@ class ReproducibleHttpRequestDuplicatorTest {
         dup.close();
         // StreamMessageDuplicator contract: duplicate() after close() must raise IllegalStateException.
         assertThatThrownBy(dup::duplicate).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void duplicateAfterAbortTearsDownProducedBodyWithCause() {
+        // The instance lock guards a duplicate() that races an abort(cause): the just-produced body
+        // must be torn down with the remembered cause (so an open-file body is released) and duplicate()
+        // must throw. Covers the abortCause-propagation branch that the close() variant above does not.
+        final List<StreamMessage<HttpObject>> produced = new ArrayList<>();
+        final Supplier<StreamMessage<? extends HttpObject>> factory = () -> {
+            final StreamMessage<HttpObject> body = StreamMessage.of(HttpData.ofUtf8("body"));
+            produced.add(body);
+            return body;
+        };
+        final ReproducibleHttpRequestDuplicator dup =
+                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+
+        final RuntimeException cause = new RuntimeException("cleanup");
+        dup.abort(cause);
+        // duplicate() still runs the factory (outside the lock), then observes the aborted state, tears
+        // the just-produced body down with the cause, and throws.
+        assertThatThrownBy(dup::duplicate).isInstanceOf(IllegalStateException.class);
+        assertThat(produced).hasSize(1);
+        assertThat(produced.get(0).whenComplete()).isCompletedExceptionally();
+        assertThatThrownBy(() -> produced.get(0).whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasRootCause(cause);
     }
 
     @Test

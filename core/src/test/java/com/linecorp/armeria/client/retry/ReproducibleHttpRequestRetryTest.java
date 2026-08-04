@@ -97,7 +97,9 @@ class ReproducibleHttpRequestRetryTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("hello-body");
-        // Body regenerated at least twice: the faulted first attempt and the successful retry.
-        assertThat(bodyCalls).hasValueGreaterThanOrEqualTo(2);
+        // Body regenerated exactly twice: the faulted first attempt and the successful retry. Assert
+        // an exact count (not >= 2) so an over-regeneration bug that re-invokes the factory a third
+        // time — leaking a fresh body resource per attempt — is caught rather than masked.
+        assertThat(bodyCalls).hasValue(2);
     }
 }
