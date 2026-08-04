@@ -122,17 +122,10 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpointGroup = Endpoint.parse(authority());
         }
 
-        RequestOptions effectiveRequestOptions = requestOptions;
-        if (sessionProtocol().isTls() && requestOptions.clientTlsSpec() == null) {
-            effectiveRequestOptions = requestOptions.toBuilder()
-                                                    .clientTlsSpec(ClientTlsSpec.of())
-                                                    .build();
-        }
-
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(),
                 endpointGroup, options,
-                request(), rpcRequest(), effectiveRequestOptions, CancellationScheduler.ofClient(0),
+                request(), rpcRequest(), requestOptions, CancellationScheduler.ofClient(0),
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
         if (timedOut()) {
