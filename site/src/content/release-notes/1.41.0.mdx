@@ -27,13 +27,9 @@ date: 2026-08-04
   ```java
   public final class ObservabilityPlugin implements ServerPlugin {
 
-      private final MeterRegistry registry;
-      ...
-
       @Override
       public void install(ServerBuilder sb) { // 👈👈👈
-          sb.meterRegistry(registry)
-            .decorator(MetricCollectingService.newDecorator(
+          sb.decorator(MetricCollectingService.newDecorator(
                     MeterIdPrefixFunction.ofDefault("http.service")))
             .decorator(LoggingService.newDecorator())
             .service("/internal/healthcheck", HealthCheckService.of());
@@ -43,7 +39,7 @@ date: 2026-08-04
   Server.builder()
         .http(8080)
         .service("/api", myService)
-        .plugin(new ObservabilityPlugin(registry)) // 👈👈👈
+        .plugin(new ObservabilityPlugin()) // 👈👈👈
         .build();
   ```
 - **Per-Request Client TLS and SNI Override**: [ClientTlsProvider](type) resolves a
