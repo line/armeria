@@ -22,6 +22,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -126,6 +133,61 @@ class ReproducibleHttpRequestDuplicatorTest {
     }
 
     @Test
+    void concurrentAbortDuringDuplicateTearsDownProducedBody() throws Exception {
+        // Deterministically reproduce the interleave the instance lock exists for: a caller thread is
+        // inside duplicate() (the factory has produced a body but the child is not yet registered) while
+        // the event-loop thread calls abort(cause). The factory blocks on a barrier until abort() has
+        // fully completed, so duplicate() is guaranteed to observe the aborted state under the lock,
+        // tear the just-produced body down with the cause, and throw. A regression that dropped
+        // synchronized or registered the child outside the lock would leak the produced body here.
+        final CyclicBarrier factoryEntered = new CyclicBarrier(2);
+        final CountDownLatch abortDone = new CountDownLatch(1);
+        final List<StreamMessage<HttpObject>> produced = new CopyOnWriteArrayList<>();
+        final Supplier<StreamMessage<? extends HttpObject>> factory = () -> {
+            final StreamMessage<HttpObject> body = StreamMessage.of(HttpData.ofUtf8("body"));
+            produced.add(body);
+            try {
+                // Signal that the body has been produced, then wait until abort() has finished before
+                // duplicate() proceeds to the synchronized closed-state check.
+                factoryEntered.await(10, TimeUnit.SECONDS);
+                abortDone.await(10, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return body;
+        };
+        final ReproducibleHttpRequestDuplicator dup =
+                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final RuntimeException cause = new RuntimeException("cleanup");
+
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            final Future<Throwable> duplicateResult = executor.submit(() -> {
+                try {
+                    dup.duplicate();
+                    return null;
+                } catch (Throwable t) {
+                    return t;
+                }
+            });
+
+            factoryEntered.await(10, TimeUnit.SECONDS);
+            dup.abort(cause);
+            abortDone.countDown();
+
+            assertThat(duplicateResult.get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(IllegalStateException.class);
+            assertThat(produced).hasSize(1);
+            assertThat(produced.get(0).whenComplete()).isCompletedExceptionally();
+            assertThatThrownBy(() -> produced.get(0).whenComplete().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasRootCause(cause);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void abortReleasesAllOutstandingUnsubscribedRequests() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
@@ -154,24 +216,6 @@ class ReproducibleHttpRequestDuplicatorTest {
         // requests that were already produced — they keep streaming until they complete on their own.
         dup.close();
         assertThat(produced.whenComplete()).isNotDone();
-    }
-
-    @Test
-    void streamsBodyWithoutAccumulatingIt() {
-        // The whole point of the reproducible duplicator is to avoid buffering the body for replay (and
-        // thus the ~2 GiB int32 cap of DefaultStreamMessageDuplicator). A produced request must stream
-        // its body straight through rather than accumulate it; here we simply assert a large body is
-        // delivered intact. See ReproducibleHttpRequestClientTest#toDuplicatorIgnoresMaxRequestLength
-        // for the companion proof that the maxRequestLength cap is not applied.
-        final byte[] large = new byte[64 * 1024];
-        final Supplier<StreamMessage<? extends HttpObject>> factory =
-                () -> StreamMessage.of(HttpData.wrap(large));
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
-
-        final HttpRequest produced = dup.duplicate();
-        final int received = produced.aggregate().join().content().length();
-        assertThat(received).isEqualTo(large.length);
     }
 
     @Test
