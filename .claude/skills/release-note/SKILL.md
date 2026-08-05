@@ -35,7 +35,7 @@ Example: `/release-note 1.38.0`
    ```
 2. Run the release note generation script:
    ```
-   cd site-new && npm run release-note <version>
+   cd site && npm run release-note <version>
    ```
 3. Verify the output file was created at `site/src/content/release-notes/<version>.mdx`.
 4. If the script fails (e.g., milestone not found, network error), report the error and stop.
@@ -167,6 +167,21 @@ The raw script includes the full dependency update PR body, which uses a structu
 3. **Group multi-version bumps** on one line when a library has multiple version streams:
    `- Spring 6.2.14 → 6.2.15, 7.0.2 → 7.0.3`
 4. **Sort alphabetically** (A → Z).
+
+## Optional: Validate with a Site Build
+
+`cd site && npm run build` validates the MDX end to end, but requires generated files under
+`site/gen-src/` (`api-index.json`, `versions.json`, `contributors.json`):
+
+- Full generation: `./gradlew :site:generateSiteSources` (api-index needs the aggregated Javadoc,
+  which is slow).
+- Quick validation: copy `api-index.json`/`versions.json` from a previous build and generate
+  `contributors.json` with
+  `gh api --paginate repos/line/armeria/contributors | jq -s '[.[][]] | map({(.login): .avatar_url}) | add'`.
+  A stale `api-index.json` is fine for validation — unknown `[X](type)` names render as blank
+  links (`type://#`) and never fail the build, so type names must be verified against the source
+  either way.
+- `npm run build | tail` masks the exit code — capture it separately.
 
 ## Phase 6: Finalize
 
