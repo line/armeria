@@ -38,7 +38,8 @@ date: 2026-08-05
   ```
 - **Per-Request Client TLS and SNI Override**: [ClientTlsProvider](type) resolves a
   [ClientTlsSpec](type) per request from the [ClientRequestContext](type), and the SNI hostname is
-  now readable and overridable via [ClientRequestContext#setSniHostname(String)](type). #6855
+  now readable via [ClientRequestContext#sniHostname()](type) and overridable via
+  [ClientRequestContext#setSniHostname(String)](type). #6855
   ```java
   ClientFactory.builder()
                .tlsProvider((ClientTlsProvider) ctx -> // 👈👈👈
@@ -52,14 +53,15 @@ date: 2026-08-05
   separately from the backend — a different trust store, proxy mTLS certificate or ALPN list. An
   unset ALPN list defaults to HTTP/1.1, since that is what CONNECT proxies speak. #6854
 - **Connection-Aware Server TLS Provider**: [ServerTlsProvider](type) resolves a
-  [ServerTlsSpec](type) from a [ConnectionContext](type), so a certificate can be chosen by ALPN,
-  remote address or custom attributes rather than the SNI hostname alone. Returning `null` falls
-  back to the virtual host's TLS settings. #6806
+  [ServerTlsSpec](type) from a [ConnectionContext](type), so a certificate can be chosen by SNI
+  hostname, ALPN, remote address or custom attributes — not the hostname alone. Returning `null`
+  falls back to the virtual host's TLS settings. #6806
 - **Circuit Breaker Alignment with `SuccessFunction`**:
   [CircuitBreakerRuleBuilder#onSuccessFunction()](type) and its
   [CircuitBreakerRuleWithContentBuilder#onSuccessFunction()](type) counterpart make a rule match
-  when the client's [SuccessFunction](type) regards a response as a success. This also fixes a
-  breaker that could never close because its trial requests kept matching `thenIgnore()`. #6828
+  when the client's [SuccessFunction](type) regards a response as a success. Opting in also fixes a
+  breaker that could otherwise never close because its trial requests kept matching
+  `thenIgnore()`. #6828
   ```java
   CircuitBreakerRule rule =
       CircuitBreakerRule.builder()
@@ -107,20 +109,19 @@ date: 2026-08-05
   ```
 - [TlsKeyPair](type) now validates that the private key matches the leaf certificate's public key at
   construction time, so a mismatch fails fast. #6892
-- [ClientRequestContext#setClientTlsSpec(ClientTlsSpec)](type) now switches the
-  [SessionProtocol](type) to its TLS variant, and the new
-  [ClientRequestContext#clearClientTlsSpec()](type) switches it back to cleartext. A decorator can
-  therefore turn TLS on or off for an individual request. #6895
+- [ClientRequestContext#setClientTlsSpec(ClientTlsSpec)](type) and the new
+  [ClientRequestContext#clearClientTlsSpec()](type) let a decorator turn TLS on or off for an
+  individual request. #6895
 - [ZtsBaseClient](type) is now an interface, so you can supply your own [WebClient](type) — for
   example one built from an xDS cluster snapshot. JWKS keys are fetched with that same
-  [WebClient](type), honoring its TLS and proxy configuration, instead of a separate
-  `SSLContext`. #6848
-- **xDS** — the following improve xDS clients and custom extensions:
+  [WebClient](type), honoring its TLS and proxy configuration, instead of a separate `SSLContext`.
+  `ZtsBaseClient.builder()` usage is unchanged. #6848
+- **xDS** — the following improve client behavior and custom extensions:
   - A cluster's `HttpProtocolOptions` is now honored, so a cluster that explicitly declares HTTP/1
     or HTTP/2 gets the matching [SessionProtocol](type) instead of defaulting to `HTTP`/`HTTPS`. #6843
-  - Load balancer selection is observable through the `armeria.xds.lb.request` and
-    `armeria.xds.lb.request.subset` counters, tagged with cluster, priority, locality and
-    `result=hit`/`result=miss`. #6840
+  - Load balancer selection is observable through the `armeria.xds.lb.select` and
+    `armeria.xds.lb.select.subset` counters, tagged with `cluster`, `priority`, `region`, `zone`,
+    `sub.zone` and `result=hit`/`result=miss`. #6840
   - A custom cluster type can be plugged in by registering an [XdsExtensionFactoryProvider](type)
     that supplies a [ClusterTypeFactory](type), then naming it in the Cluster's
     `cluster_type`. #6811 #6838
@@ -159,9 +160,9 @@ date: 2026-08-05
   [AccessDeniedException](type). Only a `403 Forbidden` from ZTS is wrapped now, so code that caught
   [AccessDeniedException](type) for a `401` or `400` sees the original exception instead. #6866
 - Three xDS defects are fixed: server-side filter chain matching now rejects a connection whose
-  protocol does not match the matched filter chain's TLS configuration; locality-aware routing now
-  honors the configured locality weights, which were previously scaled by 100 and so produced
-  skewed distributions; and a watcher no longer receives a spurious [MissingXdsResourceException](type)
+  protocol does not match the matched filter chain's TLS configuration; the `lb.zar.local.percentage`
+  gauge reports `1` rather than `100` when routing is fully local, so dashboards built on it are no
+  longer 100x off; and a watcher no longer receives a spurious [MissingXdsResourceException](type)
   when a cached resource already exists at registration time. #6887
 
 ## 📃 Documentation
@@ -173,29 +174,36 @@ date: 2026-08-05
 ## 🏚️ Deprecations
 
 - [ZtsBaseClient#ztsUri()](type) and [ZtsBaseClient#proxyUri()](type) are deprecated because they
-  leak implementation details. Use [ZtsBaseClient#webClient()](type) and read the URI from it
-  instead. #6848
+  leak implementation details. Read the URI from [ZtsBaseClient#webClient()](type) instead of
+  `ztsUri()`; `proxyUri()` has no replacement, as the proxy is configured on the builder and is
+  already applied to the [WebClient](type). #6848
 
 ## ☢️ Breaking changes
 
 - The SNI hostname is now precomputed when the [Endpoint](type) is set, not derived from the
   authority at connection time. A decorator that rewrites the authority or `Host` header no longer
   changes it — call [ClientRequestContext#setSniHostname(String)](type) instead. #6855
-- `ProxyConfig.connect(addr, true)` now gives the proxy hop a default [ClientTlsSpec](type) with
-  system defaults instead of reusing the client factory's TLS configuration. Pass an explicit spec
+- [ProxyConfig#connect(InetSocketAddress,boolean)](type) now gives the proxy hop a default
+  [ClientTlsSpec](type) with system defaults instead of reusing the client factory's TLS
+  configuration. Pass an explicit spec
   to [ProxyConfig#connect(InetSocketAddress,ClientTlsSpec)](type) to restore the old behavior. #6854
 - [ClientRequestContext#setClientTlsSpec(ClientTlsSpec)](type) now switches the
   [SessionProtocol](type) to its TLS variant; call [ClientRequestContext#clearClientTlsSpec()](type)
-  for cleartext. [RequestOptions#clientTlsSpec()](type) is a default and does not switch it. #6895
+  for cleartext. [RequestOptions#clientTlsSpec()](type) only sets a fallback spec and does not
+  switch the protocol. #6895
 - The `:ai:mcp` module builds against MCP Java SDK 2.x. [ArmeriaStatelessServerTransport](type) and
   [ArmeriaStreamableServerTransportProvider](type) keep their API, but you must move your MCP SDK
-  dependency to 2.0.0, which renames `ElicitRequest` to `ElicitFormRequest`. #6889
+  dependency to 2.0.0, which carries its own breaking API changes. #6889
 - **xDS** — the following affect custom extensions and control-plane configuration:
   - User decorators now run **before** xDS filters (`user decorators → xDS → transport`). A
-    decorator that relied on seeing xDS-injected headers must move into an xDS filter. #6890
+    decorator that relied on running after them — to read injected headers or wrap xDS retries —
+    must move into an xDS filter. #6890
   - A `Cluster` of type EDS must set `eds_cluster_config`; the inline `load_assignment` fallback is
     gone. #6811
-  - Unsupported fields are rejected rather than warned about, and there is no warn-only mode. #6864
+  - Unsupported fields are rejected rather than warned about, and validation now covers every proto
+    package except `google.protobuf` — anything outside `envoy.`/`xds.`/`armeria.` used to be
+    skipped. Register [WarningXdsValidatorIndex](type) via SPI to keep warning instead of
+    failing. #6853 #6864
   - [XdsHttpFilter](type) drops `httpPreprocessor()`/`rpcPreprocessor()` — implement
     `httpDecorator()`/`rpcDecorator()` instead. #6864
   - A single [XdsExtensionFactoryProvider](type) SPI replaces the [HttpFilterFactory](type),
@@ -217,7 +225,7 @@ date: 2026-08-05
 - Javassist 3.31.0 → 3.32.0
 - JBoss Logging Annotations 2.2.1 → 2.2.2
 - Jetty 9.4.55 → 9.4.58, 12.0.32 → 12.0.37
-- JUnit 5 5.14.2 → 5.14.4
+- JUnit 5.14.2 → 5.14.4
 - Kafka 3.9.1 → 3.9.2
 - Kotlin 2.4.0 → 2.4.10
 - Kubernetes Client 7.7.0 → 7.8.0

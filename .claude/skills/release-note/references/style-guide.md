@@ -99,12 +99,16 @@ For non-trivial migrations, include before/after code.
 
 Brief description with links to new/updated docs.
 
+Link to docs pages with a **site-relative path** (`/docs/...`), never an absolute `https://armeria.dev/...`
+URL — that is the convention across the docs and the newer release notes, and it keeps links working
+on local builds and previews.
+
 ```mdx
 - New comprehensive documentation on understanding and handling timeouts: #6592
-  - [Understanding timeout and cancellation origins](https://armeria.dev/docs/advanced/understanding-timeouts)
+  - [Understanding timeout and cancellation origins](/docs/advanced/understanding-timeouts)
   - Handling timeouts for streaming:
-    - [Client-side streaming](https://armeria.dev/docs/client/timeouts#handling-timeouts-for-streaming-responses)
-    - [Server-side streaming](https://armeria.dev/docs/server/timeouts#handling-timeouts-for-streaming-requests)
+    - [Client-side streaming](/docs/client/timeouts#handling-timeouts-for-streaming-responses)
+    - [Server-side streaming](/docs/server/timeouts#handling-timeouts-for-streaming-requests)
 ```
 
 ---
