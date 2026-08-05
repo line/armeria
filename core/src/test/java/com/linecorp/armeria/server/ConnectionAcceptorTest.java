@@ -55,7 +55,7 @@ class ConnectionAcceptorTest {
         protected void configure(ServerBuilder sb) {
             sb.http(0)
               .https(0)
-              .tls(TlsKeyPair.ofSelfSigned())
+              .tls(TlsKeyPair.ofSelfSigned("localhost"))
               .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
                   ctx.setAttr(TEST_ATTR, "from-connection");
                   acceptCount.incrementAndGet();
@@ -75,7 +75,7 @@ class ConnectionAcceptorTest {
         protected void configure(ServerBuilder sb) {
             sb.http(0)
               .https(0)
-              .tls(TlsKeyPair.ofSelfSigned())
+              .tls(TlsKeyPair.ofSelfSigned("localhost"))
               .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
                   acceptCount.incrementAndGet();
                   return false;
@@ -90,7 +90,7 @@ class ConnectionAcceptorTest {
         protected void configure(ServerBuilder sb) {
             sb.http(0)
               .https(0)
-              .tls(TlsKeyPair.ofSelfSigned())
+              .tls(TlsKeyPair.ofSelfSigned("localhost"))
               .connectionAcceptor(ConnectionAcceptor.of(ctx -> {
                   acceptCount.incrementAndGet();
                   throw new RuntimeException("acceptor failed");

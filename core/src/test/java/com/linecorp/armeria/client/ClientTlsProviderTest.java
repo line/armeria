@@ -270,12 +270,12 @@ class ClientTlsProviderTest {
     @Test
     void disallowTlsProviderWhenTlsSettingsIsSet() {
         final TlsProvider tlsProvider =
-                TlsProvider.of(TlsKeyPair.ofSelfSigned());
+                TlsProvider.of(TlsKeyPair.ofSelfSigned("localhost"));
 
         assertThatThrownBy(() -> {
             ClientFactory.builder()
                          .tlsProvider(tlsProvider)
-                         .tls(TlsKeyPair.ofSelfSigned());
+                         .tls(TlsKeyPair.ofSelfSigned("localhost"));
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot configure TLS settings because a TlsProvider has been set.");
 
@@ -302,7 +302,7 @@ class ClientTlsProviderTest {
 
         assertThatThrownBy(() -> {
             ClientFactory.builder()
-                         .tls(TlsKeyPair.ofSelfSigned())
+                         .tls(TlsKeyPair.ofSelfSigned("localhost"))
                          .tlsProvider(tlsProvider);
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining(

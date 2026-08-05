@@ -37,11 +37,11 @@ class ClientTlsProviderBuilderTest {
 
     @Test
     void testMapping() {
-        final TlsKeyPair exactKeyPair = TlsKeyPair.ofSelfSigned();
-        final TlsKeyPair wildcardKeyPair = TlsKeyPair.ofSelfSigned();
-        final TlsKeyPair defaultKeyPair = TlsKeyPair.ofSelfSigned();
-        final TlsKeyPair barKeyPair = TlsKeyPair.ofSelfSigned();
-        final TlsKeyPair barWildKeyPair = TlsKeyPair.ofSelfSigned();
+        final TlsKeyPair exactKeyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair wildcardKeyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair defaultKeyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair barKeyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair barWildKeyPair = TlsKeyPair.ofSelfSigned("localhost");
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
                            .keyPair(defaultKeyPair)

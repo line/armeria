@@ -57,7 +57,7 @@ class DelayedConnectionAcceptorTest {
         protected void configure(ServerBuilder sb) {
             sb.http(0)
               .https(0)
-              .tls(TlsKeyPair.ofSelfSigned())
+              .tls(TlsKeyPair.ofSelfSigned("localhost"))
               .connectionAcceptor(ctx -> {
                   acceptCount.incrementAndGet();
                   final CompletableFuture<Boolean> future = new CompletableFuture<>();
@@ -74,7 +74,7 @@ class DelayedConnectionAcceptorTest {
         protected void configure(ServerBuilder sb) {
             sb.http(0)
               .https(0)
-              .tls(TlsKeyPair.ofSelfSigned())
+              .tls(TlsKeyPair.ofSelfSigned("localhost"))
               .idleTimeoutMillis(1000)
               // Never completes — should be closed by the accept timeout.
               .connectionAcceptor(ctx -> {
