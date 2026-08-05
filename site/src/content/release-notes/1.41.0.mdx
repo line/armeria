@@ -209,10 +209,11 @@ date: 2026-08-05
   - A single [XdsExtensionFactoryProvider](type) SPI replaces the [HttpFilterFactory](type),
     [SotwConfigSourceSubscriptionFactory](type) and [ClusterTypeFactory](type) registrations; move
     your `META-INF/services` entry to it. Built-ins are no longer SPI-overridable — register custom
-    factories with [XdsBootstrapBuilder](type)`.extensionFactories()`. #6820 #6838
-  - [SotwConfigSourceSubscriptionFactory](type)`.create()` returns a [SnapshotStream](type) of
-    `DiscoveryResponse`; `ResourceWatcher`, `XdsStreamSubscriber`, `ConfigSourceSubscription` and
-    `SotwSubscriptionCallbacks` are removed. #6795
+    factories with [XdsBootstrapBuilder#extensionFactories(XdsExtensionFactory)](type). #6820 #6838
+  - [SotwConfigSourceSubscriptionFactory#create(ConfigSource,FactoryContext,SnapshotStream)](type)
+    returns a [SnapshotStream](type) of `DiscoveryResponse`; `ResourceWatcher`,
+    `XdsStreamSubscriber`, `ConfigSourceSubscription` and `SotwSubscriptionCallbacks` are
+    removed. #6795
 
 ## ⛓ Dependencies
 
