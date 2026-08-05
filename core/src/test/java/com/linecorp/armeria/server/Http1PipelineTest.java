@@ -20,14 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -50,11 +49,16 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 class Http1PipelineTest {
+
+    private static final CompletableFuture<Void> emptyResponseTrigger = new CompletableFuture<>();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -82,19 +86,14 @@ class Http1PipelineTest {
                   return writer;
               });
 
-            // A service that never writes any response headers — used in the sparse-map
-            // regression test so that doWriteReset() is called for an ID that has no
-            // entry in pendingWritesMap, creating a gap in the iteration range.
-            sb.route()
-              .path("/never-respond")
-              .requestTimeoutMillis(0)
-              .build((ctx, req) -> {
-                  // Return a future that resolves only when the request context is cancelled.
-                  // The connection reset from another pipelined request will cancel this context.
-                  final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
-                  ctx.whenRequestCancelling().thenRun(() -> f.cancel(true));
-                  return HttpResponse.of(f);
-              });
+            // A service that completes its response stream without writing any response headers when
+            // 'emptyResponseTrigger' is completed, so that the stream is reset via 'writeReset()'
+            // while 'pendingWritesMap' has no entry for its request ID.
+            sb.service("/empty", (ctx, req) -> {
+                final HttpResponseWriter writer = HttpResponse.streaming();
+                emptyResponseTrigger.thenRunAsync(writer::close, ctx.eventLoop());
+                return writer;
+            });
         }
     };
 
@@ -155,73 +154,58 @@ class Http1PipelineTest {
     }
 
     /**
-     * Regression test for the NPE in {@link com.linecorp.armeria.internal.common.Http1ObjectEncoder}
-     * {@code doWriteReset()} when {@code pendingWritesMap} is sparse.
+     * Regression test for the {@link NullPointerException} that was thrown by
+     * {@code Http1ObjectEncoder.doWriteReset()} when {@code pendingWritesMap} is sparse.
      *
-     * <p>{@code doWriteReset()} iterates IDs {@code [minClosedId, maxIdWithPendingWrites]} to fail
-     * pending writes. The map is <em>sparse</em>: only out-of-order request IDs that went through
-     * the encoder's {@code write()} path have entries. Iterating a gap ID (one that never wrote
-     * anything before the reset) returned {@code null}, and the subsequent {@code .poll()} call
-     * threw a {@link NullPointerException}.
-     *
-     * <p>Scenario (3 pipelined requests on one connection):
+     * <p>{@code doWriteReset()} iterates over the IDs in {@code [minClosedId, maxIdWithPendingWrites]}
+     * to fail the pending writes, but the map contains entries only for the IDs whose responses were
+     * queued out of order. The following scenario makes the range contain an ID without an entry:
      * <ol>
-     *   <li>id=1 {@code /slow}         – holds the write-turn, so ids 2 and 3 queue in pendingWritesMap</li>
-     *   <li>id=2 {@code /never-respond} – handler never writes a response header → <strong>no entry</strong>
-     *                                    in pendingWritesMap at id=2; connection reset eventually closes it</li>
-     *   <li>id=3 {@code /length-limit}  – writes 200 OK → pendingWritesMap[3]; overflow triggers
-     *                                    doWriteReset(3); after connection reset minClosedId becomes 2
-     *                                    (because the cancel from /never-respond propagates), so the
-     *                                    iteration range [2, 3] includes the gap at id=2</li>
+     *   <li>id=1 {@code /slow} - holds the write turn so that the other responses are queued.</li>
+     *   <li>id=2 {@code /empty} - completes its response stream without writing any headers, which
+     *       resets the stream via {@code writeReset(2)} while {@code pendingWritesMap} has no entry
+     *       for id=2.</li>
+     *   <li>id=3 {@code /fast} - responds immediately so that its response is queued at id=3.</li>
      * </ol>
+     * {@code doWriteReset(2)} then iterates over {@code [2, 3]} and must skip id=2.
      */
     @Test
-    void resetDoesNotNpeWhenPendingWritesMapIsSparse() throws IOException {
-        // Use a raw socket so all three requests are sent in a single burst before the server
-        // can respond to any of them. This ensures they all get distinct pipelined IDs on the
-        // same connection and that id=1 (/slow) holds the write-turn while ids 2 and 3 queue.
+    void resetShouldNotThrowNpeWhenPendingWritesMapIsSparse() throws Exception {
+        // Use a raw socket to pipeline the three requests on a single connection in a single burst.
         try (Socket socket = new Socket()) {
             socket.connect(server.httpSocketAddress());
             socket.setSoTimeout(10_000);
 
             final PrintWriter out = new PrintWriter(socket.getOutputStream(), false);
-
-            // id=1: /slow — 3-second delay; keeps currentId=1 so all later responses queue
-            out.print("GET /slow HTTP/1.1\r\n");
-            out.print("Host: 127.0.0.1\r\n");
-            out.print("\r\n");
-
-            // id=2: /never-respond — handler never writes headers → no pendingWritesMap entry at id=2
-            out.print("GET /never-respond HTTP/1.1\r\n");
-            out.print("Host: 127.0.0.1\r\n");
-            out.print("\r\n");
-
-            // id=3: /length-limit — writes 200 OK (queued at id=3) then overflows → doWriteReset(3)
-            //        After the connection reset, the cancel propagates to /never-respond which means
-            //        minClosedId is updated to cover id=2 as well, producing the gap [2, 3].
-            final String overBody = Strings.repeat("x", 101);
-            out.print("POST /length-limit HTTP/1.1\r\n");
-            out.print("Host: 127.0.0.1\r\n");
-            out.print("Content-Type: text/plain\r\n");
-            out.print("Content-Length: " + overBody.length() + "\r\n");
-            out.print("\r\n");
-            out.print(overBody);
+            out.print("GET /slow HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+            out.print("GET /empty HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+            out.print("GET /fast HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
             out.flush();
 
-            // Read until the connection is closed by the server.
-            // We only assert that we get *some* valid response (200 OK for /slow) and that
-            // the connection then closes cleanly — i.e. no NullPointerException causes the
-            // server to crash before sending any bytes.
-            final InputStream is = socket.getInputStream();
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            final StringBuilder received = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                received.append(line).append('\n');
-            }
-            // At minimum we should receive the HTTP/1.1 status line for /slow
-            // confirming the server did not crash (NPE) before writing anything.
-            assertThat(received.toString()).contains("HTTP/1.1");
+            final ServiceRequestContextCaptor captor = server.requestContextCaptor();
+            final ServiceRequestContext slowCtx = captor.take();
+            final ServiceRequestContext emptyCtx = captor.take();
+            final ServiceRequestContext fastCtx = captor.take();
+            assertThat(slowCtx.path()).isEqualTo("/slow");
+            assertThat(emptyCtx.path()).isEqualTo("/empty");
+            assertThat(fastCtx.path()).isEqualTo("/fast");
+
+            // Wait until the '/fast' response is queued in 'pendingWritesMap' and then let '/empty'
+            // complete its response stream without headers, which triggers 'doWriteReset(2)'.
+            fastCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).get(10, TimeUnit.SECONDS);
+            emptyResponseTrigger.complete(null);
+
+            // The reset must fail the queued '/fast' response with a ClosedSessionException.
+            // Before the fix, the NPE aborted the iteration so that the queued response was
+            // never failed and this log never completed.
+            final RequestLog fastLog = fastCtx.log().whenComplete().get(10, TimeUnit.SECONDS);
+            assertThat(fastLog.responseCause()).isInstanceOf(ClosedSessionException.class);
+
+            // The failed write closes the connection cleanly because the queued responses cannot
+            // be written to an HTTP/1 connection anymore.
+            final BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            assertThat(reader.readLine()).isNull();
         }
     }
 }
