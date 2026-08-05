@@ -177,6 +177,11 @@ Use `[ClassName](type)` ONLY for Armeria public API references:
 - Methods: `[GrpcServiceBuilder#enableEnvoyHttp1Bridge(boolean)](type)` — always use the full
   `ClassName#methodName(ParamType)` form. Never use backtick-only style like
   `` `enableEnvoyHttp1Bridge(true)` `` for Armeria public API references in prose.
+  - **No space after commas** in the parameter list. The lookup key in `gen-src/api-index.json`
+    has none, so `[X#m(A, B)](type)` silently resolves to a dead `type://#` link while
+    `[X#m(A,B)](type)` works. The rendered text hides the difference — it shows `X.m()` either way.
+  - **Never split a method across a class link and a backtick.** `[Foo](type)` `` `.bar()` `` is
+    not a link to `bar()`; write `[Foo#bar(Baz)](type)` as one unit.
 - Annotations: `[@Blocking](type)`
 
 Do NOT use `[Name](type)` for:

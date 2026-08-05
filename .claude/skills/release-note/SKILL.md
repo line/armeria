@@ -198,6 +198,26 @@ The raw script includes the full dependency update PR body, which uses a structu
 
 ---
 
+## Phase 7: Lint
+
+Run the mechanical checks and fix everything they report:
+
+```
+.claude/skills/release-note/scripts/lint-release-note.sh site/src/content/release-notes/<version>.mdx
+```
+
+This is not optional, and reading the style guide is not a substitute for running it. The rules it
+enforces are all written down elsewhere in this skill and have still been broken while the author
+had them open — a malformed `(type)` link never fails the site build, it just renders as a blank
+`type://#` link, so nothing else catches it.
+
+The script cannot see two things, so check them by hand:
+
+- **Identifiers copied from a PR body** — metric names, class names, proto fields. PR descriptions
+  go stale; the source does not. Grep the repo for every identifier you quote. (A real case: PR
+  #6840's body advertised `armeria.xds.lb.request`, while the code registered `lb.select`.)
+- **Whether a claim is true**, as opposed to well-formed. Read the code the entry describes.
+
 ## Execution Checklist
 
 - [ ] Phase 0 — Ran `npm run release-note <version>` and verified output file exists
@@ -207,6 +227,7 @@ The raw script includes the full dependency update PR body, which uses a structu
 - [ ] Phase 4 — Rewrote all entries per style guide
 - [ ] Phase 5 — Cleaned up dependencies section
 - [ ] Phase 6 — Removed empty sections, finalized file, reported summary
+- [ ] Phase 7 — Ran `lint-release-note.sh` and it exited 0
 
 ## Common Mistakes to Avoid
 
