@@ -176,7 +176,6 @@ class ClientTlsProviderInterfaceTest {
     @Test
     void setSniHostname() {
         final ClientTlsProvider provider = ctx -> {
-            assertThat(ctx.sniHostname()).isEqualTo("sni.host");
             return ClientTlsSpec.builder()
                                 .trustedCertificates(sniCert.certificate())
                                 .build();

@@ -27,13 +27,17 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.net.ssl.SSLSession;
+
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
@@ -46,6 +50,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -311,6 +316,22 @@ class DefaultClientRequestContextTest {
                 SystemInfo.currentTimeMicros());
     }
 
+    private static ClientRequestContext newContext(SessionProtocol protocol) {
+        return newContext(protocol, RequestOptions.of());
+    }
+
+    private static ClientRequestContext newContext(SessionProtocol protocol,
+                                                   RequestOptions requestOptions) {
+        final ClientRequestContextBuilder builder =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                    .sessionProtocol(protocol)
+                                    .requestOptions(requestOptions);
+        if (protocol.isTls()) {
+            builder.sslSession(mock(SSLSession.class));
+        }
+        return builder.build();
+    }
+
     @Test
     void extendResponseTimeout() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
@@ -442,6 +463,126 @@ class DefaultClientRequestContextTest {
         final String strWithParentLog = ctxWithNoChannel.toString();
         assertThat(strWithParentLog).contains("preqId=");
         assertThat(ctxWithNoChannel.toString()).isSameAs(strWithParentLog);
+    }
+
+    @Test
+    void setClientTlsSpecSwitchesCleartextToTls() {
+        final ClientTlsSpec spec = ClientTlsSpec.builder()
+                                                .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                .build();
+
+        final ClientRequestContext httpCtx = newContext(SessionProtocol.HTTP);
+        httpCtx.setClientTlsSpec(spec);
+        assertThat(httpCtx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+        assertThat(httpCtx.clientTlsSpec()).isNotNull();
+
+        final ClientRequestContext h1cCtx = newContext(SessionProtocol.H1C);
+        h1cCtx.setClientTlsSpec(spec);
+        assertThat(h1cCtx.sessionProtocol()).isEqualTo(SessionProtocol.H1);
+        assertThat(h1cCtx.clientTlsSpec()).isNotNull();
+
+        final ClientRequestContext h2cCtx = newContext(SessionProtocol.H2C);
+        h2cCtx.setClientTlsSpec(spec);
+        assertThat(h2cCtx.sessionProtocol()).isEqualTo(SessionProtocol.H2);
+        assertThat(h2cCtx.clientTlsSpec()).isNotNull();
+    }
+
+    @Test
+    void setClientTlsSpecNoopWhenAlreadyTls() {
+        final ClientTlsSpec spec = ClientTlsSpec.builder()
+                                                .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                .build();
+
+        final ClientRequestContext httpsCtx = newContext(SessionProtocol.HTTPS);
+        httpsCtx.setClientTlsSpec(spec);
+        assertThat(httpsCtx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+        assertThat(httpsCtx.clientTlsSpec()).isNotNull();
+    }
+
+    @Test
+    void setClientTlsSpecFillsEmptyAlpn() {
+        final ClientTlsSpec specWithoutAlpn = ClientTlsSpec.builder()
+                                                           .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                           .build();
+        assertThat(specWithoutAlpn.alpnProtocols()).isEmpty();
+
+        final ClientRequestContext ctx = newContext(SessionProtocol.H2C);
+        ctx.setClientTlsSpec(specWithoutAlpn);
+        // ALPN should be filled from sessionProtocol.withTls() (H2)
+        assertThat(ctx.clientTlsSpec()).isNotNull();
+        assertThat(ctx.clientTlsSpec().alpnProtocols()).containsExactly("h2", "http/1.1");
+    }
+
+    @Test
+    void setClientTlsSpecPreservesExplicitAlpn() {
+        final ClientTlsSpec specWithAlpn = ClientTlsSpec.builder()
+                                                        .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                        .alpnProtocols(SessionProtocol.H1)
+                                                        .build();
+        assertThat(specWithAlpn.alpnProtocols()).isNotEmpty();
+
+        final ClientRequestContext ctx = newContext(SessionProtocol.H2C);
+        ctx.setClientTlsSpec(specWithAlpn);
+        // ALPN should not be overwritten since it was explicitly set
+        assertThat(ctx.clientTlsSpec()).isSameAs(specWithAlpn);
+    }
+
+    @Test
+    void clearClientTlsSpecSwitchesTlsToCleartext() {
+        final ClientTlsSpec spec = ClientTlsSpec.builder()
+                                                .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                .build();
+
+        final ClientRequestContext httpsCtx = newContext(SessionProtocol.HTTPS);
+        httpsCtx.setClientTlsSpec(spec);
+        httpsCtx.clearClientTlsSpec();
+        assertThat(httpsCtx.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        assertThat(httpsCtx.clientTlsSpec()).isNull();
+
+        final ClientRequestContext h1Ctx = newContext(SessionProtocol.H1);
+        h1Ctx.setClientTlsSpec(spec);
+        h1Ctx.clearClientTlsSpec();
+        assertThat(h1Ctx.sessionProtocol()).isEqualTo(SessionProtocol.H1C);
+        assertThat(h1Ctx.clientTlsSpec()).isNull();
+
+        final ClientRequestContext h2Ctx = newContext(SessionProtocol.H2);
+        h2Ctx.setClientTlsSpec(spec);
+        h2Ctx.clearClientTlsSpec();
+        assertThat(h2Ctx.sessionProtocol()).isEqualTo(SessionProtocol.H2C);
+        assertThat(h2Ctx.clientTlsSpec()).isNull();
+    }
+
+    @Test
+    void clearClientTlsSpecNoopWhenAlreadyCleartext() {
+        final ClientRequestContext ctx = newContext(SessionProtocol.HTTP);
+        ctx.clearClientTlsSpec();
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        assertThat(ctx.clientTlsSpec()).isNull();
+    }
+
+    @Test
+    void requestOptionsClientTlsSpecFilteredForNonTls() {
+        final ClientTlsSpec spec = ClientTlsSpec.builder()
+                                                .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                .build();
+        final RequestOptions reqOpts = RequestOptions.builder().clientTlsSpec(spec).build();
+
+        // When protocol is HTTP (non-TLS), the clientTlsSpec from RequestOptions is dropped
+        final ClientRequestContext httpCtx = newContext(SessionProtocol.HTTP, reqOpts);
+        assertThat(httpCtx.clientTlsSpec()).isNull();
+    }
+
+    @Test
+    void requestOptionsClientTlsSpecUsedForTls() {
+        final ClientTlsSpec spec = ClientTlsSpec.builder()
+                                                .verifierFactories(TlsPeerVerifierFactory.noVerify())
+                                                .alpnProtocols(SessionProtocol.HTTPS)
+                                                .build();
+        final RequestOptions reqOpts = RequestOptions.builder().clientTlsSpec(spec).build();
+
+        // When protocol is HTTPS (TLS), the clientTlsSpec from RequestOptions is kept
+        final ClientRequestContext httpsCtx = newContext(SessionProtocol.HTTPS, reqOpts);
+        assertThat(httpsCtx.clientTlsSpec()).isSameAs(spec);
     }
 
     private static void mutateAdditionalHeaders(ClientRequestContext originalCtx) {

@@ -108,7 +108,7 @@ final class Bootstraps {
      */
     Bootstrap getOrCreate(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
                           HttpPreference httpPreference,
-                          SerializationFormat serializationFormat, ClientTlsSpec tlsSpec) {
+                          SerializationFormat serializationFormat, @Nullable ClientTlsSpec tlsSpec) {
         if (!httpAndHttpsValues().contains(desiredProtocol)) {
             throw new IllegalArgumentException("Unsupported session protocol: " + desiredProtocol);
         }
@@ -129,6 +129,7 @@ final class Bootstraps {
 
         final Bootstrap baseBootstrap = isDomainSocket ? unixBaseBootstrap : inetBaseBootstrap;
         assert baseBootstrap != null;
+        assert tlsSpec != null;
         return newBootstrap(baseBootstrap, httpPreference, serializationFormat, tlsSpec);
     }
 

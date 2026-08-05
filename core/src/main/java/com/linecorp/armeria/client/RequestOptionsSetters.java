@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -170,6 +171,7 @@ public interface RequestOptionsSetters {
     /**
      * Sets the request-specific TLS configuration for this request.
      * If not set, the {@link ClientFactory} default TLS configurations will be used.
+     * Note that setting this has no effect if the {@link SessionProtocol} is not a TLS variant.
      */
     @UnstableApi
     RequestOptionsSetters clientTlsSpec(ClientTlsSpec clientTlsSpec);

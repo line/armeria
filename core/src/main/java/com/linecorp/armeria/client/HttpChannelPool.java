@@ -617,12 +617,13 @@ final class HttpChannelPool implements AsyncCloseable {
     static final class PoolKey {
         final Endpoint endpoint;
         final ProxyConfig proxyConfig;
+        @Nullable
         private final ClientTlsSpec tlsSpec;
         @Nullable
         final InetSocketAddress localAddress;
         private final int hashCode;
 
-        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig, ClientTlsSpec tlsSpec,
+        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig, @Nullable ClientTlsSpec tlsSpec,
                 @Nullable InetSocketAddress localAddress) {
             this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
