@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.HttpResponseException;
@@ -676,5 +677,103 @@ class LoggingServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "The logWriter and the log properties cannot be set together.");
+    }
+
+    @Test
+    void slowRequestSampler() throws Exception {
+        final ServiceRequestContext ctx = serviceRequestContext();
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isDebugEnabled()).thenReturn(true);
+        final LoggingService service =
+                LoggingService.builder()
+                              .slowRequestSampler(Sampler.always())
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .build())
+                              .samplingRate(0.0f)
+                              .newDecorator()
+                              .apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        verify(logger).debug(matches(".*Response:.*totalDuration=.*"));
+    }
+
+    @Test
+    void slowRequestSamplerNever() throws Exception {
+        final ServiceRequestContext ctx = serviceRequestContext();
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        final LoggingService service =
+                LoggingService.builder()
+                              .slowRequestSampler(Sampler.never())
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .build())
+                              .samplingRate(0.0f)
+                              .newDecorator()
+                              .apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        verifyNoInteractions(logger);
+    }
+
+    @Test
+    void slowRequestSamplerPercentage() throws Exception {
+        final ServiceRequestContext ctx = serviceRequestContext();
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isDebugEnabled()).thenReturn(true);
+        final LoggingService service =
+                LoggingService.builder()
+                              .slowRequestSamplingPercentile(1.0f, 60_000L, 0L, Long.MAX_VALUE)
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .build())
+                              .samplingRate(0.0f)
+                              .newDecorator()
+                              .apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        verify(logger).debug(matches(".*Response:.*totalDuration=.*"));
+    }
+
+    @Test
+    void slowRequestSamplerUpperBound() throws Exception {
+        final ServiceRequestContext ctx = serviceRequestContext();
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isDebugEnabled()).thenReturn(true);
+        final LoggingService service =
+                LoggingService.builder()
+                              .slowRequestSamplingPercentile(0.0f, 60_000L, 0L, 1L)
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .build())
+                              .samplingRate(0.0f)
+                              .newDecorator()
+                              .apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        verify(logger).debug(matches(".*Response:.*totalDuration=.*"));
+    }
+
+    @Test
+    void slowRequestSamplerLowerBound() throws Exception {
+        final ServiceRequestContext ctx = serviceRequestContext();
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        final LoggingService service =
+                LoggingService.builder()
+                              .slowRequestSamplingPercentile(1.0f, 60_000L, 10000L, Long.MAX_VALUE)
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .build())
+                              .samplingRate(0.0f)
+                              .newDecorator()
+                              .apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        verifyNoInteractions(logger);
     }
 }
