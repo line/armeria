@@ -225,6 +225,24 @@ public enum SessionProtocol {
         }
     }
 
+    /**
+     * Returns the equivalent protocol without TLS.
+     */
+    @UnstableApi
+    public SessionProtocol withoutTls() {
+        checkState(this != PROXY, "Unsupported protocol: %s", this);
+        if (!isTls()) {
+            return this;
+        }
+        if (isExplicitHttp1()) {
+            return H1C;
+        } else if (isExplicitHttp2()) {
+            return H2C;
+        } else {
+            return HTTP;
+        }
+    }
+
     @Override
     public String toString() {
         return uriText;

@@ -101,6 +101,8 @@ class ImmutableAttributesTest {
         // Hide the value in the parent
         assertThat(attributes.attr(shaded)).isNull();
         assertThat(attributes.ownAttr(shaded)).isNull();
+        // getAndSet() must return null for a hidden key, not the internal sentinel.
+        assertThat(attributes.toBuilder().getAndSet(shaded, "revive")).isNull();
 
         assertThat(attributes.attr(overridden)).isEqualTo("update");
         assertThat(attributes.ownAttr(overridden)).isEqualTo("update");

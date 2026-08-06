@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.RequestTarget;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -41,9 +42,10 @@ class Http1ServerHeaderConvertTest {
 
     @Test
     void addHostHeaderIfMissing() throws URISyntaxException {
-        final NettyHttp1Request originReq =
-                new NettyHttp1Request(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello");
-        final NettyHttp1Headers headers = originReq.headers();
+        final DefaultHttpRequest originReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello",
+                                       ArmeriaHttpHeadersFactory.INSTANCE);
+        final NettyHttp1Headers headers = (NettyHttp1Headers) originReq.headers();
         headers.add(HttpHeaderNames.HOST, "bar");
 
         final ChannelHandlerContext ctx = mockChannelHandlerContext();

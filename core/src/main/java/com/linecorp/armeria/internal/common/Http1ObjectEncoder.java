@@ -356,6 +356,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                     new ClosedSessionException("An HTTP/1 connection has been reset: " + error);
             for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
                 final PendingWrites pendingWrites = pendingWritesMap.remove(i);
+                if (pendingWrites == null) {
+                    // pendingWritesMap is sparse — not every ID in the range has an entry.
+                    continue;
+                }
                 for (;;) {
                     final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
                     if (e == null) {

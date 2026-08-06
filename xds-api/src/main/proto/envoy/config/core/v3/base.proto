@@ -158,6 +158,7 @@ message Node {
   // <config_cluster_manager_cds>`, and :ref:`HTTP tracing
   // <arch_overview_tracing>`, either in this message or via
   // :option:`--service-node`.
+  option (armeria.xds.supported.field) = 1;
   string id = 1;
 
   // Defines the local service cluster name where Envoy is running. Though

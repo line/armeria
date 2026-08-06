@@ -56,8 +56,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.xds.RouteEntryMatcher.HeaderMatcherImpl;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
+import com.linecorp.armeria.xds.internal.XdsHeaderMatcher;
 
 import io.envoyproxy.envoy.config.route.v3.HeaderMatcher;
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
@@ -87,18 +87,18 @@ final class RetryStateFactory {
                             REQUEST_HEADER_MAX_RETRIES, REQUEST_HEADER_RETRIABLE_STATUS_CODES,
                             REQUEST_HEADER_RETRIABLE_HEADER_NAMES);
 
-    private final List<HeaderMatcherImpl> retriableRequestHeadersMatchers;
+    private final List<XdsHeaderMatcher> retriableRequestHeadersMatchers;
     private final RetryStateImpl defaultRetryState;
     private final RetryConfig<HttpResponse> defaultRetryConfig;
     private final RetryConfig<RpcResponse> defaultRpcRetryConfig;
 
     RetryStateFactory(RetryPolicy retryPolicy) {
         final Set<RetryPolicyTypes> policies = parseRetryOn(retryPolicy.getRetryOn());
-        final List<HeaderMatcherImpl> retriableResponseHeaderMatchers =
-                retryPolicy.getRetriableHeadersList().stream().map(HeaderMatcherImpl::new)
+        final List<XdsHeaderMatcher> retriableResponseHeaderMatchers =
+                retryPolicy.getRetriableHeadersList().stream().map(XdsHeaderMatcher::of)
                            .collect(ImmutableList.toImmutableList());
         retriableRequestHeadersMatchers = retryPolicy.getRetriableRequestHeadersList().stream()
-                                                     .map(HeaderMatcherImpl::new)
+                                                     .map(XdsHeaderMatcher::of)
                                                      .collect(ImmutableList.toImmutableList());
         final Set<Integer> retriableStatusCodes =
                 ImmutableSet.copyOf(retryPolicy.getRetriableStatusCodesList());
@@ -151,7 +151,7 @@ final class RetryStateFactory {
 
     private static RetryStateImpl createRetryState(RequestHeaders requestHeaders,
                                                    RetryStateImpl defaultRetryState,
-                                                   List<HeaderMatcherImpl> retriableRequestHeadersMatchers) {
+                                                   List<XdsHeaderMatcher> retriableRequestHeadersMatchers) {
         Set<RetryPolicyTypes> policies = defaultRetryState.policies;
 
         policies = retryPoliciesFromRequestHeader(requestHeaders, retriableRequestHeadersMatchers, policies);
@@ -181,16 +181,16 @@ final class RetryStateFactory {
             retriableStatusCodes = builder.build();
         }
 
-        List<HeaderMatcherImpl> retriableResponseHeaderMatchers =
+        List<XdsHeaderMatcher> retriableResponseHeaderMatchers =
                 defaultRetryState.retriableResponseHeaderMatchers;
         final String retriableHeaderNames = requestHeaders.get(REQUEST_HEADER_RETRIABLE_HEADER_NAMES, "");
         if (!retriableHeaderNames.isEmpty()) {
             final String[] splitHeaderNames = retriableHeaderNames.split(",");
             final int expectedSize = splitHeaderNames.length + retriableResponseHeaderMatchers.size();
-            final ImmutableList.Builder<HeaderMatcherImpl> builder =
+            final ImmutableList.Builder<XdsHeaderMatcher> builder =
                     ImmutableList.builderWithExpectedSize(expectedSize);
             for (String headerName : splitHeaderNames) {
-                builder.add(new HeaderMatcherImpl(HeaderMatcher.newBuilder()
+                builder.add(XdsHeaderMatcher.of(HeaderMatcher.newBuilder()
                                                                .setName(headerName.trim()).build()));
             }
             builder.addAll(retriableResponseHeaderMatchers);
@@ -202,11 +202,11 @@ final class RetryStateFactory {
     }
 
     private static Set<RetryPolicyTypes> retryPoliciesFromRequestHeader(
-            RequestHeaders requestHeaders, List<HeaderMatcherImpl> retriableRequestHeadersMatchers,
+            RequestHeaders requestHeaders, List<XdsHeaderMatcher> retriableRequestHeadersMatchers,
             Set<RetryPolicyTypes> policies) {
         if (!retriableRequestHeadersMatchers.isEmpty()) {
             boolean shouldRetry = false;
-            for (HeaderMatcherImpl headerMatcher: retriableRequestHeadersMatchers) {
+            for (XdsHeaderMatcher headerMatcher: retriableRequestHeadersMatchers) {
                 if (headerMatcher.matches(requestHeaders)) {
                     shouldRetry = true;
                     break;
@@ -259,13 +259,13 @@ final class RetryStateFactory {
         private final DelegatingBackoff backoff;
         private final Set<RetryPolicyTypes> policies;
         private final Set<Integer> retriableStatusCodes;
-        private final List<HeaderMatcherImpl> retriableResponseHeaderMatchers;
+        private final List<XdsHeaderMatcher> retriableResponseHeaderMatchers;
         private final RetryDecision shouldRetry;
         private final long perTryTimeoutMillis;
 
         RetryStateImpl(RetryPolicy retryPolicy, Set<RetryPolicyTypes> policies,
                        int numRetries, Set<Integer> retriableStatusCodes,
-                       List<HeaderMatcherImpl> retriableResponseHeaderMatchers) {
+                       List<XdsHeaderMatcher> retriableResponseHeaderMatchers) {
             this.retryPolicy = retryPolicy;
             this.numRetries = numRetries;
             final RetryBackOff retryBackOff = retryPolicy.getRetryBackOff();
@@ -342,7 +342,7 @@ final class RetryStateFactory {
                 }
             }
             if (policies.contains(RetryPolicyTypes.RETRY_ON_RETRIABLE_HEADERS)) {
-                for (HeaderMatcherImpl headerMatcher : retriableResponseHeaderMatchers) {
+                for (XdsHeaderMatcher headerMatcher : retriableResponseHeaderMatchers) {
                     if (headerMatcher.matches(responseHeaders)) {
                         return shouldRetry;
                     }
