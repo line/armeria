@@ -42,6 +42,8 @@ import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 @UnstableApi
 public final class TlsKeyPair {
 
+    private static final int MAX_COMMON_NAME_LENGTH = 64;
+
     /**
      * Creates a new {@link TlsKeyPair} from the specified key {@link InputStream}, and certificate chain
      * {@link InputStream}.
@@ -122,9 +124,17 @@ public final class TlsKeyPair {
 
     /**
      * Generates a self-signed certificate for the local hostname.
+     *
+     * <p>Note that if the local hostname exceeds 64 characters, it is truncated to satisfy the
+     * RFC 5280 common name length limit.
      */
     public static TlsKeyPair ofSelfSigned() {
-        return ofSelfSigned(SystemInfo.hostname());
+        String hostname = SystemInfo.hostname();
+        if (hostname.length() > MAX_COMMON_NAME_LENGTH) {
+            // RFC 5280 limits the length of a common name to 64 characters.
+            hostname = hostname.substring(0, MAX_COMMON_NAME_LENGTH);
+        }
+        return ofSelfSigned(hostname);
     }
 
     private final PrivateKey privateKey;
