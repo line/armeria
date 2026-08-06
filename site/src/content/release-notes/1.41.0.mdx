@@ -1,5 +1,5 @@
 ---
-date: 2026-08-05
+date: 2026-08-06
 ---
 
 # v1.41.0
@@ -146,6 +146,10 @@ date: 2026-08-05
 - Resetting an HTTP/1 connection while pipelined requests are in flight no longer fails with a
   `NullPointerException`. The pending responses are now failed with a `ClosedSessionException`, as
   intended. #6899
+- [TlsKeyPair#ofSelfSigned()](type) no longer fails on a machine whose hostname is longer than 64
+  characters, which used to break certificate generation with
+  `commonName length ... exceeds RFC 5280 ub-common-name (64)`. The hostname is truncated for the
+  certificate's common name. #6900
 - A request that arrives during the brief window of [Server#reconfigure(ServerConfigurator)](type) is
   now served normally by [AuthService](type), instead of failing with a `NullPointerException` and
   `500 Internal Server Error`. #6832
