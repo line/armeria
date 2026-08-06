@@ -136,7 +136,7 @@ Pay attention to the fact that a Client object has its own `CircuitBreaker` when
 In other words, if a new Client object is created for each request to Server2 and is extinguished after the request is completed, the `CircuitBreaker` connected to the Client would eventually become useless.
 
 Therefore, we need a `WebClient` bean that sends requests to Server2 to reuse the same `WebClient` object for the requests to all Server2.
-And we can apply `CircuitBreaker` to the `WebClient` object using the [Decorator](https://armeria.dev/docs/client-decorator) provided by Armeria.
+And we can apply `CircuitBreaker` to the `WebClient` object using the [Decorator](/docs/client-decorator) provided by Armeria.
 
 Let's take a look at each field of the `CircuitBreaker` settings above.
 

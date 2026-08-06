@@ -99,12 +99,16 @@ For non-trivial migrations, include before/after code.
 
 Brief description with links to new/updated docs.
 
+Link to docs pages with a **site-relative path** (`/docs/...`), never an absolute `https://armeria.dev/...`
+URL — that is the convention across the docs and the newer release notes, and it keeps links working
+on local builds and previews.
+
 ```mdx
 - New comprehensive documentation on understanding and handling timeouts: #6592
-  - [Understanding timeout and cancellation origins](https://armeria.dev/docs/advanced/understanding-timeouts)
+  - [Understanding timeout and cancellation origins](/docs/advanced/understanding-timeouts)
   - Handling timeouts for streaming:
-    - [Client-side streaming](https://armeria.dev/docs/client/timeouts#handling-timeouts-for-streaming-responses)
-    - [Server-side streaming](https://armeria.dev/docs/server/timeouts#handling-timeouts-for-streaming-requests)
+    - [Client-side streaming](/docs/client/timeouts#handling-timeouts-for-streaming-responses)
+    - [Server-side streaming](/docs/server/timeouts#handling-timeouts-for-streaming-requests)
 ```
 
 ---
@@ -130,6 +134,11 @@ Rules:
 - Group multi-version bumps: `- Spring 6.2.14 → 6.2.15, 7.0.2 → 7.0.3`
 - Omit build-only dependencies (anything under the `- Build` section in the raw dependency PR)
 - Sort alphabetically (A → Z)
+- Strip trailing release qualifiers from version numbers — `.Final`, `.RELEASE`, `-GA`,
+  `.vYYYYMMDD` and the like. They add no information a reader acts on:
+  - `Netty 4.2.15.Final → 4.2.16.Final` becomes `Netty 4.2.15 → 4.2.16`
+  - `Javassist 3.31.0-GA → 3.32.0-GA` becomes `Javassist 3.31.0 → 3.32.0`
+  - `Jetty 9.4.55.v20240627 → 9.4.58.v20250814` becomes `Jetty 9.4.55 → 9.4.58`
 
 ---
 
@@ -168,6 +177,11 @@ Use `[ClassName](type)` ONLY for Armeria public API references:
 - Methods: `[GrpcServiceBuilder#enableEnvoyHttp1Bridge(boolean)](type)` — always use the full
   `ClassName#methodName(ParamType)` form. Never use backtick-only style like
   `` `enableEnvoyHttp1Bridge(true)` `` for Armeria public API references in prose.
+  - **No space after commas** in the parameter list. The lookup key in `gen-src/api-index.json`
+    has none, so `[X#m(A, B)](type)` silently resolves to a dead `type://#` link while
+    `[X#m(A,B)](type)` works. The rendered text hides the difference — it shows `X.m()` either way.
+  - **Never split a method across a class link and a backtick.** `[Foo](type)` `` `.bar()` `` is
+    not a link to `bar()`; write `[Foo#bar(Baz)](type)` as one unit.
 - Annotations: `[@Blocking](type)`
 
 Do NOT use `[Name](type)` for:

@@ -73,7 +73,7 @@ public class ArmeriaPrometheusApplication {
 }
 ```
 
-You must always add [MetricCollectingService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html) as a `decorator` if you want to collect service metrics. (You can find more on how to do this in the [official Armeria documentation](https://armeria.dev/docs/advanced-metrics/).).
+You must always add [MetricCollectingService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html) as a `decorator` if you want to collect service metrics. (You can find more on how to do this in the [official Armeria documentation](/docs/advanced-metrics/).).
 You can customize the default prefix of the metrics by specifying the parameter of the `MeterIdPrefixFunction.ofDefault()` function.
 
 ```java title="ArmeriaPrometheusApplication.java"
