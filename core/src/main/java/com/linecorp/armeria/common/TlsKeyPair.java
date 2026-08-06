@@ -58,8 +58,6 @@ public final class TlsKeyPair {
     private static final byte[] VALIDATION_PROBE =
             "Armeria TlsKeyPair validation probe".getBytes(StandardCharsets.UTF_8);
 
-    private static final int MAX_COMMON_NAME_LENGTH = 64;
-
     /**
      * Creates a new {@link TlsKeyPair} from the specified key {@link InputStream}, and certificate chain
      * {@link InputStream}.
@@ -145,14 +143,7 @@ public final class TlsKeyPair {
      * RFC 5280 common name length limit.
      */
     public static TlsKeyPair ofSelfSigned() {
-        String hostname = SystemInfo.hostname();
-        if (hostname.length() > MAX_COMMON_NAME_LENGTH) {
-            final String truncated = hostname.substring(0, MAX_COMMON_NAME_LENGTH);
-            logger.debug("Truncating the local hostname '{}' to '{}' to satisfy " +
-                         "the RFC 5280 common name length limit (64).", hostname, truncated);
-            hostname = truncated;
-        }
-        return ofSelfSigned(hostname);
+        return ofSelfSigned(SystemInfo.hostname());
     }
 
     private final PrivateKey privateKey;

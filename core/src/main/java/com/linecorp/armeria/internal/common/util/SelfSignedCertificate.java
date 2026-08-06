@@ -36,6 +36,9 @@ import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -52,6 +55,10 @@ import com.google.common.collect.ImmutableList;
  * </p>
  */
 public final class SelfSignedCertificate extends SignedCertificate {
+
+    private static final Logger logger = LoggerFactory.getLogger(SelfSignedCertificate.class);
+
+    private static final int MAX_COMMON_NAME_LENGTH = 64;
 
     // Forked from:
     // https://github.com/netty/netty/blob/11e6a77fba9ec7184a558d869373d0ce506d7236/handler/src/main/java/io/netty/handler/ssl/util/SelfSignedCertificate.java
@@ -235,7 +242,17 @@ public final class SelfSignedCertificate extends SignedCertificate {
     public SelfSignedCertificate(String fqdn, Random random, int bits, Date notBefore, Date notAfter,
                                  String algorithm, Iterable<String> subjectAlternativeNames, boolean isCA)
             throws CertificateException {
-        super(new CertificateParams(fqdn, random, bits, notBefore, notAfter, algorithm,
-                                    subjectAlternativeNames, isCA));
+        super(new CertificateParams(truncateToCommonNameLength(fqdn), random, bits, notBefore, notAfter,
+                                    algorithm, subjectAlternativeNames, isCA));
+    }
+
+    private static String truncateToCommonNameLength(String fqdn) {
+        if (fqdn.length() <= MAX_COMMON_NAME_LENGTH) {
+            return fqdn;
+        }
+        final String truncated = fqdn.substring(0, MAX_COMMON_NAME_LENGTH);
+        logger.debug("Truncating the fqdn '{}' to '{}' to satisfy " +
+                     "the RFC 5280 common name length limit (64).", fqdn, truncated);
+        return truncated;
     }
 }
