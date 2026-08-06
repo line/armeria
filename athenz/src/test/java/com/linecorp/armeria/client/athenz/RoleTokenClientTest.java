@@ -58,7 +58,7 @@ class RoleTokenClientTest {
 
     @BeforeAll
     static void beforeAll() {
-        final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned();
         ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
                                      .keyPair(() -> tlsKeyPair)
                                      .build();
@@ -113,7 +113,7 @@ class RoleTokenClientTest {
 
     @Test
     void shouldRefreshTokenBeforeExpiry() throws Exception {
-        final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair tlsKeyPair = TlsKeyPair.ofSelfSigned();
         try (ZtsBaseClient ztsBaseClient = ZtsBaseClient.builder(mockServer.httpUri())
                                                         .keyPair(() -> tlsKeyPair)
                                                         .build()) {

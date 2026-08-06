@@ -56,7 +56,7 @@ class AthenzTokenClientErrorHandlingTest {
         }
     };
 
-    private static final TlsKeyPair keyPair = TlsKeyPair.ofSelfSigned("localhost");
+    private static final TlsKeyPair keyPair = TlsKeyPair.ofSelfSigned();
 
     private static ZtsBaseClient forbiddenZtsClient;
     private static ZtsBaseClient unreachableZtsClient;

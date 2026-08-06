@@ -31,7 +31,7 @@ class RefreshingTlsProviderTest {
 
     @Test
     void shouldRefreshTlsKeyPairPeriodically() throws InterruptedException {
-        final TlsKeyPair keyPair = TlsKeyPair.ofSelfSigned("localhost");
+        final TlsKeyPair keyPair = TlsKeyPair.ofSelfSigned();
         final AtomicInteger counter = new AtomicInteger();
         final TlsProvider tlsProvider = TlsProvider.ofScheduled(() -> {
             counter.incrementAndGet();
@@ -47,7 +47,7 @@ class RefreshingTlsProviderTest {
         final AtomicInteger counter = new AtomicInteger();
         final TlsProvider tlsProvider = TlsProvider.ofScheduled(() -> {
             counter.incrementAndGet();
-            return TlsKeyPair.ofSelfSigned("localhost");
+            return TlsKeyPair.ofSelfSigned();
         }, Duration.ofSeconds(1));
         final TlsKeyPair initialKeyPair = tlsProvider.keyPair("*");
         Thread.sleep(2000);
@@ -60,7 +60,7 @@ class RefreshingTlsProviderTest {
     @Test
     void shouldNotifyListenerOnKeyPair() throws InterruptedException {
         final AtomicReference<TlsKeyPair> keyPairRef = new AtomicReference<>();
-        keyPairRef.set(TlsKeyPair.ofSelfSigned("localhost"));
+        keyPairRef.set(TlsKeyPair.ofSelfSigned());
 
         final AtomicReference<TlsKeyPair> capturedKeyPairRef = new AtomicReference<>();
         final TlsProvider tlsProvider =
@@ -71,7 +71,7 @@ class RefreshingTlsProviderTest {
         assertThat(capturedKeyPairRef).hasNullValue();
         Thread.sleep(1000);
         assertThat(capturedKeyPairRef).hasNullValue();
-        keyPairRef.set(TlsKeyPair.ofSelfSigned("localhost"));
+        keyPairRef.set(TlsKeyPair.ofSelfSigned());
         await().untilAsserted(() -> {
             assertThat(capturedKeyPairRef).hasValue(keyPairRef.get());
         });
