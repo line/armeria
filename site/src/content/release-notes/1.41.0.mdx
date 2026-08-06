@@ -143,6 +143,9 @@ date: 2026-08-05
 
 - Closing a [DnsAddressEndpointGroup](type) now releases the UDP socket held by its underlying DNS
   resolver. Previously every group leaked one socket for the lifetime of the process. #6846
+- Resetting an HTTP/1 connection while pipelined requests are in flight no longer fails with a
+  `NullPointerException`. The pending responses are now failed with a `ClosedSessionException`, as
+  intended. #6899
 - A request that arrives during the brief window of [Server#reconfigure(ServerConfigurator)](type) is
   now served normally by [AuthService](type), instead of failing with a `NullPointerException` and
   `500 Internal Server Error`. #6832
