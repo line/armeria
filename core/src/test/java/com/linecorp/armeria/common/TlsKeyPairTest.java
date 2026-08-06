@@ -31,6 +31,7 @@ import java.security.cert.X509Certificate;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 class TlsKeyPairTest {
@@ -45,7 +46,14 @@ class TlsKeyPairTest {
 
     @Test
     void ofSelfSignedIsAValidPair() {
-        assertThat(TlsKeyPair.ofSelfSigned().privateKey()).isNotNull();
+        // Must not fail even on a machine whose hostname exceeds the 64-character common name limit
+        // of RFC 5280, such as a GitHub Actions macOS runner.
+        final TlsKeyPair keyPair = TlsKeyPair.ofSelfSigned();
+        assertThat(keyPair.privateKey()).isNotNull();
+        final String hostname = SystemInfo.hostname();
+        final String expectedCommonName = hostname.length() <= 64 ? hostname : hostname.substring(0, 64);
+        assertThat(keyPair.certificateChain().get(0).getSubjectX500Principal().getName())
+                .isEqualTo("CN=" + expectedCommonName);
     }
 
     @Test

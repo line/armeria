@@ -32,6 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
@@ -87,6 +88,19 @@ class VirtualHostBuilderTest {
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
         assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
         assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
+    }
+
+    @Test
+    void tlsSelfSignedWithLongDefaultHostname() {
+        // The hostname of some machines exceeds the 64-character common name limit of RFC 5280.
+        final String hostname = "very-long-hostname-" + Strings.repeat("a", 42) + ".local";
+        final Server server = Server.builder()
+                                    .defaultHostname(hostname)
+                                    .tlsSelfSigned()
+                                    .service("/test", (ctx, req) -> HttpResponse.of(OK))
+                                    .build();
+
+        assertThat(server.config().defaultVirtualHost().defaultHostname()).isEqualTo(hostname);
     }
 
     @Test
