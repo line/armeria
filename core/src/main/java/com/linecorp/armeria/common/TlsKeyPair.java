@@ -147,8 +147,10 @@ public final class TlsKeyPair {
     public static TlsKeyPair ofSelfSigned() {
         String hostname = SystemInfo.hostname();
         if (hostname.length() > MAX_COMMON_NAME_LENGTH) {
-            // RFC 5280 limits the length of a common name to 64 characters.
-            hostname = hostname.substring(0, MAX_COMMON_NAME_LENGTH);
+            final String truncated = hostname.substring(0, MAX_COMMON_NAME_LENGTH);
+            logger.debug("Truncating the local hostname '{}' to '{}' to satisfy " +
+                         "the RFC 5280 common name length limit (64).", hostname, truncated);
+            hostname = truncated;
         }
         return ofSelfSigned(hostname);
     }
