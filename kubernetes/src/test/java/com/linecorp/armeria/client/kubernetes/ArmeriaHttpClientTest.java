@@ -53,6 +53,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.linecorp.armeria.client.ClientFactory;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.http.AsyncBody;
 import io.fabric8.kubernetes.client.http.HttpClient;
@@ -94,6 +96,53 @@ class ArmeriaHttpClientTest {
     void testMultipleClosure() {
         client.getHttpClient().close();
         client.getHttpClient().close(); // additional close should be no-op
+    }
+
+    /**
+     * Derived clients (used when tagging RequestConfig, and similar) must share the WebSocket
+     * ClientFactory with the root client. Otherwise each watch creates a factory that is never
+     * closed when only the root {@link KubernetesClient} is closed (#6805).
+     */
+    @Test
+    void derivedClientSharesWebSocketFactoryLifecycle() throws Exception {
+        final HttpClient root = client.getHttpClient();
+        final HttpClient derived = root.newBuilder().tag("request-config-tag").build();
+
+        assertThat(root).isInstanceOf(ArmeriaHttpClient.class);
+        assertThat(derived).isInstanceOf(ArmeriaHttpClient.class);
+        final ArmeriaHttpClient rootImpl = (ArmeriaHttpClient) root;
+        final ArmeriaHttpClient derivedImpl = (ArmeriaHttpClient) derived;
+
+        assertThat(derivedImpl.getClosed()).isSameAs(rootImpl.getClosed());
+        assertThat(derivedImpl.getWebSocketClient()).isSameAs(rootImpl.getWebSocketClient());
+        assertThat(derivedImpl.getWebClient()).isSameAs(rootImpl.getWebClient());
+
+        server.expect().withPath("/derived-ws")
+              .andUpgradeToWebSocket()
+              .open()
+              .done().always();
+
+        // Watches open WebSockets on derived clients; that lazily builds a dedicated ClientFactory.
+        final CompletableFuture<Boolean> opened = new CompletableFuture<>();
+        derived.newWebSocketBuilder()
+               .uri(URI.create(webSocketMasterUrl() + "derived-ws"))
+               .buildAsync(new Listener() {
+                   @Override
+                   public void onOpen(WebSocket webSocket) {
+                       opened.complete(true);
+                   }
+               })
+               .get(10, TimeUnit.SECONDS);
+        assertThat(opened.get(10, TimeUnit.SECONDS)).isTrue();
+
+        final ClientFactory wsFactory = derivedImpl.getWebSocketClient().clientFactoryOrNull();
+        assertThat(wsFactory).isNotNull();
+        assertThat(wsFactory.isClosed()).isFalse();
+
+        // Closing the root (as KubernetesClient.close() does) must close the shared WebSocket factory.
+        root.close();
+        assertThat(derived.isClosed()).isTrue();
+        assertThat(wsFactory.isClosed()).isTrue();
     }
 
     @Test

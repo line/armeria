@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
@@ -133,6 +134,19 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
         if (webSocketClient != null) {
             webSocketClient.options().factory().close();
         }
+    }
+
+    /**
+     * Returns the {@link ClientFactory} used by the underlying {@link WebSocketClient}, or
+     * {@code null} if the WebSocket client has not been created yet.
+     */
+    @Nullable
+    ClientFactory clientFactoryOrNull() {
+        final WebSocketClient webSocketClient = this.webSocketClient;
+        if (webSocketClient == null) {
+            return null;
+        }
+        return webSocketClient.options().factory();
     }
 
     private static WebSocketUpgradeResponse newUpgradeResponse(StandardHttpRequest request,
