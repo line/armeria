@@ -112,8 +112,7 @@ final class ClusterStream extends RefCountedStream<ClusterSnapshot> {
                                           input.transportSocketMatches, null);
         }
         return lbStream.map(lb -> {
-            final ClusterFilterFactory factory =
-                    new ClusterFilterFactory(lb, httpProtocolOptions, input.transportSocket);
+            final ClusterFilterFactory factory = new ClusterFilterFactory(lb, httpProtocolOptions);
             return new ClusterSnapshot(resource, lb, input.transportSocket, input.transportSocketMatches,
                                        factory);
         });
