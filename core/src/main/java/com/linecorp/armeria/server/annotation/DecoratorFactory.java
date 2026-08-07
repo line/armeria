@@ -31,4 +31,10 @@ public @interface DecoratorFactory {
      * {@link DecoratorFactoryFunction} implementation type.
      */
     Class<? extends DecoratorFactoryFunction<?>> value();
+
+    /**
+     * The flag of this decorator's additivity. If this is true, an annotation that has the highest priority is
+     * only applied within annotations annotated by this {@link DecoratorFactoryFunction}.
+     */
+    boolean additivity() default true;
 }
