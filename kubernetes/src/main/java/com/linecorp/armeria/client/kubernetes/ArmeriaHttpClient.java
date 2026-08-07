@@ -52,16 +52,35 @@ final class ArmeriaHttpClient
     private final WebClient webClient;
     private final ArmeriaWebSocketClient webSocketClient;
 
+    /**
+     * Creates a root client that owns the shared close state and WebSocket transport.
+     */
     ArmeriaHttpClient(ArmeriaHttpClientBuilder armeriaHttpClientBuilder, WebClient webClient) {
-        super(armeriaHttpClientBuilder, new AtomicBoolean());
+        this(armeriaHttpClientBuilder, webClient, new ArmeriaWebSocketClient(armeriaHttpClientBuilder),
+             new AtomicBoolean());
+    }
+
+    /**
+     * Creates a client that shares the given resources with its root / sibling clients.
+     * Derived clients created via {@link #newBuilder()} must share {@code closed} and
+     * {@code webSocketClient} so that WebSocket {@code ClientFactory} instances created for
+     * watches are closed when the root client is closed (see issue #6805).
+     */
+    ArmeriaHttpClient(ArmeriaHttpClientBuilder armeriaHttpClientBuilder, WebClient webClient,
+                      ArmeriaWebSocketClient webSocketClient, AtomicBoolean closed) {
+        super(armeriaHttpClientBuilder, closed);
         this.webClient = webClient;
-        webSocketClient = new ArmeriaWebSocketClient(armeriaHttpClientBuilder);
+        this.webSocketClient = webSocketClient;
     }
 
     @Override
     public void doClose() {
         webClient.options().factory().close();
         webSocketClient.close();
+    }
+
+    ArmeriaWebSocketClient getWebSocketClient() {
+        return webSocketClient;
     }
 
     @Override
