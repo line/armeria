@@ -338,3 +338,4 @@ includeWithFlags ':examples:tutorials:grpc-tutorial',              'java11'
 project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')
 includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java11'
 includeWithFlags ':examples:tutorials:thrift',                     'java11'
+includeWithFlags ':examples:xds-playground',                       'java17'
