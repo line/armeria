@@ -104,7 +104,7 @@
 <ul>
 <li class="">GitHub: <a href="https://github.com/line/armeria" target="_blank" rel="noopener noreferrer" class="">line/armeria</a></li>
 <li class="">Twitter: <a href="https://twitter.com/armeria_project" target="_blank" rel="noopener noreferrer" class="">@armeria_project</a></li>
-<li class="">Chat: <a href="https://armeria.dev/s/discord" target="_blank" rel="noopener noreferrer" class="">Discord</a></li>
+<li class="">Chat: <a class="" href="https://armeria.dev/s/discord">Discord</a></li>
 <li class=""><a href="https://line.github.io/armeria/apidocs/index.html#://" target="_blank" rel="noopener noreferrer" class="">API documentation</a></li>
 <li class="">Armeria examples: <a href="https://github.com/line/armeria-examples" target="_blank" rel="noopener noreferrer" class="">line/armeria-examples</a></li>
 </ul>
