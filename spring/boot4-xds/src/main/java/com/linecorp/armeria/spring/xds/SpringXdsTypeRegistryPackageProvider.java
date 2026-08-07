@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.spring.xds;
 
-import java.util.List;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsTypeRegistryPackageProvider;
+import com.linecorp.armeria.xds.spring.SpringConfigSource;
 
 /**
  * Registers the {@link SpringConfigSource} protobuf type for xDS type registry discovery.
@@ -29,6 +30,6 @@ public final class SpringXdsTypeRegistryPackageProvider implements XdsTypeRegist
 
     @Override
     public Iterable<String> packages() {
-        return List.of("com.linecorp.armeria.spring.xds");
+        return ImmutableList.of("com.linecorp.armeria.xds.spring");
     }
 }

@@ -85,9 +85,9 @@ class SpringCloudConfigXdsExampleTest {
         // Override the cluster endpoint to point at the config server's actual port
         environment.getPropertySources()
                    .addFirst(new MapPropertySource("test",
-                           Map.of("armeria.xds.test-cluster", clusterYaml(configPort))));
+                           Map.of("armeria.xds.cluster.test-cluster", clusterYaml(configPort))));
         applicationContext.publishEvent(
-                new EnvironmentChangeEvent(Set.of("armeria.xds.test-cluster")));
+                new EnvironmentChangeEvent(Set.of("armeria.xds.cluster.test-cluster")));
 
         // Wait for the xDS update to propagate
         await().untilAsserted(() ->

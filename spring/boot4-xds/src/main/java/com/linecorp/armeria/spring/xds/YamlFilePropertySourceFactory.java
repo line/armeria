@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring.xds;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
 import java.util.Properties;
 
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
@@ -28,15 +29,16 @@ import org.springframework.core.io.support.PropertySourceFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class YamlPropertySourceFactory implements PropertySourceFactory {
+final class YamlFilePropertySourceFactory implements PropertySourceFactory {
 
     @Override
     public PropertySource<?> createPropertySource(@Nullable String name, EncodedResource resource) {
         final YamlPropertiesFactoryBean factory = new YamlPropertiesFactoryBean();
         factory.setResources(resource.getResource());
         final Properties properties = requireNonNull(factory.getObject(), "properties");
-        final String filename = requireNonNull(resource.getResource().getFilename(), "filename");
-        final String sourceName = name != null ? name : filename;
+        final String sourceName = Objects.requireNonNullElseGet(
+                name, () -> requireNonNull(resource.getResource().getFilename(),
+                                           "resource must be file-backed"));
         return new PropertiesPropertySource(sourceName, properties);
     }
 }

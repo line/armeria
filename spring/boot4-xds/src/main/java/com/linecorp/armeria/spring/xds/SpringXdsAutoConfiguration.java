@@ -46,34 +46,44 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
  * <h2>xDS resources</h2>
  *
  * <p>Each xDS resource is stored as a separate property with the key
- * {@code armeria.xds.<resource-name>} containing the resource YAML
+ * {@code armeria.xds.<type>.<resource-name>} containing the resource YAML
  * (without {@code @type} wrappers — the type is inferred from the
- * subscription context).
+ * subscription context). The default prefixes are:
+ * <ul>
+ *   <li>{@code armeria.xds.listener.} — for Listener resources (LDS)</li>
+ *   <li>{@code armeria.xds.cluster.} — for Cluster resources (CDS)</li>
+ * </ul>
  *
  * <p>Example:
  * <pre>{@code
  * armeria:
  *   xds:
- *     my-cluster: |
- *       name: my-cluster
- *       type: STATIC
- *       load_assignment:
- *         cluster_name: my-cluster
- *         endpoints:
- *           - lb_endpoints:
- *               - endpoint:
- *                   address:
- *                     socket_address:
- *                       address: 127.0.0.1
- *                       port_value: 8080
+ *     listener:
+ *       my-listener: |
+ *         name: my-listener
+ *         api_listener: ...
+ *     cluster:
+ *       my-cluster: |
+ *         name: my-cluster
+ *         type: STATIC
+ *         load_assignment:
+ *           cluster_name: my-cluster
+ *           endpoints:
+ *             - lb_endpoints:
+ *                 - endpoint:
+ *                     address:
+ *                       socket_address:
+ *                         address: 127.0.0.1
+ *                         port_value: 8080
  * }</pre>
  *
  * <h2>Bootstrap</h2>
  *
  * <p>The xDS {@link Bootstrap} is created from the {@code armeria.xds.bootstrap} property.
  * If not set, a default bootstrap is loaded from
- * {@code META-INF/armeria/xds/default-bootstrap.yml}, which configures both LDS and CDS
- * to use {@link SpringConfigSourceFactory} with the default prefix {@code armeria.xds.}.
+ * {@code META-INF/armeria/xds/default-bootstrap.yml}, which configures LDS with
+ * prefix {@code armeria.xds.listener.} and CDS with prefix {@code armeria.xds.cluster.}
+ * via {@link SpringConfigSourceFactory}.
  *
  * <p>To customize the bootstrap, set {@code armeria.xds.bootstrap} in your
  * {@code application.yml}:
@@ -94,7 +104,7 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 @AutoConfiguration
 @ConditionalOnClass(XdsBootstrap.class)
 @PropertySource(value = "classpath:META-INF/armeria/xds/default-bootstrap.yml",
-                factory = YamlPropertySourceFactory.class)
+                factory = YamlFilePropertySourceFactory.class)
 public class SpringXdsAutoConfiguration {
 
     /**

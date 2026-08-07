@@ -7,10 +7,10 @@ armeria:
             name: armeria.config_source.spring
             typed_config:
               "@type": type.googleapis.com/armeria.xds.spring.SpringConfigSource
-              prefix: "armeria.xds."
+              prefix: "armeria.xds.listener."
         cds_config:
           custom_config_source:
             name: armeria.config_source.spring
             typed_config:
               "@type": type.googleapis.com/armeria.xds.spring.SpringConfigSource
-              prefix: "armeria.xds."
+              prefix: "armeria.xds.cluster."

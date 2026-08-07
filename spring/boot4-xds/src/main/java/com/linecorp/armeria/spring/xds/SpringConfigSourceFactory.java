@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.springframework.core.env.Environment;
 
@@ -34,7 +36,7 @@ import com.linecorp.armeria.xds.XdsType;
 import com.linecorp.armeria.xds.configsource.InterestedResources;
 import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
 import com.linecorp.armeria.xds.filter.FactoryContext;
-import com.linecorp.armeria.xds.stream.RefCountedStream;
+import com.linecorp.armeria.xds.spring.SpringConfigSource;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
@@ -49,7 +51,8 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
  *
  * <p>The property key prefix is configured via a {@link SpringConfigSource}
  * packed into the {@code typed_config} field of the bootstrap's
- * {@code custom_config_source}. The default prefix is {@code armeria.xds.}.
+ * {@code custom_config_source}. The default prefixes are
+ * {@code armeria.xds.listener.} for LDS and {@code armeria.xds.cluster.} for CDS.
  *
  * <p>Call {@link #refresh()} to re-read properties and push updated resources
  * to subscribers (e.g. from a Spring Cloud Config {@code EnvironmentChangeEvent}).
@@ -89,7 +92,7 @@ public final class SpringConfigSourceFactory implements SotwConfigSourceSubscrip
         final SpringConfigSource springConfigSource =
                 factoryContext.validator().unpack(configSource.getCustomConfigSource().getTypedConfig(),
                                                   SpringConfigSource.class);
-        final String rawPrefix = springConfigSource.getPrefix();
+        final String rawPrefix = springConfigSource.getPrefix().trim();
         if (rawPrefix.isEmpty() || ".".equals(rawPrefix)) {
             throw new IllegalArgumentException(
                     "SpringConfigSource 'prefix' must not be empty. " +
@@ -151,16 +154,21 @@ public final class SpringConfigSourceFactory implements SotwConfigSourceSubscrip
         return builder.build();
     }
 
-    static final class RefreshSignal extends RefCountedStream<Object> {
+    static final class RefreshSignal implements SnapshotStream<Object> {
+
+        private final Set<SnapshotWatcher<? super Object>> watchers = new CopyOnWriteArraySet<>();
 
         @Override
-        protected Subscription onStart(SnapshotWatcher<Object> watcher) {
-            emit(SIGNAL, null);
-            return Subscription.noop();
+        public Subscription subscribe(SnapshotWatcher<? super Object> watcher) {
+            watchers.add(watcher);
+            watcher.onUpdate(SIGNAL, null);
+            return () -> watchers.remove(watcher);
         }
 
         void push() {
-            emit(SIGNAL, null);
+            for (SnapshotWatcher<? super Object> w : watchers) {
+                w.onUpdate(SIGNAL, null);
+            }
         }
     }
 }
