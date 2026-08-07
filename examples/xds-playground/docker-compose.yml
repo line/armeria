@@ -1,7 +1,7 @@
 # Prometheus + Grafana for xDS metrics visualization.
 #
 # Usage:
-#   1. Start the xDS example:  ./gradlew :examples:xds-example:run
+#   1. Start the xDS example:  ./gradlew :examples:xds-playground:run
 #   2. Start monitoring:       docker compose up -d
 #   3. Open Grafana at http://localhost:3000 (anonymous access enabled)
 #   4. The "Armeria xDS Metrics" dashboard is auto-provisioned.

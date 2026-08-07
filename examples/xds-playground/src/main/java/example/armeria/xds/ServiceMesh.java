@@ -61,7 +61,7 @@ final class ServiceMesh implements AsyncCloseable {
         final ProfileState initialState = new ProfileState(initialProfile);
 
         try {
-            configDir = Files.createTempDirectory("armeria-xds-example");
+            configDir = Files.createTempDirectory("armeria-xds-playground");
             logger.info("xDS config directory: {}", configDir);
 
             // Generate a root CA, server cert, and client cert

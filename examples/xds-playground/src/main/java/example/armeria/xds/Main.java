@@ -40,7 +40,7 @@ public final class Main {
         dashboard.start().join();
         logger.info("Dashboard started at http://127.0.0.1:{}", dashboard.activeLocalPort());
         logger.info("Run Grafana with: docker compose up");
-        logger.info("  (from the armeria repo: docker compose -f examples/xds-example/docker-compose.yml up)");
+        logger.info("  (from the armeria repo: docker compose -f examples/xds-playground/docker-compose.yml up)");
         logger.info("Grafana dashboard at http://localhost:3000");
         logger.info("Open your browser and visit the dashboard to interact with the xDS example.");
     }
