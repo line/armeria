@@ -34,6 +34,7 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.common.TlsPeerVerifierFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.internal.XdsStringMatcher;
 
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.CertificateValidationContext;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.SubjectAltNameMatcher;
@@ -66,7 +67,7 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
                 throw new IllegalArgumentException("Unsupported SAN type: OTHER_NAME");
             }
             parsedSanMatchers.add(new SanMatcher(sanType,
-                                                 new StringMatcherImpl(matcher.getMatcher())));
+                                                 new XdsStringMatcher(matcher.getMatcher())));
         }
         // Handle the legacy match_subject_alt_names field only when match_typed_subject_alt_names
         // is not present, matching Envoy behavior where the deprecated field is ignored if both
@@ -74,7 +75,7 @@ public final class CertificateValidationContextSnapshot implements Snapshot<Cert
         if (parsedSanMatchers.isEmpty()) {
             for (StringMatcher matcher : resource.getMatchSubjectAltNamesList()) {
                 parsedSanMatchers.add(new SanMatcher(SubjectAltNameMatcher.SanType.URI,
-                                                     new StringMatcherImpl(matcher)));
+                                                     new XdsStringMatcher(matcher)));
             }
         }
         typedSanMatchers = ImmutableList.copyOf(parsedSanMatchers);

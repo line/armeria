@@ -38,6 +38,7 @@ import com.linecorp.armeria.xds.client.endpoint.StaticClusterTypeFactory;
 import com.linecorp.armeria.xds.client.endpoint.StrictDnsClusterTypeFactory;
 import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
 import com.linecorp.armeria.xds.filter.CredentialInjectorFilterFactory;
+import com.linecorp.armeria.xds.filter.FaultInjectionFilterFactory;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -93,6 +94,7 @@ public final class XdsExtensionRegistry {
         // Built-in factories (registered last so they cannot be overridden)
         register(new RouterFilterFactory(), byName, byTypeUrl);
         register(new CredentialInjectorFilterFactory(), byName, byTypeUrl);
+        register(new FaultInjectionFilterFactory(), byName, byTypeUrl);
         register(new StaticClusterTypeFactory(), byName, byTypeUrl);
         register(new StrictDnsClusterTypeFactory(), byName, byTypeUrl);
         register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),

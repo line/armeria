@@ -98,6 +98,25 @@ const sidebars: SidebarsConfig = {
         'advanced/flags-provider',
         'advanced/zipkin',
         'advanced/client-interoperability',
+        {
+          type: 'category',
+          label: 'xDS',
+          link: {
+            type: 'generated-index',
+            title: 'xDS',
+          },
+          items: [
+            'advanced/xds/introduction',
+            'advanced/xds/concepts',
+            'advanced/xds/bootstrap',
+            'advanced/xds/client',
+            'advanced/xds/server',
+            'advanced/xds/metrics',
+            'advanced/xds/extensions',
+            'advanced/xds/supported-features',
+            'advanced/xds/control-planes',
+          ],
+        },
       ],
     },
     {

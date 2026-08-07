@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
@@ -75,6 +76,8 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
+import io.netty.handler.codec.http.HttpDecoderConfig;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
@@ -263,6 +266,19 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();
+    }
+
+    /**
+     * Returns the {@link HttpDecoderConfig} for {@link HttpServerCodec}. {@link ArmeriaHttpHeadersFactory}
+     * makes the decoder build {@link NettyHttp1Headers} directly, so that the decoded request needs no
+     * conversion before {@link ArmeriaHttpUtil#toArmeria} reads it.
+     */
+    private static HttpDecoderConfig http1DecoderConfig(ServerConfig config) {
+        return new HttpDecoderConfig()
+                .setMaxInitialLineLength(config.http1MaxInitialLineLength())
+                .setMaxHeaderSize(config.http1MaxHeaderSize())
+                .setMaxChunkSize(config.http1MaxChunkSize())
+                .setHeadersFactory(ArmeriaHttpHeadersFactory.INSTANCE);
     }
 
     private static Http2ConnectionEncoder encoder(Http2Connection connection) {
@@ -628,10 +644,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
                     ch, H1, keepAliveHandler, config.http1HeaderNaming());
-            p.addLast(new HttpServerCodec(
-                    config.http1MaxInitialLineLength(),
-                    config.http1MaxHeaderSize(),
-                    config.http1MaxChunkSize()));
+            p.addLast(new HttpServerCodec(http1DecoderConfig(config)));
             final HttpServerHandler httpServerHandler =
                     new HttpServerHandler(config, ch, gracefulShutdownSupport, encoder, H1,
                                           connectionContext(ch));
@@ -783,10 +796,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            final HttpServerCodec http1codec = new HttpServerCodec(
-                    config.http1MaxInitialLineLength(),
-                    config.http1MaxHeaderSize(),
-                    config.http1MaxChunkSize());
+            final HttpServerCodec http1codec = new HttpServerCodec(http1DecoderConfig(config));
 
             String baseName = name;
             assert baseName != null;

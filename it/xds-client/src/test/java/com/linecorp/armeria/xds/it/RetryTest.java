@@ -24,6 +24,7 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,9 +33,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.google.protobuf.Any;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RefusedStreamException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -48,8 +52,15 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+import com.linecorp.armeria.xds.filter.FactoryContext;
+import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+import com.linecorp.armeria.xds.filter.XdsHttpFilter;
+
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 class RetryTest {
+
+    private static final String MOCK_FILTER_NAME = "test.mock-response";
 
     //language=YAML
     private static final String bootstrap =
@@ -77,6 +88,8 @@ class RetryTest {
                         - name: envoy.filters.http.router
                           typed_config:
                             "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                            upstream_http_filters:
+                            - name: test.mock-response
                   clusters:
                   - name: my-cluster
                     type: STATIC
@@ -229,15 +242,16 @@ class RetryTest {
     @MethodSource("retryOnResponseHeader_args")
     void retryOnResponseHeader(String retryOptions, ResponseHeaders responseHeaders, int numRetries) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.of(responseHeaders));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> {
-                                     return HttpResponse.of(responseHeaders);
-                                 })
                                  .build()
                                  .blocking()
                                  .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -293,13 +307,16 @@ class RetryTest {
     @MethodSource("retryOnReset_args")
     void retryOnReset(String retryOptions, Throwable cause, int numRetries) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.ofFailure(cause));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 assertThatThrownBy(() -> {
                     WebClient.builder(preprocessor)
-                             .decorator((delegate, ctx0, req) -> HttpResponse.ofFailure(cause))
                              .build()
                              .blocking()
                              .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -332,13 +349,16 @@ class RetryTest {
     @MethodSource("retryLimit_args")
     void retryLimit(String retryOptions, ResponseHeaders responseHeaders, int expectedRetries) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.of(responseHeaders));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> HttpResponse.of(responseHeaders))
                                  .build()
                                  .blocking()
                                  .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -376,16 +396,19 @@ class RetryTest {
     void perTryTimeout(String retryOptions, ResponseHeaders responseHeaders, long expectedTimeoutMillis) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
         final ArrayDeque<ClientRequestContext> childCtxs = new ArrayDeque<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory((delegate, ctx0, req) -> {
+            childCtxs.add(ctx0);
+            return HttpResponse.of(responseHeaders);
+        });
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> {
-                                     childCtxs.add(ctx0);
-                                     return HttpResponse.of(responseHeaders);
-                                 })
                                  .build()
                                  .blocking()
                                  .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -455,13 +478,16 @@ class RetryTest {
     void retryBackoff(String retryOptions, ResponseHeaders responseHeaders,
                       long expectedFirstDelayMillis, long expectedSecondDelayMillis) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.of(responseHeaders));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> HttpResponse.of(responseHeaders))
                                  .build()
                                  .blocking()
                                  .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -519,12 +545,15 @@ class RetryTest {
     void rateLimitedBackoff(String retryOptions, ResponseHeaders responseHeaders,
                             long expectedFirstDelayMillis, long expectedSecondDelayMillis) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.of(responseHeaders));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 WebClient.builder(preprocessor)
-                         .decorator((delegate, ctx0, req) -> HttpResponse.of(responseHeaders))
                          .build()
                          .blocking()
                          .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -664,13 +693,16 @@ class RetryTest {
     void retryOnRequestHeaders(String retryOptions, ResponseHeaders responseHeaders,
                                RequestHeaders requestHeaders, int expectedRetries) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.of(responseHeaders));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> HttpResponse.of(responseHeaders))
                                  .build()
                                  .blocking()
                                  .execute(requestHeaders);
@@ -762,13 +794,16 @@ class RetryTest {
     void retriableRequestHeaders(String retryOptions, ResponseHeaders responseHeaders,
                                  RequestHeaders requestHeaders, int expectedRetries) {
         final String formattedBootstrap = bootstrap.formatted(retryOptions);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(formattedBootstrap));
+        final HttpFilterFactory mockFactory = mockResponseFactory(() -> HttpResponse.of(responseHeaders));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(formattedBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> HttpResponse.of(responseHeaders))
                                  .build()
                                  .blocking()
                                  .execute(requestHeaders);
@@ -807,6 +842,8 @@ class RetryTest {
                         - name: envoy.filters.http.router
                           typed_config:
                             "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                            upstream_http_filters:
+                            - name: test.mock-response
                   clusters:
                   - name: my-cluster
                     type: STATIC
@@ -838,17 +875,20 @@ class RetryTest {
 
     @Test
     void retrySelectsDifferentEndpoints() {
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(XdsResourceReader.fromYaml(multiEndpointBootstrap));
+        final ArrayDeque<Endpoint> selectedEndpoints = new ArrayDeque<>();
+        final HttpFilterFactory mockFactory = mockResponseFactory((delegate, ctx0, req) -> {
+            selectedEndpoints.add(ctx0.endpoint());
+            return HttpResponse.of(ResponseHeaders.of(503));
+        });
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(
+                     XdsResourceReader.fromYaml(multiEndpointBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
              XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
-            final ArrayDeque<Endpoint> selectedEndpoints = new ArrayDeque<>();
             final ClientRequestContext ctx;
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 final AggregatedHttpResponse res =
                         WebClient.builder(preprocessor)
-                                 .decorator((delegate, ctx0, req) -> {
-                                     selectedEndpoints.add(ctx0.endpoint());
-                                     return HttpResponse.of(ResponseHeaders.of(503));
-                                 })
                                  .build()
                                  .blocking()
                                  .execute(HttpRequest.of(HttpMethod.GET, "/"));
@@ -865,5 +905,28 @@ class RetryTest {
                                                               .collect(Collectors.toSet());
             assertThat(uniquePorts).hasSizeGreaterThan(1);
         }
+    }
+
+    private static HttpFilterFactory mockResponseFactory(Supplier<HttpResponse> responseSupplier) {
+        return mockResponseFactory((delegate, ctx, req) -> responseSupplier.get());
+    }
+
+    private static HttpFilterFactory mockResponseFactory(DecoratingHttpClientFunction decorator) {
+        return new HttpFilterFactory() {
+            @Override
+            public String name() {
+                return MOCK_FILTER_NAME;
+            }
+
+            @Override
+            public XdsHttpFilter create(HttpFilter httpFilter, Any config, FactoryContext context) {
+                return new XdsHttpFilter() {
+                    @Override
+                    public DecoratingHttpClientFunction httpDecorator() {
+                        return decorator;
+                    }
+                };
+            }
+        };
     }
 }

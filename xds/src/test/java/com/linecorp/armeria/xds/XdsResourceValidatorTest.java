@@ -44,7 +44,7 @@ class XdsResourceValidatorTest {
 
     @Test
     void supportedFieldValidationRuns() {
-        // SPI loads DefaultXdsValidatorIndex which includes supported-field validation
+        // SPI loads StrictXdsValidatorIndex which includes supported-field validation
         final XdsResourceValidator validator = new XdsResourceValidator();
         // Cluster with name set (passes pgv) — should not throw
         final Cluster cluster = Cluster.newBuilder().setName("test").build();

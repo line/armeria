@@ -68,10 +68,11 @@ public final class XdsResourceReader {
     // The YAML mapper handles both YAML and JSON since JSON is a subset of YAML.
     private static final ObjectMapper yamlMapper = new ObjectMapper(new YAMLFactory());
 
-    private static final class DefaultParserHolder {
+    private static final class DefaultTypeRegistryHolder {
+        static final TypeRegistry TYPE_REGISTRY = buildDefaultTypeRegistry();
         static final Parser PARSER = JsonFormat.parser()
                                                .ignoringUnknownFields()
-                                               .usingTypeRegistry(buildDefaultTypeRegistry());
+                                               .usingTypeRegistry(TYPE_REGISTRY);
 
         private static TypeRegistry buildDefaultTypeRegistry() {
             final TypeRegistry.Builder builder = TypeRegistry.newBuilder();
@@ -84,7 +85,7 @@ public final class XdsResourceReader {
                     "io.envoyproxy",
                     "com.github.udpa",
                     "com.github.xds",
-            };
+                    };
             for (String pkg : defaultPackages) {
                 addPackage(pkg, configuration, filterBuilder);
             }
@@ -115,10 +116,19 @@ public final class XdsResourceReader {
         }
 
         private static void addPackage(String pkg, ConfigurationBuilder configuration,
-                                        FilterBuilder filterBuilder) {
+                                       FilterBuilder filterBuilder) {
             configuration.addUrls(ClasspathHelper.forPackage(pkg));
             filterBuilder.include(FilterBuilder.prefix(pkg));
         }
+    }
+
+    /**
+     * Returns the default {@link TypeRegistry} containing all well-known Envoy protobuf types.
+     * This can be used to create a {@link com.google.protobuf.util.JsonFormat.Printer} that
+     * correctly serializes {@code Any}-wrapped xDS messages.
+     */
+    public static TypeRegistry typeRegistry() {
+        return DefaultTypeRegistryHolder.TYPE_REGISTRY;
     }
 
     /**
@@ -129,7 +139,7 @@ public final class XdsResourceReader {
     public static <T extends GeneratedMessageV3> T from(String yamlOrJson, Class<T> clazz) {
         requireNonNull(yamlOrJson, "yamlOrJson");
         requireNonNull(clazz, "clazz");
-        return parse(yamlOrJson, clazz, DefaultParserHolder.PARSER);
+        return parse(yamlOrJson, clazz, DefaultTypeRegistryHolder.PARSER);
     }
 
     /**

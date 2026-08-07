@@ -39,6 +39,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Put
         @Delete
         @Patch
+        @Query
         @ProducesJson
         @Path("/rest/{id}")
         def restApi(@Param id: String, content: String): TestRestResponse = TestRestResponse(id, content)
@@ -53,6 +54,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Put
         @Delete
         @Patch
+        @Query
         @ProducesJson
         @Path("/future")
         def future(): Future[TestRestResponse] = Future.successful(TestRestResponse("1", "Hi!"))
@@ -67,6 +69,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Put
         @Delete
         @Patch
+        @Query
         @ProducesJson
         @Path("/rest/complex/{id}")
         def restApi(

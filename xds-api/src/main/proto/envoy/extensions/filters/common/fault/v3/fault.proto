@@ -10,6 +10,8 @@ import "udpa/annotations/status.proto";
 import "udpa/annotations/versioning.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.filters.common.fault.v3";
 option java_outer_classname = "FaultProto";
 option java_multiple_files = true;
@@ -50,6 +52,7 @@ message FaultDelay {
     // the JSON/YAML Duration mapping. For HTTP/Mongo, the specified
     // delay will be injected before a new request/operation.
     // This is required if type is FIXED.
+    option (armeria.xds.supported.oneof_field) = 3;
     google.protobuf.Duration fixed_delay = 3 [(validate.rules).duration = {gt {}}];
 
     // Fault delays are controlled via an HTTP header (if applicable).
@@ -57,6 +60,7 @@ message FaultDelay {
   }
 
   // The percentage of operations/connections/requests on which the delay will be injected.
+  option (armeria.xds.supported.field) = 4;
   type.v3.FractionalPercent percentage = 4;
 }
 

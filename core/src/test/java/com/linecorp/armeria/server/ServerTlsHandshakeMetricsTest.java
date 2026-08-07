@@ -97,7 +97,7 @@ class ServerTlsHandshakeMetricsTest {
             final Counter counter =
                     meterRegistry.find("armeria.server.tls.handshakes")
                                  .tag("cipher.suite", value -> value.startsWith("TLS_"))
-                                 .tag("hostname", server.server().defaultHostname())
+                                 .tag("hostname", certificateHostname())
                                  .tag("protocol", expectedProtocol)
                                  .tag("result", "success")
                                  .tag("tls.protocol", tlsProtocol)
@@ -134,7 +134,7 @@ class ServerTlsHandshakeMetricsTest {
         final Counter counter =
                 meterRegistry.find("armeria.server.tls.handshakes")
                              .tag("cipher.suite", "")
-                             .tag("hostname", server.server().defaultHostname())
+                             .tag("hostname", certificateHostname())
                              .tag("protocol", "")
                              .tag("result", "failure")
                              .tag("tls.protocol", "")
@@ -144,5 +144,12 @@ class ServerTlsHandshakeMetricsTest {
                                  MoreMeters.measureAll(meterRegistry))
                 .isNotNull();
         assertThat(counter.count()).isOne();
+    }
+
+    private static String certificateHostname() {
+        // The hostname tag is derived from the self-signed certificate, whose common name is
+        // truncated to the 64-character limit of RFC 5280.
+        final String hostname = server.server().defaultHostname();
+        return hostname.length() <= 64 ? hostname : hostname.substring(0, 64);
     }
 }

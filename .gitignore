@@ -12,6 +12,8 @@
 /reports
 /site/public
 /site/.cache
+/site/.docusaurus
+/site/.cache-loader
 /site-new/.docusaurus
 /site-new/.cache-loader
 
