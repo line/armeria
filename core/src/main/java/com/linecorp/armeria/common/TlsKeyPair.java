@@ -138,6 +138,9 @@ public final class TlsKeyPair {
 
     /**
      * Generates a self-signed certificate for the local hostname.
+     *
+     * <p>Note that if the local hostname exceeds 64 characters, it is truncated to satisfy the
+     * RFC 5280 common name length limit.
      */
     public static TlsKeyPair ofSelfSigned() {
         return ofSelfSigned(SystemInfo.hostname());

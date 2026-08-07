@@ -35,7 +35,7 @@ Example: `/release-note 1.38.0`
    ```
 2. Run the release note generation script:
    ```
-   cd site-new && npm run release-note <version>
+   cd site && npm run release-note <version>
    ```
 3. Verify the output file was created at `site/src/content/release-notes/<version>.mdx`.
 4. If the script fails (e.g., milestone not found, network error), report the error and stop.
@@ -168,6 +168,21 @@ The raw script includes the full dependency update PR body, which uses a structu
    `- Spring 6.2.14 → 6.2.15, 7.0.2 → 7.0.3`
 4. **Sort alphabetically** (A → Z).
 
+## Optional: Validate with a Site Build
+
+`cd site && npm run build` validates the MDX end to end, but requires generated files under
+`site/gen-src/` (`api-index.json`, `versions.json`, `contributors.json`):
+
+- Full generation: `./gradlew :site:generateSiteSources` (api-index needs the aggregated Javadoc,
+  which is slow).
+- Quick validation: copy `api-index.json`/`versions.json` from a previous build and generate
+  `contributors.json` with
+  `gh api --paginate repos/line/armeria/contributors | jq -s '[.[][]] | map({(.login): .avatar_url}) | add'`.
+  A stale `api-index.json` is fine for validation — unknown `[X](type)` names render as blank
+  links (`type://#`) and never fail the build, so type names must be verified against the source
+  either way.
+- `npm run build | tail` masks the exit code — capture it separately.
+
 ## Phase 6: Finalize
 
 1. **Remove empty sections**: Delete any section whose only content is `- N/A`.
@@ -183,6 +198,26 @@ The raw script includes the full dependency update PR body, which uses a structu
 
 ---
 
+## Phase 7: Lint
+
+Run the mechanical checks and fix everything they report:
+
+```
+.claude/skills/release-note/scripts/lint-release-note.sh site/src/content/release-notes/<version>.mdx
+```
+
+This is not optional, and reading the style guide is not a substitute for running it. The rules it
+enforces are all written down elsewhere in this skill and have still been broken while the author
+had them open — a malformed `(type)` link never fails the site build, it just renders as a blank
+`type://#` link, so nothing else catches it.
+
+The script cannot see two things, so check them by hand:
+
+- **Identifiers copied from a PR body** — metric names, class names, proto fields. PR descriptions
+  go stale; the source does not. Grep the repo for every identifier you quote. (A real case: PR
+  #6840's body advertised `armeria.xds.lb.request`, while the code registered `lb.select`.)
+- **Whether a claim is true**, as opposed to well-formed. Read the code the entry describes.
+
 ## Execution Checklist
 
 - [ ] Phase 0 — Ran `npm run release-note <version>` and verified output file exists
@@ -192,6 +227,7 @@ The raw script includes the full dependency update PR body, which uses a structu
 - [ ] Phase 4 — Rewrote all entries per style guide
 - [ ] Phase 5 — Cleaned up dependencies section
 - [ ] Phase 6 — Removed empty sections, finalized file, reported summary
+- [ ] Phase 7 — Ran `lint-release-note.sh` and it exited 0
 
 ## Common Mistakes to Avoid
 

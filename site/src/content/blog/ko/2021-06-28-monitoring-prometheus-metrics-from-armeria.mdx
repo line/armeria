@@ -74,7 +74,7 @@ public class ArmeriaPrometheusApplication {
 }
 ```
 
-서비스 지표를 수집하기 위해서는 반드시 아래와 같이 [MetricCollectingService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html)를 `decorator`로 추가해야 합니다(자세한 방법은 [공식 문서](https://armeria.dev/docs/advanced-metrics/)를 참고하시기 바랍니다). `MeterIdPrefixFunction.ofDefault()` 함수의 인자 값을 이용하면 지표의 기본 프리픽스 이름을 원하는 대로 설정할 수 있습니다.
+서비스 지표를 수집하기 위해서는 반드시 아래와 같이 [MetricCollectingService](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/server/metric/MetricCollectingService.html)를 `decorator`로 추가해야 합니다(자세한 방법은 [공식 문서](/docs/advanced-metrics/)를 참고하시기 바랍니다). `MeterIdPrefixFunction.ofDefault()` 함수의 인자 값을 이용하면 지표의 기본 프리픽스 이름을 원하는 대로 설정할 수 있습니다.
 
 ```java title="ArmeriaPrometheusApplication.java"
 .decorator(new MyAnnotatedService(),
