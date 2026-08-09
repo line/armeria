@@ -62,6 +62,16 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
+    /**
+     * An {@link AttributeKey} to store the original response timeout millis
+     * before it gets modified by the retry logic. This is used by
+     * {@code ArmeriaClientCall} to report the originally configured timeout
+     * in the DEADLINE_EXCEEDED status description.
+     */
+    public static final AttributeKey<Long> ORIGINAL_RESPONSE_TIMEOUT_MILLIS =
+            AttributeKey.valueOf(AbstractRetryingClient.class,
+                                 "ORIGINAL_RESPONSE_TIMEOUT_MILLIS");
+
     private final RetryConfigMapping<O> mapping;
 
     @Nullable
@@ -84,6 +94,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final State state = new State(config, ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
+        ctx.setAttr(ORIGINAL_RESPONSE_TIMEOUT_MILLIS, ctx.responseTimeoutMillis());
         return doExecute(ctx, req);
     }
 
@@ -339,3 +350,4 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
     }
 }
+
