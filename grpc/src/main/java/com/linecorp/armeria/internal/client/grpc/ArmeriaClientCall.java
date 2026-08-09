@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpPreClient;
+import com.linecorp.armeria.client.retry.AbstractRetryingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -555,8 +556,16 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         if (status.getCode() == Code.DEADLINE_EXCEEDED) {
+            final long timeoutMillis;
+            final Long originalTimeout =
+                    ctx.attr(AbstractRetryingClient.ORIGINAL_RESPONSE_TIMEOUT_MILLIS).get();
+            if (originalTimeout != null && originalTimeout > 0) {
+                timeoutMillis = originalTimeout;
+            } else {
+                timeoutMillis = ctx.responseTimeoutMillis();
+            }
             status = status.augmentDescription("deadline exceeded after " +
-                                               MILLISECONDS.toNanos(ctx.responseTimeoutMillis()) + "ns.");
+                                               MILLISECONDS.toNanos(timeoutMillis) + "ns.");
         }
 
         final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
@@ -651,3 +660,4 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         return simpleMethodName;
     }
 }
+
