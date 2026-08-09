@@ -660,4 +660,3 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         return simpleMethodName;
     }
 }
-

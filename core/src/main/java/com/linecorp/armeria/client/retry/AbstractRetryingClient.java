@@ -92,9 +92,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final RetryConfig<O> config = mapping.get(ctx, req);
         requireNonNull(config, "mapping.get() returned null");
 
-        final State state = new State(config, ctx.responseTimeoutMillis());
+        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
+        final State state = new State(config, responseTimeoutMillis);
         ctx.setAttr(STATE, state);
-        ctx.setAttr(ORIGINAL_RESPONSE_TIMEOUT_MILLIS, ctx.responseTimeoutMillis());
+        ctx.setAttr(ORIGINAL_RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
         return doExecute(ctx, req);
     }
 
