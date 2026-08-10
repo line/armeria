@@ -129,17 +129,17 @@ public final class KubernetesClusterTypeFactory implements ClusterTypeFactory {
                 typedConfig, KubernetesClusterConfig.class);
         final String clusterName = clusterXdsResource.name();
 
-        final ConfigBuilder configBuilder = newConfigBuilder(config);
         if (config.hasCredential()) {
             return context.genericSecretStream(config.getCredential())
                           .switchMapEager(secretSnapshot -> {
+                              final ConfigBuilder configBuilder = newConfigBuilder(config);
                               if (secretSnapshot.credential() != null) {
                                   configBuilder.withOauthToken(secretSnapshot.credential());
                               }
                               return createSnapshot(configBuilder, config, clusterName);
                           });
         }
-        return createSnapshot(configBuilder, config, clusterName);
+        return createSnapshot(newConfigBuilder(config), config, clusterName);
     }
 
     private ConfigBuilder newConfigBuilder(KubernetesClusterConfig config) {
