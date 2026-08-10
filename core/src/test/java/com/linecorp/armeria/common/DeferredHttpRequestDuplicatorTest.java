@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
 
-class ReproducibleHttpRequestDuplicatorTest {
+class DeferredHttpRequestDuplicatorTest {
 
     private static final RequestHeaders HEADERS = RequestHeaders.of(HttpMethod.POST, "/upload");
 
@@ -47,8 +47,8 @@ class ReproducibleHttpRequestDuplicatorTest {
             calls.incrementAndGet();
             return StreamMessage.of(HttpData.ofUtf8("body"));
         };
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         // Even the first duplicate() invokes the factory — the caller's request is never reused.
         final HttpRequest first = dup.duplicate();
@@ -63,8 +63,8 @@ class ReproducibleHttpRequestDuplicatorTest {
     void duplicateWithHeadersOverridesHeaders() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         final RequestHeaders overridden = RequestHeaders.of(HttpMethod.POST, "/upload", "x-attempt", "1");
         final HttpRequest req = dup.duplicate(overridden);
@@ -74,21 +74,21 @@ class ReproducibleHttpRequestDuplicatorTest {
     @Test
     void factoryThrowingPropagates() {
         final Supplier<StreamMessage<? extends HttpObject>> factory = () -> {
-            throw new IllegalStateException("cannot reproduce body");
+            throw new IllegalStateException("cannot regenerate body");
         };
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         // Fail fast: the exception propagates so the client can terminate the request.
         assertThatThrownBy(dup::duplicate).isInstanceOf(IllegalStateException.class)
-                                          .hasMessageContaining("cannot reproduce body");
+                                          .hasMessageContaining("cannot regenerate body");
     }
 
     @Test
     void factoryReturningNullThrows() {
         final Supplier<StreamMessage<? extends HttpObject>> factory = () -> null;
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         assertThatThrownBy(dup::duplicate).isInstanceOf(NullPointerException.class);
     }
@@ -97,8 +97,8 @@ class ReproducibleHttpRequestDuplicatorTest {
     void duplicateAfterCloseThrows() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         dup.duplicate();
         dup.close();
@@ -117,8 +117,8 @@ class ReproducibleHttpRequestDuplicatorTest {
             produced.add(body);
             return body;
         };
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         final RuntimeException cause = new RuntimeException("cleanup");
         dup.abort(cause);
@@ -156,8 +156,8 @@ class ReproducibleHttpRequestDuplicatorTest {
             }
             return body;
         };
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
         final RuntimeException cause = new RuntimeException("cleanup");
 
         final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -191,8 +191,8 @@ class ReproducibleHttpRequestDuplicatorTest {
     void abortReleasesAllOutstandingUnsubscribedRequests() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         // Multiple produced requests may be outstanding at once (e.g. hedging); abort() must tear
         // down every one of them, not just the most recently produced, so no body is leaked.
@@ -208,8 +208,8 @@ class ReproducibleHttpRequestDuplicatorTest {
     void closeLeavesOutstandingRequestsActive() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         final HttpRequest produced = dup.duplicate();
         // StreamMessageDuplicator contract: close() prevents further duplication but must not abort
@@ -222,8 +222,8 @@ class ReproducibleHttpRequestDuplicatorTest {
     void completedRequestIsUntrackedSoAbortDoesNotAffectIt() {
         final Supplier<StreamMessage<? extends HttpObject>> factory =
                 () -> StreamMessage.of(HttpData.ofUtf8("body"));
-        final ReproducibleHttpRequestDuplicator dup =
-                new ReproducibleHttpRequestDuplicator(HEADERS, factory);
+        final DeferredHttpRequestDuplicator dup =
+                new DeferredHttpRequestDuplicator(HEADERS, factory);
 
         // Draining a produced request completes it; it is then removed from the tracked set so the set
         // does not grow unbounded and a later abort() leaves the already-completed request untouched.

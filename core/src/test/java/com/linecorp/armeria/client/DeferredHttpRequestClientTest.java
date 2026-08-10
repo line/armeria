@@ -51,7 +51,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.concurrent.EventExecutor;
 
-class ReproducibleHttpRequestClientTest {
+class DeferredHttpRequestClientTest {
 
     private static final AtomicInteger serverHits = new AtomicInteger();
 
@@ -79,7 +79,7 @@ class ReproducibleHttpRequestClientTest {
                             HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                             agg.contentUtf8()).toHttpResponse())));
             // Echoes the concatenated body plus the received trailer, failing the first attempt so the
-            // multi-chunk body is reproduced across a retry.
+            // multi-chunk body is regenerated across a retry.
             sb.service("/multi", (ctx, req) -> HttpResponse.of(
                     req.aggregate().thenApply(agg -> {
                         final int hit = serverHits.incrementAndGet();
@@ -106,7 +106,7 @@ class ReproducibleHttpRequestClientTest {
                             HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                             agg.contentUtf8()).toHttpResponse())));
             // Same fail-once-then-echo behavior as /upload, reached only when a base-URI path prefix
-            // ("/api") rewrites the request path — the scenario that must keep the reproducible body.
+            // ("/api") rewrites the request path — the scenario that must keep the deferred body.
             sb.service("/api/upload", (ctx, req) -> HttpResponse.of(
                     req.aggregate().thenApply(agg -> {
                         final int hit = serverHits.incrementAndGet();
@@ -141,7 +141,7 @@ class ReproducibleHttpRequestClientTest {
         };
 
         // Creating the request must not call the factory; it is invoked lazily per attempt only.
-        final HttpRequest req = HttpRequest.reproducible(headers, bodyFactory);
+        final HttpRequest req = HttpRequest.defer(headers, bodyFactory);
         assertThat(bodyCalls).hasValue(0);
         req.abort();
     }
@@ -157,7 +157,7 @@ class ReproducibleHttpRequestClientTest {
 
         // Consuming the request directly (no retry/redirect decorator) subscribes the lazy delegate,
         // which invokes the factory exactly once to produce the single body.
-        final HttpRequest req = HttpRequest.reproducible(headers, bodyFactory);
+        final HttpRequest req = HttpRequest.defer(headers, bodyFactory);
         assertThat(req.aggregate().join().contentUtf8()).isEqualTo("hello-body");
         assertThat(bodyCalls).hasValue(1);
     }
@@ -174,7 +174,7 @@ class ReproducibleHttpRequestClientTest {
         // Aborting a directly-consumed request that was never sent subscribes an aborting subscriber,
         // which runs the factory once so the produced body can be released. It does not regenerate on a
         // later subscribe (a stream permits only one subscription), so the factory runs at most once.
-        final HttpRequest req = HttpRequest.reproducible(headers, bodyFactory);
+        final HttpRequest req = HttpRequest.defer(headers, bodyFactory);
         req.abort();
         // abort() propagates asynchronously; join() blocks until completion before we assert the count.
         assertThatThrownBy(() -> req.whenComplete().join()).isInstanceOf(CompletionException.class);
@@ -199,7 +199,7 @@ class ReproducibleHttpRequestClientTest {
                          .build();
 
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -213,13 +213,13 @@ class ReproducibleHttpRequestClientTest {
     }
 
     @Test
-    void retryReproducesMultiChunkBodyAndTrailers() {
+    void retryRegeneratesMultiChunkBodyAndTrailers() {
         final AtomicInteger bodyCalls = new AtomicInteger();
         final RequestHeaders headers =
                 RequestHeaders.of(HttpMethod.POST, "/multi",
                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
         // A genuinely multi-chunk body terminated by a trailer, the shape a streaming upload takes.
-        // Each attempt must reproduce every interior chunk in order plus the trailer.
+        // Each attempt must regenerate every interior chunk in order plus the trailer.
         final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> {
             bodyCalls.incrementAndGet();
             return StreamMessage.of(HttpData.ofUtf8("a"),
@@ -235,11 +235,11 @@ class ReproducibleHttpRequestClientTest {
                          .build();
 
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        // Concatenated interior chunks (in order) plus the reproduced trailer, on the re-sent attempt.
+        // Concatenated interior chunks (in order) plus the regenerated trailer, on the re-sent attempt.
         assertThat(res.contentUtf8()).isEqualTo("abc|v");
         // Deterministic: initial + one retry. Exact assertion guards against over-regeneration.
         assertThat(serverHits).hasValue(2);
@@ -268,13 +268,13 @@ class ReproducibleHttpRequestClientTest {
 
         // The surfaced failure must carry the factory's own exception, not merely be "some Exception":
         // a connection error, timeout, or unrelated bug would also satisfy isInstanceOf(Exception.class).
-        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+        assertThatThrownBy(() -> client.execute(HttpRequest.defer(headers, bodyFactory),
                                                 streamingOptions())
                                        .aggregate().join())
                 .getRootCause()
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("cannot regenerate body");
-        // The factory is consulted twice: once for the initial body (via reproducible()), once for the
+        // The factory is consulted twice: once for the initial body (via defer()), once for the
         // failing retry. It fails fast rather than looping through the whole retry budget.
         assertThat(bodyCalls).hasValue(2);
     }
@@ -296,7 +296,7 @@ class ReproducibleHttpRequestClientTest {
                          .build();
 
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -323,7 +323,7 @@ class ReproducibleHttpRequestClientTest {
                          .build();
 
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         // On a 303 the method is rewritten to GET and the body dropped; the duplicator is aborted
@@ -346,7 +346,7 @@ class ReproducibleHttpRequestClientTest {
             return StreamMessage.of(HttpData.ofUtf8("redir-body"));
         };
 
-        // Both RetryingClient and RedirectingClient present; the reproducible body must be resent
+        // Both RetryingClient and RedirectingClient present; the deferred body must be resent
         // correctly through the redirect without a destructive double-consume.
         final WebClient client =
                 WebClient.builder(server.httpUri())
@@ -356,7 +356,7 @@ class ReproducibleHttpRequestClientTest {
                          .build();
 
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -388,7 +388,7 @@ class ReproducibleHttpRequestClientTest {
                          .followRedirects()
                          .build();
 
-        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+        assertThatThrownBy(() -> client.execute(HttpRequest.defer(headers, bodyFactory),
                                                 streamingOptions())
                                        .aggregate().join())
                 .getRootCause()
@@ -412,7 +412,7 @@ class ReproducibleHttpRequestClientTest {
 
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -432,7 +432,7 @@ class ReproducibleHttpRequestClientTest {
         };
 
         final WebClient client = WebClient.of(server.httpUri());
-        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+        assertThatThrownBy(() -> client.execute(HttpRequest.defer(headers, bodyFactory),
                                                 streamingOptions())
                                        .aggregate().join())
                 .getRootCause()
@@ -450,7 +450,7 @@ class ReproducibleHttpRequestClientTest {
         final Supplier<StreamMessage<? extends HttpObject>> bodyFactory = () -> null;
 
         final WebClient client = WebClient.of(server.httpUri());
-        assertThatThrownBy(() -> client.execute(HttpRequest.reproducible(headers, bodyFactory),
+        assertThatThrownBy(() -> client.execute(HttpRequest.defer(headers, bodyFactory),
                                                 streamingOptions())
                                        .aggregate().join())
                 .getRootCause()
@@ -459,7 +459,7 @@ class ReproducibleHttpRequestClientTest {
 
     @Test
     void toDuplicatorIgnoresMaxRequestLength() {
-        // The reproducible duplicator never buffers, so it must ignore the maxRequestLength cap that a
+        // The deferred duplicator never buffers, so it must ignore the maxRequestLength cap that a
         // buffering DefaultStreamMessageDuplicator would enforce. A body far larger than a tiny cap must
         // still stream to completion; a regression that fell back to a buffering duplicator would throw
         // ContentTooLargeException here.
@@ -470,7 +470,7 @@ class ReproducibleHttpRequestClientTest {
 
         final EventExecutor executor = CommonPools.workerGroup().next();
         final HttpRequestDuplicator duplicator =
-                HttpRequest.reproducible(headers, bodyFactory).toDuplicator(executor, 8);
+                HttpRequest.defer(headers, bodyFactory).toDuplicator(executor, 8);
 
         final AggregatedHttpRequest produced = duplicator.duplicate().aggregate().join();
         assertThat(produced.content().length()).isEqualTo(large.length);
@@ -478,9 +478,9 @@ class ReproducibleHttpRequestClientTest {
     }
 
     @Test
-    void basePathPrefixRemainsReproducible() {
+    void basePathPrefixRemainsDeferred() {
         // A WebClient built with a base-URI path prefix rewrites the request path via
-        // req.withHeaders(...). If ReproducibleHttpRequest did not override withHeaders, the rewritten
+        // req.withHeaders(...). If DeferredHttpRequest did not override withHeaders, the rewritten
         // request would be a plain HeaderOverridingHttpRequest whose toDuplicator falls back to the
         // buffering DefaultStreamMessageDuplicator — silently reintroducing the ~2 GiB limit. This test
         // pins that the rewritten request still regenerates its body per attempt (non-buffering path).
@@ -502,13 +502,13 @@ class ReproducibleHttpRequestClientTest {
                          .build();
 
         final AggregatedHttpResponse res =
-                client.execute(HttpRequest.reproducible(headers, bodyFactory), streamingOptions())
+                client.execute(HttpRequest.defer(headers, bodyFactory), streamingOptions())
                       .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("prefixed-body");
         // Regenerated for the initial attempt and the retry — proving the path-rewritten request kept
-        // the reproducible (non-buffering) duplicator rather than falling back to buffering.
+        // the deferred (non-buffering) duplicator rather than falling back to buffering.
         assertThat(bodyCalls).hasValue(2);
     }
 }

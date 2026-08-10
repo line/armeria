@@ -298,8 +298,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final HttpRequest duplicateReq;
         final ClientRequestContext derivedCtx;
         try {
-            // duplicate() may throw if the request body cannot be reproduced (see
-            // HttpRequest.reproducible); fail the request instead of retrying an unreproducible body.
+            // duplicate() may throw if the request body cannot be regenerated (see
+            // HttpRequest#defer); fail the request instead of retrying a non-regenerable body.
             if (initialAttempt) {
                 duplicateReq = rootReqDuplicator.duplicate();
             } else {

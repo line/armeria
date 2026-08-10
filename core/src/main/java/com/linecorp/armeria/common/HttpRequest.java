@@ -359,7 +359,7 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     /**
-     * Creates a new {@link HttpRequest} whose body can be reproduced on demand, so that
+     * Creates a new {@link HttpRequest} whose body is regenerated on demand, so that
      * {@code RetryingClient} and {@code RedirectingClient} can resend it without buffering the whole
      * body in memory.
      *
@@ -372,7 +372,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * final RequestHeaders headers =
      *         RequestHeaders.of(HttpMethod.POST, "/upload",
      *                           HttpHeaderNames.CONTENT_TYPE, "application/octet-stream");
-     * final HttpRequest req = HttpRequest.reproducible(headers, () -> StreamMessage.of(path));
+     * final HttpRequest req = HttpRequest.defer(headers, () -> StreamMessage.of(path));
      * final RequestOptions options =
      *         RequestOptions.builder()
      *                       .exchangeType(ExchangeType.REQUEST_STREAMING)
@@ -383,30 +383,32 @@ public interface HttpRequest extends Request, HttpMessage {
      * <p>The {@code bodyFactory} is invoked once per attempt (initial request, retry attempt, or
      * redirect hop). The fixed {@code headers} are reused for every attempt; the factory regenerates
      * only the body {@link StreamMessage}, so the request method and headers cannot drift between
-     * attempts. Every invocation must produce an <em>equivalent</em> body — the same bytes and
-     * trailers, not merely the same length — because the fixed {@code headers} (including any declared
-     * {@link HttpHeaderNames#CONTENT_LENGTH}) are reused verbatim on every attempt and are not
+     * attempts. Every invocation should produce an <em>equivalent</em> body — the same bytes and
+     * trailers — because the fixed {@code headers} are reused verbatim on every attempt and are not
      * re-validated against the regenerated body. A factory whose output varies across invocations
      * (e.g. it embeds a timestamp, or reads a file being mutated concurrently) silently sends
-     * different data on a retry or redirect, and a length mismatch against a declared
-     * {@code content-length} corrupts wire framing (the request stalls or the next message is
-     * garbled) with no error surfaced.
+     * different data on a retry or redirect. This is normally harmless to framing, because a streaming
+     * request without an explicit {@link HttpHeaderNames#CONTENT_LENGTH} is sent with chunked
+     * transfer-encoding, which is self-delimiting. The one exception is when the caller sets
+     * {@code content-length} explicitly in {@code headers}: that length is reused verbatim and not
+     * re-validated, so a body whose length differs from the declared value corrupts wire framing (the
+     * request stalls or the next message is garbled) with no error surfaced.
      *
-     * <p>Reproducible replay applies only at the <em>outermost</em> duplicating decorator; each attempt
+     * <p>Deferred replay applies only at the <em>outermost</em> duplicating decorator; each attempt
      * it hands downstream is an ordinary {@link HttpRequest}, so any inner duplicating decorator treats
      * it as a normal request and buffers it. Which decorator is outermost depends on configuration:
      * <ul>
      *   <li>With retries only (the common case; redirects are disabled by default),
-     *       {@code RetryingClient} is the outermost decorator and replays reproducibly across every
+     *       {@code RetryingClient} is the outermost decorator and replays the deferred body across every
      *       retry.</li>
      *   <li>With {@code followRedirects()} enabled, the built-in {@code RedirectingClient} wraps the
-     *       user-supplied decorators (including {@code RetryingClient}), so it replays reproducibly
+     *       user-supplied decorators (including {@code RetryingClient}), so it replays the deferred body
      *       across redirect hops, but an inner {@code RetryingClient} re-buffers the body when retrying
      *       within a single hop — reintroducing the ~2 GiB limit for that retry. If you need
      *       non-buffering retries of a very large body, avoid stacking {@code RetryingClient} beneath
      *       {@code RedirectingClient}.</li>
      * </ul>
-     * Reproducibility is honored for streaming requests
+     * Deferral is honored for streaming requests
      * ({@link ExchangeType#isRequestStreaming()}); an aggregated exchange type buffers the body as
      * usual.
      *
@@ -418,12 +420,12 @@ public interface HttpRequest extends Request, HttpMessage {
      *                    without exhausting the remaining retry budget.
      */
     @UnstableApi
-    static HttpRequest reproducible(
+    static HttpRequest defer(
             RequestHeaders headers,
             Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory) {
         requireNonNull(headers, "headers");
         requireNonNull(bodyFactory, "bodyFactory");
-        return new ReproducibleHttpRequest(headers, bodyFactory);
+        return new DeferredHttpRequest(headers, bodyFactory);
     }
 
     /**
