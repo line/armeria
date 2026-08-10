@@ -12,6 +12,10 @@ dependencies {
     testImplementation project(':athenz')
     testImplementation project(':thrift0.18')
     testImplementation project(':xds-athenz')
+    testImplementation project(':xds-kubernetes')
+    testImplementation(variantOf(libs.kubernetes.client.api) { classifier("tests") })
+    testImplementation libs.kubernetes.server.mock
+    testImplementation libs.kubernetes.junit.jupiter
     testImplementation libs.athenz.zms.client
     testImplementation libs.testcontainers.junit.jupiter
 }
