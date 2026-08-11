@@ -29,14 +29,14 @@ import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWr
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * An {@link HttpRequest} whose body is regenerated on demand, so {@code RetryingClient} and
+ * An {@link HttpRequest} whose body can be reproduced on demand, so {@code RetryingClient} and
  * {@code RedirectingClient} can resend it without buffering the whole body in memory.
  *
- * <p>See {@link HttpRequest#defer(RequestHeaders, Supplier)} for details and usage.
+ * <p>See {@link HttpRequest#reproducible(RequestHeaders, Supplier)} for details and usage.
  *
  * <p>The body factory is invoked lazily: it is never called during construction. On the
  * retry/redirect path {@link #toDuplicator(EventExecutor, long)} returns a
- * {@link DeferredHttpRequestDuplicator} that calls the factory once per attempt, and this
+ * {@link ReproducibleHttpRequestDuplicator} that calls the factory once per attempt, and this
  * request's own delegate is never subscribed. When this request is instead consumed directly (no
  * retry/redirect decorator), the factory is invoked once when the delegate is first subscribed to
  * produce the single body.
@@ -48,13 +48,13 @@ import io.netty.util.concurrent.EventExecutor;
  * regenerate on a subsequent subscribe, because a stream permits only one subscription). The factory
  * therefore runs at most once on the direct path.
  */
-final class DeferredHttpRequest
+final class ReproducibleHttpRequest
         extends NonOverridableStreamMessageWrapper<HttpObject, HttpRequestDuplicator> implements HttpRequest {
 
     private final RequestHeaders headers;
     private final Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory;
 
-    DeferredHttpRequest(RequestHeaders headers,
+    ReproducibleHttpRequest(RequestHeaders headers,
                             Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory) {
         super(lazyBody(bodyFactory));
         this.headers = headers;
@@ -84,9 +84,9 @@ final class DeferredHttpRequest
             final StreamMessage<HttpObject> cast = (StreamMessage<HttpObject>) body;
             // This single-arg subscribe forwards neither the caller's SubscriptionOptions
             // (WITH_POOLED_OBJECTS / NOTIFY_CANCELLATION) nor the requested executor to the produced
-            // body. That is acceptable only because this is a cold path: a deferred request is
+            // body. That is acceptable only because this is a cold path: a reproducible request is
             // meant to be driven by a retry/redirect decorator, which uses toDuplicator(...) and never
-            // subscribes this delegate. This branch is reached only when a deferred request is
+            // subscribes this delegate. This branch is reached only when a reproducible request is
             // consumed directly, with no such decorator.
             cast.subscribe(subscriber);
         });
@@ -103,13 +103,13 @@ final class DeferredHttpRequest
         if (headers == newHeaders) {
             return this;
         }
-        // Preserve the deferred body across a header rewrite (e.g. a base-URI path prefix applied by
+        // Preserve reproducibility across a header rewrite (e.g. a base-URI path prefix applied by
         // DefaultWebClient, or a redirect/retry decorator overriding the path). The default
         // HttpRequest.withHeaders wraps this in a HeaderOverridingHttpRequest, which does not override
         // toDuplicator and would therefore fall back to the buffering DefaultHttpRequestDuplicator,
         // reintroducing the ~2 GiB size limit this request type exists to avoid. Rebinding the same
         // factory to the new headers keeps the non-buffering toDuplicator path.
-        return new DeferredHttpRequest(newHeaders, bodyFactory);
+        return new ReproducibleHttpRequest(newHeaders, bodyFactory);
     }
 
     @SuppressWarnings("unchecked")
@@ -125,9 +125,9 @@ final class DeferredHttpRequest
 
     @Override
     public HttpRequestDuplicator toDuplicator(EventExecutor executor, long maxRequestLength) {
-        // Neither argument applies: the deferred duplicator never buffers, so it needs no
+        // Neither argument applies: the reproducible duplicator never buffers, so it needs no
         // subscriber executor and has no accumulated length to cap. Each attempt streams a fresh
         // body straight from the factory.
-        return new DeferredHttpRequestDuplicator(headers, bodyFactory);
+        return new ReproducibleHttpRequestDuplicator(headers, bodyFactory);
     }
 }

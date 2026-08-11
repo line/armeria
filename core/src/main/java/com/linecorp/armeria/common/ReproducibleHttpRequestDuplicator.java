@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
- * An {@link HttpRequestDuplicator} that regenerates the request body without buffering it. Every
+ * An {@link HttpRequestDuplicator} that reproduces the request body without buffering it. Every
  * {@link #duplicate()} — including the first — obtains a fresh body from the supplied factory, so no
  * attempt reuses another attempt's stream and the original request handed to the client is never put
  * on the wire. This avoids the ~2 GiB {@code int} size limit and the memory cost of
@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  * {@code duplicate}, and {@code duplicate} then throws instead of returning a request that would never
  * be torn down.
  */
-final class DeferredHttpRequestDuplicator implements HttpRequestDuplicator {
+final class ReproducibleHttpRequestDuplicator implements HttpRequestDuplicator {
 
     private final RequestHeaders headers;
     private final Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory;
@@ -61,7 +61,7 @@ final class DeferredHttpRequestDuplicator implements HttpRequestDuplicator {
     @Nullable
     private Throwable abortCause;
 
-    DeferredHttpRequestDuplicator(
+    ReproducibleHttpRequestDuplicator(
             RequestHeaders headers,
             Supplier<? extends StreamMessage<? extends HttpObject>> bodyFactory) {
         this.headers = requireNonNull(headers, "headers");

@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class DeferredHttpRequestRetryTest {
+class ReproducibleHttpRequestRetryTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -92,7 +92,7 @@ class DeferredHttpRequestRetryTest {
                               .exchangeType(ExchangeType.REQUEST_STREAMING)
                               .build();
 
-        final HttpRequest req = HttpRequest.defer(headers, bodySupplier);
+        final HttpRequest req = HttpRequest.reproducible(headers, bodySupplier);
         final AggregatedHttpResponse res = client.execute(req, options).aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);

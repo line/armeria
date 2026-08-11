@@ -188,8 +188,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final HttpRequest duplicateReq;
         final ClientRequestContext derivedCtx;
         try {
-            // duplicate() may throw if the request body cannot be regenerated (see
-            // HttpRequest#defer); fail the request instead of following the redirect.
+            // duplicate() may throw if the request body cannot be reproduced (see
+            // HttpRequest.reproducible); fail the request instead of following the redirect.
             duplicateReq = reqDuplicator.duplicate();
             derivedCtx = ClientUtil.newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
