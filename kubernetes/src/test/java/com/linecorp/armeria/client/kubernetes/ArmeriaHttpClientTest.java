@@ -54,6 +54,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.websocket.WebSocketClient;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.http.AsyncBody;
@@ -135,8 +136,9 @@ class ArmeriaHttpClientTest {
                .get(10, TimeUnit.SECONDS);
         assertThat(opened.get(10, TimeUnit.SECONDS)).isTrue();
 
-        final ClientFactory wsFactory = derivedImpl.getWebSocketClient().clientFactoryOrNull();
-        assertThat(wsFactory).isNotNull();
+        final WebSocketClient wsClient = derivedImpl.getWebSocketClient().webSocketClientOrNull();
+        assertThat(wsClient).isNotNull();
+        final ClientFactory wsFactory = wsClient.options().factory();
         assertThat(wsFactory.isClosed()).isFalse();
 
         // Closing the root (as KubernetesClient.close() does) must close the shared WebSocket factory.
