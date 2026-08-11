@@ -17,6 +17,9 @@
 package com.linecorp.armeria.xds.kubernetes;
 
 import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -40,8 +43,8 @@ final class DefaultKubernetesEndpointMapper implements KubernetesEndpointMapper 
     @Override
     public ClusterLoadAssignment map(String clusterName, List<Endpoint> endpoints) {
         final LocalityLbEndpoints.Builder localityBuilder = LocalityLbEndpoints.newBuilder();
-
-        for (Endpoint endpoint : endpoints) {
+        final Set<Endpoint> deduped = ImmutableSet.copyOf(endpoints);
+        for (Endpoint endpoint : deduped) {
             final SocketAddress.Builder sa = SocketAddress.newBuilder()
                                                           .setAddress(endpoint.host());
             if (endpoint.hasPort()) {

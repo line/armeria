@@ -74,6 +74,26 @@ class DefaultKubernetesEndpointMapperTest {
     }
 
     @Test
+    void deduplicatesByHostPort() {
+        // Simulates NODE_PORT mode where multiple pods on the same node produce
+        // duplicate endpoints with the same nodeIP:nodePort.
+        final List<Endpoint> endpoints = ImmutableList.of(
+                Endpoint.of("192.168.1.1", 30000),
+                Endpoint.of("192.168.1.1", 30000),
+                Endpoint.of("192.168.1.2", 30000));
+
+        final ClusterLoadAssignment cla =
+                DefaultKubernetesEndpointMapper.get().map("dedup-cluster", endpoints);
+
+        final LocalityLbEndpoints locality = cla.getEndpoints(0);
+        assertThat(locality.getLbEndpointsList()).hasSize(2);
+        assertThat(locality.getLbEndpoints(0).getEndpoint().getAddress()
+                           .getSocketAddress().getAddress()).isEqualTo("192.168.1.1");
+        assertThat(locality.getLbEndpoints(1).getEndpoint().getAddress()
+                           .getSocketAddress().getAddress()).isEqualTo("192.168.1.2");
+    }
+
+    @Test
     void endpointWithoutPortOmitsPortValue() {
         final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("10.0.0.1"));
 
