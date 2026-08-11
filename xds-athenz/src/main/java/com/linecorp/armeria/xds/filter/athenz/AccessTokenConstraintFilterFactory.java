@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.athenz.AccessCheckStatus;
 import com.linecorp.armeria.server.athenz.AthenzAuthorizer;
 import com.linecorp.armeria.server.athenz.AthenzPolicyConfig;
-import com.linecorp.armeria.xds.athenz.AthenzFilterConfig.AccessTokenConstraintConfig;
+import com.linecorp.armeria.xds.athenz.AccessTokenConstraintConfig;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
@@ -47,12 +47,12 @@ import com.linecorp.armeria.xds.stream.SnapshotStream;
 import com.linecorp.armeria.xds.stream.Subscription;
 
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.AccessTokenConstraint;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.AssertionMappingRule;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttribute;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttribute.AttributeCase;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.EndpointAttributeMatch;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.WellKnownEndpointAttribute;
+import jp.co.lycorp.ftd.athenz.v1.AccessTokenConstraint;
+import jp.co.lycorp.ftd.athenz.v1.AssertionMappingRule;
+import jp.co.lycorp.ftd.athenz.v1.EndpointAttribute;
+import jp.co.lycorp.ftd.athenz.v1.EndpointAttribute.AttributeCase;
+import jp.co.lycorp.ftd.athenz.v1.EndpointAttributeMatch;
+import jp.co.lycorp.ftd.athenz.v1.WellKnownEndpointAttribute;
 
 final class AccessTokenConstraintFilterFactory implements HttpFilterFactory {
 
