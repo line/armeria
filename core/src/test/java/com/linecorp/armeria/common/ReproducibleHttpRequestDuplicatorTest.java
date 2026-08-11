@@ -229,6 +229,10 @@ class ReproducibleHttpRequestDuplicatorTest {
         // does not grow unbounded and a later abort() leaves the already-completed request untouched.
         final HttpRequest produced = dup.duplicate();
         produced.aggregate().join();
+        // Wait for the request's own completion, which may resolve slightly after the aggregate future
+        // (the completion callback fires on the event loop); join() makes this deterministic rather
+        // than asserting on a completion that may not have fired yet.
+        produced.whenComplete().join();
         assertThat(produced.whenComplete()).isCompleted();
 
         dup.abort(new RuntimeException("cleanup"));
