@@ -581,19 +581,16 @@ class SamlServiceProviderTest {
 
     @Test
     void shouldNotConsumeLogoutRequestWithoutIssuer_HttpPost() throws Exception {
-    final LogoutRequest logoutRequest =
-            getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post",
-                             "http://idp.example.com/post");
+        final LogoutRequest logoutRequest =
+                getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post",
+                                 "http://idp.example.com/post");
 
-    logoutRequest.setIssuer(null);
+        logoutRequest.setIssuer(null);
 
-    final AggregatedHttpResponse res =
-            sendViaHttpPostBindingProtocol("/saml/slo/post",
-                                          SAML_REQUEST,
-                                          logoutRequest,
-                                          idpCredential);
+        final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/slo/post", SAML_REQUEST,
+                                                                          logoutRequest, idpCredential);
 
-    assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
