@@ -587,8 +587,11 @@ class SamlServiceProviderTest {
 
         logoutRequest.setIssuer(null);
 
-        final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/slo/post", SAML_REQUEST,
-                                                                          logoutRequest, idpCredential);
+        final AggregatedHttpResponse res =
+                sendViaHttpPostBindingProtocol("/saml/slo/post",
+                                               SAML_REQUEST,
+                                               logoutRequest,
+                                               idpCredential);
 
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }

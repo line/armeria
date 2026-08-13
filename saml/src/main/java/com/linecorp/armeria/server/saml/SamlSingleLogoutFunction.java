@@ -176,18 +176,27 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
 
     private SamlIdentityProviderConfig validateAndGetIdPConfig(LogoutRequest logoutRequest,
                                                                String endpointUri) {
-        final Issuer issuerElement = logoutRequest.getIssuer();
-        final String issuer = issuerElement != null ? issuerElement.getValue() : null;
+        final Issuer issuerObject = logoutRequest.getIssuer();
+        if (issuerObject == null) {
+            throw new InvalidSamlRequestException(
+                    "no issuer found from the logout request: " + logoutRequest.getID());
+        }
+
+        final String issuer = issuerObject.getValue();
         if (issuer == null) {
-            throw new InvalidSamlRequestException("no issuer found from the logout request: " +
-                                                  logoutRequest.getID());
+            throw new InvalidSamlRequestException(
+                    "no issuer found from the logout request: " + logoutRequest.getID());
         }
+
         if (!endpointUri.equals(logoutRequest.getDestination())) {
-            throw new InvalidSamlRequestException("unexpected destination: " + logoutRequest.getDestination());
+            throw new InvalidSamlRequestException(
+                    "unexpected destination: " + logoutRequest.getDestination());
         }
+
         final SamlIdentityProviderConfig config = idpConfigs.get(issuer);
         if (config == null) {
-            throw new InvalidSamlRequestException("unexpected identity provider: " + issuer);
+            throw new InvalidSamlRequestException(
+                    "unexpected identity provider: " + issuer);
         }
         return config;
     }
