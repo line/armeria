@@ -1,0 +1,9 @@
+dynamic_resources:
+  lds_config:
+    path_config_source:
+      path: ${config-dir}/layer1-client-listener.yaml
+  cds_config:
+    path_config_source:
+      path: ${config-dir}/layer1-client-cluster.yaml
+node:
+  id: layer1-dashboard

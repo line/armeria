@@ -1,0 +1,33 @@
+# Prometheus + Grafana for xDS metrics visualization.
+#
+# Usage:
+#   1. Start the xDS example:  ./gradlew :examples:xds-playground:run
+#   2. Start monitoring:       docker compose up -d
+#   3. Open Grafana at http://localhost:3000 (anonymous access enabled)
+#   4. The "Armeria xDS Metrics" dashboard is auto-provisioned.
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=1s
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus

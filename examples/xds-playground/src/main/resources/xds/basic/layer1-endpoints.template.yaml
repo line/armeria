@@ -1,0 +1,104 @@
+cluster_name: layer1-endpoints
+endpoints:
+  - locality:
+      region: us-east
+    load_balancing_weight: 100
+    lb_endpoints:
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: us-east
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-us-east-port-1}
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: us-east
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-us-east-port-2}
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: us-east
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-us-east-port-3}
+  - locality:
+      region: us-west
+    load_balancing_weight: 100
+    lb_endpoints:
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: us-west
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-us-west-port-1}
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: us-west
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-us-west-port-2}
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: us-west
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-us-west-port-3}
+  - locality:
+      region: eu-west
+    load_balancing_weight: 100
+    lb_endpoints:
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: eu-west
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-eu-west-port-1}
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: eu-west
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-eu-west-port-2}
+      - health_status: HEALTHY
+        metadata:
+          filter_metadata:
+            envoy.lb:
+              region: eu-west
+        endpoint:
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: ${layer2-eu-west-port-3}
