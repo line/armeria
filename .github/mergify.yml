@@ -1,3 +1,7 @@
+merge_queue:
+  # Do not invite contributors to queue a pull request; no queue rules are defined.
+  queue_controls_comment: false
+
 pull_request_rules:
   - name: Automatically merge Public suffix list pull requests
     conditions:
