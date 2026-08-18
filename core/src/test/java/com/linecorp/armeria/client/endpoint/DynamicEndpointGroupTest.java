@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -28,7 +29,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 
 class DynamicEndpointGroupTest {
 
@@ -180,6 +184,49 @@ class DynamicEndpointGroupTest {
         // Should be allowed to set an empty list.
         dynamicEndpointGroup.setEndpoints(new ArrayList<>());
         assertThat(dynamicEndpointGroup.endpoints()).isEmpty();
+    }
+
+    @Test
+    void concurrentSetEndpointsShouldNotDeliverStaleNotification() throws Exception {
+        final DynamicEndpointGroup group = new DynamicEndpointGroup();
+        final Endpoint a = Endpoint.of("a");
+        final Endpoint b = Endpoint.of("b");
+        final Endpoint c = Endpoint.of("c");
+
+        group.setEndpoints(ImmutableList.of(a, b, c));
+
+        final AtomicInteger counter = new AtomicInteger();
+        final CountDownLatch slowListenerEntered = new CountDownLatch(1);
+        final CountDownLatch slowListenerProceed = new CountDownLatch(1);
+
+        group.addListener(endpoints -> {
+            if (counter.getAndIncrement() == 0) {
+                slowListenerEntered.countDown();
+                try {
+                    slowListenerProceed.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        group.selectNow(ctx);
+
+        final Thread t1 = new Thread(() -> group.setEndpoints(ImmutableList.of(a, b)));
+        t1.start();
+
+        slowListenerEntered.await();
+
+        group.setEndpoints(ImmutableList.of(a));
+
+        slowListenerProceed.countDown();
+        t1.join();
+
+        // only a is selected
+        assertThat(group.selectNow(ctx)).isEqualTo(a);
+        assertThat(group.selectNow(ctx)).isEqualTo(a);
+        assertThat(group.selectNow(ctx)).isEqualTo(a);
     }
 
     private static void testWhenAllowEmptyEndpointsIsFalse(DynamicEndpointGroup dynamicEndpointGroup,
