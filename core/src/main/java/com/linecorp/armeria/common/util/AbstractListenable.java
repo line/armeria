@@ -57,7 +57,8 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
         }
 
         for (Consumer<? super T> listener : updateListeners) {
-            listener.accept(latestValue);
+            final T value = latestValue();
+            listener.accept(value != null ? value : latestValue);
         }
     }
 
