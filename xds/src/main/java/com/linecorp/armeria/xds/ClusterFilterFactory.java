@@ -80,12 +80,10 @@ final class ClusterFilterFactory {
     private final HttpProtocolOptions httpProtocolOptions;
 
     ClusterFilterFactory(XdsLoadBalancer loadBalancer,
-                         @Nullable HttpProtocolOptions httpProtocolOptions,
-                         TransportSocketSnapshot transportSocket) {
+                         @Nullable HttpProtocolOptions httpProtocolOptions) {
         endpointGroup = XdsEndpointGroup.of(loadBalancer);
         this.httpProtocolOptions = httpProtocolOptions;
-        final boolean tls = transportSocket.clientTlsSpec() != null;
-        sessionProtocol = sessionProtocol(tls, httpProtocolOptions);
+        sessionProtocol = sessionProtocol(httpProtocolOptions);
     }
 
     @Nullable
@@ -155,6 +153,7 @@ final class ClusterFilterFactory {
         @Nullable
         ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
         if (clientTlsSpec == null) {
+            ctx.clearClientTlsSpec();
             return;
         }
         final Set<String> alpnOverride = ctx.attr(XdsCommonUtil.ALPN_OVERRIDE_KEY);
@@ -171,17 +170,17 @@ final class ClusterFilterFactory {
                           .toString();
     }
 
-    private static SessionProtocol sessionProtocol(boolean tls,
-                                                   @Nullable HttpProtocolOptions httpProtocolOptions) {
+    private static SessionProtocol sessionProtocol(@Nullable HttpProtocolOptions httpProtocolOptions) {
+        // we assume TLS variants for now, and switch to cleartext later if necessary
         if (httpProtocolOptions != null && httpProtocolOptions.hasExplicitHttpConfig()) {
             final ExplicitHttpConfig explicitConfig = httpProtocolOptions.getExplicitHttpConfig();
             if (explicitConfig.hasHttp2ProtocolOptions()) {
-                return tls ? SessionProtocol.H2 : SessionProtocol.H2C;
+                return SessionProtocol.H2;
             }
             if (explicitConfig.hasHttpProtocolOptions()) {
-                return tls ? SessionProtocol.H1 : SessionProtocol.H1C;
+                return SessionProtocol.H1;
             }
         }
-        return tls ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
+        return SessionProtocol.HTTPS;
     }
 }

@@ -1,0 +1,22 @@
+cluster_manager:
+  local_cluster_name: layer2-local-cluster
+dynamic_resources:
+  lds_config:
+    path_config_source:
+      path: ${config-dir}/layer2-client-listener.yaml
+  cds_config:
+    path_config_source:
+      path: ${config-dir}/layer2-client-cluster.yaml
+static_resources:
+  clusters:
+    - name: layer2-local-cluster
+      type: EDS
+      eds_cluster_config:
+        eds_config:
+          path_config_source:
+            path: ${config-dir}/layer1-endpoints.yaml
+        service_name: layer1-endpoints
+node:
+  id: layer2-${zone}
+  locality:
+    region: ${zone}

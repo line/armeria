@@ -175,10 +175,17 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final Map<String, Any> filterConfigs = FilterUtil.mergeFilterConfigs(
                     routeConfigFilterConfigs, vhostFilterConfigs, routeFilterConfigs);
 
-            // Determine retry policy
-            final RetryPolicy retryPolicy = route.getRoute().getRetryPolicy();
-            final RetryPolicy effectiveRetryPolicy =
-                    retryPolicy == RetryPolicy.getDefaultInstance() ? null : retryPolicy;
+            // Determine retry policy: route level takes precedence over virtual host level
+            final RetryPolicy routeRetryPolicy = route.getRoute().getRetryPolicy();
+            final RetryPolicy vhostRetryPolicy = vhostResource.resource().getRetryPolicy();
+            final RetryPolicy effectiveRetryPolicy;
+            if (routeRetryPolicy != RetryPolicy.getDefaultInstance()) {
+                effectiveRetryPolicy = routeRetryPolicy;
+            } else if (vhostRetryPolicy != RetryPolicy.getDefaultInstance()) {
+                effectiveRetryPolicy = vhostRetryPolicy;
+            } else {
+                effectiveRetryPolicy = null;
+            }
 
             final ClientDecoration retryDecoration =
                     FilterUtil.buildRetryDecoration(effectiveRetryPolicy);

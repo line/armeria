@@ -1,0 +1,26 @@
+name: ${listener-name}
+default_filter_chain:
+  filters:
+    - name: envoy.filters.network.http_connection_manager
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        stat_prefix: ${listener-name}
+        route_config:
+          name: local_route
+          virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+                - match:
+                    prefix: "/"
+                  non_forwarding_action: {}
+        http_filters:
+          - name: envoy.filters.http.fault
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+              abort:
+                http_status: 503
+                percentage:
+                  numerator: 25
+                  denominator: HUNDRED
+          - name: envoy.filters.http.router

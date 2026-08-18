@@ -907,6 +907,145 @@ class RetryTest {
         }
     }
 
+    //language=YAML
+    private static final String vhostRetryBootstrap =
+            """
+                static_resources:
+                  listeners:
+                  - name: my-listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.\
+                http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            retry_policy:
+                              retry_on: "5xx"
+                              num_retries: 2
+                            routes:
+                              - match:
+                                  prefix: /
+                                route:
+                                  cluster: my-cluster
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                            upstream_http_filters:
+                            - name: test.mock-response
+                  clusters:
+                  - name: my-cluster
+                    type: STATIC
+                    load_assignment:
+                      cluster_name: my-cluster
+                      endpoints:
+                      - lb_endpoints:
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: 8080
+                """;
+
+    @Test
+    void virtualHostLevelRetryPolicy() {
+        final HttpFilterFactory mockFactory =
+                mockResponseFactory(() -> HttpResponse.of(ResponseHeaders.of(503)));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(XdsResourceReader.fromYaml(vhostRetryBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+            final ClientRequestContext ctx;
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final AggregatedHttpResponse res =
+                        WebClient.builder(preprocessor)
+                                 .build()
+                                 .blocking()
+                                 .execute(HttpRequest.of(HttpMethod.GET, "/"));
+                assertThat(res.status().code()).isEqualTo(503);
+                ctx = captor.get();
+            }
+            // 1 original + 2 retries = 3 total attempts
+            assertThat(ctx.log().children()).hasSize(3);
+        }
+    }
+
+    @Test
+    void routeLevelRetryPolicyOverridesVirtualHost() {
+        // Virtual host says retry on 5xx with 2 retries,
+        // but route-level overrides with gateway-error and 1 retry.
+        // A 500 response should NOT trigger retries (gateway-error doesn't match 500).
+        //language=YAML
+        final String overrideBootstrap =
+                """
+                    static_resources:
+                      listeners:
+                      - name: my-listener
+                        api_listener:
+                          api_listener:
+                            "@type": type.googleapis.com/envoy.extensions.filters.network.\
+                    http_connection_manager.v3.HttpConnectionManager
+                            stat_prefix: http
+                            route_config:
+                              name: local_route
+                              virtual_hosts:
+                              - name: local_service1
+                                domains: [ "*" ]
+                                retry_policy:
+                                  retry_on: "5xx"
+                                  num_retries: 2
+                                routes:
+                                  - match:
+                                      prefix: /
+                                    route:
+                                      cluster: my-cluster
+                                      retry_policy:
+                                        retry_on: "gateway-error"
+                                        num_retries: 1
+                            http_filters:
+                            - name: envoy.filters.http.router
+                              typed_config:
+                                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                                upstream_http_filters:
+                                - name: test.mock-response
+                      clusters:
+                      - name: my-cluster
+                        type: STATIC
+                        load_assignment:
+                          cluster_name: my-cluster
+                          endpoints:
+                          - lb_endpoints:
+                            - endpoint:
+                                address:
+                                  socket_address:
+                                    address: 127.0.0.1
+                                    port_value: 8080
+                    """;
+        final HttpFilterFactory mockFactory =
+                mockResponseFactory(() -> HttpResponse.of(ResponseHeaders.of(500)));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(XdsResourceReader.fromYaml(overrideBootstrap))
+                                                     .extensionFactories(mockFactory)
+                                                     .build();
+             XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", xdsBootstrap)) {
+            final ClientRequestContext ctx;
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final AggregatedHttpResponse res =
+                        WebClient.builder(preprocessor)
+                                 .build()
+                                 .blocking()
+                                 .execute(HttpRequest.of(HttpMethod.GET, "/"));
+                assertThat(res.status().code()).isEqualTo(500);
+                ctx = captor.get();
+            }
+            // Route-level gateway-error doesn't match 500, so no retries
+            assertThat(ctx.log().children()).hasSize(1);
+        }
+    }
+
     private static HttpFilterFactory mockResponseFactory(Supplier<HttpResponse> responseSupplier) {
         return mockResponseFactory((delegate, ctx, req) -> responseSupplier.get());
     }

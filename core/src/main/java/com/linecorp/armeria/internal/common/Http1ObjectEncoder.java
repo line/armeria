@@ -365,7 +365,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                     if (e == null) {
                         break;
                     }
-
+                    ReferenceCountUtil.release(e.getKey());
                     e.getValue().tryFailure(cause);
                 }
             }
@@ -412,7 +412,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 if (e == null) {
                     break;
                 }
-
+                ReferenceCountUtil.release(e.getKey());
                 e.getValue().tryFailure(cause);
             }
         }

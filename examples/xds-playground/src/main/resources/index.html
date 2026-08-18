@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Armeria xDS Example Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container py-3">
+
+<h1 class="text-primary">Armeria xDS Example</h1>
+<p class="text-secondary small mb-4">Three-layer architecture with zone-aware routing and subset routing via file-based xDS</p>
+
+<!-- Topology -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-center align-items-center gap-4 py-3">
+      <div class="d-flex flex-column align-items-center gap-2">
+        <small class="text-secondary">Layer 1</small>
+        <div class="border border-warning text-warning rounded p-2 text-center" style="min-width:6rem">
+          Dashboard<br><small>xDS</small>
+        </div>
+      </div>
+      <div class="text-secondary fs-4">&#x2192;</div>
+      <div class="d-flex flex-column align-items-center gap-2">
+        <small class="text-secondary">Layer 2</small>
+        <div class="border border-info text-info rounded p-2 text-center" style="min-width:6rem">
+          Layer 2 <small>us-east</small><br><small class="text-secondary" style="font-size:smaller">&times;3</small>
+        </div>
+        <div class="border border-info text-info rounded p-2 text-center" style="min-width:6rem">
+          Layer 2 <small>us-west</small><br><small class="text-secondary" style="font-size:smaller">&times;3</small>
+        </div>
+        <div class="border border-info text-info rounded p-2 text-center" style="min-width:6rem">
+          Layer 2 <small>eu-west</small><br><small class="text-secondary" style="font-size:smaller">&times;3</small>
+        </div>
+      </div>
+      <div class="text-secondary fs-4">&#x2192;</div>
+      <div class="d-flex flex-column align-items-center gap-2">
+        <small class="text-secondary">Layer 3</small>
+        <div class="border border-primary text-primary rounded p-2 text-center" style="min-width:6rem">
+          Layer 3 <small>us-east</small><br><small class="text-secondary" style="font-size:smaller">&times;3</small>
+        </div>
+        <div class="border border-primary text-primary rounded p-2 text-center" style="min-width:6rem">
+          Layer 3 <small>us-west</small><br><small class="text-secondary" style="font-size:smaller">&times;3</small>
+        </div>
+        <div class="border border-primary text-primary rounded p-2 text-center" style="min-width:6rem">
+          Layer 3 <small>eu-west</small><br><small class="text-secondary" style="font-size:smaller">&times;3</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <!-- Profile Selector -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-title border-bottom pb-1 text-secondary">Global Profile</h6>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <select id="profileSelect" class="form-select w-auto">
+            <option value="basic">basic</option>
+            <option value="tls">tls</option>
+            <option value="fault">fault</option>
+          </select>
+          <button class="btn btn-success" onclick="applyProfile()">Apply</button>
+          <small id="profileStatus" class="text-secondary"></small>
+        </div>
+        <div id="profileDesc" class="text-secondary small mt-1"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Traffic -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-title border-bottom pb-1 text-secondary">Traffic</h6>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-secondary" onclick="sendOne()">Send 1</button>
+          <button id="toggleBtn" class="btn btn-success" onclick="toggleSending()">Start Sending</button>
+          <input id="rpsInput" type="number" min="1" max="100" value="10"
+                 class="form-control form-control-sm font-monospace text-center w-auto">
+          <small class="text-secondary">req/s</small>
+          <small id="sendingStatus" class="text-secondary"></small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Request Headers -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-title border-bottom pb-1 text-secondary">Request Headers</h6>
+        <div id="headerRows"></div>
+        <button class="btn btn-secondary btn-sm mt-1" onclick="addHeaderRow()">+ Add Header</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- xDS Resources -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-title border-bottom pb-1 text-secondary">xDS Resources</h6>
+        <div id="configDir" class="text-secondary small mb-2"></div>
+        <div class="mb-2">
+          <select id="resourceSelect" class="form-select" onchange="showSelectedResource()">
+            <option value="">(select a resource to view/edit)</option>
+          </select>
+        </div>
+        <div id="resources"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-title border-bottom pb-1 text-secondary">Activity Log</h6>
+        <div id="log" class="border rounded p-2 font-monospace text-secondary small" style="max-height:10rem;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let sendTimer = null;
+let sending = false;
+let validProfiles = {};
+let baseProfile = 'basic';
+let profileOverrides = {};
+let pendingProfile = null; // tracks profile being previewed/overridden
+
+const profileDescriptions = {
+  'basic': 'Plain routing without TLS. Requests are routed via subset and zone-aware routing.',
+  'tls': 'Mutual TLS between all layers. Same routing as basic, with mTLS for authentication.',
+  'fault': 'Server-side fault injection. L2 and L3 servers abort 25% of requests with 503. Enable retry per client listener to add retries.',
+  'retry': 'Client retry policy. L1 and L2 clients retry on 5xx (up to 3 retries).'
+};
+
+function log(msg) {
+  const el = $('log');
+  const time = new Date().toLocaleTimeString();
+  el.innerHTML = `<div class="mb-1">[${time}] ${msg}</div>` + el.innerHTML;
+  if (el.children.length > 100) el.removeChild(el.lastChild);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// --- Profiles ---
+
+function profileFor(resource) {
+  const override = profileOverrides[resource];
+  if (override) return override;
+  const valid = validProfiles[resource];
+  return valid && valid.includes(baseProfile) ? baseProfile : 'basic';
+}
+
+async function loadProfiles() {
+  try {
+    const res = await fetch('/api/profiles');
+    const data = await res.json();
+    $('profileSelect').value = data.baseProfile;
+    baseProfile = data.baseProfile;
+    profileOverrides = data.overrides || {};
+    if (data.validProfiles) validProfiles = data.validProfiles;
+    updateProfileDesc();
+  } catch (_) {}
+}
+
+function updateProfileDesc() {
+  const profile = $('profileSelect').value;
+  $('profileDesc').textContent = profileDescriptions[profile] || '';
+}
+
+$('profileSelect').addEventListener('change', updateProfileDesc);
+
+async function applyProfile() {
+  const profile = $('profileSelect').value;
+  $('profileStatus').textContent = 'Applying...';
+  try {
+    const res = await fetch('/api/apply-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseProfile: profile })
+    });
+    if (res.ok) {
+      $('profileStatus').textContent = 'Applied!';
+      log(`Profile switched to: ${profile}`);
+      setTimeout(() => { $('profileStatus').textContent = ''; }, 2000);
+      await loadProfiles();
+      await loadConfig();
+    } else {
+      $('profileStatus').textContent = 'Error: ' + res.statusText;
+      log(`Error applying profile: ${res.status} ${res.statusText}`);
+    }
+  } catch (e) {
+    $('profileStatus').textContent = 'Error';
+    log(`Error: ${e.message}`);
+  }
+}
+
+// --- Traffic ---
+
+function getRps() {
+  return Math.max(1, Math.min(100, parseInt($('rpsInput').value) || 10));
+}
+
+function toggleSending() {
+  if (sending) {
+    sending = false;
+    clearTimeout(sendTimer);
+    sendTimer = null;
+    $('toggleBtn').textContent = 'Start Sending';
+    $('toggleBtn').className = 'btn btn-success';
+    $('sendingStatus').textContent = '';
+    log('Stopped sending traffic');
+  } else {
+    sending = true;
+    $('toggleBtn').textContent = 'Stop';
+    $('toggleBtn').className = 'btn btn-danger';
+    $('sendingStatus').textContent = 'sending ' + getRps() + ' req/s...';
+    log('Started sending traffic (' + getRps() + ' req/s)');
+    scheduleNext();
+  }
+}
+
+function scheduleNext() {
+  if (!sending) return;
+  sendOne();
+  sendTimer = setTimeout(scheduleNext, 1000 / getRps());
+}
+
+function addHeaderRow(key, val) {
+  const row = document.createElement('div');
+  row.className = 'd-flex align-items-center gap-1 mb-1';
+  row.innerHTML = `<input class="form-control form-control-sm font-monospace hdr-key" style="width:14em" placeholder="header name" value="${key || ''}">` +
+    `<input class="form-control form-control-sm font-monospace hdr-val flex-grow-1" placeholder="value" value="${val || ''}">` +
+    `<button class="btn btn-secondary btn-sm" onclick="this.parentElement.querySelector('.hdr-val').value=''">&#x2715;</button>`;
+  $('headerRows').appendChild(row);
+}
+
+function getHeaders() {
+  const headers = {};
+  for (const row of $('headerRows').children) {
+    const key = row.querySelector('.hdr-key').value.trim();
+    const val = row.querySelector('.hdr-val').value.trim();
+    if (key) headers[key] = val;
+  }
+  return headers;
+}
+
+async function sendOne() {
+  const headers = getHeaders();
+  try {
+    await fetch('/api/send-traffic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headers })
+    });
+  } catch (_) {}
+}
+
+// --- xDS Config ---
+
+let allResources = [];
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const data = await res.json();
+    allResources = data.resources || [];
+    if (data.configDir) $('configDir').textContent = data.configDir;
+    populateDropdown();
+  } catch (e) {
+    $('resources').innerHTML = `<p class="text-danger">Error: ${e.message}</p>`;
+  }
+}
+
+function populateDropdown() {
+  const sel = $('resourceSelect');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">(select a resource to view/edit)</option>';
+  allResources.sort((a, b) => a.name.localeCompare(b.name));
+  for (let i = 0; i < allResources.length; i++) {
+    const r = allResources[i];
+    sel.innerHTML += `<option value="${i}">${r.name}</option>`;
+  }
+  if (prev && prev < allResources.length) sel.value = prev;
+  showSelectedResource();
+}
+
+function showSelectedResource() {
+  const idx = $('resourceSelect').value;
+  if (idx === '') {
+    $('resources').innerHTML = '<p class="text-secondary">Select a resource above to view/edit.</p>';
+    return;
+  }
+  const r = allResources[parseInt(idx)];
+  if (!r) {
+    $('resources').innerHTML = '<p class="text-secondary">Resource not found.</p>';
+    return;
+  }
+  const resourceKey = r.name;
+  const profiles = validProfiles[resourceKey] || [];
+  const currentProfile = profileFor(resourceKey);
+  const profileBtns = profiles.length ? `<div class="d-flex align-items-center gap-1 my-1">
+    <small class="text-secondary">Profile:</small>
+    ${profiles.map(p =>
+      `<button class="btn btn-sm ${p === currentProfile ? 'btn-success' : 'btn-secondary'}" onclick="previewResource('${resourceKey}','${r.type}','${p}')">${p}</button>`
+    ).join('')}
+    <button class="btn btn-sm ${currentProfile === 'override' ? 'btn-success' : 'btn-secondary'}" onclick="enableOverride()">override</button>
+  </div>` : '';
+  const rows = Math.min(Math.max(r.config.split('\n').length + 1, 6), 30);
+  $('resources').innerHTML = `<div class="mb-3">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <span class="badge bg-secondary text-uppercase">${r.type}</span>
+      <span>${r.name}</span>
+      <small class="text-secondary">${r.file}</small>
+    </div>
+    ${profileBtns}
+    <textarea id="editor" class="form-control font-monospace small" rows="${rows}" spellcheck="false" readonly>${escHtml(r.config)}</textarea>
+    <div id="overrideBtns" class="mt-1" style="display:none">
+      <button class="btn btn-success btn-sm" onclick="applyResource()">Apply</button>
+      <button class="btn btn-secondary btn-sm" onclick="showSelectedResource()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+async function previewResource(resource, type, profile) {
+  try {
+    const res = await fetch('/api/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resource, type, profile })
+    });
+    if (!res.ok) {
+      log(`Error previewing: ${res.status} ${res.statusText}`);
+      return;
+    }
+    const preview = await res.json();
+    const editor = $('editor');
+    if (editor) {
+      editor.value = preview.config;
+      editor.setAttribute('readonly', '');
+      editor.classList.remove('border-warning');
+    }
+    const btns = $('overrideBtns');
+    if (btns) btns.style.display = '';
+    // Update profile button highlighting
+    const btnContainer = document.querySelector('#resources .d-flex.align-items-center.gap-1.my-1');
+    if (btnContainer) {
+      btnContainer.querySelectorAll('button').forEach(btn => {
+        btn.className = btn.textContent === profile ? 'btn btn-sm btn-success' : 'btn btn-sm btn-secondary';
+      });
+    }
+    pendingProfile = profile;
+    log(`Preview '${profile}' for ${resource}`);
+  } catch (e) {
+    log(`Error: ${e.message}`);
+  }
+}
+
+function enableOverride() {
+  const editor = $('editor');
+  if (editor) {
+    editor.removeAttribute('readonly');
+    editor.classList.add('border-warning');
+  }
+  pendingProfile = 'override';
+  const btns = $('overrideBtns');
+  if (btns) btns.style.display = '';
+  // Update profile button highlighting
+  const btnContainer = document.querySelector('#resources .d-flex.align-items-center.gap-1.my-1');
+  if (btnContainer) {
+    btnContainer.querySelectorAll('button').forEach(btn => {
+      btn.className = btn.textContent === 'override' ? 'btn btn-sm btn-success' : 'btn btn-sm btn-secondary';
+    });
+  }
+}
+
+async function applyResource() {
+  const idx = parseInt($('resourceSelect').value);
+  const r = allResources[idx];
+  const el = $('editor');
+  if (!r || !el) return;
+  const resourceKey = r.name;
+  try {
+    const res = await fetch('/api/update-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: r.file, resources: [{ type: r.type, config: el.value }] })
+    });
+    if (res.ok) {
+      log(`Updated ${r.file}`);
+      await fetch('/api/apply-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrides: { [resourceKey]: pendingProfile || 'override' } })
+      });
+      await loadProfiles();
+    } else {
+      log(`Error: ${res.status} ${res.statusText}`);
+    }
+  } catch (e) {
+    log(`Error: ${e.message}`);
+  }
+  await loadConfig();
+}
+
+// --- Init ---
+
+loadProfiles();
+loadConfig();
+addHeaderRow('x-layer1-zone', '');
+addHeaderRow('x-layer2-zone', '');
+log('Dashboard loaded. Select a profile or edit xDS resources below.');
+</script>
+</body>
+</html>
