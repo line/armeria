@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
 import io.netty.util.AsciiString;
@@ -62,16 +63,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
-    /**
-     * An {@link AttributeKey} to store the original response timeout millis
-     * before it gets modified by the retry logic. This is used by
-     * {@code ArmeriaClientCall} to report the originally configured timeout
-     * in the DEADLINE_EXCEEDED status description.
-     */
-    public static final AttributeKey<Long> ORIGINAL_RESPONSE_TIMEOUT_MILLIS =
-            AttributeKey.valueOf(AbstractRetryingClient.class,
-                                 "ORIGINAL_RESPONSE_TIMEOUT_MILLIS");
-
     private final RetryConfigMapping<O> mapping;
 
     @Nullable
@@ -92,10 +83,17 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final RetryConfig<O> config = mapping.get(ctx, req);
         requireNonNull(config, "mapping.get() returned null");
 
-        final long responseTimeoutMillis = ctx.responseTimeoutMillis();
-        final State state = new State(config, responseTimeoutMillis);
+        final State state = new State(config, ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
-        ctx.setAttr(ORIGINAL_RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
+
+        // The response timeout of the original context is transferred to the derived contexts created for
+        // each retry attempt. Disable the timeout of the original context so that it is not triggered
+        // while retrying, and set the timeout on each derived context instead.
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt != null) {
+            ctxExt.responseCancellationScheduler().cancelScheduled();
+        }
+
         return doExecute(ctx, req);
     }
 
@@ -183,21 +181,22 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Resets the {@link ClientRequestContext#responseTimeoutMillis()}.
+     * Sets the response timeout of the specified {@code derivedCtx}.
      *
      * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final boolean setResponseTimeout(ClientRequestContext ctx) {
+    protected final boolean setResponseTimeout(ClientRequestContext ctx, ClientRequestContext derivedCtx) {
         requireNonNull(ctx, "ctx");
+        requireNonNull(derivedCtx, "derivedCtx");
         final long responseTimeoutMillis = state(ctx).responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
             return false;
         } else if (responseTimeoutMillis == 0) {
-            ctx.clearResponseTimeout();
+            derivedCtx.clearResponseTimeout();
             return true;
         } else {
-            ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
+            derivedCtx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
             return true;
         }
     }

@@ -290,11 +290,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             return;
         }
 
-        if (!setResponseTimeout(ctx)) {
-            handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get(), initialAttempt);
-            return;
-        }
-
         final HttpRequest duplicateReq;
         if (initialAttempt) {
             duplicateReq = rootReqDuplicator.duplicate();
@@ -309,6 +304,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
+            return;
+        }
+
+        if (!setResponseTimeout(ctx, derivedCtx)) {
+            handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }
 
