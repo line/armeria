@@ -11,7 +11,8 @@ if (rootProject.hasProperty('noWeb')) {
 }
 
 node {
-    version = '22.10.0'
+    // webpack-dev-server 6 requires Node.js 22.15.0 or newer.
+    version = '22.23.1'
     npmVersion = '10.9.0'
     download = true
     npmInstallCommand = "ci"

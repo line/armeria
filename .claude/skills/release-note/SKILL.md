@@ -1,11 +1,11 @@
 ---
 name: release-note
-description: Generate and polish release notes for an Armeria version. Runs site-new/release-note.ts to collect PR data from a GitHub milestone, then rewrites the skeletal output into publication-ready MDX. Invoked as `/release-note <version>` (e.g., `/release-note 1.38.0`).
+description: Generate and polish release notes for an Armeria version. Runs site/release-note.ts to collect PR data from a GitHub milestone, then rewrites the skeletal output into publication-ready MDX. Invoked as `/release-note <version>` (e.g., `/release-note 1.38.0`).
 ---
 
 # Release Note Generator
 
-Generates skeletal release notes from a GitHub milestone using `site-new/release-note.ts`,
+Generates skeletal release notes from a GitHub milestone using `site/release-note.ts`,
 then rewrites them into polished, publication-ready MDX with rich descriptions, code examples,
 and proper formatting.
 
@@ -14,8 +14,8 @@ and proper formatting.
 - The `gh` CLI must be authenticated with access to `line/armeria`. Verify with `gh auth status`.
 - A `GITHUB_ACCESS_TOKEN` environment variable is recommended for higher GitHub API rate limits.
   If not set, the script falls back to anonymous access (lower rate limits).
-- Node.js and npm must be available. The `site-new/` directory must have dependencies installed
-  (`npm install` in `site-new/`).
+- Node.js and npm must be available. The `site/` directory must have dependencies installed
+  (`npm install` in `site/`).
 
 ## Invocation
 
@@ -35,14 +35,14 @@ Example: `/release-note 1.38.0`
    ```
 2. Run the release note generation script:
    ```
-   cd site-new && npm run release-note <version>
+   cd site && npm run release-note <version>
    ```
-3. Verify the output file was created at `site-new/src/content/release-notes/<version>.mdx`.
+3. Verify the output file was created at `site/src/content/release-notes/<version>.mdx`.
 4. If the script fails (e.g., milestone not found, network error), report the error and stop.
 
 ## Phase 1: Load Draft and Study Style
 
-1. Read the generated draft file at `site-new/src/content/release-notes/<version>.mdx`.
+1. Read the generated draft file at `site/src/content/release-notes/<version>.mdx`.
 2. Read 3-4 recent polished release notes (e.g., `1.36.0.mdx`, `1.37.0.mdx`) to calibrate tone and style.
 3. Read the style guide at `references/style-guide.md` for formatting rules.
 4. Extract all PR/issue references (`#NNNN`) from every line of the draft.
@@ -168,6 +168,21 @@ The raw script includes the full dependency update PR body, which uses a structu
    `- Spring 6.2.14 → 6.2.15, 7.0.2 → 7.0.3`
 4. **Sort alphabetically** (A → Z).
 
+## Optional: Validate with a Site Build
+
+`cd site && npm run build` validates the MDX end to end, but requires generated files under
+`site/gen-src/` (`api-index.json`, `versions.json`, `contributors.json`):
+
+- Full generation: `./gradlew :site:generateSiteSources` (api-index needs the aggregated Javadoc,
+  which is slow).
+- Quick validation: copy `api-index.json`/`versions.json` from a previous build and generate
+  `contributors.json` with
+  `gh api --paginate repos/line/armeria/contributors | jq -s '[.[][]] | map({(.login): .avatar_url}) | add'`.
+  A stale `api-index.json` is fine for validation — unknown `[X](type)` names render as blank
+  links (`type://#`) and never fail the build, so type names must be verified against the source
+  either way.
+- `npm run build | tail` masks the exit code — capture it separately.
+
 ## Phase 6: Finalize
 
 1. **Remove empty sections**: Delete any section whose only content is `- N/A`.
@@ -177,11 +192,31 @@ The raw script includes the full dependency update PR body, which uses a structu
    `CLAassistant`). Core maintainers listed in `.github/CODEOWNERS` must always be included
    in the Thank You section, even if they don't appear in the PR participant lists.
 4. **Ensure consistent bullet style**: Use `-` (dash) for all bullets, not `*`.
-5. **Write the final file** to `site-new/src/content/release-notes/<version>.mdx`.
+5. **Write the final file** to `site/src/content/release-notes/<version>.mdx`.
 6. **Show a summary** to the user: list the sections, entry count per section, and any entries
    flagged as uncertain (where PR context was insufficient to write a confident description).
 
 ---
+
+## Phase 7: Lint
+
+Run the mechanical checks and fix everything they report:
+
+```
+.claude/skills/release-note/scripts/lint-release-note.sh site/src/content/release-notes/<version>.mdx
+```
+
+This is not optional, and reading the style guide is not a substitute for running it. The rules it
+enforces are all written down elsewhere in this skill and have still been broken while the author
+had them open — a malformed `(type)` link never fails the site build, it just renders as a blank
+`type://#` link, so nothing else catches it.
+
+The script cannot see two things, so check them by hand:
+
+- **Identifiers copied from a PR body** — metric names, class names, proto fields. PR descriptions
+  go stale; the source does not. Grep the repo for every identifier you quote. (A real case: PR
+  #6840's body advertised `armeria.xds.lb.request`, while the code registered `lb.select`.)
+- **Whether a claim is true**, as opposed to well-formed. Read the code the entry describes.
 
 ## Execution Checklist
 
@@ -192,6 +227,7 @@ The raw script includes the full dependency update PR body, which uses a structu
 - [ ] Phase 4 — Rewrote all entries per style guide
 - [ ] Phase 5 — Cleaned up dependencies section
 - [ ] Phase 6 — Removed empty sections, finalized file, reported summary
+- [ ] Phase 7 — Ran `lint-release-note.sh` and it exited 0
 
 ## Common Mistakes to Avoid
 

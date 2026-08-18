@@ -50,27 +50,33 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
     private final XdsLoadBalancer allEndpointsLoadBalancer;
-    private final Locality locality;
     @Nullable
-    private final XdsLoadBalancer localLoadBalancer;
+    private final XdsLoadBalancer fallbackLoadBalancer;
+    private final SubsetSelectionRecorder subsetRecorder;
 
     private final Map<Struct, XdsLoadBalancer> subsetLoadBalancers;
     private final Map<Struct, LoadBalancerState> subsetStates;
     private final LbSubsetConfig lbSubsetConfig;
-    private final LbSubsetFallbackPolicy fallbackPolicy;
 
     SubsetLoadBalancer(PrioritySet prioritySet, XdsLoadBalancer allEndpointsLoadBalancer,
-                       Locality locality, @Nullable XdsLoadBalancer localLoadBalancer) {
+                       Locality locality, @Nullable XdsLoadBalancer localLoadBalancer,
+                       LbSelectionRecorder selectionRecorder, SubsetSelectionRecorder subsetRecorder) {
         this.allEndpointsLoadBalancer = allEndpointsLoadBalancer;
-        this.locality = locality;
-        this.localLoadBalancer = localLoadBalancer;
+        this.subsetRecorder = subsetRecorder;
 
         final Cluster cluster = prioritySet.cluster();
         lbSubsetConfig = cluster.getLbSubsetConfig();
-        fallbackPolicy = lbSubsetFallbackPolicy(lbSubsetConfig);
+        final LbSubsetFallbackPolicy fallbackPolicy = lbSubsetFallbackPolicy(lbSubsetConfig);
 
-        subsetLoadBalancers = createSubsetLoadBalancers(prioritySet);
+        subsetLoadBalancers = createSubsetLoadBalancers(prioritySet, locality, localLoadBalancer,
+                                                        selectionRecorder, subsetRecorder);
         subsetStates = ImmutableMap.copyOf(subsetLoadBalancers);
+
+        if (fallbackPolicy == LbSubsetFallbackPolicy.ANY_ENDPOINT) {
+            fallbackLoadBalancer = subsetRecorder.wrapFallback(allEndpointsLoadBalancer);
+        } else {
+            fallbackLoadBalancer = null;
+        }
     }
 
     private static LbSubsetFallbackPolicy lbSubsetFallbackPolicy(LbSubsetConfig lbSubsetConfig) {
@@ -92,11 +98,11 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
         if (subsetLoadBalancer != null) {
             return subsetLoadBalancer.selectNow(ctx);
         }
-        if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
-            return null;
+        if (fallbackLoadBalancer != null) {
+            return fallbackLoadBalancer.selectNow(ctx);
         }
-        assert fallbackPolicy == LbSubsetFallbackPolicy.ANY_ENDPOINT;
-        return allEndpointsLoadBalancer.selectNow(ctx);
+        subsetRecorder.recordNoMatch();
+        return null;
     }
 
     @Override
@@ -110,7 +116,10 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
         return allEndpointsLoadBalancer.localLoadBalancer();
     }
 
-    private Map<Struct, XdsLoadBalancer> createSubsetLoadBalancers(PrioritySet prioritySet) {
+    private static Map<Struct, XdsLoadBalancer> createSubsetLoadBalancers(
+            PrioritySet prioritySet, Locality locality, @Nullable XdsLoadBalancer localLoadBalancer,
+            LbSelectionRecorder selectionRecorder, SubsetSelectionRecorder subsetRecorder) {
+        final LbSubsetConfig lbSubsetConfig = prioritySet.cluster().getLbSubsetConfig();
         final Map<Struct, List<Endpoint>> endpointsPerFilterStruct = new HashMap<>();
         for (LbSubsetSelector subsetSelector: lbSubsetConfig.getSubsetSelectorsList()) {
             final ProtocolStringList keys = subsetSelector.getKeysList();
@@ -142,8 +151,9 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
                                              prioritySet.endpointSnapshot(),
                                              entry.getValue()).build();
             final DefaultLoadBalancer subsetLoadBalancer =
-                    new DefaultLoadBalancer(subsetPrioritySet, locality, localLoadBalancer);
-            builder.put(entry.getKey(), subsetLoadBalancer);
+                    new DefaultLoadBalancer(subsetPrioritySet, locality, localLoadBalancer,
+                                            selectionRecorder);
+            builder.put(entry.getKey(), subsetRecorder.wrap(subsetLoadBalancer, entry.getKey()));
         }
         return builder.build();
     }

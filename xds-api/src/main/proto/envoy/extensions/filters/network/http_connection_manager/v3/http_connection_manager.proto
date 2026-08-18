@@ -1347,6 +1347,7 @@ message HttpFilter {
   // for more details.
   //
   // Terminal filters (e.g. ``envoy.filters.http.router``) cannot be marked as disabled.
+  option (armeria.xds.supported.field) = 7;
   bool disabled = 7;
 }
 

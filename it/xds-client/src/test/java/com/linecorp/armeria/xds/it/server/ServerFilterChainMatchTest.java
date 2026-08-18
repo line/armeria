@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
@@ -353,9 +354,9 @@ class ServerFilterChainMatchTest {
 
         // SNI "test.example.com" should match "*.example.com" chain → certA
         final ClientTlsSpec wildcardTlsSpec = ClientTlsSpec.builder()
-                                                            .trustedCertificates(certA.certificate())
-                                                            .endpointIdentificationAlgorithm("")
-                                                            .build();
+                                                           .trustedCertificates(certA.certificate())
+                                                           .endpointIdentificationAlgorithm("")
+                                                           .build();
         final Endpoint wildcardEndpoint = Endpoint.of("test.example.com", port).withIpAddr("127.0.0.1");
         final BlockingWebClient wildcardClient =
                 WebClient.builder(SessionProtocol.HTTPS, wildcardEndpoint).build().blocking();
@@ -367,9 +368,9 @@ class ServerFilterChainMatchTest {
 
         // SNI "other.net" should NOT match "*.example.com" → default chain → certDefault
         final ClientTlsSpec defaultTlsSpec = ClientTlsSpec.builder()
-                                                           .trustedCertificates(certDefault.certificate())
-                                                           .endpointIdentificationAlgorithm("")
-                                                           .build();
+                                                          .trustedCertificates(certDefault.certificate())
+                                                          .endpointIdentificationAlgorithm("")
+                                                          .build();
         final Endpoint otherEndpoint = Endpoint.of("other.net", port).withIpAddr("127.0.0.1");
         final BlockingWebClient defaultClient =
                 WebClient.builder(SessionProtocol.HTTPS, otherEndpoint).build().blocking();
@@ -378,6 +379,120 @@ class ServerFilterChainMatchTest {
                 RequestOptions.builder().clientTlsSpec(defaultTlsSpec).build());
         assertThat(defaultRes.status()).isEqualTo(HttpStatus.OK);
         assertThat(defaultRes.contentUtf8()).isEqualTo("hello");
+    }
+
+    @Test
+    void tlsFilterChainRejectsPlaintextConnection() {
+        final Path certPath = certA.certificateFile().toPath();
+        final Path keyPath = certA.privateKeyFile().toPath();
+
+        // Default filter chain requires TLS — plaintext HTTP should be rejected.
+        //language=YAML
+        final String yaml =
+                """
+                name: %s
+                default_filter_chain:
+                  filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters\
+                .network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                            - name: local_service
+                              domains: ["*"]
+                              routes:
+                                - match:
+                                    prefix: "/"
+                                  non_forwarding_action: {}
+                        http_filters:
+                          - name: envoy.filters.http.router
+                  transport_socket:
+                    name: envoy.transport_sockets.downstream_tls
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.DownstreamTlsContext
+                      common_tls_context:
+                        tls_certificates:
+                          - certificate_chain:
+                              filename: '%s'
+                            private_key:
+                              filename: '%s'
+                """.formatted(LISTENER_NAME, certPath, keyPath);
+        final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
+        controlPlane.awaitListener(LISTENER_NAME, ver);
+
+        // HTTPS should succeed.
+        final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
+                                                   .trustedCertificates(certA.certificate())
+                                                   .build();
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            final BlockingWebClient httpsClient = WebClient.builder(server.httpsUri())
+                                                           .factory(cf)
+                                                           .build()
+                                                           .blocking();
+            final AggregatedHttpResponse httpsRes = httpsClient.execute(
+                    HttpRequest.of(HttpMethod.GET, "/hello"),
+                    RequestOptions.builder().clientTlsSpec(tlsSpec).build());
+            assertThat(httpsRes.status()).isEqualTo(HttpStatus.OK);
+        }
+
+        // Plaintext HTTP should be rejected because the matched chain requires TLS.
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            final BlockingWebClient httpClient = WebClient.builder(server.httpUri())
+                                                          .factory(cf)
+                                                          .build()
+                                                          .blocking();
+            assertThatThrownBy(() -> httpClient.get("/hello"))
+                    .isInstanceOf(UnprocessedRequestException.class);
+        }
+    }
+
+    @Test
+    void plaintextFilterChainRejectsHttpsConnection() {
+        // Default filter chain has no transport_socket (plaintext only).
+        //language=YAML
+        final String yaml =
+                """
+                name: %s
+                default_filter_chain:
+                  filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters\
+                .network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: ingress_http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                            - name: local_service
+                              domains: ["*"]
+                              routes:
+                                - match:
+                                    prefix: "/"
+                                  non_forwarding_action: {}
+                        http_filters:
+                          - name: envoy.filters.http.router
+                """.formatted(LISTENER_NAME);
+        final String ver = controlPlane.set(XdsResourceReader.fromYaml(yaml, Listener.class));
+        controlPlane.awaitListener(LISTENER_NAME, ver);
+
+        // Plaintext HTTP should succeed.
+        final BlockingWebClient httpClient = WebClient.of(server.httpUri()).blocking();
+        final AggregatedHttpResponse httpRes = httpClient.get("/hello");
+        assertThat(httpRes.status()).isEqualTo(HttpStatus.OK);
+
+        // HTTPS should be rejected because the matched chain has no TLS.
+        final ClientTlsSpec tlsSpec = ClientTlsSpec.builder()
+                                                   .trustedCertificates(certA.certificate())
+                                                   .build();
+        final BlockingWebClient httpsClient = WebClient.of(server.httpsUri()).blocking();
+        assertThatThrownBy(() -> httpsClient.execute(
+                HttpRequest.of(HttpMethod.GET, "/hello"),
+                RequestOptions.builder().clientTlsSpec(tlsSpec).build()))
+                .isInstanceOf(UnprocessedRequestException.class);
     }
 
     @Test

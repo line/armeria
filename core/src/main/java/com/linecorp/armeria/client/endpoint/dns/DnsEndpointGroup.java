@@ -209,7 +209,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     abstract ImmutableSortedSet<Endpoint> onDnsRecords(List<DnsRecord> records, int ttl) throws Exception;
 
     /**
-     * Stops polling DNS servers for service updates.
+     * Stops polling DNS servers for service updates and releases the underlying DNS resolver,
+     * including its UDP {@link io.netty.channel.socket.DatagramChannel}.
      */
     @Override
     protected final void doCloseAsync(CompletableFuture<?> future) {
@@ -217,7 +218,13 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
+        resolver.close();
         future.complete(null);
+    }
+
+    @VisibleForTesting
+    final DefaultDnsResolver resolver() {
+        return resolver;
     }
 
     /**

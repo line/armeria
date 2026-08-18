@@ -11,6 +11,8 @@ import "envoy/extensions/filters/network/http_connection_manager/v3/http_connect
 import "udpa/annotations/status.proto";
 import "validate/validate.proto";
 
+import "armeria/xds/supported.proto";
+
 option java_package = "io.envoyproxy.envoy.extensions.upstreams.http.v3";
 option java_outer_classname = "HttpProtocolOptionsProto";
 option java_multiple_files = true;
@@ -69,8 +71,10 @@ message HttpProtocolOptions {
     oneof protocol_config {
       option (validate.required) = true;
 
+      option (armeria.xds.supported.oneof_field) = 1;
       config.core.v3.Http1ProtocolOptions http_protocol_options = 1;
 
+      option (armeria.xds.supported.oneof_field) = 2;
       config.core.v3.Http2ProtocolOptions http2_protocol_options = 2;
 
       // .. warning::
@@ -149,6 +153,7 @@ message HttpProtocolOptions {
     option (validate.required) = true;
 
     // To explicitly configure either HTTP/1 or HTTP/2 (but not both!) use ``explicit_http_config``.
+    option (armeria.xds.supported.oneof_field) = 3;
     ExplicitHttpConfig explicit_http_config = 3;
 
     // This allows switching on protocol based on what protocol the downstream
@@ -156,6 +161,7 @@ message HttpProtocolOptions {
     UseDownstreamHttpConfig use_downstream_protocol_config = 4;
 
     // This allows switching on protocol based on ALPN
+    option (armeria.xds.supported.oneof_field) = 5;
     AutoHttpConfig auto_config = 5;
   }
 

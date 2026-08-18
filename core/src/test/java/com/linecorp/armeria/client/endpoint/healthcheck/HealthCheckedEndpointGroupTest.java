@@ -634,6 +634,54 @@ class HealthCheckedEndpointGroupTest {
                                              .containsOnly(candidate1, candidate2);
     }
 
+    @Test
+    void delegateIsClosedBeforeGroupCloseCompletes() throws Exception {
+        // A delegate whose close completes asynchronously, controlled by the test.
+        final CompletableFuture<Void> permitDelegateClose = new CompletableFuture<>();
+        final AtomicBoolean delegateClosed = new AtomicBoolean();
+
+        final DynamicEndpointGroup slowDelegate = new DynamicEndpointGroup() {
+            {
+                setEndpoints(ImmutableList.of(Endpoint.of("foo")));
+            }
+
+            @Override
+            protected void doCloseAsync(CompletableFuture<?> future) {
+                permitDelegateClose.whenComplete((unused, cause) -> {
+                    delegateClosed.set(true);
+                    future.complete(null);
+                });
+            }
+        };
+
+        final HealthCheckedEndpointGroup group =
+                new AbstractHealthCheckedEndpointGroupBuilder(slowDelegate) {
+                    @Override
+                    protected Function<? super HealthCheckerContext, ? extends AsyncCloseable>
+                    newCheckerFactory() {
+                        return ctx -> {
+                            ctx.updateHealth(1, null, null, null);
+                            return AsyncCloseableSupport.of();
+                        };
+                    }
+                }.build();
+        await().until(() -> !group.endpoints().isEmpty());
+
+        // Close the group in a separate thread so we can observe blocking behaviour.
+        final CompletableFuture<Void> groupCloseFuture = CompletableFuture.runAsync(group::close);
+
+        // group.close() must block until the delegate closes. Give it time to progress past
+        // the health-checker stop phase and reach the blocked delegate close.
+        Thread.sleep(500);
+        assertThat(groupCloseFuture).isNotDone();
+        assertThat(delegateClosed).isFalse();
+
+        // Unblock the delegate. group.close() must now complete.
+        permitDelegateClose.complete(null);
+        groupCloseFuture.get(5, TimeUnit.SECONDS);
+        assertThat(delegateClosed).isTrue();
+    }
+
     static final class MockEndpointGroup extends DynamicEndpointGroup {
 
         MockEndpointGroup() {}

@@ -53,8 +53,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 public final class ZtsBaseClientBuilder {
 
     private final URI ztsUri;
-    @Nullable
-    private URI proxyUri;
 
     @Nullable
     private Supplier<TlsKeyPair> athenzKeyPairSupplier;
@@ -155,7 +153,6 @@ public final class ZtsBaseClientBuilder {
      */
     public ZtsBaseClientBuilder proxyUri(URI proxyUri) {
         requireNonNull(proxyUri, "proxyUri");
-        this.proxyUri = proxyUri;
         final boolean isTls = "https".equalsIgnoreCase(proxyUri.getScheme());
         final int port = proxyUri.getPort() == -1 ? (isTls ? 443 : 80) : proxyUri.getPort();
         final InetSocketAddress proxyAddress = InetSocketAddress.createUnresolved(proxyUri.getHost(), port);
@@ -211,7 +208,8 @@ public final class ZtsBaseClientBuilder {
         if (athenzKeyPairSupplier == null) {
             throw new IllegalStateException("Athenz key pair must be set");
         }
-        return new ZtsBaseClient(ztsUri, proxyUri, athenzKeyPairSupplier, trustedCertificates,
-                                 autoKeyRefreshIntervalMillis, clientFactoryConfigurer, webClientConfigurer);
+        return new DefaultZtsBaseClient(ztsUri, athenzKeyPairSupplier, trustedCertificates,
+                                        autoKeyRefreshIntervalMillis, clientFactoryConfigurer,
+                                        webClientConfigurer);
     }
 }

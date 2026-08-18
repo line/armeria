@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package armeria.xds.athenz;
+
+option java_package = "com.linecorp.armeria.xds.athenz";
+
+import "validate/validate.proto";
+import "armeria/xds/supported.proto";
+import "armeria/xds/athenz/athenz_access_token.proto";
+
+// Outbound filter config: injects an Athenz access token into requests.
+message AccessTokenTargetConfig {
+  option (armeria.xds.supported.field) = 1;
+  string zts_cluster_name = 1 [(validate.rules).string = {min_len: 1}];
+  option (armeria.xds.supported.field) = 2;
+  jp.co.lycorp.ftd.athenz.v1.AccessTokenTarget access_token_target = 2 [(validate.rules).message = {required: true}];
+}
+
+// Inbound filter config: authorizes requests using Athenz access tokens.
+message AccessTokenConstraintConfig {
+  option (armeria.xds.supported.field) = 1;
+  string zts_cluster_name = 1 [(validate.rules).string = {min_len: 1}];
+  option (armeria.xds.supported.field) = 2;
+  jp.co.lycorp.ftd.athenz.v1.AccessTokenConstraint access_token_constraint = 2 [(validate.rules).message = {required: true}];
+}

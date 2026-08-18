@@ -1,0 +1,6 @@
+dynamic_resources:
+  lds_config:
+    path_config_source:
+      path: ${config-dir}/layer3-server-listener.yaml
+node:
+  id: layer3-server

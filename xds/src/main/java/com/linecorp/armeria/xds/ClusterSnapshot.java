@@ -25,10 +25,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions;
 
 /**
  * A snapshot of a {@link Cluster} resource.
@@ -41,21 +43,19 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     private final EndpointSnapshot endpointSnapshot;
     private final List<TransportSocketMatchSnapshot> transportSocketMatches;
     private final XdsLoadBalancer loadBalancer;
-    private final HttpPreprocessor httpPreprocessor;
-    private final RpcPreprocessor rpcPreprocessor;
+    private final ClusterFilterFactory clusterFilterFactory;
 
     ClusterSnapshot(ClusterXdsResource clusterXdsResource,
                     XdsLoadBalancer loadBalancer,
                     TransportSocketSnapshot transportSocket,
-                    List<TransportSocketMatchSnapshot> transportSocketMatches) {
+                    List<TransportSocketMatchSnapshot> transportSocketMatches,
+                    ClusterFilterFactory clusterFilterFactory) {
         this.clusterXdsResource = clusterXdsResource;
         this.transportSocket = transportSocket;
         this.loadBalancer = loadBalancer;
         endpointSnapshot = loadBalancer.endpointSnapshot();
         this.transportSocketMatches = transportSocketMatches;
-        final ClusterFilterFactory factory = new ClusterFilterFactory(loadBalancer, transportSocket);
-        httpPreprocessor = factory.httpPreprocessor();
-        rpcPreprocessor = factory.rpcPreprocessor();
+        this.clusterFilterFactory = clusterFilterFactory;
     }
 
     @Override
@@ -90,12 +90,22 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
     }
 
     /**
+     * Returns the parsed {@link HttpProtocolOptions} from the cluster's
+     * {@code typed_extension_protocol_options}, or {@code null} if not configured.
+     */
+    @Nullable
+    @UnstableApi
+    public HttpProtocolOptions httpProtocolOptions() {
+        return clusterFilterFactory.httpProtocolOptions();
+    }
+
+    /**
      * Returns an {@link HttpPreprocessor} that sets the endpoint group, session protocol,
      * and installs cluster-level decoration (retry + per-endpoint TLS) on the context.
      */
     @UnstableApi
     public HttpPreprocessor preprocessor() {
-        return httpPreprocessor;
+        return clusterFilterFactory.httpPreprocessor();
     }
 
     /**
@@ -104,7 +114,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
      */
     @UnstableApi
     public RpcPreprocessor rpcPreprocessor() {
-        return rpcPreprocessor;
+        return clusterFilterFactory.rpcPreprocessor();
     }
 
     /**
@@ -161,8 +171,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
                           .add("transportSocketMatches",
                                SnapshotUtil.debugStrings(transportSocketMatches,
                                                          TransportSocketMatchSnapshot::toDebugString))
-                          .add("httpPreprocessor", httpPreprocessor)
-                          .add("rpcPreprocessor", rpcPreprocessor)
+                          .add("clusterFilterFactory", clusterFilterFactory)
                           .toString();
     }
 }

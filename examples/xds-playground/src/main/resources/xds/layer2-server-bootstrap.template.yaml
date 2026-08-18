@@ -1,0 +1,6 @@
+dynamic_resources:
+  lds_config:
+    path_config_source:
+      path: ${config-dir}/layer2-server-listener.yaml
+node:
+  id: layer2-${zone}-server

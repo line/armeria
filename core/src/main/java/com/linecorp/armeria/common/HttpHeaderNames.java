@@ -342,6 +342,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString ACCEPT_PATCH = create("Accept-Patch");
     /**
+     * The HTTP {@code "Accept-Query"} header field name.
+     */
+    public static final AsciiString ACCEPT_QUERY = create("Accept-Query");
+    /**
      * The HTTP {@code "Access-Control-Allow-Headers"} header field name.
      */
     public static final AsciiString ACCESS_CONTROL_ALLOW_HEADERS = create("Access-Control-Allow-Headers");

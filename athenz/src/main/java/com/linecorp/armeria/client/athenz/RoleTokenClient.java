@@ -28,11 +28,9 @@ import com.linecorp.armeria.client.InvalidHttpResponseException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientRequestPreparation;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.athenz.AccessDeniedException;
 import com.linecorp.armeria.common.util.AsyncLoader;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class RoleTokenClient implements AthenzTokenClient {
 
@@ -54,7 +52,6 @@ final class RoleTokenClient implements AthenzTokenClient {
         refreshBeforeSec = refreshBefore.getSeconds();
         tokenLoader = AsyncLoader.<RoleToken>builder(unused -> fetchRoleToken())
                                  .name("athenz-role-token/" + domainName + '/' + roleNamesString)
-                                 .exceptionHandler(this::errorHandler)
                                  .refreshIf(token -> remainingTimeSec(token) < refreshBeforeSec)
                                  .expireIf(token -> remainingTimeSec(token) == 0)
                                  .preload(preload)
@@ -103,23 +100,10 @@ final class RoleTokenClient implements AthenzTokenClient {
                                         ", roles: " + roleNamesString + ')', exception);
                             }
                         }
+                        return Exceptions.throwUnsafely(cause);
                     }
                     return response.content();
                 });
-    }
-
-    @Nullable
-    private CompletableFuture<RoleToken> errorHandler(Throwable cause, @Nullable RoleToken cache) {
-        if (cause instanceof InvalidHttpResponseException) {
-            final InvalidHttpResponseException exception = (InvalidHttpResponseException) cause;
-            if (exception.response().status() == HttpStatus.FORBIDDEN) {
-                return UnmodifiableFuture.exceptionallyCompletedFuture(
-                        new AccessDeniedException("Failed to obtain an Athenz role token. " +
-                                                  "(domain: " + domainName + ", roles: " + roleNamesString +
-                                                  ')', exception));
-            }
-        }
-        return null;
     }
 
     @Override

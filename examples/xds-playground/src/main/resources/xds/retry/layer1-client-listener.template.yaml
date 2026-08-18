@@ -1,0 +1,58 @@
+name: layer1-client-listener
+api_listener:
+  api_listener:
+    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+    stat_prefix: layer1_ingress
+    route_config:
+      name: layer1-route
+      virtual_hosts:
+        - name: default
+          domains: ["*"]
+          retry_policy:
+            retry_on: "5xx"
+            num_retries: 3
+          routes:
+            - match:
+                prefix: "/"
+                headers:
+                  - name: x-layer1-zone
+                    string_match:
+                      exact: us-east
+              route:
+                cluster: layer1-client-cluster
+                metadata_match:
+                  filter_metadata:
+                    envoy.lb:
+                      region: us-east
+            - match:
+                prefix: "/"
+                headers:
+                  - name: x-layer1-zone
+                    string_match:
+                      exact: us-west
+              route:
+                cluster: layer1-client-cluster
+                metadata_match:
+                  filter_metadata:
+                    envoy.lb:
+                      region: us-west
+            - match:
+                prefix: "/"
+                headers:
+                  - name: x-layer1-zone
+                    string_match:
+                      exact: eu-west
+              route:
+                cluster: layer1-client-cluster
+                metadata_match:
+                  filter_metadata:
+                    envoy.lb:
+                      region: eu-west
+            - match:
+                prefix: "/"
+              route:
+                cluster: layer1-client-cluster
+    http_filters:
+      - name: envoy.filters.http.router
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

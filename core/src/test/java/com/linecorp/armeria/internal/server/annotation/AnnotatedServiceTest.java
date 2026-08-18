@@ -96,6 +96,7 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.Query;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
@@ -665,6 +666,11 @@ class AnnotatedServiceTest {
             return "GET";
         }
 
+        @Query("/same/path")
+        public String sharedQuery() {
+            return "QUERY";
+        }
+
         @Post("/same/path")
         public String sharedPost() {
             return "POST";
@@ -1119,6 +1125,11 @@ class AnnotatedServiceTest {
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.headers().contentType()).isNull();
         assertThat(res.contentUtf8()).isEqualTo("GET");
+
+        headers = RequestHeaders.of(HttpMethod.QUERY, path);
+        res = client.execute(headers);
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("QUERY");
 
         // The same as the above.
         headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.ACCEPT, "*/*");

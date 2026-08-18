@@ -32,6 +32,7 @@ class HttpMethodTest {
         assertThat(HttpMethod.tryParse("DELETE")).isSameAs(HttpMethod.DELETE);
         assertThat(HttpMethod.tryParse("TRACE")).isSameAs(HttpMethod.TRACE);
         assertThat(HttpMethod.tryParse("CONNECT")).isSameAs(HttpMethod.CONNECT);
+        assertThat(HttpMethod.tryParse("QUERY")).isSameAs(HttpMethod.QUERY);
 
         // Should ignore UNKNOWN.
         assertThat(HttpMethod.tryParse("UNKNOWN")).isNull();
@@ -40,5 +41,11 @@ class HttpMethodTest {
         // Should ignore anything else.
         assertThat(HttpMethod.tryParse("foo")).isNull();
         assertThat(HttpMethod.tryParse(null)).isNull();
+    }
+
+    @Test
+    void testQueryProperties() {
+        assertThat(HttpMethod.isSupported("QUERY")).isTrue();
+        assertThat(HttpMethod.idempotentMethods()).contains(HttpMethod.QUERY);
     }
 }

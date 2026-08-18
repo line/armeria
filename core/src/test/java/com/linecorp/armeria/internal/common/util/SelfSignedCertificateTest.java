@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 class SelfSignedCertificateTest {
@@ -40,6 +41,18 @@ class SelfSignedCertificateTest {
         final SelfSignedCertificate ssc = new SelfSignedCertificate("*.netty.io", "EC", 256);
         assertThat(ssc.certificate().getName()).doesNotContain("*");
         assertThat(ssc.privateKey().getName()).doesNotContain("*");
+    }
+
+    @Test
+    void fqdnLongerThanCommonNameLimitTest() throws Exception {
+        // The hostname of some machines, such as a GitHub Actions macOS runner, exceeds the
+        // 64-character common name limit of RFC 5280.
+        final String fqdn = "very-long-hostname-" + Strings.repeat("a", 42) + ".local";
+        assertThat(fqdn).hasSize(67);
+
+        final SelfSignedCertificate ssc = new SelfSignedCertificate(fqdn);
+        assertThat(ssc.cert().getSubjectX500Principal().getName())
+                .isEqualTo("CN=" + fqdn.substring(0, 64));
     }
 
     @Test

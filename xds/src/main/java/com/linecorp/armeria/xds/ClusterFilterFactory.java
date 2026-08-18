@@ -18,6 +18,8 @@ package com.linecorp.armeria.xds;
 
 import java.util.Set;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientTlsSpec;
@@ -43,6 +45,9 @@ import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
 import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 import com.linecorp.armeria.xds.internal.XdsEndpoint;
+
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions;
+import io.envoyproxy.envoy.extensions.upstreams.http.v3.HttpProtocolOptions.ExplicitHttpConfig;
 
 /**
  * A factory which injects cluster-related filters.
@@ -71,12 +76,19 @@ final class ClusterFilterFactory {
 
     private final XdsEndpointGroup endpointGroup;
     private final SessionProtocol sessionProtocol;
+    @Nullable
+    private final HttpProtocolOptions httpProtocolOptions;
 
     ClusterFilterFactory(XdsLoadBalancer loadBalancer,
-                         TransportSocketSnapshot transportSocket) {
+                         @Nullable HttpProtocolOptions httpProtocolOptions) {
         endpointGroup = XdsEndpointGroup.of(loadBalancer);
-        sessionProtocol = transportSocket.clientTlsSpec() != null ?
-                          SessionProtocol.HTTPS : SessionProtocol.HTTP;
+        this.httpProtocolOptions = httpProtocolOptions;
+        sessionProtocol = sessionProtocol(httpProtocolOptions);
+    }
+
+    @Nullable
+    HttpProtocolOptions httpProtocolOptions() {
+        return httpProtocolOptions;
     }
 
     HttpPreprocessor httpPreprocessor() {
@@ -141,6 +153,7 @@ final class ClusterFilterFactory {
         @Nullable
         ClientTlsSpec clientTlsSpec = transportSocket.clientTlsSpec();
         if (clientTlsSpec == null) {
+            ctx.clearClientTlsSpec();
             return;
         }
         final Set<String> alpnOverride = ctx.attr(XdsCommonUtil.ALPN_OVERRIDE_KEY);
@@ -148,5 +161,26 @@ final class ClusterFilterFactory {
             clientTlsSpec = clientTlsSpec.toBuilder().alpnProtocols(alpnOverride).build();
         }
         ctx.setClientTlsSpec(clientTlsSpec);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("sessionProtocol", sessionProtocol)
+                          .toString();
+    }
+
+    private static SessionProtocol sessionProtocol(@Nullable HttpProtocolOptions httpProtocolOptions) {
+        // we assume TLS variants for now, and switch to cleartext later if necessary
+        if (httpProtocolOptions != null && httpProtocolOptions.hasExplicitHttpConfig()) {
+            final ExplicitHttpConfig explicitConfig = httpProtocolOptions.getExplicitHttpConfig();
+            if (explicitConfig.hasHttp2ProtocolOptions()) {
+                return SessionProtocol.H2;
+            }
+            if (explicitConfig.hasHttpProtocolOptions()) {
+                return SessionProtocol.H1;
+            }
+        }
+        return SessionProtocol.HTTPS;
     }
 }

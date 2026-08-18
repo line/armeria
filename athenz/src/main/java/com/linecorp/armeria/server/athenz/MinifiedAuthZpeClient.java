@@ -32,7 +32,6 @@ package com.linecorp.armeria.server.athenz;
 
 import static com.yahoo.athenz.zpe.ZpeConsts.ZPE_PROP_MILLIS_BETWEEN_ZTS_CALLS;
 
-import java.net.URI;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -49,6 +48,7 @@ import com.oath.auth.KeyRefresher;
 import com.oath.auth.Utils;
 import com.yahoo.athenz.auth.token.AccessToken;
 import com.yahoo.athenz.auth.token.RoleToken;
+import com.yahoo.athenz.auth.token.jwts.ArmeriaJwtsSigningKeyResolver;
 import com.yahoo.athenz.auth.token.jwts.JwtsSigningKeyResolver;
 import com.yahoo.athenz.auth.util.CryptoException;
 import com.yahoo.athenz.zpe.ZpeConsts;
@@ -56,17 +56,8 @@ import com.yahoo.athenz.zpe.match.ZpeMatch;
 import com.yahoo.athenz.zpe.pkey.PublicKeyStore;
 import com.yahoo.rdl.Struct;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientTlsSpec;
-import com.linecorp.armeria.client.ClientTlsSpecBuilder;
 import com.linecorp.armeria.client.athenz.ZtsBaseClient;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
-
-import io.netty.handler.ssl.JdkSslContext;
 
 final class MinifiedAuthZpeClient {
 
@@ -111,11 +102,8 @@ final class MinifiedAuthZpeClient {
     private void initializeAccessTokenSignKeyResolver(ZtsBaseClient ztsBaseClient, String oauth2KeysPath) {
         final String serverUrl = System.getProperty(ZpeConsts.ZPE_PROP_JWK_URI);
         if (serverUrl == null || serverUrl.isEmpty()) {
-            accessSignKeyResolver = newDefaultJwtsSigningKeyResolver(ztsBaseClient, oauth2KeysPath);
-            ztsBaseClient.addTlsKeyPairListener(tlsKeyPair -> {
-                // Refresh the JwtsSigningKeyResolver when the TLS key pair changes
-                accessSignKeyResolver = newDefaultJwtsSigningKeyResolver(ztsBaseClient, oauth2KeysPath);
-            });
+            accessSignKeyResolver = ArmeriaJwtsSigningKeyResolver.create(
+                    ztsBaseClient.webClient(), oauth2KeysPath);
             return;
         }
 
@@ -132,42 +120,8 @@ final class MinifiedAuthZpeClient {
                 logger.warn("Unable to initialize key refresher: {}", ex.getMessage());
             }
         }
-        final URI proxyUri = ztsBaseClient.proxyUri();
-        accessSignKeyResolver = new JwtsSigningKeyResolver(serverUrl, sslContext,
-                                                           proxyUri != null ? proxyUri.toString() : null);
-    }
-
-    private static JwtsSigningKeyResolver newDefaultJwtsSigningKeyResolver(ZtsBaseClient ztsBaseClient,
-                                                                           String oauth2KeysPath) {
-        final URI ztsUri = ztsBaseClient.ztsUri();
-        final URI proxyUri = ztsBaseClient.proxyUri();
-        String proxyUriStr = null;
-        if (proxyUri != null) {
-            proxyUriStr = proxyUri.toString();
-        }
-        final ClientFactory clientFactory = ztsBaseClient.clientFactory();
-        final TlsProvider tlsProvider = clientFactory.options().tlsProvider();
-        final boolean allowUnsafeCiphers = clientFactory.options().tlsConfig().allowsUnsafeCiphers();
-        final ClientTlsSpec clientTlsSpec = toTlsSpec(tlsProvider, allowUnsafeCiphers);
-        final JdkSslContext sslContext =
-                (JdkSslContext) SslContextUtil.toSslContext(clientTlsSpec);
-        return new JwtsSigningKeyResolver(ztsUri + oauth2KeysPath, sslContext.context(), proxyUriStr);
-    }
-
-    private static ClientTlsSpec toTlsSpec(TlsProvider tlsProvider, boolean allowUnsafeCiphers) {
-        final ClientTlsSpecBuilder builder = ClientTlsSpec.builder();
-        final TlsKeyPair tlsKeyPair = tlsProvider.keyPair("*");
-        if (tlsKeyPair != null) {
-            builder.tlsKeyPair(tlsKeyPair);
-        }
-        final List<X509Certificate> trustedCertificates = tlsProvider.trustedCertificates("*");
-        if (trustedCertificates != null) {
-            builder.trustedCertificates(trustedCertificates);
-        }
-        builder.engineType(TlsEngineType.JDK);
-        builder.alpnProtocols(SslContextUtil.DEFAULT_ALPN_PROTOCOLS);
-        builder.allowUnsafeCiphers(allowUnsafeCiphers);
-        return builder.build();
+        final String proxyUrl = System.getProperty(ZpeConsts.ZPE_PROP_JWK_PROXY_URI);
+        accessSignKeyResolver = new JwtsSigningKeyResolver(serverUrl, sslContext, proxyUrl);
     }
 
     /**

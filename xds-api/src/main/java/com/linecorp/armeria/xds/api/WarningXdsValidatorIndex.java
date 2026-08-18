@@ -1,0 +1,59 @@
+/*
+ * Copyright 2025 LY Corporation
+ *
+ * LY Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.xds.api;
+
+import static java.util.Objects.requireNonNull;
+
+import com.google.protobuf.Message;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.validator.XdsValidatorIndex;
+
+/**
+ * A {@link XdsValidatorIndex} that applies pgv (protoc-gen-validate) structural validation
+ * and logs warnings for unsupported fields instead of rejecting them.
+ *
+ * <p>Use this validator when you want to be notified of unsupported fields without
+ * failing the resource. To reject unsupported fields, use {@link StrictXdsValidatorIndex}.
+ */
+@UnstableApi
+public final class WarningXdsValidatorIndex implements XdsValidatorIndex {
+
+    private static final WarningXdsValidatorIndex INSTANCE = new WarningXdsValidatorIndex();
+
+    private final PgvValidator pgvValidator = PgvValidator.of();
+    private final SupportedFieldValidator supportedFieldValidator = SupportedFieldValidator.of();
+
+    /**
+     * Returns the singleton instance.
+     */
+    public static WarningXdsValidatorIndex of() {
+        return INSTANCE;
+    }
+
+    @Override
+    public void assertValid(Message message) {
+        requireNonNull(message, "message");
+        pgvValidator.assertValid(message);
+        supportedFieldValidator.validate(message);
+    }
+
+    @Override
+    public int priority() {
+        return 1;
+    }
+}

@@ -703,4 +703,28 @@ class DnsAddressEndpointGroupTest {
             super.channelRead(ctx, msg);
         }
     }
+
+    @Test
+    void closesUnderlyingDnsResolverOnClose() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("close-test.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("close-test.com.", "1.2.3.4")),
+                new DefaultDnsQuestion("close-test.com.", AAAA),
+                new DefaultDnsResponse(0)
+        ))) {
+            final DnsAddressEndpointGroup group =
+                    DnsAddressEndpointGroup.builder("close-test.com")
+                                           .port(8080)
+                                           .serverAddresses(server.addr())
+                                           .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                                           .dnsCache(NoopDnsCache.INSTANCE)
+                                           .build();
+            group.whenReady().get(10, TimeUnit.SECONDS);
+
+            assertThat(group.resolver().isClosed()).isFalse();
+            group.close();
+            // The DefaultDnsResolver (and its underlying UDP DatagramChannel) must be released.
+            assertThat(group.resolver().isClosed()).isTrue();
+        }
+    }
 }

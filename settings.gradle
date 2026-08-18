@@ -18,9 +18,9 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
-    id 'com.gradle.develocity' version '4.4.2'
+    id 'com.gradle.develocity' version '4.5.0'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.6.0'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.8.0'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -220,6 +220,7 @@ includeWithFlags ':tomcat8',                             'java', 'publish', 'rel
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
+includeWithFlags ':xds-athenz',                          'java11', 'publish', 'relocate'
 includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
 includeWithFlags ':xds-validator',                       'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':xds-pgv-shaded',                      'java', 'publish', 'relocate', 'no_aggregation'
@@ -288,7 +289,7 @@ project(':thrift0.12').projectDir = file('thrift/thrift0.12')
 includeWithFlags ':docs-client'
 
 // Site generation project
-includeWithFlags ':site-new'
+includeWithFlags ':site'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java11'
@@ -337,3 +338,4 @@ includeWithFlags ':examples:tutorials:grpc-tutorial',              'java11'
 project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')
 includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java11'
 includeWithFlags ':examples:tutorials:thrift',                     'java11'
+includeWithFlags ':examples:xds-playground',                       'java17'

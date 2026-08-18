@@ -1,0 +1,303 @@
+{
+  "title": "Armeria xDS Metrics",
+  "uid": "armeria-xds",
+  "editable": true,
+  "time": {"from": "now-5m", "to": "now"},
+  "refresh": "1s",
+  "timepicker": {"refresh_intervals": ["1s", "2s", "5s", "10s", "30s"]},
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "type": "query",
+        "query": "label_values(armeria_xds_lb_membership, cluster)",
+        "datasource": "Prometheus",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {"text": "All", "value": "$__all"}
+      }
+    ]
+  },
+  "panels": [
+    {"title": "Armeria", "type": "row", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "collapsed": false},
+    {
+      "title": "L1 Requests (by status)",
+      "description": "Per-attempt counts (includes retry attempts)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 1},
+      "interval": "1s",
+      "targets": [{"expr": "sum by (http_status)(rate(layer1_requests_total[3s]))", "legendFormat": "{{http_status}}"}],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "title": "L2 Requests (by status)",
+      "description": "Aggregate Layer 2 server requests from Layer 1",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 1},
+      "interval": "1s",
+      "targets": [{"expr": "sum by (http_status)(rate(layer2_requests_total{side=\"server\"}[3s]))", "legendFormat": "{{http_status}}"}],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "title": "Retries",
+      "description": "Rate of retry attempts (actual requests minus logical requests)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 1},
+      "interval": "1s",
+      "targets": [
+        {"expr": "sum(rate(layer1_actual_requests_attempts_sum[3s])) - sum(rate(layer1_actual_requests_attempts_count[3s]))", "legendFormat": "L1 retries"},
+        {
+          "expr": "sum(rate(layer2_actual_requests_attempts_sum{side=\"client\"}[3s])) - sum(rate(layer2_actual_requests_attempts_count{side=\"client\"}[3s]))",
+          "legendFormat": "L2 retries"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "title": "Route Success (L1 → L2 → L3)",
+      "description": "Successful request routing path (2xx)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 7},
+      "interval": "1s",
+      "targets": [
+        {"expr": "sum by (layer2_node, layer3_node)(rate(layer1_route_total{http_status=\"200\"}[3s]))", "legendFormat": "{{layer2_node}} → {{layer3_node}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "title": "Route Failure (L1 → L2 → L3)",
+      "description": "Failed request routing path (non-2xx)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 7},
+      "interval": "1s",
+      "targets": [
+        {"expr": "sum by (layer2_node, layer3_node, http_status)(rate(layer1_route_total{http_status!=\"200\"}[3s]))", "legendFormat": "{{layer2_node}} → {{layer3_node}} {{http_status}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "title": "Active Connections (by protocol)",
+      "description": "Client connection pool — h2 = TLS, h2c = cleartext. Cycles every 5s due to max connection age.",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 7},
+      "interval": "1s",
+      "targets": [
+        {"expr": "layer1_client_active_connections", "legendFormat": "L1 {{protocol}} → {{remote_ip}}"},
+        {"expr": "layer2_client_active_connections", "legendFormat": "L2 {{protocol}} → {{remote_ip}}"}
+      ]
+    },
+    {
+      "title": "Route Distribution (L2)",
+      "description": "Percentage of successful traffic routed to each L2 node",
+      "type": "piechart",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 13},
+      "interval": "1s",
+      "targets": [{"expr": "sum by (layer2_node)(rate(layer1_route_total{http_status=\"200\"}[10s]))", "legendFormat": "{{layer2_node}}"}],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "legend": {"displayMode": "table", "placement": "right", "values": ["percent"]},
+        "pieType": "donut"
+      }
+    },
+    {
+      "title": "Route Distribution (L3)",
+      "description": "Percentage of successful traffic routed to each L3 node",
+      "type": "piechart",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 13},
+      "interval": "1s",
+      "targets": [{"expr": "sum by (layer3_node)(rate(layer1_route_total{http_status=\"200\"}[10s]))", "legendFormat": "{{layer3_node}}"}],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "legend": {"displayMode": "table", "placement": "right", "values": ["percent"]},
+        "pieType": "donut"
+      }
+    },
+    {
+      "title": "Route Distribution (L2 → L3)",
+      "description": "Percentage of successful traffic per L2→L3 path",
+      "type": "piechart",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 13},
+      "interval": "1s",
+      "targets": [
+        {"expr": "sum by (layer2_node, layer3_node)(rate(layer1_route_total{http_status=\"200\"}[10s]))", "legendFormat": "{{layer2_node}} → {{layer3_node}}"}
+      ],
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"]},
+        "legend": {"displayMode": "table", "placement": "right", "values": ["percent"]},
+        "pieType": "donut"
+      }
+    },
+    {"title": "Control Plane", "type": "row", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 20}, "collapsed": false},
+    {
+      "title": "File Loaded",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 21},
+      "interval": "1s",
+      "targets": [{"expr": "sum by (node) (rate(armeria_xds_configsource_file_loaded_total[3s]))", "legendFormat": "{{node}}"}],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "title": "File Errors",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 21},
+      "interval": "1s",
+      "targets": [{"expr": "sum by (node) (rate(armeria_xds_configsource_file_error_total[3s]))", "legendFormat": "{{node}}"}],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "title": "Resources Active",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 21},
+      "interval": "1s",
+      "targets": [{"expr": "armeria_xds_resource_node_revision", "legendFormat": "{{type}}/{{name}}"}]
+    },
+    {
+      "title": "Resource Errors",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 21},
+      "interval": "1s",
+      "targets": [
+        {"expr": "rate(armeria_xds_resource_node_error_total[3s])", "legendFormat": "error {{type}}/{{name}}"},
+        {"expr": "rate(armeria_xds_resource_node_missing_total[3s])", "legendFormat": "missing {{type}}/{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {"title": "Load Balancer", "type": "row", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 27}, "collapsed": false},
+    {
+      "title": "Membership per Locality",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 28},
+      "interval": "1s",
+      "targets": [{"expr": "armeria_xds_lb_membership{cluster=~\"$cluster\"}", "legendFormat": "{{cluster}} / {{region}}"}]
+    },
+    {
+      "title": "Healthy / Degraded Membership",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 28},
+      "interval": "1s",
+      "targets": [
+        {"expr": "armeria_xds_lb_membership_healthy{cluster=~\"$cluster\"}", "legendFormat": "healthy {{cluster}}/{{region}}"},
+        {"expr": "armeria_xds_lb_membership_degraded{cluster=~\"$cluster\"}", "legendFormat": "degraded {{cluster}}/{{region}}"}
+      ]
+    },
+    {
+      "title": "Locality Weights",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 28},
+      "interval": "1s",
+      "targets": [{"expr": "armeria_xds_lb_locality_weight{cluster=~\"$cluster\"}", "legendFormat": "{{cluster}} / {{region}}"}]
+    },
+    {
+      "title": "Priority Load",
+      "description": "Traffic distribution across priorities. In panic mode, all endpoints are treated as healthy regardless of actual health status.",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 34},
+      "interval": "1s",
+      "targets": [
+        {"expr": "armeria_xds_lb_state_load_healthy{cluster=~\"$cluster\"}", "legendFormat": "healthy p{{priority}} {{cluster}}"},
+        {"expr": "armeria_xds_lb_state_load_degraded{cluster=~\"$cluster\"}", "legendFormat": "degraded p{{priority}} {{cluster}}"}
+      ]
+    },
+    {
+      "title": "Panic Mode",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 34},
+      "interval": "1s",
+      "targets": [{"expr": "armeria_xds_lb_state_panic{cluster=~\"$cluster\"}", "legendFormat": "{{cluster}} p{{priority}}"}]
+    },
+    {
+      "title": "Subsets",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 34},
+      "interval": "1s",
+      "targets": [{"expr": "armeria_xds_lb_state_subsets{cluster=~\"$cluster\"}", "legendFormat": "{{cluster}}"}]
+    },
+    {"title": "Zone-Aware Routing", "type": "row", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40}, "collapsed": false},
+    {
+      "title": "ZAR Local Percentage",
+      "description": "Percentage of traffic routed to the local zone (computed by Armeria ZAR algorithm)",
+      "type": "bargauge",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 41},
+      "interval": "1s",
+      "targets": [
+        {"expr": "armeria_xds_lb_zar_local_percentage{cluster=~\"$cluster\",cluster!~\".*local.*\"}", "legendFormat": "{{node}} / {{cluster}}"}
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {"calcs": ["lastNotNull"]}
+      },
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}}
+    },
+    {
+      "title": "ZAR Residual Percentage per Locality",
+      "description": "Residual traffic percentage for each locality after local zone allocation",
+      "type": "table",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 41},
+      "interval": "1s",
+      "targets": [
+        {
+          "expr": "armeria_xds_lb_zar_residual_percentage{cluster=~\"$cluster\",cluster!~\".*local.*\"}",
+          "legendFormat": "{{node}} / {{cluster}} / {{region}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {"excludeByName": {"Time": true, "__name__": true, "instance": true, "job": true, "priority": true}, "renameByName": {"Value": "residual %"}}
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []}
+    },
+    {"title": "LB Selection", "type": "row", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 47}, "collapsed": false},
+    {
+      "title": "Selection Rate (hit vs miss)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 48},
+      "interval": "1s",
+      "targets": [
+        {"expr": "rate(armeria_xds_lb_select_total{result=\"hit\",cluster=~\"$cluster\"}[3s])", "legendFormat": "hit {{cluster}}/{{region}}"},
+        {"expr": "rate(armeria_xds_lb_select_total{result=\"miss\",cluster=~\"$cluster\"}[3s])", "legendFormat": "miss {{cluster}}/{{region}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "title": "Errors (no_endpoints / no_host_source)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 48},
+      "interval": "1s",
+      "targets": [
+        {"expr": "rate(armeria_xds_lb_select_total{result=\"no_endpoints\",cluster=~\"$cluster\"}[3s])", "legendFormat": "no_endpoints {{cluster}}"},
+        {"expr": "rate(armeria_xds_lb_select_total{result=\"no_host_source\",cluster=~\"$cluster\"}[3s])", "legendFormat": "no_host_source {{cluster}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {"title": "LB Update Events", "type": "row", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 54}, "collapsed": false},
+    {
+      "title": "Resource / Endpoint / State Updates",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 55},
+      "interval": "1s",
+      "targets": [
+        {"expr": "rate(armeria_xds_lb_resource_updated_count_total{cluster=~\"$cluster\"}[3s])", "legendFormat": "resource {{cluster}}"},
+        {"expr": "rate(armeria_xds_lb_endpoints_updated_count_total{cluster=~\"$cluster\"}[3s])", "legendFormat": "endpoints {{cluster}}"},
+        {"expr": "rate(armeria_xds_lb_state_updated_count_total{cluster=~\"$cluster\"}[3s])", "legendFormat": "state {{cluster}}"},
+        {"expr": "rate(armeria_xds_lb_state_rejected_count_total{cluster=~\"$cluster\"}[3s])", "legendFormat": "rejected {{cluster}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "title": "Update Revisions",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 55},
+      "interval": "1s",
+      "targets": [
+        {"expr": "armeria_xds_lb_resource_updated_revision{cluster=~\"$cluster\"}", "legendFormat": "resource {{cluster}}"},
+        {"expr": "armeria_xds_lb_state_updated_revision{cluster=~\"$cluster\"}", "legendFormat": "state {{cluster}}"}
+      ]
+    }
+  ]
+}

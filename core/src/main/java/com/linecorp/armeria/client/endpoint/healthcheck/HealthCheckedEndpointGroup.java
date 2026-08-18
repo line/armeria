@@ -364,8 +364,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             } finally {
                 lock.unlock();
             }
-            return delegate.closeAsync();
-        }).handle((unused1, unused2) -> future.complete(null));
+            return null;
+        }).thenCompose(unused -> delegate.closeAsync())
+          .handle((unused1, unused2) -> future.complete(null));
     }
 
     /**
