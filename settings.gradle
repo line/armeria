@@ -28,7 +28,8 @@ import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 def isCi = System.getenv("CI") != null
 
 develocity {
-    server = "https://ge.armeria.dev"
+    server = "https://community.develocity.cloud"
+    projectId = "armeria"
     buildScan {
         publishing.onlyIf { it.authenticated }
         uploadInBackground = !isCi

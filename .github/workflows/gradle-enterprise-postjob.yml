@@ -1,4 +1,4 @@
-name: Upload artifacts to ge.armeria.dev
+name: Upload artifacts to community.develocity.cloud
 
 on:
   workflow_run:
