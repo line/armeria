@@ -38,7 +38,7 @@ async function main(): Promise<void> {
     if (scan.trim().length === 0) {
       continue;
     }
-    // build scan string pattern: "<job-name> https://ge.armeria.dev/xxxxxx"
+    // build scan string pattern: "<job-name> https://community.develocity.cloud/xxxxxx"
     const [jobName, scanUrl]= scan.split(" ");
     const job = jobs.find(job => job.name === jobName);
     if (job.conclusion === 'success') {
