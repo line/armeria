@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -221,7 +222,7 @@ class DynamicEndpointGroupTest {
         group.setEndpoints(ImmutableList.of(a));
 
         slowListenerProceed.countDown();
-        t1.join();
+        t1.join(Duration.ofSeconds(10));
 
         // only a is selected
         assertThat(group.selectNow(ctx)).isEqualTo(a);
