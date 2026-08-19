@@ -55,10 +55,6 @@ final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
     @Override
     public HttpClient build() {
         if (client != null) {
-            // Share close state, HTTP client, and WebSocket transport with the root client so that
-            // ClientFactory instances created for watches are released when the root is closed.
-            // Matches fabric8 JDK/Jetty clients; without this, each derived client builds its own
-            // WebSocket ClientFactory that is never closed (LEAK / #6805).
             return new ArmeriaHttpClient(this, client.getWebClient(), client.getWebSocketClient(),
                                          client.getClosed());
         }

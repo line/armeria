@@ -135,10 +135,6 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
         }
     }
 
-    /**
-     * Returns the underlying {@link WebSocketClient}, or {@code null} if it has not been created yet.
-     * Package-private for tests that inspect shared lifecycle with derived clients.
-     */
     @Nullable
     WebSocketClient webSocketClientOrNull() {
         return webSocketClient;
