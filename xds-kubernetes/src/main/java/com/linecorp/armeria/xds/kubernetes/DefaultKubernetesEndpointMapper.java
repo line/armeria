@@ -30,15 +30,9 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 
-final class DefaultKubernetesEndpointMapper implements KubernetesEndpointMapper {
+enum DefaultKubernetesEndpointMapper implements KubernetesEndpointMapper {
 
-    private static final DefaultKubernetesEndpointMapper INSTANCE = new DefaultKubernetesEndpointMapper();
-
-    static DefaultKubernetesEndpointMapper get() {
-        return INSTANCE;
-    }
-
-    private DefaultKubernetesEndpointMapper() {}
+    INSTANCE;
 
     @Override
     public ClusterLoadAssignment map(String clusterName, List<Endpoint> endpoints) {

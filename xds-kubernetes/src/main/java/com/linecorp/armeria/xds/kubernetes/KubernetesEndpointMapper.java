@@ -41,13 +41,13 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 public interface KubernetesEndpointMapper {
 
     /**
-     * Returns the default {@link KubernetesEndpointMapper} that places all endpoints in a single
+     * Returns a default {@link KubernetesEndpointMapper} that places all endpoints in a single
      * {@link io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints LocalityLbEndpoints}
      * with equal weight, priority 0, and
      * {@link io.envoyproxy.envoy.config.core.v3.HealthStatus#HEALTHY HEALTHY} status.
      */
-    static KubernetesEndpointMapper ofDefault() {
-        return DefaultKubernetesEndpointMapper.get();
+    static KubernetesEndpointMapper of() {
+        return DefaultKubernetesEndpointMapper.INSTANCE;
     }
 
     /**

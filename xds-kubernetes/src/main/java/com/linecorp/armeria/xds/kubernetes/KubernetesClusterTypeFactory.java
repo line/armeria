@@ -74,7 +74,7 @@ public final class KubernetesClusterTypeFactory implements ClusterTypeFactory {
      * {@link KubernetesEndpointMapper}.
      */
     public static KubernetesClusterTypeFactory of() {
-        return of(new ConfigBuilder().build(), KubernetesEndpointMapper.ofDefault());
+        return of(new ConfigBuilder().build(), KubernetesEndpointMapper.of());
     }
 
     /**
@@ -91,7 +91,7 @@ public final class KubernetesClusterTypeFactory implements ClusterTypeFactory {
      * by the proto config fields ({@code api_server_url}, {@code credential}).
      */
     public static KubernetesClusterTypeFactory of(Config baseConfig) {
-        return of(requireNonNull(baseConfig, "baseConfig"), KubernetesEndpointMapper.ofDefault());
+        return of(requireNonNull(baseConfig, "baseConfig"), KubernetesEndpointMapper.of());
     }
 
     /**

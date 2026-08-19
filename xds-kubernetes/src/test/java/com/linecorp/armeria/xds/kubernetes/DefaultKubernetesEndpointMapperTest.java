@@ -41,7 +41,7 @@ class DefaultKubernetesEndpointMapperTest {
                 Endpoint.of("10.0.0.3", 9090));
 
         final ClusterLoadAssignment cla =
-                DefaultKubernetesEndpointMapper.get().map("test-cluster", endpoints);
+                KubernetesEndpointMapper.of().map("test-cluster", endpoints);
 
         assertThat(cla.getClusterName()).isEqualTo("test-cluster");
         assertThat(cla.getEndpointsList()).hasSize(1);
@@ -66,7 +66,7 @@ class DefaultKubernetesEndpointMapperTest {
     @Test
     void emptyEndpointsProducesEmptyLocality() {
         final ClusterLoadAssignment cla =
-                DefaultKubernetesEndpointMapper.get().map("empty-cluster", ImmutableList.of());
+                KubernetesEndpointMapper.of().map("empty-cluster", ImmutableList.of());
 
         assertThat(cla.getClusterName()).isEqualTo("empty-cluster");
         assertThat(cla.getEndpointsList()).hasSize(1);
@@ -83,7 +83,7 @@ class DefaultKubernetesEndpointMapperTest {
                 Endpoint.of("192.168.1.2", 30000));
 
         final ClusterLoadAssignment cla =
-                DefaultKubernetesEndpointMapper.get().map("dedup-cluster", endpoints);
+                KubernetesEndpointMapper.of().map("dedup-cluster", endpoints);
 
         final LocalityLbEndpoints locality = cla.getEndpoints(0);
         assertThat(locality.getLbEndpointsList()).hasSize(2);
@@ -98,7 +98,7 @@ class DefaultKubernetesEndpointMapperTest {
         final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("10.0.0.1"));
 
         final ClusterLoadAssignment cla =
-                DefaultKubernetesEndpointMapper.get().map("no-port-cluster", endpoints);
+                KubernetesEndpointMapper.of().map("no-port-cluster", endpoints);
 
         final LbEndpoint ep = cla.getEndpoints(0).getLbEndpoints(0);
         assertThat(ep.getEndpoint().getAddress().getSocketAddress().getAddress())
