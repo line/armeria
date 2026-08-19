@@ -27,6 +27,7 @@ import org.springframework.core.env.Environment;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Any;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.GeneratedMessageV3;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -148,10 +149,20 @@ public final class SpringConfigSourceFactory implements SotwConfigSourceSubscrip
             if (yaml == null || yaml.isBlank()) {
                 throw new IllegalArgumentException("Property '" + propertyKey + "' is empty or not set");
             }
-            final GeneratedMessageV3 resource = XdsResourceReader.from(yaml, protoClass);
+            final GeneratedMessageV3 parsed = XdsResourceReader.from(yaml, protoClass);
+            final GeneratedMessageV3 resource = overrideName(parsed, type, name);
             builder.addResources(Any.pack(resource));
         }
         return builder.build();
+    }
+
+    private static GeneratedMessageV3 overrideName(GeneratedMessageV3 resource, XdsType type, String name) {
+        final String fieldName = type == XdsType.ENDPOINT ? "cluster_name" : "name";
+        final FieldDescriptor field = resource.getDescriptorForType().findFieldByName(fieldName);
+        if (field != null) {
+            return (GeneratedMessageV3) resource.toBuilder().setField(field, name).build();
+        }
+        return resource;
     }
 
     static final class RefreshSignal implements SnapshotStream<Object> {
