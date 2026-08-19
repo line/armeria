@@ -187,6 +187,12 @@ public class ClientRequestContextWrapper
 
     @Override
     @UnstableApi
+    public void clearClientTlsSpec() {
+        unwrap().clearClientTlsSpec();
+    }
+
+    @Override
+    @UnstableApi
     public @Nullable String sniHostname() {
         return unwrap().sniHostname();
     }

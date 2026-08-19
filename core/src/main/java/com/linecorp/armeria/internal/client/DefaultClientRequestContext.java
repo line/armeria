@@ -435,6 +435,7 @@ public final class DefaultClientRequestContext
 
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         updateEndpoint(endpoint);
+        resolveClientTlsSpec();
         acquireEventLoop(endpoint);
         maybeInitializeResponseCancellationScheduler();
         return initFuture(true, null);
@@ -445,6 +446,7 @@ public final class DefaultClientRequestContext
         final Endpoint endpoint = endpointGroup.selectNow(this);
         if (endpoint != null) {
             updateEndpoint(endpoint);
+            resolveClientTlsSpec();
             acquireEventLoop(endpointGroup);
             maybeInitializeResponseCancellationScheduler();
             return initFuture(true, null);
@@ -454,6 +456,7 @@ public final class DefaultClientRequestContext
         final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
         return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
+            resolveClientTlsSpec();
             acquireEventLoop(endpointGroup);
             maybeInitializeResponseCancellationScheduler();
 
@@ -525,6 +528,17 @@ public final class DefaultClientRequestContext
         this.endpoint = endpoint;
         defaultSniHostname = computeDefaultSniHostname(endpoint);
         updateInternalHeaders();
+    }
+
+    private void resolveClientTlsSpec() {
+        if (!sessionProtocol.isTls()) {
+            clearClientTlsSpec();
+            return;
+        }
+        if (clientTlsSpec == null) {
+            clientTlsSpec = options.factory().options().clientTlsProvider().clientTlsSpec(this);
+        }
+        setClientTlsSpec(clientTlsSpec);
     }
 
     @Nullable
@@ -714,6 +728,7 @@ public final class DefaultClientRequestContext
             acquireEventLoop(endpoint);
         }
         maybeInitializeResponseCancellationScheduler();
+        resolveClientTlsSpec();
     }
 
     private void maybeInitializeResponseCancellationScheduler() {
@@ -1163,7 +1178,24 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setClientTlsSpec(ClientTlsSpec clientTlsSpec) {
-        this.clientTlsSpec = requireNonNull(clientTlsSpec, "clientTlsSpec");
+        requireNonNull(clientTlsSpec, "clientTlsSpec");
+        if (clientTlsSpec.alpnProtocols().isEmpty()) {
+            clientTlsSpec = clientTlsSpec.toBuilder()
+                                         .alpnProtocols(sessionProtocol.withTls())
+                                         .build();
+        }
+        this.clientTlsSpec = clientTlsSpec;
+        if (!sessionProtocol.isTls()) {
+            setSessionProtocol0(sessionProtocol.withTls());
+        }
+    }
+
+    @Override
+    public void clearClientTlsSpec() {
+        clientTlsSpec = null;
+        if (sessionProtocol.isTls()) {
+            setSessionProtocol0(sessionProtocol.withoutTls());
+        }
     }
 
     @Override

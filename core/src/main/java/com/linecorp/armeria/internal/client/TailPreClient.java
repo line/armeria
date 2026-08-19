@@ -57,9 +57,18 @@ public final class TailPreClient<I extends Request, O extends Response, C extend
             HttpClient httpClient,
             Function<CompletableFuture<HttpResponse>, HttpResponse> futureConverter,
             BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory) {
+        final TailHttpClient tailDelegating = httpClient.as(TailHttpClient.class);
+        assert tailDelegating != null;
+        final HttpClient rawDelegate = tailDelegating.defaultDelegate();
         final TailPreClient<HttpRequest, HttpResponse, HttpClient> tail =
                 new TailPreClient<>(httpClient, futureConverter, errorResponseFactory,
-                                    (ctx, delegate) -> ctx.httpClientCustomizer().apply(delegate));
+                                    (ctx, delegate) -> {
+                                        final HttpClient inner = ctx.httpClientCustomizer().apply(rawDelegate);
+                                        if (inner != rawDelegate) {
+                                            TailHttpClient.setDelegate(ctx, inner);
+                                        }
+                                        return delegate;
+                                    });
         return tail::execute;
     }
 
@@ -67,9 +76,18 @@ public final class TailPreClient<I extends Request, O extends Response, C extend
             RpcClient rpcClient,
             Function<CompletableFuture<RpcResponse>, RpcResponse> futureConverter,
             BiFunction<ClientRequestContext, Throwable, RpcResponse> errorResponseFactory) {
+        final TailRpcClient tailDelegating = rpcClient.as(TailRpcClient.class);
+        assert tailDelegating != null;
+        final RpcClient rawDelegate = tailDelegating.defaultDelegate();
         final TailPreClient<RpcRequest, RpcResponse, RpcClient> tail =
                 new TailPreClient<>(rpcClient, futureConverter, errorResponseFactory,
-                                    (ctx, delegate) -> ctx.rpcClientCustomizer().apply(delegate));
+                                    (ctx, delegate) -> {
+                                        final RpcClient inner = ctx.rpcClientCustomizer().apply(rawDelegate);
+                                        if (inner != rawDelegate) {
+                                            TailRpcClient.setDelegate(ctx, inner);
+                                        }
+                                        return delegate;
+                                    });
         return tail::execute;
     }
 

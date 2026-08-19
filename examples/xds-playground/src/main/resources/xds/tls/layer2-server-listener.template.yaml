@@ -1,0 +1,32 @@
+name: ${listener-name}
+default_filter_chain:
+  filters:
+    - name: envoy.filters.network.http_connection_manager
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        stat_prefix: ${listener-name}
+        route_config:
+          name: local_route
+          virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+                - match:
+                    prefix: "/"
+                  non_forwarding_action: {}
+        http_filters:
+          - name: envoy.filters.http.router
+  transport_socket:
+    name: envoy.transport_sockets.downstream_tls
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+      require_client_certificate: true
+      common_tls_context:
+        tls_certificates:
+          - certificate_chain:
+              filename: "${server-cert-path}"
+            private_key:
+              filename: "${server-key-path}"
+        validation_context:
+          trusted_ca:
+            filename: "${ca-cert-path}"

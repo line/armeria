@@ -29,7 +29,7 @@ You can add your HTTP method name to your existing `MeterIdPrefix` in the `Meter
 
 While doing so, you can use [`RequestLog#requestHeaders`](<https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestOnlyLog.html#requestHeaders()>) to get the request's HTTP method name.
 Various other information generated while processing a single request gets collected on [`RequestLog`](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/1.8.0/com/linecorp/armeria/common/logging/RequestLog.html).
-For more information about this, please refer to the [Official Armeria documentation](https://armeria.dev/docs/advanced-structured-logging/).
+For more information about this, please refer to the [Official Armeria documentation](/docs/advanced-structured-logging/).
 
 ```java title="MeterIdPrefixFunctionCustomizer.java"
 public class MyMeterIdPrefixFunction implements MeterIdPrefixFunctionCustomizer {

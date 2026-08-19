@@ -20,7 +20,7 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
     id 'com.gradle.develocity' version '4.5.0'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.7.0'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.8.0'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -28,7 +28,8 @@ import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 def isCi = System.getenv("CI") != null
 
 develocity {
-    server = "https://ge.armeria.dev"
+    server = "https://community.develocity.cloud"
+    projectId = "armeria"
     buildScan {
         publishing.onlyIf { it.authenticated }
         uploadInBackground = !isCi
@@ -340,3 +341,4 @@ includeWithFlags ':examples:tutorials:grpc-tutorial',              'java11'
 project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')
 includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java11'
 includeWithFlags ':examples:tutorials:thrift',                     'java11'
+includeWithFlags ':examples:xds-playground',                       'java17'

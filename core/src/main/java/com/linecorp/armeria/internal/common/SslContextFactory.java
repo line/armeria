@@ -20,8 +20,10 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientTlsSpec;
@@ -48,6 +50,14 @@ public final class SslContextFactory {
 
     private final Map<AbstractTlsSpec, SslContextHolder> cache = new HashMap<>();
     private final Map<SslContext, AbstractTlsSpec> reverseCache = new HashMap<>();
+    // Certificate metrics are shared across all cached contexts that register the exact same meters
+    // (same certificates and meter ID prefix). Without this, two contexts that differ only in an
+    // attribute irrelevant to the meter identity - e.g. ALPN protocols - would each bind an identical
+    // set of gauges, producing "Gauge already registered" warnings and, worse, unregistering the
+    // shared gauges as soon as the first of them is released. See
+    // https://github.com/line/armeria/issues/6734
+    private final Map<CertificateMetricsKey, CertificateMetricsHolder> certificateMetrics =
+            new HashMap<>();
 
     private final MeterRegistry meterRegistry;
     @Nullable
@@ -99,7 +109,7 @@ public final class SslContextFactory {
     }
 
     private SslContextHolder toContextHolder(AbstractTlsSpec tlsSpec, SslContext sslContext) {
-        CloseableMeterBinder meterBinder = null;
+        CertificateMetricsKey meterKey = null;
         final ImmutableList.Builder<X509Certificate> certsBuilder = ImmutableList.builder();
         final TlsKeyPair keyPair = tlsSpec.tlsKeyPair();
         if (keyPair != null) {
@@ -109,10 +119,28 @@ public final class SslContextFactory {
                 certsBuilder.addAll(tlsSpec.trustedCertificates()).build();
         if (!certs.isEmpty()) {
             final MeterIdPrefix meterIdPrefix = meterIdPrefix(tlsSpec);
-            meterBinder = MoreMeterBinders.certificateMetrics(certs, meterIdPrefix);
-            meterBinder.bindTo(meterRegistry);
+            meterKey = new CertificateMetricsKey(certs, meterIdPrefix);
+            // Bind the certificate metrics only once per unique meter identity, and retain a
+            // reference so they are unbound only after the last context using them is released.
+            final CertificateMetricsHolder metricsHolder =
+                    certificateMetrics.computeIfAbsent(meterKey, key -> {
+                        final CloseableMeterBinder meterBinder =
+                                MoreMeterBinders.certificateMetrics(key.certificates, key.meterIdPrefix);
+                        meterBinder.bindTo(meterRegistry);
+                        return new CertificateMetricsHolder(meterBinder);
+                    });
+            metricsHolder.retain();
         }
-        return new SslContextHolder(sslContext, meterBinder);
+        return new SslContextHolder(sslContext, meterKey);
+    }
+
+    private void releaseCertificateMetrics(CertificateMetricsKey meterKey) {
+        final CertificateMetricsHolder metricsHolder = certificateMetrics.get(meterKey);
+        assert metricsHolder != null : "certificate metrics not found for: " + meterKey;
+        if (metricsHolder.release()) {
+            certificateMetrics.remove(meterKey);
+            metricsHolder.meterBinder.close();
+        }
     }
 
     public void release(SslContext sslContext) {
@@ -127,6 +155,10 @@ public final class SslContextFactory {
                 assert removed == contextHolder;
                 reverseCache.remove(sslContext);
                 contextHolder.destroy();
+                final CertificateMetricsKey meterKey = contextHolder.meterKey();
+                if (meterKey != null) {
+                    releaseCertificateMetrics(meterKey);
+                }
             }
         } finally {
             lock.unlock();
@@ -157,16 +189,21 @@ public final class SslContextFactory {
     private static final class SslContextHolder {
         private final SslContext sslContext;
         @Nullable
-        private final CloseableMeterBinder meterBinder;
+        private final CertificateMetricsKey meterKey;
         private long refCnt;
 
-        SslContextHolder(SslContext sslContext, @Nullable CloseableMeterBinder meterBinder) {
+        SslContextHolder(SslContext sslContext, @Nullable CertificateMetricsKey meterKey) {
             this.sslContext = sslContext;
-            this.meterBinder = meterBinder;
+            this.meterKey = meterKey;
         }
 
         SslContext sslContext() {
             return sslContext;
+        }
+
+        @Nullable
+        CertificateMetricsKey meterKey() {
+            return meterKey;
         }
 
         void retain() {
@@ -180,10 +217,71 @@ public final class SslContextFactory {
         }
 
         void destroy() {
-            if (meterBinder != null) {
-                meterBinder.close();
-            }
             ReferenceCountUtil.release(sslContext);
+        }
+    }
+
+    /**
+     * Identifies the certificate metrics registered for a set of certificates under a
+     * {@link MeterIdPrefix}. Two {@link AbstractTlsSpec}s that yield an equal key register an
+     * identical set of gauges, so they must share a single {@link CertificateMetricsHolder}.
+     */
+    private static final class CertificateMetricsKey {
+        private final List<X509Certificate> certificates;
+        private final MeterIdPrefix meterIdPrefix;
+
+        CertificateMetricsKey(List<X509Certificate> certificates, MeterIdPrefix meterIdPrefix) {
+            this.certificates = certificates;
+            this.meterIdPrefix = meterIdPrefix;
+        }
+
+        @Override
+        public boolean equals(@Nullable Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof CertificateMetricsKey)) {
+                return false;
+            }
+            final CertificateMetricsKey that = (CertificateMetricsKey) o;
+            return certificates.equals(that.certificates) &&
+                   meterIdPrefix.equals(that.meterIdPrefix);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(certificates, meterIdPrefix);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("certificates", certificates)
+                              .add("meterIdPrefix", meterIdPrefix)
+                              .toString();
+        }
+    }
+
+    /**
+     * A reference-counted {@link CloseableMeterBinder} shared by all cached contexts that register the
+     * same certificate metrics.
+     */
+    private static final class CertificateMetricsHolder {
+        private final CloseableMeterBinder meterBinder;
+        private long refCnt;
+
+        CertificateMetricsHolder(CloseableMeterBinder meterBinder) {
+            this.meterBinder = meterBinder;
+        }
+
+        void retain() {
+            refCnt++;
+        }
+
+        boolean release() {
+            refCnt--;
+            assert refCnt >= 0 : "refCount: " + refCnt;
+            return refCnt == 0;
         }
     }
 }
