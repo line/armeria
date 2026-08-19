@@ -60,7 +60,7 @@ final class ArmeriaHttpClient
 
     @Override
     public void doClose() {
-        webClient.options().factory().close();
+        webClient.options().factory().closeAsync();
         webSocketClient.close();
     }
 

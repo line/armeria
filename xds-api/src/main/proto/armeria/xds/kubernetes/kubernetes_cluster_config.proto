@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package armeria.xds.kubernetes;
+
+option java_package = "com.linecorp.armeria.xds.kubernetes";
+option java_multiple_files = true;
+
+import "validate/validate.proto";
+import "armeria/xds/supported.proto";
+import "envoy/extensions/transport_sockets/tls/v3/secret.proto";
+
+message KubernetesClusterConfig {
+  // The Kubernetes Service name to watch for endpoints. (Required)
+  option (armeria.xds.supported.field) = 1;
+  string service_name = 1 [(validate.rules).string = {min_len: 1}];
+
+  // The Kubernetes namespace. If empty, uses the client's default namespace.
+  option (armeria.xds.supported.field) = 2;
+  string namespace = 2;
+
+  // The port name to select. If empty, uses the first port.
+  option (armeria.xds.supported.field) = 3;
+  string port_name = 3;
+
+  // Endpoint discovery mode. Default: POD.
+  option (armeria.xds.supported.field) = 4;
+  KubernetesEndpointMode mode = 4;
+
+  // The Kubernetes API server URL (e.g. "https://kubernetes.default.svc").
+  // If empty, uses the default from kubeconfig or in-cluster config.
+  option (armeria.xds.supported.field) = 5;
+  string api_server_url = 5;
+
+  // SDS secret config for the bearer token to authenticate with the K8s API.
+  // The secret must be a generic_secret whose value is the raw bearer token.
+  // When the secret rotates, the KubernetesEndpointGroup is recreated.
+  // If unset, uses the default KubernetesClient auth (kubeconfig/in-cluster SA token).
+  option (armeria.xds.supported.field) = 6;
+  envoy.extensions.transport_sockets.tls.v3.SdsSecretConfig credential = 6;
+}
+
+enum KubernetesEndpointMode {
+  // Direct pod IP connections (default). True client-side load balancing.
+  POD = 0;
+  // NodeIP:NodePort connections via Kubernetes NodePort/LoadBalancer services.
+  NODE_PORT = 1;
+}
