@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(':spring:boot4-xds')
+    implementation libs.spring.cloud.config.server
+    testImplementation libs.spring.boot4.starter.test
+}
+
+tasks.register('runConfigServer', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'example.springframework.boot.xds.cloudconfig.server.ConfigServerMain'
+}
+
+tasks.register('runClient', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'example.springframework.boot.xds.cloudconfig.client.ClientMain'
+}

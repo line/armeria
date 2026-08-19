@@ -1,0 +1,37 @@
+armeria:
+  xds:
+    listener:
+      test-listener: |
+        name: test-listener
+        api_listener:
+          api_listener:
+            "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+            codec_type: AUTO
+            stat_prefix: ingress_http
+            route_config:
+              name: local_route
+              virtual_hosts:
+                - name: local_service
+                  domains: ["*"]
+                  routes:
+                    - match:
+                        prefix: /
+                      route:
+                        cluster: test-cluster
+            http_filters:
+              - name: envoy.filters.http.router
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    cluster:
+      test-cluster: |
+        name: test-cluster
+        type: STATIC
+        load_assignment:
+          cluster_name: test-cluster
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 8888
