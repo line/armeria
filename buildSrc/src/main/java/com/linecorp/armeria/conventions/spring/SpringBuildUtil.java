@@ -96,14 +96,16 @@ public final class SpringBuildUtil {
             additionalSourceDirs = new String[] {
                     "build/generated/sources/proto/test/grpc",
                     "build/generated/sources/proto/test/java",
-                    "gen-src/test/java"
+                    "gen-src/test/java",
+                    "gen-src/test/javaThrift"
             };
         } else {
             assert sourceSetType == SourceSetType.MAIN;
             additionalSourceDirs = new String[] {
                     "build/generated/sources/proto/main/grpc",
                     "build/generated/sources/proto/main/java",
-                    "gen-src/main/java"
+                    "gen-src/main/java",
+                    "gen-src/main/javaThrift"
             };
         }
         for (String path : additionalSourceDirs) {
