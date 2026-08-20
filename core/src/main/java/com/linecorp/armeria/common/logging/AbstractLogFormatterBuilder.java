@@ -18,8 +18,12 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
@@ -29,6 +33,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A skeletal builder implementation for {@link LogFormatter}.
  */
 abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuilder<SELF, T>, T> {
+
+    @Nullable
+    private Set<String> queryParamsToMask;
+
+    private QueryParamMaskingFunction queryParamMaskingFunction = QueryParamMaskingFunction.of();
 
     @Nullable
     private HeadersSanitizer<T> requestHeadersSanitizer;
@@ -51,6 +60,49 @@ abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuil
     @SuppressWarnings("unchecked")
     final SELF self() {
         return (SELF) this;
+    }
+
+    /**
+     * Adds the query parameters to mask in request paths before logging.
+     * Query parameter names are case-sensitive. Unmasked query components are logged unchanged.
+     */
+    public SELF maskQueryParams(String... queryParams) {
+        requireNonNull(queryParams, "queryParams");
+        return maskQueryParams(ImmutableSet.copyOf(queryParams));
+    }
+
+    /**
+     * Adds the query parameters to mask in request paths before logging.
+     * Query parameter names are case-sensitive. Unmasked query components are logged unchanged.
+     */
+    public SELF maskQueryParams(Iterable<String> queryParams) {
+        requireNonNull(queryParams, "queryParams");
+        if (queryParamsToMask == null) {
+            queryParamsToMask = new HashSet<>();
+        }
+        queryParams.forEach(queryParam ->
+                queryParamsToMask.add(requireNonNull(queryParam, "queryParam")));
+        return self();
+    }
+
+    /**
+     * Sets the {@link QueryParamMaskingFunction} to use to mask query parameters before logging.
+     * The default is {@link QueryParamMaskingFunction#of()}.
+     */
+    public SELF queryParamMaskingFunction(QueryParamMaskingFunction queryParamMaskingFunction) {
+        this.queryParamMaskingFunction =
+                requireNonNull(queryParamMaskingFunction, "queryParamMaskingFunction");
+        return self();
+    }
+
+    final HeadersSanitizer<T> maybeWrapRequestHeadersSanitizer(
+            HeadersSanitizer<T> requestHeadersSanitizer) {
+        if (queryParamsToMask == null || queryParamsToMask.isEmpty()) {
+            return requestHeadersSanitizer;
+        }
+        return new QueryParamMaskingHeadersSanitizer<>(
+                requestHeadersSanitizer, ImmutableSet.copyOf(queryParamsToMask),
+                queryParamMaskingFunction);
     }
 
     /**

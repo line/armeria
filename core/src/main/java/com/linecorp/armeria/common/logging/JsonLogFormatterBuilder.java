@@ -61,10 +61,12 @@ public final class JsonLogFormatterBuilder
         final ObjectMapper objectMapper = this.objectMapper;
         final HeadersSanitizer<JsonNode> defaultHeadersSanitizer =
                 defaultHeadersSanitizer(objectMapper);
+        final HeadersSanitizer<JsonNode> requestHeadersSanitizer =
+                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofJson());
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =
                 defaultSanitizer(objectMapper);
         return new JsonLogFormatter(
-                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofJson()),
+                maybeWrapRequestHeadersSanitizer(requestHeadersSanitizer),
                 firstNonNull(responseHeadersSanitizer(), HeadersSanitizer.ofJson()),
                 firstNonNull(requestTrailersSanitizer(), defaultHeadersSanitizer),
                 firstNonNull(responseTrailersSanitizer(), defaultHeadersSanitizer),
