@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -127,7 +128,7 @@ class WebSocketClientTest {
         assertThat(future).isNotDone();
         group.set(server.httpEndpoint());
         final WebSocketSession session = future.join();
-        assertThat(session.responseHeaders().status().code()).isGreaterThanOrEqualTo(100);
+        assertThat(session.responseHeaders().status()).isIn(HttpStatus.SWITCHING_PROTOCOLS, HttpStatus.OK);
         session.inbound().abort();
         session.outbound().abort();
     }

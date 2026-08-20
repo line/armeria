@@ -108,19 +108,13 @@ final class DefaultWebSocketClient implements WebSocketClient {
             ctx = captor.get();
         }
 
-        final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
         final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
         if (ctxExt == null) {
-            finishConnect(ctx, requestHeaders, response, outboundFuture, result);
-            return result;
+            throw new IllegalStateException("ClientRequestContextExtension is unavailable");
         }
-        ctxExt.whenInitialized().handle((unused, cause) -> {
-            if (cause != null) {
-                response.abort(cause);
-                outboundFuture.completeExceptionally(cause);
-                result.completeExceptionally(cause);
-                return null;
-            }
+
+        final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
+        ctxExt.whenInitialized().handle((unused, unused2) -> {
             try {
                 finishConnect(ctx, requestHeaders, response, outboundFuture, result);
             } catch (Throwable t) {
