@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A skeletal builder implementation for {@link LogFormatter}.
@@ -66,6 +67,7 @@ abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuil
      * Adds the query parameters to mask in request paths before logging.
      * Query parameter names are case-sensitive. Unmasked query components are logged unchanged.
      */
+    @UnstableApi
     public SELF maskQueryParams(String... queryParams) {
         requireNonNull(queryParams, "queryParams");
         return maskQueryParams(ImmutableSet.copyOf(queryParams));
@@ -75,6 +77,7 @@ abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuil
      * Adds the query parameters to mask in request paths before logging.
      * Query parameter names are case-sensitive. Unmasked query components are logged unchanged.
      */
+    @UnstableApi
     public SELF maskQueryParams(Iterable<String> queryParams) {
         requireNonNull(queryParams, "queryParams");
         if (queryParamsToMask == null) {
@@ -89,6 +92,7 @@ abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuil
      * Sets the {@link QueryParamMaskingFunction} to use to mask query parameters before logging.
      * The default is {@link QueryParamMaskingFunction#of()}.
      */
+    @UnstableApi
     public SELF queryParamMaskingFunction(QueryParamMaskingFunction queryParamMaskingFunction) {
         this.queryParamMaskingFunction =
                 requireNonNull(queryParamMaskingFunction, "queryParamMaskingFunction");

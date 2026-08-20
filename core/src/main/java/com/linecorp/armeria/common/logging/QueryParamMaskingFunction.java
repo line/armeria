@@ -17,10 +17,12 @@
 package com.linecorp.armeria.common.logging;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A function that masks the specified query parameter value.
  */
+@UnstableApi
 @FunctionalInterface
 public interface QueryParamMaskingFunction {
 

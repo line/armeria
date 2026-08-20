@@ -49,10 +49,13 @@ final class QueryParamMaskingHeadersSanitizer<T> implements HeadersSanitizer<T> 
             return delegate.sanitize(ctx, headers);
         }
 
-        final int queryStart = path.indexOf('?') + 1;
-        if (queryStart == 0 || queryStart == path.length()) {
+        final int queryDelimiter = path.indexOf('?');
+        final int fragmentStart = path.indexOf('#');
+        if (queryDelimiter < 0 || queryDelimiter == path.length() - 1 ||
+            (fragmentStart >= 0 && fragmentStart < queryDelimiter)) {
             return delegate.sanitize(ctx, headers);
         }
+        final int queryStart = queryDelimiter + 1;
 
         final String maskedPath = maskQueryParams(path, queryStart);
         if (maskedPath == null) {

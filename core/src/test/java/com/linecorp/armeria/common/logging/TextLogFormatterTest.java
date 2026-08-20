@@ -167,6 +167,25 @@ class TextLogFormatterTest {
     }
 
     @Test
+    void doNotMaskFragmentThatContainsQueryDelimiter() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .requestHeadersSanitizer((ctx, headers) ->
+                                                              headers.get(HttpHeaderNames.PATH))
+                                                      .build();
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        log.requestHeaders(RequestHeaders.of(
+                HttpMethod.GET, "/search#fragment?token=value"));
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains("headers=/search#fragment?token=value")
+                .doesNotContain("****");
+    }
+
+    @Test
     void useCustomQueryParamMaskingFunction() {
         final LogFormatter logFormatter = LogFormatter.builderForText()
                                                       .maskQueryParams("token")
