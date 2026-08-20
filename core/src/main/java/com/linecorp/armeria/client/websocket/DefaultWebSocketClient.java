@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
@@ -106,6 +107,30 @@ final class DefaultWebSocketClient implements WebSocketClient {
             response = webClient.execute(request, requestOptions);
             ctx = captor.get();
         }
+
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt == null) {
+            throw new IllegalStateException("ClientRequestContextExtension is unavailable");
+        }
+
+        final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
+        ctxExt.whenInitialized().handle((unused, unused2) -> {
+            try {
+                finishConnect(ctx, requestHeaders, response, outboundFuture, result);
+            } catch (Throwable t) {
+                response.abort(t);
+                outboundFuture.completeExceptionally(t);
+                result.completeExceptionally(t);
+            }
+            return null;
+        });
+        return result;
+    }
+
+    private void finishConnect(ClientRequestContext ctx, RequestHeaders requestHeaders,
+                               HttpResponse response,
+                               CompletableFuture<StreamMessage<HttpData>> outboundFuture,
+                               CompletableFuture<WebSocketSession> result) {
         final SplitHttpResponse split =
                 new DefaultSplitHttpResponse(response, ctx.eventLoop(), responseHeaders -> {
                     final SessionProtocol actualSessionProtocol = actualSessionProtocol(ctx);
@@ -116,7 +141,6 @@ final class DefaultWebSocketClient implements WebSocketClient {
                     return !responseHeaders.status().isInformational();
                 });
 
-        final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
         split.headers().handle((responseHeaders, cause) -> {
             if (cause != null) {
                 fail(outboundFuture, split.body(), result, cause);
@@ -137,7 +161,6 @@ final class DefaultWebSocketClient implements WebSocketClient {
             result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));
             return null;
         });
-        return result;
     }
 
     private RequestHeaders webSocketHeaders(String path, HttpHeaders headers) {

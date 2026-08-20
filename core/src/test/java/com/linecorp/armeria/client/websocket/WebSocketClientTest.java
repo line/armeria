@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -29,7 +30,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -114,6 +118,25 @@ class WebSocketClientTest {
         assertThat(frame).isEqualTo(WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
         inboundHandler.completionFuture().join();
         await().until(outbound::isComplete);
+    }
+
+    @Test
+    void connectWaitsForAsyncEndpointGroup() {
+        final DelayedEndpointGroup group = new DelayedEndpointGroup();
+        final WebSocketClient client = WebSocketClient.builder(SessionProtocol.HTTP, group).build();
+        final CompletableFuture<WebSocketSession> future = client.connect("/chat");
+        assertThat(future).isNotDone();
+        group.set(server.httpEndpoint());
+        final WebSocketSession session = future.join();
+        assertThat(session.responseHeaders().status()).isIn(HttpStatus.SWITCHING_PROTOCOLS, HttpStatus.OK);
+        session.inbound().abort();
+        session.outbound().abort();
+    }
+
+    static final class DelayedEndpointGroup extends DynamicEndpointGroup {
+        void set(Endpoint endpoint) {
+            addEndpoint(endpoint);
+        }
     }
 
     static final class WebSocketServiceEchoHandler implements WebSocketServiceHandler {
