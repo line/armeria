@@ -553,53 +553,55 @@ class HealthCheckedEndpointGroupTest {
         final AtomicLong updateInvokedCounter = new AtomicLong();
         final Consumer<List<Endpoint>> endpointsListener = endpoints -> updateInvokedCounter.incrementAndGet();
 
-        try (HealthCheckedEndpointGroup endpointGroup =
-                     new HealthCheckedEndpointGroup(delegate, true,
-                                                    10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
-                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
-            endpointGroup.addListener(endpointsListener, true);
-            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
-            // the counter should stay 1 after 1 second has passed
-            await().pollDelay(1, TimeUnit.SECONDS)
-                   .untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-                    .isFalse();
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-                    .isTrue();
+        final HealthCheckedEndpointGroup endpointGroup = new HealthCheckedEndpointGroup(
+                delegate, true,
+                10000, 10000,
+                SessionProtocol.HTTP, 80,
+                DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                ClientOptions.of(), checkFactory,
+                HealthCheckStrategy.all(),
+                DEFAULT_ENDPOINT_PREDICATE
+        );
 
-            headers.set(ResponseHeaders.of(HttpStatus.OK, "x-envoy-degraded", ""));
-            // the counter should be incremented to three now
-            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(2));
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-                    .isTrue();
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-                    .isTrue();
+        endpointGroup.addListener(endpointsListener, true);
 
-            // the counter should be incremented to two now
-            healthy.set(0);
-            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(3));
-            assertThat(endpointGroup.endpoints()).isEmpty();
+        await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
+        // the counter should stay 1 after 1 second has passed
+        await().pollDelay(1, TimeUnit.SECONDS)
+               .untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                .isFalse();
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                .isTrue();
 
-            // healthy again
-            healthy.set(1);
-            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(4));
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-                    .isTrue();
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-                    .isTrue();
+        headers.set(ResponseHeaders.of(HttpStatus.OK, "x-envoy-degraded", ""));
+        // the counter should be incremented to three now
+        await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(2));
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                .isTrue();
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                .isTrue();
 
-            // turn off degraded again
-            headers.set(null);
-            await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(5));
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
-                    .isTrue();
-            assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
-                    .isFalse();
-        }
+        // the counter should be incremented to two now
+        healthy.set(0);
+        await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(3));
+        assertThat(endpointGroup.endpoints()).isEmpty();
+
+        // healthy again
+        healthy.set(1);
+        await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(4));
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                .isTrue();
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                .isTrue();
+
+        // turn off degraded again
+        headers.set(null);
+        await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(5));
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.HEALTHY_ATTR))
+                .isTrue();
+        assertThat(endpointGroup.endpoints().get(0).attrs().attr(EndpointAttributeKeys.DEGRADED_ATTR))
+                .isFalse();
     }
 
     @Test
