@@ -144,6 +144,7 @@ class ArmeriaHttpClientTest {
         // Closing the root (as KubernetesClient.close() does) must close the shared WebSocket factory.
         root.close();
         assertThat(derived.isClosed()).isTrue();
+        wsFactory.whenClosed().get(10, TimeUnit.SECONDS);
         assertThat(wsFactory.isClosed()).isTrue();
     }
 
