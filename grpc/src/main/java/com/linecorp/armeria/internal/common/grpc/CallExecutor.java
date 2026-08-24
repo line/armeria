@@ -46,10 +46,10 @@ import io.netty.channel.EventLoop;
 public interface CallExecutor extends Executor {
 
     /**
-     * Returns a CallExecutor that runs tasks on the EventLoop of the specified
-     * RequestContext. When called on that event loop while idle and the current
-     * context is compatible with the call's context, a task runs inline without
-     * touching the queue.
+     * Returns a {@link CallExecutor} that runs tasks on the {@link EventLoop} of the specified
+     * {@link RequestContext}. A task submitted from that event loop runs inline without touching
+     * the queue when this executor has no task running or queued and the current context is
+     * compatible with the specified context.
      */
     static CallExecutor of(RequestContext ctx, Consumer<? super Throwable> exceptionHandler) {
         return new EventLoopCallExecutor(requireNonNull(ctx, "ctx"),
