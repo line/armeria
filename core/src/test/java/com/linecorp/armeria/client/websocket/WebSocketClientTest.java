@@ -22,10 +22,10 @@ import static org.awaitility.Awaitility.await;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -120,15 +120,20 @@ class WebSocketClientTest {
         await().until(outbound::isComplete);
     }
 
-    @Test
-    void connectWaitsForAsyncEndpointGroup() {
+    @EnumSource(value = SessionProtocol.class, names = { "H2C", "H1C" })
+    @ParameterizedTest
+    void connectWaitsForAsyncEndpointGroup(SessionProtocol sessionProtocol) {
         final DelayedEndpointGroup group = new DelayedEndpointGroup();
-        final WebSocketClient client = WebSocketClient.builder(SessionProtocol.HTTP, group).build();
+        final WebSocketClient client = WebSocketClient.builder(sessionProtocol, group).build();
         final CompletableFuture<WebSocketSession> future = client.connect("/chat");
         assertThat(future).isNotDone();
         group.set(server.httpEndpoint());
         final WebSocketSession session = future.join();
-        assertThat(session.responseHeaders().status()).isIn(HttpStatus.SWITCHING_PROTOCOLS, HttpStatus.OK);
+        if (sessionProtocol == SessionProtocol.H1C) {
+            assertThat(session.responseHeaders().status()).isSameAs(HttpStatus.SWITCHING_PROTOCOLS);
+        } else {
+            assertThat(session.responseHeaders().status()).isSameAs(HttpStatus.OK);
+        }
         session.inbound().abort();
         session.outbound().abort();
     }
