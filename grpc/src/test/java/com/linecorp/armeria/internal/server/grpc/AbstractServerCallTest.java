@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,12 +29,16 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.protobuf.ByteString;
+
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
@@ -43,6 +48,8 @@ import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import io.netty.buffer.ByteBuf;
+import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.StreamingInputCallRequest;
 import testing.grpc.Messages.StreamingInputCallResponse;
 import testing.grpc.TestServiceGrpc;
@@ -58,6 +65,7 @@ class AbstractServerCallTest {
             final GrpcService grpcService =
                     GrpcService.builder()
                                .useBlockingTaskExecutor(true)
+                               .unsafeWrapRequestBuffers(true)
                                .useClientTimeoutHeader(false)
                                .addService(ServerInterceptors.intercept(
                                        new FooTestServiceImpl(),
@@ -79,14 +87,20 @@ class AbstractServerCallTest {
                     protected void beforeSubscribe(Subscriber<? super HttpObject> subscriber,
                                                    Subscription subscription) {
                         // This is called right before
-                        // blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+                        // callExecutor.execute(() -> invokeOnMessage(request, endOfStream));
                         // in AbstractServerCall.
-                        // https://github.com/line/armeria/blob/0960d091bfc7f350c17e68f57cc627de584b9705/grpc/src/main/java/com/linecorp/armeria/internal/server/grpc/AbstractServerCall.java#L363
                         final ServerCall<?, ?> serverCall = serverCallCaptor.get();
                         assertThat(serverCall).isInstanceOf(AbstractServerCall.class);
-                        ((AbstractServerCall<?, ?>) serverCall).blockingExecutor.execute(() -> {
+                        ((AbstractServerCall<?, ?>) serverCall).callExecutor.execute(() -> {
                             // invokeOnMessage is not called until the request is cancelled.
                             await().until(serverCall::isCancelled);
+                            // The request message was deframed and its buffer stored in the meantime.
+                            await().until(() -> {
+                                final IdentityHashMap<Object, ByteBuf> buffers =
+                                        ctx.attr(GrpcUnsafeBufferUtil.BUFFERS);
+                                return buffers != null && !buffers.isEmpty();
+                            });
+                            storedBuffer.set(ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).values().iterator().next());
                             // Now, AbstractServerCall.invokeOnMessage() is called and it doesn't call
                             // listener.onMessage() because the request is cancelled.
                         });
@@ -98,6 +112,7 @@ class AbstractServerCallTest {
                     }
                 };
                 ctx.updateRequest(newReq);
+                ctxCaptor.set(ctx);
                 return delegate.serve(ctx, newReq);
             });
             sb.requestTimeoutMillis(100);
@@ -105,6 +120,8 @@ class AbstractServerCallTest {
     };
 
     private static final AtomicBoolean isOnNextCalled = new AtomicBoolean();
+    private static final AtomicReference<ServiceRequestContext> ctxCaptor = new AtomicReference<>();
+    private static final AtomicReference<ByteBuf> storedBuffer = new AtomicReference<>();
 
     @Test
     void onMessageIsNotCalledWhenRequestCancelled() throws InterruptedException {
@@ -124,12 +141,23 @@ class AbstractServerCallTest {
                     public void onCompleted() {
                     }
                 });
-        streamingInputCallRequestStreamObserver.onNext(StreamingInputCallRequest.newBuilder().build());
+        streamingInputCallRequestStreamObserver.onNext(
+                StreamingInputCallRequest.newBuilder()
+                                         .setPayload(Payload.newBuilder()
+                                                            .setBody(ByteString.copyFromUtf8("payload")))
+                                         .build());
         assertThatThrownBy(future::get).hasCauseInstanceOf(StatusRuntimeException.class)
                                        .hasMessageContaining("CANCELLED");
         // Sleep additional 1 second to make sure that the onNext() is not called.
         Thread.sleep(1000);
         assertThat(isOnNextCalled).isFalse();
+
+        // The skipped message must release the buffer it wrapped, exactly once.
+        await().untilAsserted(() -> {
+            assertThat(storedBuffer.get()).isNotNull();
+            assertThat(storedBuffer.get().refCnt()).isZero();
+            assertThat(ctxCaptor.get().attr(GrpcUnsafeBufferUtil.BUFFERS)).isEmpty();
+        });
     }
 
     private static class FooTestServiceImpl extends TestServiceGrpc.TestServiceImplBase {

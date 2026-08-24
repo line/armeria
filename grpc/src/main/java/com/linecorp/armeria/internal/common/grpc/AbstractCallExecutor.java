@@ -21,6 +21,9 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.SafeCloseable;
+
 /**
  * Shares the exception-routing logic between the {@link CallExecutor} implementations.
  */
@@ -28,26 +31,37 @@ abstract class AbstractCallExecutor implements CallExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractCallExecutor.class);
 
+    private final RequestContext ctx;
     private final Consumer<? super Throwable> exceptionHandler;
 
-    AbstractCallExecutor(Consumer<? super Throwable> exceptionHandler) {
+    AbstractCallExecutor(RequestContext ctx, Consumer<? super Throwable> exceptionHandler) {
+        this.ctx = ctx;
         this.exceptionHandler = exceptionHandler;
     }
 
     /**
-     * Runs the task and routes any {@link Throwable} it throws to the exception handler.
-     * Never throws: a misbehaving handler is logged instead, so that a drain loop can always continue with
-     * the tasks queued behind the failed one. Otherwise those tasks would be orphaned in the queue.
+     * Returns the {@link RequestContext} of the call this executor belongs to.
+     */
+    protected final RequestContext ctx() {
+        return ctx;
+    }
+
+    /**
+     * Runs the task with {@link #ctx()} pushed and routes any {@link Throwable} it throws to the exception
+     * handler. A misbehaving handler is logged instead of propagating, so that a drain loop can always
+     * continue with the tasks queued behind the failed one.
      */
     protected final void runTask(Runnable task) {
-        try {
-            task.run();
-        } catch (Throwable cause) {
+        try (SafeCloseable ignored = ctx.push()) {
             try {
-                exceptionHandler.accept(cause);
-            } catch (Throwable handlerCause) {
-                logger.warn("Unexpected exception from the exception handler of {} " +
-                            "while handling an exception from a task: {}", this, cause, handlerCause);
+                task.run();
+            } catch (Throwable cause) {
+                try {
+                    exceptionHandler.accept(cause);
+                } catch (Throwable handlerCause) {
+                    logger.warn("Unexpected exception from the exception handler of {} " +
+                                "while handling an exception from a task: {}", this, cause, handlerCause);
+                }
             }
         }
     }

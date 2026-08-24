@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -45,8 +46,9 @@ final class SequentialCallExecutor extends AbstractCallExecutor {
     @Nullable
     private volatile Thread currentThread;
 
-    SequentialCallExecutor(Executor executor, Consumer<? super Throwable> exceptionHandler) {
-        super(exceptionHandler);
+    SequentialCallExecutor(RequestContext ctx, Executor executor,
+                           Consumer<? super Throwable> exceptionHandler) {
+        super(ctx, exceptionHandler);
         sequentialExecutor = MoreExecutors.newSequentialExecutor(executor);
     }
 

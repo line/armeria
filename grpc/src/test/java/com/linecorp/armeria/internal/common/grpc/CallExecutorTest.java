@@ -40,10 +40,15 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.EventLoop;
 
 class CallExecutorTest {
 
@@ -70,7 +75,7 @@ class CallExecutorTest {
     @Test
     void sequential_tasksNeverRunConcurrentlyAndKeepPerProducerOrder() throws Exception {
         final List<Throwable> errors = new CopyOnWriteArrayList<>();
-        final CallExecutor executor = CallExecutor.sequential(pool, errors::add);
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, errors::add);
 
         final int producers = 4;
         final int perProducer = 200;
@@ -121,7 +126,7 @@ class CallExecutorTest {
 
     @Test
     void sequential_reentrantTaskRunsAfterCurrentTaskOnTheSameThread() throws Exception {
-        final CallExecutor executor = CallExecutor.sequential(pool, t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, t -> {});
         final List<String> events = new CopyOnWriteArrayList<>();
         final AtomicReference<Thread> outerThread = new AtomicReference<>();
         final AtomicReference<Thread> innerThread = new AtomicReference<>();
@@ -146,7 +151,7 @@ class CallExecutorTest {
 
     @Test
     void sequential_reentrantTaskDoesNotOvertakeAlreadyQueuedTasks() throws Exception {
-        final CallExecutor executor = CallExecutor.sequential(pool, t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, t -> {});
         final List<String> events = new CopyOnWriteArrayList<>();
         final CountDownLatch aStarted = new CountDownLatch(1);
         final CountDownLatch bQueued = new CountDownLatch(1);
@@ -179,7 +184,7 @@ class CallExecutorTest {
 
     @Test
     void sequential_inExecutorIsTrueOnlyWhileRunningATask() throws Exception {
-        final CallExecutor executor = CallExecutor.sequential(pool, t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, t -> {});
         final CompletableFuture<Boolean> insideTask = new CompletableFuture<>();
 
         assertThat(executor.inExecutor()).isFalse();
@@ -190,7 +195,7 @@ class CallExecutorTest {
 
     @Test
     void sequential_secondTaskDoesNotStartWhileFirstIsRunning() throws Exception {
-        final CallExecutor executor = CallExecutor.sequential(pool, t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, t -> {});
         final CountDownLatch firstStarted = new CountDownLatch(1);
         final CountDownLatch releaseFirst = new CountDownLatch(1);
         final AtomicBoolean firstFinished = new AtomicBoolean();
@@ -225,7 +230,7 @@ class CallExecutorTest {
             delegateCalls.incrementAndGet();
             pool.execute(task);
         };
-        final CallExecutor executor = CallExecutor.sequential(countingDelegate, t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), countingDelegate, t -> {});
         final CompletableFuture<Void> done = new CompletableFuture<>();
 
         executor.execute(() -> {
@@ -241,7 +246,7 @@ class CallExecutorTest {
     void sequential_inExecutorIsFalseAgainAfterExecuteReturnsOnDirectExecutor() {
         // With a direct delegate the task runs synchronously on the calling thread, so this is the only
         // way to observe from the same thread that the "current thread" bookkeeping is reset afterwards.
-        final CallExecutor executor = CallExecutor.sequential(MoreExecutors.directExecutor(), t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), MoreExecutors.directExecutor(), t -> {});
         final AtomicBoolean insideTask = new AtomicBoolean();
 
         executor.execute(() -> insideTask.set(executor.inExecutor()));
@@ -254,7 +259,7 @@ class CallExecutorTest {
     void sequential_rejectedSubmissionNeverRunsAndPropagates() {
         final ExecutorService deadPool = Executors.newSingleThreadExecutor();
         deadPool.shutdownNow();
-        final CallExecutor executor = CallExecutor.sequential(deadPool, t -> {});
+        final CallExecutor executor = CallExecutor.sequential(ctx(), deadPool, t -> {});
         final AtomicBoolean ran = new AtomicBoolean();
 
         assertThatThrownBy(() -> executor.execute(() -> ran.set(true)))
@@ -266,7 +271,7 @@ class CallExecutorTest {
     void sequential_throwingExceptionHandlerDoesNotOrphanQueuedTasks() throws Exception {
         // The handler throwing an Error is the harshest case: without isolation it would kill the worker
         // and leave the already-queued task behind forever.
-        final CallExecutor executor = CallExecutor.sequential(pool, t -> {
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, t -> {
             throw new Error("handler failed");
         });
         final CountDownLatch firstStarted = new CountDownLatch(1);
@@ -292,7 +297,7 @@ class CallExecutorTest {
     @Test
     void sequential_exceptionIsReportedAndLaterTasksStillRun() throws Exception {
         final List<Throwable> errors = new CopyOnWriteArrayList<>();
-        final CallExecutor executor = CallExecutor.sequential(pool, errors::add);
+        final CallExecutor executor = CallExecutor.sequential(ctx(), pool, errors::add);
         final CompletableFuture<Void> secondRan = new CompletableFuture<>();
         final RuntimeException boom = new RuntimeException("boom");
 
@@ -311,7 +316,7 @@ class CallExecutorTest {
 
     @Test
     void eventLoop_runsInlineWhenCalledOnTheEventLoopWhileIdle() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {});
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), t -> {});
         final CompletableFuture<Boolean> ranBeforeExecuteReturned = new CompletableFuture<>();
 
         eventLoop.get().execute(() -> {
@@ -325,7 +330,7 @@ class CallExecutorTest {
 
     @Test
     void eventLoop_reentrantTaskRunsAfterCurrentTaskInsteadOfNesting() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {});
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), t -> {});
         final List<String> events = new CopyOnWriteArrayList<>();
         final CompletableFuture<List<String>> afterOuterExecute = new CompletableFuture<>();
 
@@ -345,7 +350,7 @@ class CallExecutorTest {
 
     @Test
     void eventLoop_reentrantTasksKeepSubmissionOrder() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {});
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), t -> {});
         final List<String> events = new CopyOnWriteArrayList<>();
         final CompletableFuture<Void> done = new CompletableFuture<>();
 
@@ -365,7 +370,7 @@ class CallExecutorTest {
 
     @Test
     void eventLoop_reentrantTaskDoesNotOvertakeTaskQueuedByForeignThread() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {});
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), t -> {});
         final List<String> events = new CopyOnWriteArrayList<>();
         final CountDownLatch aStarted = new CountDownLatch(1);
         final CountDownLatch bQueued = new CountDownLatch(1);
@@ -398,7 +403,7 @@ class CallExecutorTest {
 
     @Test
     void eventLoop_foreignThreadSubmissionRunsOnTheEventLoop() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {});
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), t -> {});
         final CompletableFuture<Boolean> ranOnEventLoop = new CompletableFuture<>();
 
         // The test thread is not the event loop.
@@ -409,20 +414,11 @@ class CallExecutorTest {
     }
 
     @Test
-    void eventLoop_inExecutorIsTrueOnTheEventLoop() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {});
-        final CompletableFuture<Boolean> insideTask = new CompletableFuture<>();
-
-        executor.execute(() -> insideTask.complete(executor.inExecutor()));
-        assertThat(insideTask.get(10, TimeUnit.SECONDS)).isTrue();
-    }
-
-    @Test
     void eventLoop_rejectedForeignSubmissionNeverRunsAndLeavesNoResidue() throws Exception {
         final DefaultEventLoop deadLoop = new DefaultEventLoop();
         deadLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
         final EventLoopCallExecutor executor =
-                (EventLoopCallExecutor) CallExecutor.of(deadLoop, t -> {});
+                (EventLoopCallExecutor) CallExecutor.of(ctxOn(deadLoop), t -> {});
         final AtomicBoolean ran = new AtomicBoolean();
 
         assertThatThrownBy(() -> executor.execute(() -> ran.set(true)))
@@ -439,7 +435,7 @@ class CallExecutorTest {
         // instead of reporting a rejection the caller might retry.
         final InterceptingEventLoop loop = new InterceptingEventLoop();
         try {
-            final CallExecutor executor = CallExecutor.of(loop, t -> {});
+            final CallExecutor executor = CallExecutor.of(ctxOn(loop), t -> {});
             final CountDownLatch aStarted = new CountDownLatch(1);
             final CountDownLatch releaseA = new CountDownLatch(1);
             final CompletableFuture<Void> fRan = new CompletableFuture<>();
@@ -475,7 +471,7 @@ class CallExecutorTest {
 
     @Test
     void eventLoop_throwingExceptionHandlerDoesNotOrphanQueuedTasks() throws Exception {
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), t -> {
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), t -> {
             throw new Error("handler failed");
         });
         final CompletableFuture<Void> reentrantRan = new CompletableFuture<>();
@@ -491,7 +487,7 @@ class CallExecutorTest {
     @Test
     void eventLoop_exceptionIsReportedAndDrainContinues() throws Exception {
         final List<Throwable> errors = new CopyOnWriteArrayList<>();
-        final CallExecutor executor = CallExecutor.of(eventLoop.get(), errors::add);
+        final CallExecutor executor = CallExecutor.of(ctxOn(eventLoop.get()), errors::add);
         final CompletableFuture<Void> reentrantRan = new CompletableFuture<>();
         final RuntimeException boom = new RuntimeException("boom");
 
@@ -502,6 +498,89 @@ class CallExecutorTest {
 
         reentrantRan.get(10, TimeUnit.SECONDS);
         assertThat(errors).containsExactly(boom);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Request context: every task runs with the call's context, and a call's executor never runs a
+    // task inline under another request's context.
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    void eventLoop_inlineTaskRunsWithTheCallContext() throws Exception {
+        final ServiceRequestContext ctx = ctxOn(eventLoop.get());
+        final CallExecutor executor = CallExecutor.of(ctx, t -> {});
+        final CompletableFuture<RequestContext> seen = new CompletableFuture<>();
+
+        // Raw event loop, no context pushed: the task still runs inline, and still sees its own context.
+        eventLoop.get().execute(() -> executor.execute(() -> seen.complete(RequestContext.currentOrNull())));
+
+        assertThat(seen.get(10, TimeUnit.SECONDS)).isSameAs(ctx);
+    }
+
+    @Test
+    void eventLoop_submissionUnderAnotherRequestContextIsNotRunInline() throws Exception {
+        // Two calls share one physical event loop. While a task of call A runs with A's context pushed,
+        // it submits to B's executor (e.g. by completing B's listener future). B's task must not run
+        // inline under A's context; it runs later with B's context.
+        final EventLoop loop = eventLoop.get();
+        final ServiceRequestContext ctxA = ctxOn(loop);
+        final ServiceRequestContext ctxB = ctxOn(loop);
+        final CallExecutor executorB = CallExecutor.of(ctxB, t -> {});
+        final AtomicBoolean bRan = new AtomicBoolean();
+        final CompletableFuture<Boolean> ranInlineUnderA = new CompletableFuture<>();
+        final CompletableFuture<RequestContext> seenByB = new CompletableFuture<>();
+
+        ctxA.eventLoop().execute(() -> {                // ContextAwareEventLoop: A's context is pushed here
+            executorB.execute(() -> {
+                bRan.set(true);
+                seenByB.complete(RequestContext.currentOrNull());
+            });
+            ranInlineUnderA.complete(bRan.get());
+        });
+
+        assertThat(ranInlineUnderA.get(10, TimeUnit.SECONDS)).isFalse();
+        assertThat(seenByB.get(10, TimeUnit.SECONDS)).isSameAs(ctxB);
+    }
+
+    @Test
+    void eventLoop_inExecutorIsTrueOnlyInsideThisExecutorsTask() throws Exception {
+        final EventLoop loop = eventLoop.get();
+        final CallExecutor executorA = CallExecutor.of(ctxOn(loop), t -> {});
+        final CallExecutor executorB = CallExecutor.of(ctxOn(loop), t -> {});
+        final CompletableFuture<Boolean> onLoopOutsideAnyTask = new CompletableFuture<>();
+        final CompletableFuture<Boolean> insideOwnTask = new CompletableFuture<>();
+        final CompletableFuture<Boolean> insideOtherCallsTask = new CompletableFuture<>();
+
+        loop.execute(() -> {
+            onLoopOutsideAnyTask.complete(executorA.inExecutor());
+            executorA.execute(() -> {
+                insideOwnTask.complete(executorA.inExecutor());
+                insideOtherCallsTask.complete(executorB.inExecutor());
+            });
+        });
+
+        assertThat(onLoopOutsideAnyTask.get(10, TimeUnit.SECONDS)).isFalse();
+        assertThat(insideOwnTask.get(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(insideOtherCallsTask.get(10, TimeUnit.SECONDS)).isFalse();
+    }
+
+    @Test
+    void sequential_taskRunsWithTheCallContext() throws Exception {
+        final ServiceRequestContext ctx = ctx();
+        final CallExecutor executor = CallExecutor.sequential(ctx, pool, t -> {});
+        final CompletableFuture<RequestContext> seen = new CompletableFuture<>();
+
+        executor.execute(() -> seen.complete(RequestContext.currentOrNull()));
+
+        assertThat(seen.get(10, TimeUnit.SECONDS)).isSameAs(ctx);
+    }
+
+    private static ServiceRequestContext ctx() {
+        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+    }
+
+    private static ServiceRequestContext ctxOn(EventLoop loop) {
+        return ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).eventLoop(loop).build();
     }
 
     /**

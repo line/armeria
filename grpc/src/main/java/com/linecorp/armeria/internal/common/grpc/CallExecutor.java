@@ -21,12 +21,15 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.common.RequestContext;
+
 import io.netty.channel.EventLoop;
 
 /**
  * A per-call {@link Executor} that runs the tasks of a single gRPC call one at a time.
  *
  * <ul>
+ *   <li>Every task runs with the call's {@link RequestContext} pushed.</li>
  *   <li>No two tasks run concurrently, and consecutive tasks have a happens-before relationship.</li>
  *   <li>Tasks run in the order they were enqueued, whichever thread submitted them.</li>
  *   <li>A task submitted while this executor is already running a task on the current thread is
@@ -43,26 +46,30 @@ import io.netty.channel.EventLoop;
 public interface CallExecutor extends Executor {
 
     /**
-     * Returns a {@link CallExecutor} that runs tasks on the specified {@link EventLoop}.
-     * When called on the event loop while idle, a task runs inline without touching the queue.
+     * Returns a CallExecutor that runs tasks on the EventLoop of the specified
+     * RequestContext. When called on that event loop while idle and the current
+     * context is compatible with the call's context, a task runs inline without
+     * touching the queue.
      */
-    static CallExecutor of(EventLoop eventLoop, Consumer<? super Throwable> exceptionHandler) {
-        return new EventLoopCallExecutor(requireNonNull(eventLoop, "eventLoop"),
+    static CallExecutor of(RequestContext ctx, Consumer<? super Throwable> exceptionHandler) {
+        return new EventLoopCallExecutor(requireNonNull(ctx, "ctx"),
                                          requireNonNull(exceptionHandler, "exceptionHandler"));
     }
 
     /**
-     * Returns a {@link CallExecutor} that serializes tasks on top of the specified, possibly
-     * multi-threaded, {@link Executor} such as {@code ctx.blockingTaskExecutor()}.
+     * Returns a {@link CallExecutor} that serializes the tasks of the specified {@link RequestContext} on
+     * top of the specified, possibly multi-threaded, {@link Executor} such as
+     * {@code ctx.blockingTaskExecutor()}.
      */
-    static CallExecutor sequential(Executor executor, Consumer<? super Throwable> exceptionHandler) {
-        return new SequentialCallExecutor(requireNonNull(executor, "executor"),
+    static CallExecutor sequential(RequestContext ctx, Executor executor,
+                                   Consumer<? super Throwable> exceptionHandler) {
+        return new SequentialCallExecutor(requireNonNull(ctx, "ctx"), requireNonNull(executor, "executor"),
                                           requireNonNull(exceptionHandler, "exceptionHandler"));
     }
 
     /**
-     * Returns {@code true} if the current thread is the one this executor runs its tasks on,
-     * like {@link EventLoop#inEventLoop()}.
+     * Returns whether the current thread is actively executing a task
+     * submitted to this executor.
      */
     boolean inExecutor();
 }

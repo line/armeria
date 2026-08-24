@@ -25,6 +25,9 @@ import java.util.function.Consumer;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
+
 import io.netty.channel.EventLoop;
 
 /**
@@ -34,6 +37,10 @@ import io.netty.channel.EventLoop;
  * drains it, one drain at a time ({@code draining}). A task submitted while a drain is running on the
  * event loop is picked up by that drain after the current task returns. When the event loop is idle and
  * nothing is queued, the task runs inline without touching the queue.
+ *
+ * <p>Several calls share one event loop, so "on the event loop" is not enough to run inline: if another
+ * request's context is current, the submission is handed off like one from a foreign thread,
+ * so that the task runs in a fresh event loop turn with this call's context.
  */
 final class EventLoopCallExecutor extends AbstractCallExecutor {
 
@@ -46,15 +53,15 @@ final class EventLoopCallExecutor extends AbstractCallExecutor {
     // Accessed only from the event loop thread.
     private boolean draining;
 
-    EventLoopCallExecutor(EventLoop eventLoop, Consumer<? super Throwable> exceptionHandler) {
-        super(exceptionHandler);
-        this.eventLoop = eventLoop;
+    EventLoopCallExecutor(RequestContext ctx, Consumer<? super Throwable> exceptionHandler) {
+        super(ctx, exceptionHandler);
+        eventLoop = ctx.eventLoop();
     }
 
     @Override
     public void execute(Runnable task) {
         requireNonNull(task, "task");
-        if (!eventLoop.inEventLoop()) {
+        if (!eventLoop.inEventLoop() || !inCompatibleContext()) {
             executeFromForeignThread(task);
             return;
         }
@@ -82,8 +89,8 @@ final class EventLoopCallExecutor extends AbstractCallExecutor {
     }
 
     private void executeFromForeignThread(Runnable task) {
-        // Wrapped so that the rollback below removes exactly this submission, as Guava's SequentialExecutor
-        // does.
+        // Wrapped so that the rollback below removes exactly this submission,
+        // as Guava's SequentialExecutor does.
         final Runnable submitted = new Runnable() {
             @Override
             public void run() {
@@ -96,14 +103,14 @@ final class EventLoopCallExecutor extends AbstractCallExecutor {
             }
         };
 
-        // Enqueued from this thread, not from the event loop task, so that a reentrant submission cannot
-        // overtake it.
+        // Enqueued from this thread, not from the event loop task,
+        // so that a reentrant submission cannot overtake it.
         queue.add(submitted);
         try {
             eventLoop.execute(drainTask);
         } catch (Throwable t) {
-            // Still queued: it will never run, so rethrow. Already taken by a running drain: it ran, and only
-            // the redundant drain request was rejected.
+            // Still queued: it will never run, so rethrow. Already taken by a running drain:
+            // it ran, and only the redundant drain request was rejected.
             if (queue.remove(submitted) || !(t instanceof RejectedExecutionException)) {
                 throw t;
             }
@@ -112,7 +119,22 @@ final class EventLoopCallExecutor extends AbstractCallExecutor {
 
     @Override
     public boolean inExecutor() {
-        return eventLoop.inEventLoop();
+        return eventLoop.inEventLoop() && draining;
+    }
+
+    /**
+     * Whether {@link #ctx()} may be pushed on the current thread, mirroring the rule in
+     * {@code ServiceRequestContext.push()}: no context, a context without a root,
+     * this context or one of its children.
+     */
+    private boolean inCompatibleContext() {
+        final RequestContext current = RequestContext.currentOrNull();
+        if (current == null || current.root() == null) {
+            return true;
+        }
+        final RequestContext ctx = ctx();
+        return current.unwrapAll() == ctx.unwrapAll() ||
+               RequestContextUtil.equalsIgnoreWrapper(current.root(), ctx.root());
     }
 
     @VisibleForTesting
