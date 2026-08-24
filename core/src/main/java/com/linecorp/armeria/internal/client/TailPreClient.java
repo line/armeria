@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.client;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -58,7 +60,9 @@ public final class TailPreClient<I extends Request, O extends Response, C extend
             Function<CompletableFuture<HttpResponse>, HttpResponse> futureConverter,
             BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory) {
         final TailHttpClient tailDelegating = httpClient.as(TailHttpClient.class);
-        assert tailDelegating != null;
+        checkState(tailDelegating != null,
+                   "Failed to find TailHttpClient in the decorator chain. " +
+                   "A decorator may have been added that does not properly delegate Unwrappable.as().");
         final HttpClient rawDelegate = tailDelegating.defaultDelegate();
         final TailPreClient<HttpRequest, HttpResponse, HttpClient> tail =
                 new TailPreClient<>(httpClient, futureConverter, errorResponseFactory,
@@ -77,7 +81,9 @@ public final class TailPreClient<I extends Request, O extends Response, C extend
             Function<CompletableFuture<RpcResponse>, RpcResponse> futureConverter,
             BiFunction<ClientRequestContext, Throwable, RpcResponse> errorResponseFactory) {
         final TailRpcClient tailDelegating = rpcClient.as(TailRpcClient.class);
-        assert tailDelegating != null;
+        checkState(tailDelegating != null,
+                   "Failed to find TailRpcClient in the decorator chain. " +
+                   "A decorator may have been added that does not properly delegate Unwrappable.as().");
         final RpcClient rawDelegate = tailDelegating.defaultDelegate();
         final TailPreClient<RpcRequest, RpcResponse, RpcClient> tail =
                 new TailPreClient<>(rpcClient, futureConverter, errorResponseFactory,
