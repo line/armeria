@@ -93,7 +93,8 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                      sp.defaultIdpConfig(),
                                                                      sp.requestIdManager(),
                                                                      sp.ssoHandler(),
-                                                                     sp.isSignatureRequired())));
+                                                                     sp.isSignatureRequired(),
+                                                                     sp.assertionIdCache())));
         sp.sloEndpoints().forEach(
                 cfg -> builder.put(cfg.uri().getPath(),
                                    new SamlSingleLogoutFunction(cfg,

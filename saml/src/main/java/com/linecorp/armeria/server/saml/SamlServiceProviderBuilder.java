@@ -105,6 +105,9 @@ public final class SamlServiceProviderBuilder {
     @Nullable
     private SamlRequestIdManager requestIdManager;
 
+    @Nullable
+    private SamlAssertionIdCache assertionIdCache;
+
     private boolean signatureRequired = true;
 
     @Nullable
@@ -241,6 +244,20 @@ public final class SamlServiceProviderBuilder {
      */
     public SamlServiceProviderBuilder requestIdManager(SamlRequestIdManager requestIdManager) {
         this.requestIdManager = requireNonNull(requestIdManager, "requestIdManager");
+        return this;
+    }
+
+    /**
+     * Sets a {@link SamlAssertionIdCache} which tracks consumed SAML assertion IDs to prevent
+     * replay attacks. If not set, a local in-process Caffeine cache is used by default.
+     *
+     * <p>For clustered (active-active) deployments, provide a custom implementation backed by
+     * a shared store (e.g. Redis) to ensure replay protection across all nodes.
+     *
+     * @see SamlAssertionIdCache#ofLocal()
+     */
+    public SamlServiceProviderBuilder assertionIdCache(SamlAssertionIdCache assertionIdCache) {
+        this.assertionIdCache = requireNonNull(assertionIdCache, "assertionIdCache");
         return this;
     }
 
@@ -449,6 +466,9 @@ public final class SamlServiceProviderBuilder {
                                             e);
         }
 
+        final SamlAssertionIdCache assertionIdCache = firstNonNull(this.assertionIdCache,
+                                                                   SamlAssertionIdCache.ofLocal());
+
         final SamlSingleSignOnHandler ssoHandler;
         if (this.ssoHandler != null) {
             ssoHandler = this.ssoHandler;
@@ -474,7 +494,8 @@ public final class SamlServiceProviderBuilder {
                                        requestIdManager,
                                        ssoHandler,
                                        sloHandler,
-                                       signatureRequired);
+                                       signatureRequired,
+                                       assertionIdCache);
     }
 
     private static void validateSignatureAlgorithm(String signatureAlgorithm, Credential credential) {
