@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -520,7 +521,14 @@ public final class SamlServiceProviderBuilder {
             public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                                MessageContext<Response> message, @Nullable String sessionIndex,
                                                @Nullable String relayState) {
-                return responseWithLocation(firstNonNull(relayState, "/"));
+                // 'relayState' is attacker-controlled opaque data round-tripped by the IdP, so it must not
+                // be used as a redirect target without validation. Otherwise the default handler can be
+                // abused to perform an open redirect to an arbitrary URL. See:
+                // https://github.com/line/armeria/security/advisories/GHSA-89cp-657f-wp7v
+                if (relayState != null && isSafeRelayState(relayState, relayStateMaxLength)) {
+                    return responseWithLocation(relayState);
+                }
+                return responseWithLocation("/");
             }
 
             @Override
@@ -530,6 +538,36 @@ public final class SamlServiceProviderBuilder {
                 return responseWithLocation("/error");
             }
         };
+    }
+
+    /**
+     * Returns whether the specified {@code relayState} is safe to be used as a redirect target by the
+     * default SSO handler. Only a relative path that starts with exactly one {@code '/'} is allowed in
+     * order to prevent an open redirect. Protocol-relative URLs ({@code //host}), absolute URLs
+     * ({@code https://host/...}), schemes such as {@code javascript:} or {@code data:}, backslashes and
+     * control characters are all rejected.
+     */
+    @VisibleForTesting
+    static boolean isSafeRelayState(String relayState, int relayStateMaxLength) {
+        if (relayState.isEmpty() || relayState.length() > relayStateMaxLength) {
+            return false;
+        }
+        if (relayState.charAt(0) != '/') {
+            // Not a relative path. Reject absolute URLs and schemes such as 'javascript:' or 'data:'.
+            return false;
+        }
+        if (relayState.length() > 1 && relayState.charAt(1) == '/') {
+            // Reject a protocol-relative URL such as '//evil.example/'.
+            return false;
+        }
+        for (int i = 0; i < relayState.length(); i++) {
+            final char c = relayState.charAt(i);
+            // Reject backslashes, which some browsers normalize to '/', and control characters.
+            if (c == '\\' || Character.isISOControl(c)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
