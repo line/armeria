@@ -297,22 +297,11 @@ configure(relocatedProjects) {
                     // A relocated project may not have any tests (e.g. a project that only re-exports
                     // relocated APIs). In that case 'copyShadedTestClasses' still creates its (empty)
                     // destination directory, so Gradle treats it as "test sources present" and fails
-                    // this task via 'failOnNoDiscoveredTests' because no tests are discovered. Disable
-                    // that check when the project has no test *code* so such projects can still be shaded.
-                    // Only code (not resources) compiles into the test classes that tests are discovered
-                    // from, so a project with only test resources (e.g. 'src/test/resources') is treated
-                    // as having no tests. Each language's 'SourceDirectorySet' already includes generated
-                    // sources registered via 'srcDir(...)'.
-                    def testSourceSet = project.sourceSets.test
-                    def testCodeSources = [testSourceSet.allJava]
-                    ['kotlin', 'scala'].each { lang ->
-                        def langSources = testSourceSet.extensions.findByName(lang)
-                        if (langSources instanceof SourceDirectorySet) {
-                            testCodeSources << langSources
-                        }
-                    }
-                    if (testCodeSources.every { it.empty }) {
-                        failOnNoDiscoveredTests = false
+                    // this task via 'failOnNoDiscoveredTests' because no tests are discovered. Keep that
+                    // check enabled only when this project compiled its own test classes.
+                    def testClassesOutput = project.sourceSets.test.output.classesDirs
+                    failOnNoDiscoveredTests = project.provider {
+                        !testClassesOutput.asFileTree.matching { include '**/*.class' }.empty
                     }
 
                     project.ext.relocations.each {
