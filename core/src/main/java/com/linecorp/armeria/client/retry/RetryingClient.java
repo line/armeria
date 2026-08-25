@@ -296,16 +296,17 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
 
         final HttpRequest duplicateReq;
-        if (initialAttempt) {
-            duplicateReq = rootReqDuplicator.duplicate();
-        } else {
-            final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
-            newHeaders.setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
-            duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
-        }
-
         final ClientRequestContext derivedCtx;
         try {
+            // duplicate() may throw if the request body cannot be reproduced (see
+            // HttpRequest.reproducible); fail the request instead of retrying an unreproducible body.
+            if (initialAttempt) {
+                duplicateReq = rootReqDuplicator.duplicate();
+            } else {
+                final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
+                newHeaders.setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
+                duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
+            }
             derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
