@@ -175,6 +175,7 @@ public interface ServerConfig {
      * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
      * {@code maxConnectionAge}.
      */
+    @UnstableApi
     default double maxConnectionAgeJitterRate() {
         return 0.0;
     }

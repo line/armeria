@@ -877,6 +877,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeJitterRate} is less than
      *                                  {@code 0.0} or greater than {@code 1.0}
      */
+    @UnstableApi
     public ClientFactoryBuilder maxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
         option(ClientFactoryOptions.MAX_CONNECTION_AGE_JITTER_RATE, maxConnectionAgeJitterRate);
         return this;

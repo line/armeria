@@ -270,6 +270,9 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 
+    /**
+     * Closes an idle connection whose effective maximum connection age has elapsed.
+     */
     protected ChannelFuture closeIdleConnectionOnMaxAge(ChannelHandlerContext ctx) {
         return ctx.channel().close();
     }

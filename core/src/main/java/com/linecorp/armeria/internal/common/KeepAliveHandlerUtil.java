@@ -41,6 +41,11 @@ public final class KeepAliveHandlerUtil {
                maxConnectionAgeMillis > 0 || maxNumRequestsPerConnection > 0;
     }
 
+    /**
+     * Samples the effective maximum age of the connection and schedules a pre-protocol close task.
+     * The keep-alive handler takes ownership of the remaining lifespan after protocol detection, while
+     * closing the channel before detection cancels and cleans up the task.
+     */
     public static void initializeConnectionLifespan(Channel channel, long maxConnectionAgeMillis,
                                                     double maxConnectionAgeJitterRate) {
         if (maxConnectionAgeMillis <= 0) {

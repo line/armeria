@@ -802,6 +802,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeJitterRate} is less than
      *                                  {@code 0.0} or greater than {@code 1.0}
      */
+    @UnstableApi
     public ServerBuilder maxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
         checkArgument(maxConnectionAgeJitterRate >= 0.0 && maxConnectionAgeJitterRate <= 1.0,
                       "maxConnectionAgeJitterRate: %s (expected: >= 0.0 and <= 1.0)",

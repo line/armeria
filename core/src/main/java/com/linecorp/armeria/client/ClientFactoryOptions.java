@@ -250,6 +250,7 @@ public final class ClientFactoryOptions
      * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
      * {@code maxConnectionAge}. This option is disabled by default.
      */
+    @UnstableApi
     public static final ClientFactoryOption<Double> MAX_CONNECTION_AGE_JITTER_RATE =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_JITTER_RATE", 0.0,
                                        ClientFactoryOptions::validateMaxConnectionAgeJitterRate,
@@ -631,6 +632,7 @@ public final class ClientFactoryOptions
      * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
      * {@code maxConnectionAge}.
      */
+    @UnstableApi
     public double maxConnectionAgeJitterRate() {
         return get(MAX_CONNECTION_AGE_JITTER_RATE);
     }
