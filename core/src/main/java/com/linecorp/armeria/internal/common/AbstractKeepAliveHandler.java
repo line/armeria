@@ -47,8 +47,6 @@ import io.netty.channel.EventLoop;
 public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractKeepAliveHandler.class);
-    private static final long MIN_MAX_CONNECTION_AGE_NANOS = TimeUnit.SECONDS.toNanos(1);
-
     @Nullable
     private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
@@ -169,7 +167,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 } else {
                     randomValue = ThreadLocalRandom.current().nextDouble();
                 }
-                effectiveMaxConnectionAgeNanos = jitteredMaxConnectionAgeNanos(
+                effectiveMaxConnectionAgeNanos = KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
                         maxConnectionAgeNanos, maxConnectionAgeJitterRate, randomValue);
                 maxConnectionAgeDelayNanos = effectiveMaxConnectionAgeNanos;
             }
@@ -288,19 +286,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     @VisibleForTesting
     final PingState state() {
         return pingState;
-    }
-
-    @VisibleForTesting
-    static long jitteredMaxConnectionAgeNanos(long maxConnectionAgeNanos,
-                                              double jitterRate, double randomValue) {
-        if (maxConnectionAgeNanos <= 0 || jitterRate == 0) {
-            return maxConnectionAgeNanos;
-        }
-
-        final long jitteredLowerBound = (long) (maxConnectionAgeNanos * (1 - jitterRate));
-        final long lowerBound = Math.min(maxConnectionAgeNanos,
-                                         Math.max(MIN_MAX_CONNECTION_AGE_NANOS, jitteredLowerBound));
-        return lowerBound + (long) ((maxConnectionAgeNanos - lowerBound) * randomValue);
     }
 
     private void cancelFutures() {

@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.common;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.Channel;
@@ -27,6 +29,8 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
 
 public final class KeepAliveHandlerUtil {
+
+    private static final long MIN_MAX_CONNECTION_AGE_NANOS = TimeUnit.SECONDS.toNanos(1);
 
     private static final AttributeKey<ConnectionLifespan> CONNECTION_LIFESPAN =
             AttributeKey.valueOf(KeepAliveHandlerUtil.class, "connectionLifespan");
@@ -46,7 +50,7 @@ public final class KeepAliveHandlerUtil {
         final long maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         final double randomValue = maxConnectionAgeJitterRate == 0 ? 0 :
                                    ThreadLocalRandom.current().nextDouble();
-        final long effectiveMaxConnectionAgeNanos = AbstractKeepAliveHandler.jitteredMaxConnectionAgeNanos(
+        final long effectiveMaxConnectionAgeNanos = jitteredMaxConnectionAgeNanos(
                 maxConnectionAgeNanos, maxConnectionAgeJitterRate, randomValue);
         final long connectionStartTimeNanos = System.nanoTime();
         final ScheduledFuture<?> preProtocolMaxAgeFuture = channel.eventLoop().schedule(
@@ -68,6 +72,19 @@ public final class KeepAliveHandlerUtil {
     @Nullable
     static ConnectionLifespan connectionLifespan(Channel channel) {
         return channel.attr(CONNECTION_LIFESPAN).get();
+    }
+
+    @VisibleForTesting
+    static long jitteredMaxConnectionAgeNanos(long maxConnectionAgeNanos,
+                                              double jitterRate, double randomValue) {
+        if (maxConnectionAgeNanos <= 0 || jitterRate == 0) {
+            return maxConnectionAgeNanos;
+        }
+
+        final long jitteredLowerBound = (long) (maxConnectionAgeNanos * (1 - jitterRate));
+        final long lowerBound = Math.min(maxConnectionAgeNanos,
+                                         Math.max(MIN_MAX_CONNECTION_AGE_NANOS, jitteredLowerBound));
+        return lowerBound + (long) ((maxConnectionAgeNanos - lowerBound) * randomValue);
     }
 
     static final class ConnectionLifespan {

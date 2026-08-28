@@ -229,7 +229,7 @@ class KeepAliveHandlerTest {
     void zeroJitterPreservesMaxConnectionAge() {
         final long maxConnectionAgeNanos = TimeUnit.SECONDS.toNanos(10);
 
-        assertThat(AbstractKeepAliveHandler.jitteredMaxConnectionAgeNanos(
+        assertThat(KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
                 maxConnectionAgeNanos, 0, 0.5)).isEqualTo(maxConnectionAgeNanos);
     }
 
@@ -244,7 +244,7 @@ class KeepAliveHandlerTest {
     })
     void jitteredMaxConnectionAgeStaysWithinBounds(long maxConnectionAgeMillis, double jitterRate,
                                                     double randomValue, long expectedMillis) {
-        assertThat(AbstractKeepAliveHandler.jitteredMaxConnectionAgeNanos(
+        assertThat(KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
                 TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis), jitterRate, randomValue))
                 .isEqualTo(TimeUnit.MILLISECONDS.toNanos(expectedMillis));
     }
