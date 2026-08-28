@@ -292,7 +292,7 @@ class KeepAliveHandlerTest {
         channel.closeFuture().addListener(unused -> closed.incrementAndGet());
         final AbstractKeepAliveHandler keepAliveHandler =
                 new AbstractKeepAliveHandler(channel, "server", keepAliveTimer, 0, 0,
-                                             500, 0.0, 0, false) {
+                                             500, 0.0, 0, false, ConnectionEventListener.NOOP) {
                     @Override
                     public boolean isHttp2() {
                         return false;
