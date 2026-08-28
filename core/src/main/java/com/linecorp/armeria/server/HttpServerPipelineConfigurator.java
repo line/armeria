@@ -213,6 +213,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+        final double maxConnectionAgeJitterRate = config.maxConnectionAgeJitterRate();
         final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
         final boolean needsKeepAliveHandler =
                 needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
@@ -223,6 +224,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
             keepAliveHandler = new Http1ServerKeepAliveHandler(ch, keepAliveTimer, idleTimeoutMillis,
                                                                maxConnectionAgeMillis,
+                                                               maxConnectionAgeJitterRate,
                                                                maxNumRequestsPerConnection);
         } else {
             keepAliveHandler = new NoopKeepAliveHandler();
@@ -628,6 +630,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+            final double maxConnectionAgeJitterRate = config.maxConnectionAgeJitterRate();
             final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
             final boolean needsKeepAliveHandler =
                     needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
@@ -637,6 +640,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             if (needsKeepAliveHandler) {
                 keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
                                                                    maxConnectionAgeMillis,
+                                                                   maxConnectionAgeJitterRate,
                                                                    maxNumRequestsPerConnection);
             } else {
                 keepAliveHandler = new NoopKeepAliveHandler();

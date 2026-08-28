@@ -54,7 +54,9 @@ import io.netty.util.AttributeMap;
 
 class ServerMaxConnectionAgeTest {
 
-    private static final long MAX_CONNECTION_AGE = 1000;
+    private static final long MAX_CONNECTION_AGE = 1500;
+    private static final long MIN_CONNECTION_AGE = 1000;
+    private static final long CONNECTION_AGE_TOLERANCE = 1000;
     private static MeterRegistry meterRegistry;
 
     @RegisterExtension
@@ -66,8 +68,9 @@ class ServerMaxConnectionAgeTest {
             sb.tlsSelfSigned();
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
-            sb.connectionDrainDuration(Duration.ofMillis(10));
+            sb.connectionDrainDuration(Duration.ofSeconds(3));
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
+            sb.maxConnectionAgeJitterRate(1.0);
             meterRegistry = new SimpleMeterRegistry();
             sb.meterRegistry(meterRegistry);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
@@ -160,12 +163,12 @@ class ServerMaxConnectionAgeTest {
                                           .responseTimeoutMillis(0)
                                           .build();
 
-        while (closed.get() < maxClosedConnection) {
+        for (int i = 0; i < maxClosedConnection; i++) {
             final HttpResponse response = client.get("/");
             assertThat(response.aggregate().join().status()).isEqualTo(OK);
             response.whenComplete().join();
-            final int closed = this.closed.get();
-            assertThat(opened).hasValueBetween(closed, closed + 1);
+            await().untilAtomic(opened, Matchers.is(i + 1));
+            await().untilAtomic(closed, Matchers.is(i + 1));
         }
 
         await().untilAsserted(() -> {
@@ -175,14 +178,18 @@ class ServerMaxConnectionAgeTest {
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                        .isBetween(MIN_CONNECTION_AGE - 200.0,
+                                                   (double) (MAX_CONNECTION_AGE +
+                                                             CONNECTION_AGE_TOLERANCE));
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                        .isBetween(MIN_CONNECTION_AGE - 200.0,
+                                                   (double) (MAX_CONNECTION_AGE +
+                                                             CONNECTION_AGE_TOLERANCE));
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
@@ -284,9 +291,14 @@ class ServerMaxConnectionAgeTest {
         try (ClientFactory factory = newClientFactory(false)) {
             final WebClient client = newWebClient(factory, server.uri(protocol));
 
+            final long startNanos = System.nanoTime();
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             await().untilAtomic(opened, Matchers.is(1));
-            await().untilAtomic(closed, Matchers.is(1));
+            await().atMost(Duration.ofMillis(MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE))
+                   .untilAtomic(closed, Matchers.is(1));
+            assertThat(Duration.ofNanos(System.nanoTime() - startNanos).toMillis())
+                    .isBetween(MIN_CONNECTION_AGE - 200,
+                               MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE);
         }
     }
 

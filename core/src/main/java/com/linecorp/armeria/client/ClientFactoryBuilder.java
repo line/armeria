@@ -867,6 +867,22 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the jitter rate applied to the maximum connection age. The effective max connection age is chosen
+     * uniformly at random for each connection between
+     * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
+     * {@code maxConnectionAge}. The default is {@code 0.0}, which disables jitter. This option has no effect
+     * when the max connection age is disabled.
+     *
+     * @param maxConnectionAgeJitterRate the jitter rate between {@code 0.0} and {@code 1.0}, inclusive
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeJitterRate} is less than
+     *                                  {@code 0.0} or greater than {@code 1.0}
+     */
+    public ClientFactoryBuilder maxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
+        option(ClientFactoryOptions.MAX_CONNECTION_AGE_JITTER_RATE, maxConnectionAgeJitterRate);
+        return this;
+    }
+
+    /**
      * Sets the maximum allowed number of requests that can be sent through one connection.
      * This option is disabled by default, which means unlimited.
      *

@@ -245,6 +245,17 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
     /**
+     * The jitter rate applied to the client-side max connection age. The effective max connection age is
+     * chosen uniformly at random for each connection between
+     * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
+     * {@code maxConnectionAge}. This option is disabled by default.
+     */
+    public static final ClientFactoryOption<Double> MAX_CONNECTION_AGE_JITTER_RATE =
+            ClientFactoryOption.define("MAX_CONNECTION_AGE_JITTER_RATE", 0.0,
+                                       ClientFactoryOptions::validateMaxConnectionAgeJitterRate,
+                                       (oldValue, newValue) -> newValue);
+
+    /**
      * The {@link OutlierDetection} which is used to detect unhealthy connections.
      * If an unhealthy connection is detected, it is disabled and a new connection will be created.
      * This option is disabled by default.
@@ -259,6 +270,13 @@ public final class ClientFactoryOptions
             return MIN_MAX_CONNECTION_AGE_MILLIS;
         }
         return connectionAgeMillis;
+    }
+
+    private static double validateMaxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
+        checkArgument(maxConnectionAgeJitterRate >= 0.0 && maxConnectionAgeJitterRate <= 1.0,
+                      "maxConnectionAgeJitterRate: %s (expected: >= 0.0 and <= 1.0)",
+                      maxConnectionAgeJitterRate);
+        return maxConnectionAgeJitterRate;
     }
 
     /**
@@ -605,6 +623,16 @@ public final class ClientFactoryOptions
      */
     public long maxConnectionAgeMillis() {
         return get(MAX_CONNECTION_AGE_MILLIS);
+    }
+
+    /**
+     * Returns the jitter rate applied to the client-side max connection age. The effective max connection age
+     * is chosen uniformly at random for each connection between
+     * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
+     * {@code maxConnectionAge}.
+     */
+    public double maxConnectionAgeJitterRate() {
+        return get(MAX_CONNECTION_AGE_JITTER_RATE);
     }
 
     /**

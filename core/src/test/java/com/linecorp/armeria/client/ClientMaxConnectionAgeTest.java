@@ -46,6 +46,8 @@ import io.netty.util.AttributeMap;
 class ClientMaxConnectionAgeTest {
 
     private static final long MAX_CONNECTION_AGE = 2000;
+    private static final long MIN_CONNECTION_AGE = 1000;
+    private static final long CONNECTION_AGE_TOLERANCE = 1000;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -105,6 +107,7 @@ class ClientMaxConnectionAgeTest {
                                                          .connectionPoolListener(connectionPoolListener)
                                                          .idleTimeoutMillis(0)
                                                          .maxConnectionAgeMillis(MAX_CONNECTION_AGE)
+                                                         .maxConnectionAgeJitterRate(1.0)
                                                          .meterRegistry(meterRegistry)
                                                          .tlsNoVerify()
                                                          .build();
@@ -136,14 +139,18 @@ class ClientMaxConnectionAgeTest {
                             scheme + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 300.0, MAX_CONNECTION_AGE + 4000.0);
+                                        .isBetween(MIN_CONNECTION_AGE - 300.0,
+                                                   (double) (MAX_CONNECTION_AGE +
+                                                             CONNECTION_AGE_TOLERANCE));
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan.percentile#value{phi=1,protocol=" +
                             scheme + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 300.0, MAX_CONNECTION_AGE + 4000.0);
+                                        .isBetween(MIN_CONNECTION_AGE - 300.0,
+                                                   (double) (MAX_CONNECTION_AGE +
+                                                             CONNECTION_AGE_TOLERANCE));
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan#count{protocol=" + scheme + '}',
@@ -159,6 +166,7 @@ class ClientMaxConnectionAgeTest {
                                                   .connectionPoolListener(connectionPoolListener)
                                                   .idleTimeoutMillis(0)
                                                   .maxConnectionAgeMillis(MAX_CONNECTION_AGE)
+                                                  .maxConnectionAgeJitterRate(1.0)
                                                   .tlsNoVerify()
                                                   .build()) {
             final WebClient client = WebClient.builder(server.uri(protocol))
@@ -166,9 +174,14 @@ class ClientMaxConnectionAgeTest {
                                               .responseTimeoutMillis(0)
                                               .build();
 
+            final long startNanos = System.nanoTime();
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             await().untilAtomic(opened, Matchers.is(1));
-            await().untilAtomic(closed, Matchers.is(1));
+            await().atMost(Duration.ofMillis(MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE))
+                   .untilAtomic(closed, Matchers.is(1));
+            assertThat(Duration.ofNanos(System.nanoTime() - startNanos).toMillis())
+                    .isBetween(MIN_CONNECTION_AGE - 300,
+                               MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE);
         }
     }
 

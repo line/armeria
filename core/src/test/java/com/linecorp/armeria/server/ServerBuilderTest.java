@@ -687,6 +687,40 @@ class ServerBuilderTest {
     }
 
     @Test
+    void maxConnectionAgeJitterRate() {
+        final ServerConfig config = Server.builder()
+                                          .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                          .maxConnectionAgeJitterRate(0.1)
+                                          .build()
+                                          .config();
+
+        assertThat(config.maxConnectionAgeJitterRate()).isEqualTo(0.1);
+    }
+
+    @Test
+    void maxConnectionAgeJitterRateDefaultsToZero() {
+        final ServerConfig config = Server.builder()
+                                          .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                          .build()
+                                          .config();
+
+        assertThat(config.maxConnectionAgeJitterRate()).isZero();
+    }
+
+    @Test
+    void invalidMaxConnectionAgeJitterRate() {
+        assertThatThrownBy(() -> Server.builder().maxConnectionAgeJitterRate(-0.1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+        assertThatThrownBy(() -> Server.builder().maxConnectionAgeJitterRate(1.1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+        assertThatThrownBy(() -> Server.builder().maxConnectionAgeJitterRate(Double.NaN))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+    }
+
+    @Test
     void defaultTcpUserTimeoutApplied() {
         assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
