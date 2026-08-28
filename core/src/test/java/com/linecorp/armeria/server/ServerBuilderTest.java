@@ -708,6 +708,11 @@ class ServerBuilderTest {
     }
 
     @Test
+    void maxConnectionAgeJitterRateIsBackwardCompatible() throws NoSuchMethodException {
+        assertThat(ServerConfig.class.getMethod("maxConnectionAgeJitterRate").isDefault()).isTrue();
+    }
+
+    @Test
     void invalidMaxConnectionAgeJitterRate() {
         assertThatThrownBy(() -> Server.builder().maxConnectionAgeJitterRate(-0.1))
                 .isInstanceOf(IllegalArgumentException.class)

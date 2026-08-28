@@ -175,7 +175,9 @@ public interface ServerConfig {
      * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
      * {@code maxConnectionAge}.
      */
-    double maxConnectionAgeJitterRate();
+    default double maxConnectionAgeJitterRate() {
+        return 0.0;
+    }
 
     /**
      * Returns the graceful connection shutdown drain duration.

@@ -85,6 +85,20 @@ class KeepAliveHandlerTest {
         }).syncUninterruptibly();
     }
 
+    @Test
+    void connectionLifespanIsInitializedOnceAndClearedOnClose() {
+        KeepAliveHandlerUtil.initializeConnectionLifespan(channel, 60_000, 0.0);
+        final KeepAliveHandlerUtil.ConnectionLifespan connectionLifespan =
+                KeepAliveHandlerUtil.connectionLifespan(channel);
+        assertThat(connectionLifespan).isNotNull();
+
+        KeepAliveHandlerUtil.initializeConnectionLifespan(channel, 60_000, 0.0);
+        assertThat(KeepAliveHandlerUtil.connectionLifespan(channel)).isSameAs(connectionLifespan);
+
+        channel.close();
+        await().untilAsserted(() -> assertThat(KeepAliveHandlerUtil.connectionLifespan(channel)).isNull());
+    }
+
     @AfterEach
     void tearDown() {
         channel.finish();

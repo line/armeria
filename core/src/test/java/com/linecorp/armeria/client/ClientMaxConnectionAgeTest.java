@@ -141,7 +141,8 @@ class ClientMaxConnectionAgeTest {
                                 assertThat(value * 1000)
                                         .isBetween(MIN_CONNECTION_AGE - 300.0,
                                                    (double) (MAX_CONNECTION_AGE +
-                                                             CONNECTION_AGE_TOLERANCE));
+                                                             CONNECTION_AGE_TOLERANCE))
+                                        .isLessThan((double) MAX_CONNECTION_AGE);
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan.percentile#value{phi=1,protocol=" +

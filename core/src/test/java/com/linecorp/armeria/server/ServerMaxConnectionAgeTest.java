@@ -22,10 +22,12 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -180,7 +182,8 @@ class ServerMaxConnectionAgeTest {
                                 assertThat(value * 1000)
                                         .isBetween(MIN_CONNECTION_AGE - 200.0,
                                                    (double) (MAX_CONNECTION_AGE +
-                                                             CONNECTION_AGE_TOLERANCE));
+                                                             CONNECTION_AGE_TOLERANCE))
+                                        .isLessThan((double) MAX_CONNECTION_AGE);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
@@ -268,6 +271,55 @@ class ServerMaxConnectionAgeTest {
                         .hasValue(1);
             });
         }
+    }
+
+    @CsvSource({ "H2C", "H2" })
+    @ParameterizedTest
+    void activeHttp2RequestCompletesAfterMaxConnectionAge(SessionProtocol protocol) {
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, server.uri(protocol));
+
+            assertThat(client.get("/slow").aggregate().join().contentUtf8()).isEqualTo("Disconnect");
+            await().untilAtomic(closed, Matchers.is(1));
+        }
+    }
+
+    @Test
+    void directH2cRecordsOnlyH2cConnectionLifespan() {
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, server.uri(SessionProtocol.H2C));
+            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+        }
+
+        await().untilAsserted(() ->
+                assertThat(MoreMeters.measureAll(meterRegistry))
+                        .containsEntry("armeria.server.connections.lifespan#count{protocol=h2c}", 1.0)
+                        .containsEntry("armeria.server.connections.lifespan#count{protocol=h1c}", 0.0));
+    }
+
+    @Test
+    void maxConnectionAgeIncludesProtocolDetection() throws Exception {
+        final long startNanos = System.nanoTime();
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
+            socket.setSoTimeout((int) (MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE));
+            final OutputStream out = socket.getOutputStream();
+            final byte[] fragmentedMethod = { 'G', 'E', 'T' };
+            for (int i = 0; i < fragmentedMethod.length; i++) {
+                out.write(fragmentedMethod[i]);
+                out.flush();
+                if (i < fragmentedMethod.length - 1) {
+                    Thread.sleep(450);
+                }
+            }
+            out.write(" / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            out.flush();
+
+            while (socket.getInputStream().read() != -1) {
+                // Drain the response until the max-age deadline closes the connection.
+            }
+        }
+        assertThat(Duration.ofNanos(System.nanoTime() - startNanos).toMillis())
+                .isLessThan(MAX_CONNECTION_AGE + 300);
     }
 
     @CsvSource({ "H1C", "H2C" })

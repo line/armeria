@@ -131,13 +131,22 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         }
         isInitialized = true;
 
-        final long connectionStartTimeNanos = System.nanoTime();
+        final long initializationTimeNanos = System.nanoTime();
+        final KeepAliveHandlerUtil.ConnectionLifespan connectionLifespan =
+                KeepAliveHandlerUtil.connectionLifespan(channel);
+        final long connectionStartTimeNanos;
+        if (connectionLifespan != null) {
+            connectionLifespan.protocolDetected();
+            connectionStartTimeNanos = connectionLifespan.connectionStartTimeNanos();
+        } else {
+            connectionStartTimeNanos = initializationTimeNanos;
+        }
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
             destroy();
         });
 
-        lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
+        lastConnectionIdleTime = lastPingIdleTime = initializationTimeNanos;
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
                                                         connectionIdleTimeNanos, TimeUnit.NANOSECONDS);
@@ -147,17 +156,26 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (maxConnectionAgeNanos > 0) {
-            final double randomValue;
-            if (maxConnectionAgeJitterRate == 0) {
-                randomValue = 0;
+            final long effectiveMaxConnectionAgeNanos;
+            final long maxConnectionAgeDelayNanos;
+            if (connectionLifespan != null) {
+                effectiveMaxConnectionAgeNanos = connectionLifespan.effectiveMaxConnectionAgeNanos();
+                final long connectionAgeNanos = initializationTimeNanos - connectionStartTimeNanos;
+                maxConnectionAgeDelayNanos = Math.max(0, effectiveMaxConnectionAgeNanos - connectionAgeNanos);
             } else {
-                randomValue = ThreadLocalRandom.current().nextDouble();
+                final double randomValue;
+                if (maxConnectionAgeJitterRate == 0) {
+                    randomValue = 0;
+                } else {
+                    randomValue = ThreadLocalRandom.current().nextDouble();
+                }
+                effectiveMaxConnectionAgeNanos = jitteredMaxConnectionAgeNanos(
+                        maxConnectionAgeNanos, maxConnectionAgeJitterRate, randomValue);
+                maxConnectionAgeDelayNanos = effectiveMaxConnectionAgeNanos;
             }
-            final long effectiveMaxConnectionAgeNanos = jitteredMaxConnectionAgeNanos(
-                    maxConnectionAgeNanos, maxConnectionAgeJitterRate, randomValue);
             maxConnectionAgeFuture = executor().schedule(
                     new MaxConnectionAgeExceededTask(ctx, effectiveMaxConnectionAgeNanos),
-                    effectiveMaxConnectionAgeNanos, TimeUnit.NANOSECONDS);
+                    maxConnectionAgeDelayNanos, TimeUnit.NANOSECONDS);
         }
     }
 
