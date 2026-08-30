@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
@@ -379,12 +380,8 @@ class CallExecutorTest {
         eventLoop.get().execute(() -> executor.execute(() -> {
             events.add("A:start");
             aStarted.countDown();
-            try {
-                // Block the event loop briefly until the test thread has queued B from outside.
-                bQueued.await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            // Block the event loop briefly until the test thread has queued B from outside.
+            BlockingUtils.blockingRun(() -> bQueued.await(10, TimeUnit.SECONDS));
             // Reentrant submission while B (from a foreign thread) is already queued: X must run after B.
             executor.execute(() -> {
                 events.add("X");
@@ -444,11 +441,7 @@ class CallExecutorTest {
             // A holds the event loop inside a running drain.
             loop.execute(() -> executor.execute(() -> {
                 aStarted.countDown();
-                try {
-                    releaseA.await(10, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                BlockingUtils.blockingRun(() -> releaseA.await(10, TimeUnit.SECONDS));
             }));
             assertThat(aStarted.await(10, TimeUnit.SECONDS)).isTrue();
 
