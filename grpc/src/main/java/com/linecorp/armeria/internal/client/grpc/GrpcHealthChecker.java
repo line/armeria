@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -52,7 +54,9 @@ public final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
     public GrpcHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, SessionProtocol sessionProtocol,
                              @Nullable String service) {
-        this.ctx = ctx;
+        this.ctx = requireNonNull(ctx, "ctx");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(sessionProtocol, "sessionProtocol");
         this.service = service;
 
         this.stub = GrpcClients.builder(sessionProtocol, endpoint)
