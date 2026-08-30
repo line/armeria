@@ -15,9 +15,12 @@
  */
 package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Represents a gRPC health check method.
  */
+@UnstableApi
 public enum GrpcHealthCheckMethod {
     CHECK, WATCH
 }

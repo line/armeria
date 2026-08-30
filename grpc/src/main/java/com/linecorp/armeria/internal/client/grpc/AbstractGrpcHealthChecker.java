@@ -33,6 +33,7 @@ abstract class AbstractGrpcHealthChecker implements AsyncCloseable {
 
     private final ReentrantLock lock = new ReentrantShortLock();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    private boolean closed;
 
     public void start() {
         check();
@@ -45,13 +46,33 @@ abstract class AbstractGrpcHealthChecker implements AsyncCloseable {
         return closeable.closeAsync();
     }
 
-    private synchronized void closeAsync(CompletableFuture<?> future) {
+    private void closeAsync(CompletableFuture<?> future) {
+        lock();
+        try {
+            closed = true;
+            cancelActiveCheck();
+        } finally {
+            unlock();
+        }
         future.complete(null);
     }
 
     @Override
     public void close() {
         closeable.close();
+    }
+
+    /**
+     * Cancels the in-flight health check RPC, if any. Invoked while holding the lock.
+     */
+    protected void cancelActiveCheck() {}
+
+    /**
+     * Returns whether this health checker has been closed. Subclasses must check this before
+     * issuing a new RPC or scheduling the next check, to avoid running health checks after closure.
+     */
+    protected boolean isClosed() {
+        return closed;
     }
 
     protected void lock() {

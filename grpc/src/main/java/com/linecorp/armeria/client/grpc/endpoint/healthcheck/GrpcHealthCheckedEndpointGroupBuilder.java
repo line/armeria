@@ -23,6 +23,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.internal.client.grpc.GrpcHealthCheckWatcher;
 import com.linecorp.armeria.internal.client.grpc.GrpcHealthChecker;
@@ -30,6 +31,7 @@ import com.linecorp.armeria.internal.client.grpc.GrpcHealthChecker;
 /**
  * Builds a health checked endpoint group whose health comes from a standard gRPC health check service.
  */
+@UnstableApi
 public final class GrpcHealthCheckedEndpointGroupBuilder
         extends AbstractHealthCheckedEndpointGroupBuilder<GrpcHealthCheckedEndpointGroupBuilder> {
 
@@ -47,8 +49,8 @@ public final class GrpcHealthCheckedEndpointGroupBuilder
      */
     public static GrpcHealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate,
                                                                 GrpcHealthCheckMethod healthCheckMethod) {
-        return new GrpcHealthCheckedEndpointGroupBuilder(requireNonNull(delegate),
-                requireNonNull(healthCheckMethod));
+        return new GrpcHealthCheckedEndpointGroupBuilder(requireNonNull(delegate, "delegate"),
+                requireNonNull(healthCheckMethod, "healthCheckMethod"));
     }
 
     /**

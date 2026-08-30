@@ -32,35 +32,35 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
     private static HealthGrpcServerExtension serverExtension = new HealthGrpcServerExtension();
 
     @Test
-    public void hasHealthyEndpointViaCheck() {
+    void hasHealthyEndpointViaCheck() {
         serverExtension.setStatus(HealthCheckResponse.ServingStatus.SERVING);
 
-        final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
                 .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.CHECK)
-                .build();
-
-        assertThat(endpointGroup.whenReady().join()).hasSize(1);
+                .build()) {
+            assertThat(endpointGroup.whenReady().join()).hasSize(1);
+        }
     }
 
     @Test
-    public void hasHealthyEndpointViaWatch() {
+    void hasHealthyEndpointViaWatch() {
         serverExtension.setStatus(HealthCheckResponse.ServingStatus.SERVING);
 
-        final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
                 .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.WATCH)
-                .build();
-
-        assertThat(endpointGroup.whenReady().join()).hasSize(1);
+                .build()) {
+            assertThat(endpointGroup.whenReady().join()).hasSize(1);
+        }
     }
 
     @Test
-    public void empty() throws Exception {
+    void empty() throws Exception {
         serverExtension.setStatus(HealthCheckResponse.ServingStatus.NOT_SERVING);
 
-        final HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
                 .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.CHECK)
-                .build();
-
-        assertThat(endpointGroup.whenReady().get()).isEmpty();
+                .build()) {
+            assertThat(endpointGroup.whenReady().get()).isEmpty();
+        }
     }
 }

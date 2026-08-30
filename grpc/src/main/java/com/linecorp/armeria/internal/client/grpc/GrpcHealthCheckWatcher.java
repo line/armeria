@@ -46,6 +46,8 @@ public class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
     private final HealthCheckerContext ctx;
     @Nullable private final String service;
     private final HealthGrpc.HealthStub stub;
+    @Nullable
+    private ClientRequestContext activeRequestContext;
 
     public GrpcHealthCheckWatcher(HealthCheckerContext ctx, Endpoint endpoint, SessionProtocol sessionProtocol,
                                   @Nullable String service) {
@@ -62,63 +64,106 @@ public class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
     protected void check() {
         lock();
         try {
+            if (isClosed()) {
+                return;
+            }
+
             final HealthCheckRequest.Builder builder = HealthCheckRequest.newBuilder();
             if (service != null) {
                 builder.setService(service);
             }
 
             try (ClientRequestContextCaptor reqCtxCaptor = Clients.newContextCaptor()) {
-                stub.watch(builder.build(), new StreamObserver<HealthCheckResponse>() {
+                StreamObserver<HealthCheckResponse> responseObserver = new StreamObserver<HealthCheckResponse>() {
                     @Override
                     public void onNext(HealthCheckResponse healthCheckResponse) {
-                        final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        // extract the headers from the ctx log
-                        ResponseHeaders responseHeaders = null;
-                        if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                            responseHeaders = reqCtx.log().partial().responseHeaders();
-                        }
-                        // update health
-                        if (healthCheckResponse.getStatus() == HealthCheckResponse.ServingStatus.SERVING) {
-                            LOGGER.debug("Health check returned healthy from endpoint {}",
-                                    ctx.endpoint());
-                            ctx.updateHealth(HEALTHY, reqCtx, responseHeaders, null);
-                        } else {
-                            LOGGER.debug("Health check returned unhealthy from endpoint {}",
-                                    ctx.endpoint());
-                            ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, null);
+                        lock();
+                        try {
+                            if (isClosed()) {
+                                return;
+                            }
+
+                            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+                            // extract the headers from the ctx log
+                            ResponseHeaders responseHeaders = null;
+                            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                                responseHeaders = reqCtx.log().partial().responseHeaders();
+                            }
+                            // update health
+                            if (healthCheckResponse.getStatus() ==
+                                    HealthCheckResponse.ServingStatus.SERVING) {
+                                LOGGER.debug("Health check returned healthy from endpoint {}",
+                                        ctx.endpoint());
+                                ctx.updateHealth(HEALTHY, reqCtx, responseHeaders, null);
+                            } else {
+                                LOGGER.debug("Health check returned unhealthy from endpoint {}",
+                                        ctx.endpoint());
+                                ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, null);
+                            }
+                        } finally {
+                            unlock();
                         }
                     }
 
                     @Override
                     public void onError(Throwable throwable) {
-                        final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        // extract the headers from the ctx log
-                        ResponseHeaders responseHeaders = null;
-                        if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                            responseHeaders = reqCtx.log().partial().responseHeaders();
-                        }
-                        // update health
-                        LOGGER.debug("Failed streaming health check on endpoint {}", ctx.endpoint(), throwable);
-                        ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
+                        lock();
+                        try {
+                            if (isClosed()) {
+                                return;
+                            }
 
-                        // schedule next watch request
-                        ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+                            // extract the headers from the ctx log
+                            ResponseHeaders responseHeaders = null;
+                            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                                responseHeaders = reqCtx.log().partial().responseHeaders();
+                            }
+                            // update health
+                            LOGGER.debug("Failed streaming health check on endpoint {}", ctx.endpoint(),
+                                    throwable);
+                            ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
+
+                            // schedule next watch request
+                            ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                        } finally {
+                            unlock();
+                        }
                     }
 
                     @Override
                     public void onCompleted() {
-                        final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        // update health
-                        LOGGER.debug("Streaming health check complete from endpoint {}", ctx.endpoint());
-                        ctx.updateHealth(UNHEALTHY, reqCtx, null, null);
+                        lock();
+                        try {
+                            if (isClosed()) {
+                                return;
+                            }
 
-                        // schedule next watch request
-                        ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+                            // update health
+                            LOGGER.debug("Streaming health check complete from endpoint {}", ctx.endpoint());
+                            ctx.updateHealth(UNHEALTHY, reqCtx, null, null);
+
+                            // schedule next watch request
+                            ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                        } finally {
+                            unlock();
+                        }
                     }
-                });
+                };
+                stub.watch(builder.build(), responseObserver);
+                activeRequestContext = reqCtxCaptor.get();
             }
         } finally {
             unlock();
+        }
+    }
+
+    @Override
+    protected void cancelActiveCheck() {
+        if (activeRequestContext != null) {
+            activeRequestContext.cancel();
+            activeRequestContext = null;
         }
     }
 }

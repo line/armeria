@@ -47,6 +47,8 @@ public final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
     @Nullable
     private final String service;
     private final HealthGrpc.HealthStub stub;
+    @Nullable
+    private ClientRequestContext activeRequestContext;
 
     public GrpcHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, SessionProtocol sessionProtocol,
                              @Nullable String service) {
@@ -62,6 +64,10 @@ public final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
     protected void check() {
         lock();
         try {
+            if (isClosed()) {
+                return;
+            }
+
             final HealthCheckRequest.Builder builder = HealthCheckRequest.newBuilder();
             if (service != null) {
                 builder.setService(service);
@@ -89,44 +95,71 @@ public final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
                     public void onCompleted() {
                     }
                 });
+                activeRequestContext = reqCtxCaptor.get();
             }
         } finally {
             unlock();
         }
     }
 
-    private void handleHealthyUpdate(ClientRequestContext reqCtx) {
-        // extract the headers from the ctx log
-        ResponseHeaders responseHeaders = null;
-        if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            responseHeaders = reqCtx.log().partial().responseHeaders();
+    @Override
+    protected void cancelActiveCheck() {
+        if (activeRequestContext != null) {
+            activeRequestContext.cancel();
+            activeRequestContext = null;
         }
+    }
 
-        // update health status to healthy
-        LOGGER.debug("Health check returned healthy from endpoint {}", ctx.endpoint());
-        ctx.updateHealth(HEALTHY, reqCtx, responseHeaders, null);
+    private void handleHealthyUpdate(ClientRequestContext reqCtx) {
+        lock();
+        try {
+            if (isClosed()) {
+                return;
+            }
 
-        // schedule next check
-        ctx.executor().schedule(GrpcHealthChecker.this::check,
-                ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+            // extract the headers from the ctx log
+            ResponseHeaders responseHeaders = null;
+            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                responseHeaders = reqCtx.log().partial().responseHeaders();
+            }
+
+            // update health status to healthy
+            LOGGER.debug("Health check returned healthy from endpoint {}", ctx.endpoint());
+            ctx.updateHealth(HEALTHY, reqCtx, responseHeaders, null);
+
+            // schedule next check
+            ctx.executor().schedule(GrpcHealthChecker.this::check,
+                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+        } finally {
+            unlock();
+        }
     }
 
     private void handleUnhealthyUpdate(ClientRequestContext reqCtx, @Nullable Throwable throwable) {
-        // extract the headers from the ctx log
-        ResponseHeaders responseHeaders = null;
-        if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            responseHeaders = reqCtx.log().partial().responseHeaders();
-        }
+        lock();
+        try {
+            if (isClosed()) {
+                return;
+            }
 
-        // update health status to unhealthy
-        if (throwable == null) {
-            LOGGER.debug("Health check returned unhealthy from endpoint {}", ctx.endpoint());
-        } else {
-            LOGGER.debug("Failed health check on endpoint {}", ctx.endpoint(), throwable);
-        }
-        ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
+            // extract the headers from the ctx log
+            ResponseHeaders responseHeaders = null;
+            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                responseHeaders = reqCtx.log().partial().responseHeaders();
+            }
 
-        // execute next check immediately
-        ctx.executor().execute(GrpcHealthChecker.this::check);
+            // update health status to unhealthy
+            if (throwable == null) {
+                LOGGER.debug("Health check returned unhealthy from endpoint {}", ctx.endpoint());
+            } else {
+                LOGGER.debug("Failed health check on endpoint {}", ctx.endpoint(), throwable);
+            }
+            ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
+
+            // execute next check immediately
+            ctx.executor().execute(GrpcHealthChecker.this::check);
+        } finally {
+            unlock();
+        }
     }
 }
