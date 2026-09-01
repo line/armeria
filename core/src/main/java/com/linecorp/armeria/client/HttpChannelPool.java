@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.ConnectionEventListener;
@@ -550,8 +551,15 @@ final class HttpChannelPool implements AsyncCloseable {
                 }
                 promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }
-        } catch (Exception e) {
-            promise.completeExceptionally(UnprocessedRequestException.of(e));
+        } catch (Throwable t) {
+            Throwable cause = t;
+            try {
+                cause = UnprocessedRequestException.of(t);
+            } catch (Throwable ignored) {
+                // Use the original cause if creating an UnprocessedRequestException fails.
+            }
+            promise.completeExceptionally(cause);
+            Exceptions.throwIfFatal(t);
         }
     }
 
