@@ -1,0 +1,25 @@
+---
+date: 2026-09-01
+---
+
+# v1.41.1
+
+## 🛠️ Bug fixes
+
+- Lambda-style client decorators no longer throw an `AssertionError` when a request is executed.
+  This regression was introduced in 1.41.0. #6929
+  ```java
+  WebClient.builder()
+           .decorator(delegate ->
+               (ctx, req) -> delegate.execute(ctx, req)) // 👈👈👈
+           .build();
+  ```
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />
