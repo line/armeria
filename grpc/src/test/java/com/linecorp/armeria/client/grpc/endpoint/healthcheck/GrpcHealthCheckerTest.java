@@ -93,7 +93,8 @@ class GrpcHealthCheckerTest {
         verify(context, timeout(1000)).updateHealth(eq(GrpcHealthChecker.HEALTHY),
                 any(ClientRequestContext.class), any(ResponseHeaders.class), eq(null));
 
-        verify(executor).schedule(any(Runnable.class), eq(NEXT_DELAY_MILLIS), eq(TimeUnit.MILLISECONDS));
+        verify(executor, timeout(1000))
+                .schedule(any(Runnable.class), eq(NEXT_DELAY_MILLIS), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -105,7 +106,7 @@ class GrpcHealthCheckerTest {
         verify(context, timeout(1000)).updateHealth(eq(GrpcHealthChecker.UNHEALTHY),
                 any(ClientRequestContext.class), any(ResponseHeaders.class), eq(null));
 
-        verify(executor).execute(any(Runnable.class));
+        verify(executor, timeout(1000)).schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test
@@ -117,7 +118,7 @@ class GrpcHealthCheckerTest {
         verify(context, timeout(1000)).updateHealth(eq(GrpcHealthChecker.UNHEALTHY),
                 any(ClientRequestContext.class), isNull(), throwableArgumentCaptor.capture());
 
-        verify(executor).execute(any(Runnable.class));
+        verify(executor, timeout(1000)).schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS));
 
         final Throwable exception = throwableArgumentCaptor.getValue();
         assertThat(exception).isInstanceOf(StatusRuntimeException.class)

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,8 +130,10 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
                                     throwable);
                             ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
 
-                            // schedule next watch request
-                            ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                            // schedule next watch request using the retry backoff, to avoid
+                            // tight-looping against an unhealthy or unavailable server
+                            ctx.executor().schedule(GrpcHealthCheckWatcher.this::check,
+                                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
                         } finally {
                             unlock();
                         }
@@ -149,8 +152,10 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
                             LOGGER.debug("Streaming health check complete from endpoint {}", ctx.endpoint());
                             ctx.updateHealth(UNHEALTHY, reqCtx, null, null);
 
-                            // schedule next watch request
-                            ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                            // schedule next watch request using the retry backoff, to avoid
+                            // tight-looping against an unhealthy or unavailable server
+                            ctx.executor().schedule(GrpcHealthCheckWatcher.this::check,
+                                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
                         } finally {
                             unlock();
                         }

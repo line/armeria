@@ -82,21 +82,21 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
                     @Override
                     public void onNext(HealthCheckResponse healthCheckResponse) {
                         final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        if (healthCheckResponse.getStatus() == HealthCheckResponse.ServingStatus.SERVING) {
-                            handleHealthyUpdate(reqCtx);
-                        } else {
-                           handleUnhealthyUpdate(reqCtx, null);
-                        }
+                        final double health = healthCheckResponse.getStatus() ==
+                                HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
+                        updateHealth(health, reqCtx, null);
                     }
 
                     @Override
                     public void onError(Throwable throwable) {
                         final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        handleUnhealthyUpdate(reqCtx, throwable);
+                        updateHealth(UNHEALTHY, reqCtx, throwable);
+                        scheduleNextCheck();
                     }
 
                     @Override
                     public void onCompleted() {
+                        scheduleNextCheck();
                     }
                 });
                 activeRequestContext = reqCtxCaptor.get();
@@ -114,7 +114,7 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
         }
     }
 
-    private void handleHealthyUpdate(ClientRequestContext reqCtx) {
+    private void updateHealth(double health, ClientRequestContext reqCtx, @Nullable Throwable throwable) {
         lock();
         try {
             if (isClosed()) {
@@ -127,41 +127,30 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
                 responseHeaders = reqCtx.log().partial().responseHeaders();
             }
 
-            // update health status to healthy
-            LOGGER.debug("Health check returned healthy from endpoint {}", ctx.endpoint());
-            ctx.updateHealth(HEALTHY, reqCtx, responseHeaders, null);
-
-            // schedule next check
-            ctx.executor().schedule(GrpcHealthChecker.this::check,
-                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+            if (health == HEALTHY) {
+                LOGGER.debug("Health check returned healthy from endpoint {}", ctx.endpoint());
+            } else if (throwable == null) {
+                LOGGER.debug("Health check returned unhealthy from endpoint {}", ctx.endpoint());
+            } else {
+                LOGGER.debug("Failed health check on endpoint {}", ctx.endpoint(), throwable);
+            }
+            ctx.updateHealth(health, reqCtx, responseHeaders, throwable);
         } finally {
             unlock();
         }
     }
 
-    private void handleUnhealthyUpdate(ClientRequestContext reqCtx, @Nullable Throwable throwable) {
+    private void scheduleNextCheck() {
         lock();
         try {
             if (isClosed()) {
                 return;
             }
 
-            // extract the headers from the ctx log
-            ResponseHeaders responseHeaders = null;
-            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                responseHeaders = reqCtx.log().partial().responseHeaders();
-            }
-
-            // update health status to unhealthy
-            if (throwable == null) {
-                LOGGER.debug("Health check returned unhealthy from endpoint {}", ctx.endpoint());
-            } else {
-                LOGGER.debug("Failed health check on endpoint {}", ctx.endpoint(), throwable);
-            }
-            ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
-
-            // execute next check immediately
-            ctx.executor().execute(GrpcHealthChecker.this::check);
+            // schedule next check using the retry backoff, to avoid tight-looping against
+            // an unhealthy or unavailable server
+            ctx.executor().schedule(GrpcHealthChecker.this::check,
+                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
         } finally {
             unlock();
         }
