@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
 import static com.linecorp.armeria.internal.client.ClientBuilderParamsUtil.preprocessorToUri;
 import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
@@ -119,14 +118,15 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     private static Scheme validateScheme(String scheme) {
         final Scheme parsedScheme = Scheme.tryParse(scheme);
         if (parsedScheme != null) {
-            if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
-                httpAndHttpsValues().contains(parsedScheme.sessionProtocol())) {
-                return parsedScheme;
-            }
+            checkArgument(parsedScheme.serializationFormat() == SerializationFormat.NONE,
+                          "scheme: %s (expected serialization format: %s)",
+                          scheme, SerializationFormat.NONE);
+            checkArgument(parsedScheme.sessionProtocol() != SessionProtocol.PROXY,
+                          "scheme: %s (PROXY is not supported)", scheme);
+            return parsedScheme;
         }
 
-        throw new IllegalArgumentException("scheme: " + scheme +
-                                           " (expected: one of " + httpAndHttpsValues() + ')');
+        throw new IllegalArgumentException("unknown scheme: " + scheme);
     }
 
     @Nullable
