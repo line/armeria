@@ -98,11 +98,11 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
                             // update health
                             if (healthCheckResponse.getStatus() ==
                                     HealthCheckResponse.ServingStatus.SERVING) {
-                                LOGGER.debug("Health check returned healthy from endpoint {}",
+                                LOGGER.trace("Health check returned healthy from endpoint {}",
                                         ctx.endpoint());
                                 ctx.updateHealth(HEALTHY, reqCtx, responseHeaders, null);
                             } else {
-                                LOGGER.debug("Health check returned unhealthy from endpoint {}",
+                                LOGGER.trace("Health check returned unhealthy from endpoint {}",
                                         ctx.endpoint());
                                 ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, null);
                             }
@@ -126,8 +126,7 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
                                 responseHeaders = reqCtx.log().partial().responseHeaders();
                             }
                             // update health
-                            LOGGER.debug("Failed streaming health check on endpoint {}", ctx.endpoint(),
-                                    throwable);
+                            logCheckFailure(LOGGER, ctx.endpoint(), throwable);
                             ctx.updateHealth(UNHEALTHY, reqCtx, responseHeaders, throwable);
 
                             // schedule next watch request using the retry backoff, to avoid
@@ -149,7 +148,7 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
 
                             final ClientRequestContext reqCtx = reqCtxCaptor.get();
                             // update health
-                            LOGGER.debug("Streaming health check complete from endpoint {}", ctx.endpoint());
+                            LOGGER.trace("Streaming health check complete from endpoint {}", ctx.endpoint());
                             ctx.updateHealth(UNHEALTHY, reqCtx, null, null);
 
                             // schedule next watch request using the retry backoff, to avoid

@@ -128,11 +128,11 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
             }
 
             if (health == HEALTHY) {
-                LOGGER.debug("Health check returned healthy from endpoint {}", ctx.endpoint());
+                LOGGER.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
             } else if (throwable == null) {
-                LOGGER.debug("Health check returned unhealthy from endpoint {}", ctx.endpoint());
+                LOGGER.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
             } else {
-                LOGGER.debug("Failed health check on endpoint {}", ctx.endpoint(), throwable);
+                logCheckFailure(LOGGER, ctx.endpoint(), throwable);
             }
             ctx.updateHealth(health, reqCtx, responseHeaders, throwable);
         } finally {

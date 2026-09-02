@@ -18,9 +18,16 @@ package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.slf4j.Logger;
+
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+
+import io.grpc.Status;
+import io.grpc.StatusException;
+import io.grpc.StatusRuntimeException;
 
 /**
  * Abstract class that provides common structure for {@link GrpcHealthChecker} and
@@ -81,5 +88,26 @@ abstract class AbstractGrpcHealthChecker implements AsyncCloseable {
 
     protected void unlock() {
         lock.unlock();
+    }
+
+    /**
+     * Logs a failed health check RPC at a severity appropriate to the cause: {@code WARN} for an
+     * {@link Status.Code#UNIMPLEMENTED} status (indicating the endpoint doesn't implement the gRPC
+     * health check service) or an exception that didn't originate from a gRPC status, since both
+     * usually indicate a misconfiguration; {@code TRACE} for any other gRPC status exception, since
+     * those are expected to occur transiently while health checking.
+     */
+    protected static void logCheckFailure(Logger logger, Endpoint endpoint, Throwable throwable) {
+        if (throwable instanceof StatusRuntimeException || throwable instanceof StatusException) {
+            final Status status = Status.fromThrowable(throwable);
+            if (status.getCode() == Status.Code.UNIMPLEMENTED) {
+                logger.warn("gRPC health checking is not implemented by endpoint {}", endpoint, throwable);
+            } else {
+                logger.trace("Failed health check on endpoint {}", endpoint, throwable);
+            }
+        } else {
+            logger.warn("Unexpected exception while performing health check on endpoint {}",
+                    endpoint, throwable);
+        }
     }
 }
