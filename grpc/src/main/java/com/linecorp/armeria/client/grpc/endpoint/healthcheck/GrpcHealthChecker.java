@@ -78,27 +78,7 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
             }
 
             try (ClientRequestContextCaptor reqCtxCaptor = Clients.newContextCaptor()) {
-                stub.check(builder.build(), new StreamObserver<HealthCheckResponse>() {
-                    @Override
-                    public void onNext(HealthCheckResponse healthCheckResponse) {
-                        final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        final double health = healthCheckResponse.getStatus() ==
-                                HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
-                        updateHealth(health, reqCtx, null);
-                    }
-
-                    @Override
-                    public void onError(Throwable throwable) {
-                        final ClientRequestContext reqCtx = reqCtxCaptor.get();
-                        updateHealth(UNHEALTHY, reqCtx, throwable);
-                        scheduleNextCheck();
-                    }
-
-                    @Override
-                    public void onCompleted() {
-                        scheduleNextCheck();
-                    }
-                });
+                stub.check(builder.build(), new CheckObserver(this, reqCtxCaptor));
                 activeRequestContext = reqCtxCaptor.get();
             }
         } finally {
@@ -153,6 +133,37 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
                     ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
         } finally {
             unlock();
+        }
+    }
+
+    private static final class CheckObserver implements StreamObserver<HealthCheckResponse> {
+
+        private final GrpcHealthChecker checker;
+        private final ClientRequestContextCaptor reqCtxCaptor;
+
+        CheckObserver(GrpcHealthChecker checker, ClientRequestContextCaptor reqCtxCaptor) {
+            this.checker = checker;
+            this.reqCtxCaptor = reqCtxCaptor;
+        }
+
+        @Override
+        public void onNext(HealthCheckResponse healthCheckResponse) {
+            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+            final double health = healthCheckResponse.getStatus() ==
+                    HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
+            checker.updateHealth(health, reqCtx, null);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+            checker.updateHealth(UNHEALTHY, reqCtx, throwable);
+            checker.scheduleNextCheck();
+        }
+
+        @Override
+        public void onCompleted() {
+            checker.scheduleNextCheck();
         }
     }
 }
