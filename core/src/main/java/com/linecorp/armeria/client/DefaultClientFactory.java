@@ -185,7 +185,10 @@ final class DefaultClientFactory implements ClientFactory {
         if (isClosing()) {
             throw new IllegalStateException("Cannot create a client because the factory is closing.");
         }
+
+        params = params.scheme().executionProtocol().translate(params);
         validateParams(params);
+
         final Scheme scheme = params.scheme();
         final Class<?> clientType = params.clientType();
         for (ClientFactory factory : clientFactories.get(scheme)) {

@@ -299,10 +299,6 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
             return uri;
         }
 
-        if (uri.getAuthority() == null) {
-            throw new IllegalArgumentException("URI with missing authority: " + uri);
-        }
-
         final String scheme = uri.getScheme();
         if (scheme == null) {
             throw new IllegalArgumentException("URI with missing scheme: " + uri);
@@ -310,6 +306,14 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
         final Scheme parsedScheme = Scheme.tryParse(scheme);
         if (parsedScheme == null) {
             throw new IllegalArgumentException("URI with undefined scheme: " + uri);
+        }
+
+        // Delegate to the execution protocol for protocol-specific validation (e.g., authority check).
+        uri = parsedScheme.executionProtocol().validateUri(uri);
+
+        // For custom execution protocols, skip supportedSchemes check and normalization.
+        if (!(parsedScheme.executionProtocol() instanceof SessionProtocol)) {
+            return uri;
         }
 
         final Set<Scheme> supportedSchemes = supportedSchemes();
@@ -350,7 +354,9 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      */
     default Scheme validateScheme(Scheme scheme) {
         requireNonNull(scheme, "scheme");
-
+        if (!(scheme.executionProtocol() instanceof SessionProtocol)) {
+            return scheme;
+        }
         final Set<Scheme> supportedSchemes = supportedSchemes();
         if (!supportedSchemes.contains(scheme)) {
             throw new IllegalArgumentException(
