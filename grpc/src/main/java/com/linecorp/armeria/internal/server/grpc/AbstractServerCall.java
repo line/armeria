@@ -329,9 +329,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     public void onRequestMessage(DeframedMessage message, boolean endOfStream) {
         try {
-            final I request;
-            final ByteBuf buf = message.buf();
-
             boolean success = false;
             try {
                 // Special case for unary calls.
@@ -354,28 +351,54 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             }
 
-            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-            request = marshaller.deserializeRequest(message, grpcWebText);
-            maybeLogRequestContent(request);
-
-            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
-                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
-            }
-
+            // Deserialize the message on the thread that invokes the listener, so that the event loop
+            // is not occupied by deserialization (and decompression) when `blockingTaskExecutor` is used.
             if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+                blockingExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
             } else {
-                invokeOnMessage(request, endOfStream);
+                deserializeAndInvokeOnMessage(message, endOfStream);
             }
         } catch (Throwable cause) {
             close(cause, true);
         }
     }
 
+    private void deserializeAndInvokeOnMessage(DeframedMessage message, boolean endOfStream) {
+        if (blockingExecutor != null && cancelled) {
+            // Do not deserialize the message if the call is cancelled after
+            // this task was scheduled to blockingTaskExecutor.
+            message.close();
+            return;
+        }
+
+        final I request;
+        try {
+            final ByteBuf buf = message.buf();
+            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+            // `deserializeRequest()` releases the buffer (unless `unsafeWrapRequestBuffers` is enabled)
+            // or closes the stream, even if it fails.
+            request = marshaller.deserializeRequest(message, grpcWebText);
+            maybeLogRequestContent(request);
+
+            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
+                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
+            }
+        } catch (Throwable cause) {
+            close(cause, true);
+            return;
+        }
+
+        invokeOnMessage(request, endOfStream);
+    }
+
     protected final void onRequestComplete() {
         clientStreamClosed = true;
         if (!closeCalled) {
-            maybeLogRequestContent(null);
+            if (!messageReceived) {
+                // If a message was received, its request content is logged when it is deserialized,
+                // which may happen later than this on `blockingTaskExecutor`.
+                maybeLogRequestContent(null);
+            }
             if (blockingExecutor != null) {
                 blockingExecutor.execute(this::invokeHalfClose);
             } else {
@@ -400,11 +423,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void invokeOnMessage(I request, boolean halfClose) {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onMessage() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
-            return;
-        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
