@@ -350,4 +350,3 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
     }
 }
-

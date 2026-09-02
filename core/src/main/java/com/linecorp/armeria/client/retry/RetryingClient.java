@@ -308,7 +308,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
 
         if (!setResponseTimeout(ctx, derivedCtx)) {
-            handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get(), initialAttempt);
+            handleException(ctx, derivedCtx, rootReqDuplicator, future,
+                            ResponseTimeoutException.get(), initialAttempt);
             return;
         }
 
@@ -316,7 +317,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (!initialAttempt) {
             final boolean shouldRetry = config.retryLimiter().shouldRetry(derivedCtx);
             if (!shouldRetry) {
-                handleException(ctx, rootReqDuplicator, future, RetryLimitedException.of(), initialAttempt);
+                handleException(ctx, derivedCtx, rootReqDuplicator, future,
+                                RetryLimitedException.of(), initialAttempt);
                 return;
             }
         }
@@ -530,6 +532,14 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
+    }
+
+    private static void handleException(ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                        @Nullable HttpRequestDuplicator rootReqDuplicator,
+                                        CompletableFuture<HttpResponse> future, Throwable cause,
+                                        boolean endRequestLog) {
+        derivedCtx.cancel(cause);
+        handleException(ctx, rootReqDuplicator, future, cause, endRequestLog);
     }
 
     private void handleRetryDecision(@Nullable RetryDecision decision, ClientRequestContext ctx,
