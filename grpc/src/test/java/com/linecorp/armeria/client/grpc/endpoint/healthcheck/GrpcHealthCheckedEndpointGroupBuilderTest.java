@@ -35,7 +35,7 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
     void hasHealthyEndpointViaCheck() {
         serverExtension.setStatus(HealthCheckResponse.ServingStatus.SERVING);
 
-        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroup
                 .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.CHECK)
                 .build()) {
             assertThat(endpointGroup.whenReady().join()).hasSize(1);
@@ -46,7 +46,7 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
     void hasHealthyEndpointViaWatch() {
         serverExtension.setStatus(HealthCheckResponse.ServingStatus.SERVING);
 
-        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroup
                 .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.WATCH)
                 .build()) {
             assertThat(endpointGroup.whenReady().join()).hasSize(1);
@@ -57,7 +57,7 @@ class GrpcHealthCheckedEndpointGroupBuilderTest {
     void empty() throws Exception {
         serverExtension.setStatus(HealthCheckResponse.ServingStatus.NOT_SERVING);
 
-        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroupBuilder
+        try (HealthCheckedEndpointGroup endpointGroup = GrpcHealthCheckedEndpointGroup
                 .builder(serverExtension.endpoint(SessionProtocol.H2C), GrpcHealthCheckMethod.CHECK)
                 .build()) {
             assertThat(endpointGroup.whenReady().get()).isEmpty();

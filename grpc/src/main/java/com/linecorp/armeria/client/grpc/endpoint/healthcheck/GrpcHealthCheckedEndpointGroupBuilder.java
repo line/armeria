@@ -30,6 +30,8 @@ import com.linecorp.armeria.internal.client.grpc.GrpcHealthChecker;
 
 /**
  * Builds a health checked endpoint group whose health comes from a standard gRPC health check service.
+ *
+ * @see GrpcHealthCheckedEndpointGroup#builder(EndpointGroup, GrpcHealthCheckMethod)
  */
 @UnstableApi
 public final class GrpcHealthCheckedEndpointGroupBuilder
@@ -40,17 +42,7 @@ public final class GrpcHealthCheckedEndpointGroupBuilder
 
     GrpcHealthCheckedEndpointGroupBuilder(EndpointGroup delegate, GrpcHealthCheckMethod healthCheckMethod) {
         super(delegate);
-        this.healthCheckMethod = healthCheckMethod;
-    }
-
-    /**
-     * Returns a {@link GrpcHealthCheckedEndpointGroupBuilder} that builds a health checked
-     * endpoint group with the specified {@link EndpointGroup} and {@link GrpcHealthCheckMethod}.
-     */
-    public static GrpcHealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate,
-                                                                GrpcHealthCheckMethod healthCheckMethod) {
-        return new GrpcHealthCheckedEndpointGroupBuilder(requireNonNull(delegate, "delegate"),
-                requireNonNull(healthCheckMethod, "healthCheckMethod"));
+        this.healthCheckMethod = requireNonNull(healthCheckMethod, "healthCheckMethod");
     }
 
     /**
