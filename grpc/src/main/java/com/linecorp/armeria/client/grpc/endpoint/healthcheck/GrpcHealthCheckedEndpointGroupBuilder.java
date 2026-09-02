@@ -25,8 +25,6 @@ import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.internal.client.grpc.GrpcHealthCheckWatcher;
-import com.linecorp.armeria.internal.client.grpc.GrpcHealthChecker;
 
 /**
  * Builds a health checked endpoint group whose health comes from a standard gRPC health check service.

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.client.grpc;
+package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,7 +41,7 @@ import io.grpc.stub.StreamObserver;
 /**
  * Performs gRPC health checking using the Check rpc endpoint.
  */
-public final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
+final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GrpcHealthChecker.class);
 
@@ -52,8 +52,8 @@ public final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
     @Nullable
     private ClientRequestContext activeRequestContext;
 
-    public GrpcHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, SessionProtocol sessionProtocol,
-                             @Nullable String service) {
+    GrpcHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, SessionProtocol sessionProtocol,
+                      @Nullable String service) {
         this.ctx = requireNonNull(ctx, "ctx");
         requireNonNull(endpoint, "endpoint");
         requireNonNull(sessionProtocol, "sessionProtocol");

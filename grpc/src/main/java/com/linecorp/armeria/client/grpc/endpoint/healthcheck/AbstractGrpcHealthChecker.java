@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.client.grpc;
+package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
