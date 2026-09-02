@@ -552,13 +552,11 @@ final class HttpChannelPool implements AsyncCloseable {
                 promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }
         } catch (Throwable t) {
-            Throwable cause = t;
-            try {
-                cause = UnprocessedRequestException.of(t);
-            } catch (Throwable ignored) {
-                // Use the original cause if creating an UnprocessedRequestException fails.
-            }
-            promise.completeExceptionally(cause);
+            // Complete the promise before rethrowing, so that a fatal error cannot leave the request
+            // pending forever. The cause is not wrapped with UnprocessedRequestException here because
+            // HttpClientDelegate already does that for every acquisition failure, and wrapping could
+            // fail for the same reason the original attempt did.
+            promise.completeExceptionally(t);
             Exceptions.throwIfFatal(t);
         }
     }
