@@ -1,8 +1,7 @@
 # OAuth 2.0 client
 
 Armeria can obtain an access token and attach it to outgoing requests as an
-[OAuth2Client](type) decorator. The token grant API lives in the `armeria-oauth2` module and is
-still marked `@UnstableApi`.
+[OAuth2Client](type) decorator. The token grant API lives in the `armeria-oauth2` module.
 
 ## Supported grants
 
@@ -14,9 +13,6 @@ The client implements the following token requests:
   via [AccessTokenRequest#ofResourceOwnerPassword(String, String)](type)
 - [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523) JSON Web Token (JWT) bearer assertions
   via [AccessTokenRequest#ofJsonWebToken(String)](type)
-
-Authorization Code and Implicit are not implemented. Tokens are refreshed automatically when a
-refresh token is present; by default the client refreshes one minute before expiry.
 
 ## Dependency
 
