@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.reactivestreams.Subscriber;
@@ -145,7 +146,13 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message, payload);
         } else {
-            ctx.eventLoop().execute(() -> doSendMessage(message, payload));
+            try {
+                ctx.eventLoop().execute(() -> doSendMessage(message, payload));
+            } catch (RejectedExecutionException cause) {
+                payload.close();
+                pendingMessagesUpdater.decrementAndGet(this);
+                throw cause;
+            }
         }
     }
 

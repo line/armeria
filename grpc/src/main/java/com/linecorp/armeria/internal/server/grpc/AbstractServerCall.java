@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -362,7 +363,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             // Deserialize the message on the thread that invokes the listener, so that the event loop
             // is not occupied by deserialization (and decompression) when `blockingTaskExecutor` is used.
             if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
+                try {
+                    blockingExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
+                } catch (RejectedExecutionException cause) {
+                    message.close();
+                    throw cause;
+                }
             } else {
                 deserializeAndInvokeOnMessage(message, endOfStream);
             }
