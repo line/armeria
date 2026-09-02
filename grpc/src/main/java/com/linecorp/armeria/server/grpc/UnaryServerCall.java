@@ -63,6 +63,9 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     // Only set once.
     @Nullable
     private O responseMessage;
+    // The serialized `responseMessage`. Released by `onListenerClosed()` if it was not written.
+    @Nullable
+    private HttpData responsePayload;
 
     UnaryServerCall(HttpRequest req, MethodDescriptor<I, O> method, String simpleMethodName,
                     CompressorRegistry compressorRegistry, DecompressorRegistry decompressorRegistry,
@@ -120,22 +123,47 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void sendMessage(O message) {
+        // Serialize and compress the message on the caller's thread so that the event loop is not
+        // occupied by serialization.
+        final HttpData payload;
+        try {
+            payload = toPayload(message);
+        } catch (Throwable e) {
+            close(e, true);
+            return;
+        }
         if (ctx.eventLoop().inEventLoop()) {
-            doSendMessage(message);
+            doSendMessage(message, payload);
         } else {
-            ctx.eventLoop().execute(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message, payload));
         }
     }
 
-    private void doSendMessage(O message) {
+    private void doSendMessage(O message, HttpData payload) {
         if (isCancelled()) {
             // call was already closed by a client or a timeout scheduler
+            payload.close();
             return;
         }
-        checkState(responseHeaders() != null, "sendHeaders has not been called");
-        checkState(responseMessage == null, "responseMessage is set already");
-        checkState(!isCloseCalled(), "call is closed");
+        try {
+            checkState(responseHeaders() != null, "sendHeaders has not been called");
+            checkState(responseMessage == null, "responseMessage is set already");
+            checkState(!isCloseCalled(), "call is closed");
+        } catch (IllegalStateException e) {
+            payload.close();
+            throw e;
+        }
         responseMessage = message;
+        responsePayload = payload;
+    }
+
+    @Override
+    protected void onListenerClosed() {
+        if (responsePayload != null) {
+            // The call was closed without writing the response, e.g. cancelled or failed.
+            responsePayload.close();
+            responsePayload = null;
+        }
     }
 
     @Override
@@ -154,9 +182,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             if (status.isOk()) {
                 assert responseHeaders != null;
                 assert responseMessage != null;
-                final HttpData responseBody = toPayload(responseMessage);
-
+                assert responsePayload != null;
+                final HttpData responseBody = responsePayload;
                 final HttpObject responseTrailers = responseTrailers(ctx, status, metadata, false);
+                // From here, the payload is owned by the response or consumed by `aggregateData()`.
+                // If an exception was raised above, `onListenerClosed()` releases it.
+                responsePayload = null;
                 if (responseTrailers instanceof HttpData) {
                     // gRPC-Web encodes response trailers as response body.
                     final HttpData httpData =

@@ -282,10 +282,18 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected abstract void doClose(ServerStatusAndMetadata statusAndMetadata);
 
+    /**
+     * Invoked once when the listener is closed, i.e. when the call is complete or cancelled, right before
+     * {@code onComplete()} or {@code onCancel()} is delivered to the listener, so that a subclass can
+     * release the resources which were prepared for a response but never written.
+     */
+    protected void onListenerClosed() {}
+
     protected final void closeListener(ServerStatusAndMetadata statusAndMetadata) {
         final boolean cancelled = statusAndMetadata.shouldCancel();
         if (!listenerClosed) {
             listenerClosed = true;
+            onListenerClosed();
 
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Failed to deserialize a message into a request
@@ -496,14 +504,18 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     @Override
     public void sendHeaders(Metadata metadata) {
+        // Decide the compressor and build the response headers on the caller's thread, because
+        // `sendMessage()` serializes and compresses a message on the caller's thread, which may happen
+        // before the event loop runs `doSendHeaders()`.
+        final ResponseHeaders headers = buildResponseHeaders(metadata);
         if (ctx.eventLoop().inEventLoop()) {
-            doSendHeaders(metadata);
+            doSendHeaders(headers);
         } else {
-            ctx.eventLoop().execute(() -> doSendHeaders(metadata));
+            ctx.eventLoop().execute(() -> doSendHeaders(headers));
         }
     }
 
-    private void doSendHeaders(Metadata metadata) {
+    private void doSendHeaders(ResponseHeaders headers) {
         if (isCancelled()) {
             // call was already closed by a client or a timeout scheduler.
             return;
@@ -511,6 +523,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
+        // https://github.com/grpc/proposal/blob/4c4a06d95eb1e7d3d7d84c4c9505a99f2a721db9/A6-client-retries.md#L263
+        // gRPC servers should delay the Response-Headers until the first response message or
+        // until the application code chooses to send headers.
+        responseHeaders = headers;
+    }
+
+    private ResponseHeaders buildResponseHeaders(Metadata metadata) {
         final Compressor oldCompressor = compressor;
         if (messageCompression && !clientAcceptEncoding.isEmpty()) {
             final List<String> acceptedEncodings =
@@ -560,11 +579,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             });
         }
-
-        // https://github.com/grpc/proposal/blob/4c4a06d95eb1e7d3d7d84c4c9505a99f2a721db9/A6-client-retries.md#L263
-        // gRPC servers should delay the Response-Headers until the first response message or
-        // until the application code chooses to send headers.
-        responseHeaders = headers;
+        return headers;
     }
 
     protected final HttpData toPayload(O message) throws IOException {

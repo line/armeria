@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -132,25 +133,41 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     @Override
     public void sendMessage(O message) {
         pendingMessagesUpdater.incrementAndGet(this);
+        // Serialize and compress the message on the caller's thread so that the event loop is not
+        // occupied by serialization.
+        final HttpData payload;
+        try {
+            payload = toPayload(message);
+        } catch (Throwable e) {
+            close(e, true);
+            return;
+        }
         if (ctx.eventLoop().inEventLoop()) {
-            doSendMessage(message);
+            doSendMessage(message, payload);
         } else {
-            ctx.eventLoop().execute(() -> doSendMessage(message));
+            ctx.eventLoop().execute(() -> doSendMessage(message, payload));
         }
     }
 
-    private void doSendMessage(O message) {
+    private void doSendMessage(O message, HttpData payload) {
         if (isCancelled()) {
             // call was already closed by a client or a timeout scheduler
+            payload.close();
             return;
         }
         final ResponseHeaders responseHeaders = responseHeaders();
-        checkState(responseHeaders != null, "sendHeaders has not been called");
-        checkState(!isCloseCalled(), "call is closed");
+        try {
+            checkState(responseHeaders != null, "sendHeaders has not been called");
+            checkState(!isCloseCalled(), "call is closed");
+        } catch (IllegalStateException e) {
+            payload.close();
+            throw e;
+        }
 
         if (firstResponse == null) {
             // Write the response headers when the first response is received.
             if (!res.tryWrite(responseHeaders)) {
+                payload.close();
                 maybeCancel();
                 return;
             }
@@ -158,7 +175,8 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         }
 
         try {
-            if (res.tryWrite(toPayload(message))) {
+            // `res` releases `payload` by itself if `tryWrite()` returns false or throws.
+            if (res.tryWrite(payload)) {
                 if (!method.getType().serverSendsOneMessage()) {
                     // Invoke onReady() only when server can send multiple messages.
                     res.whenConsumed().thenRun(() -> {
