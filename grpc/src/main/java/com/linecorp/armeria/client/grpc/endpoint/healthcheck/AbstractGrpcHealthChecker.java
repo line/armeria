@@ -107,7 +107,7 @@ abstract class AbstractGrpcHealthChecker implements AsyncCloseable {
             }
         } else {
             logger.warn("Unexpected exception while performing health check on endpoint {}",
-                    endpoint, throwable);
+                        endpoint, throwable);
         }
     }
 }

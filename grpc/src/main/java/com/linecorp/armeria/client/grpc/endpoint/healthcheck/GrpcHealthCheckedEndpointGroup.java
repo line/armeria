@@ -34,7 +34,7 @@ public final class GrpcHealthCheckedEndpointGroup {
      * @param healthCheckMethod the gRPC health check method used to check the health of the candidates
      */
     public static GrpcHealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate,
-                                                                  GrpcHealthCheckMethod healthCheckMethod) {
+                                                                GrpcHealthCheckMethod healthCheckMethod) {
         return new GrpcHealthCheckedEndpointGroupBuilder(delegate, healthCheckMethod);
     }
 

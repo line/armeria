@@ -107,12 +107,12 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
                 responseHeaders = reqCtx.log().partial().responseHeaders();
             }
 
-            if (health == HEALTHY) {
-                LOGGER.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
-            } else if (throwable == null) {
-                LOGGER.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
-            } else {
+            if (throwable != null) {
                 logCheckFailure(LOGGER, ctx.endpoint(), throwable);
+            } else if (health == HEALTHY) {
+                LOGGER.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
+            } else {
+                LOGGER.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
             }
             ctx.updateHealth(health, reqCtx, responseHeaders, throwable);
         } finally {
@@ -130,16 +130,23 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
             // schedule next check using the retry backoff, to avoid tight-looping against
             // an unhealthy or unavailable server
             ctx.executor().schedule(GrpcHealthChecker.this::check,
-                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+                                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
         } finally {
             unlock();
         }
     }
 
+    /**
+     * A {@link StreamObserver} for the unary {@code Check} rpc. Since gRPC doesn't guarantee that
+     * {@link #onNext(HealthCheckResponse)} precedes a terminal event in every implementation, health is
+     * only reported once the RPC terminates: if a message was received, it determines the reported health
+     * regardless of how the stream was closed; otherwise the endpoint is reported unhealthy.
+     */
     private static final class CheckObserver implements StreamObserver<HealthCheckResponse> {
 
         private final GrpcHealthChecker checker;
         private final ClientRequestContextCaptor reqCtxCaptor;
+        private double health = UNHEALTHY;
 
         CheckObserver(GrpcHealthChecker checker, ClientRequestContextCaptor reqCtxCaptor) {
             this.checker = checker;
@@ -148,21 +155,21 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
         @Override
         public void onNext(HealthCheckResponse healthCheckResponse) {
-            final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            final double health = healthCheckResponse.getStatus() ==
+            health = healthCheckResponse.getStatus() ==
                     HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
-            checker.updateHealth(health, reqCtx, null);
         }
 
         @Override
         public void onError(Throwable throwable) {
             final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            checker.updateHealth(UNHEALTHY, reqCtx, throwable);
+            checker.updateHealth(health, reqCtx, throwable);
             checker.scheduleNextCheck();
         }
 
         @Override
         public void onCompleted() {
+            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+            checker.updateHealth(health, reqCtx, null);
             checker.scheduleNextCheck();
         }
     }
