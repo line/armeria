@@ -122,6 +122,17 @@ class AuthServiceTest {
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
+            // Auth with Basic + explicit onFailure (explicit handler must NOT be replaced)
+            sb.service(
+                    "/basic-on-failure",
+                    ok.decorate(AuthService.builder()
+                                           .addBasicAuth(httpBasicAuthorizer)
+                                           .onFailure((delegate2, ctx2, req2, cause2) -> {
+                                               return HttpResponse.of(HttpStatus.FORBIDDEN);
+                                           })
+                                           .newDecorator())
+                      .decorate(LoggingService.newDecorator()));
+
             // Auth with OAuth1a
             final Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
                     completedFuture("dummy_signature".equals(token.signature()) &&
@@ -264,6 +275,18 @@ class AuthServiceTest {
                     basicGetRequest("/basic", AuthToken.ofBasic("choco", "pangyo"),
                                     AUTHORIZATION))) {
                 assertThat(res.getCode()).isEqualTo(401);
+            }
+        }
+    }
+
+    @Test
+    void explicitOnFailureNotReplacedByBasicAuth() throws Exception {
+        // Explicit onFailure set with addBasicAuth must be preserved (not replaced by Basic handler).
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(server.httpUri() + "/basic-on-failure"))) {
+                assertThat(res.getCode()).isEqualTo(403); // custom handler returns FORBIDDEN
+                assertThat(res.getHeader("WWW-Authenticate")).isNull(); // custom handler doesn't add it
             }
         }
     }
