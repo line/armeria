@@ -213,6 +213,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
     private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private double maxConnectionAgeJitterRate;
     private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
@@ -788,6 +789,26 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the jitter rate applied to the maximum connection age. The effective max connection age is chosen
+     * uniformly at random for each connection between
+     * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
+     * {@code maxConnectionAge}. The default is {@code 0.0}, which disables jitter. This option has no effect
+     * when the max connection age is disabled.
+     *
+     * @param maxConnectionAgeJitterRate the jitter rate between {@code 0.0} and {@code 1.0}, inclusive
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeJitterRate} is less than
+     *                                  {@code 0.0} or greater than {@code 1.0}
+     */
+    @UnstableApi
+    public ServerBuilder maxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
+        checkArgument(maxConnectionAgeJitterRate >= 0.0 && maxConnectionAgeJitterRate <= 1.0,
+                      "maxConnectionAgeJitterRate: %s (expected: >= 0.0 and <= 1.0)",
+                      maxConnectionAgeJitterRate);
+        this.maxConnectionAgeJitterRate = maxConnectionAgeJitterRate;
+        return this;
     }
 
     /**
@@ -2648,6 +2669,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
                 ports, defaultVirtualHost,
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
+                maxConnectionAgeJitterRate,
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2StreamWindowUpdateRatio, http2MaxStreamsPerConnection,
