@@ -31,14 +31,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.xds.athenz.AthenzFilterConfig.AccessTokenTargetConfig;
+import com.linecorp.armeria.xds.athenz.AccessTokenTargetConfig;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.AccessTokenTarget;
+import jp.co.lycorp.ftd.athenz.v1.AccessTokenTarget;
 
 final class AccessTokenTargetFilterFactory implements HttpFilterFactory {
 
