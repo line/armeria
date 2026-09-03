@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.grpc.CallExecutor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -112,8 +113,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final boolean autoCompression;
 
     @VisibleForTesting
-    @Nullable
-    final Executor blockingExecutor;
+    final CallExecutor callExecutor;
     private final InternalGrpcExceptionHandler exceptionHandler;
 
     // Only set once.
@@ -173,7 +173,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers, useMethodMarshaller);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        this.blockingExecutor = blockingExecutor;
+        // Listener callbacks of this call run on the blocking task executor if given, or on the event loop.
+        // The handler is only reached by a failure that escaped a task;
+        // closing the call is the only sensible reaction.
+        callExecutor = blockingExecutor != null ? CallExecutor.sequential(ctx, blockingExecutor, this::close)
+                                                : CallExecutor.of(ctx, this::close);
         defaultResponseHeaders = defaultHeaders;
         this.exceptionHandler = exceptionHandler;
 
@@ -307,18 +311,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             }
 
             if (!cancelled) {
-                if (blockingExecutor != null) {
-                    blockingExecutor.execute(this::invokeOnComplete);
-                } else {
-                    invokeOnComplete();
-                }
+                callExecutor.execute(this::invokeOnComplete);
             } else {
                 this.cancelled = true;
-                if (blockingExecutor != null) {
-                    blockingExecutor.execute(this::invokeOnCancel);
-                } else {
-                    invokeOnCancel();
-                }
+                callExecutor.execute(this::invokeOnCancel);
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
                     res.abort(statusAndMetadata.asRuntimeException());
@@ -362,11 +358,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
             }
 
-            if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
-            } else {
-                invokeOnMessage(request, endOfStream);
-            }
+            callExecutor.execute(() -> invokeOnMessage(request, endOfStream));
         } catch (Throwable cause) {
             close(cause, true);
         }
@@ -376,18 +368,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         clientStreamClosed = true;
         if (!closeCalled) {
             maybeLogRequestContent(null);
-            if (blockingExecutor != null) {
-                blockingExecutor.execute(this::invokeHalfClose);
-            } else {
-                invokeHalfClose();
-            }
+            callExecutor.execute(this::invokeHalfClose);
         }
     }
 
     protected final void invokeOnReady() {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onReady() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (cancelled) {
+            // Do not call listener.onReady() if the call is cancelled after this task was queued.
             return;
         }
         try {
@@ -400,9 +387,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void invokeOnMessage(I request, boolean halfClose) {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onMessage() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (cancelled) {
+            // Do not call listener.onMessage() if the call is cancelled after this task was queued.
+            // The listener will never see this message, so release the buffer it may be wrapping.
+            if (unsafeWrapRequestBuffers) {
+                GrpcUnsafeBufferUtil.releaseBuffer(request, ctx);
+            }
             return;
         }
         try (SafeCloseable ignored = ctx.push()) {
@@ -417,9 +407,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeHalfClose() {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onHalfClose() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (cancelled) {
+            // Do not call listener.onHalfClose() if the call is cancelled after this task was queued.
             return;
         }
         try (SafeCloseable ignored = ctx.push()) {
@@ -662,9 +651,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         return cancelled;
     }
 
-    @Nullable
-    public final Executor blockingExecutor() {
-        return blockingExecutor;
+    public final CallExecutor callExecutor() {
+        return callExecutor;
     }
 
     public final EventLoop eventLoop() {
