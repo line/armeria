@@ -146,7 +146,7 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
         private final GrpcHealthChecker checker;
         private final ClientRequestContextCaptor reqCtxCaptor;
-        private double health = UNHEALTHY;
+        private HealthCheckResponse.ServingStatus servingStatus = HealthCheckResponse.ServingStatus.UNKNOWN;
 
         CheckObserver(GrpcHealthChecker checker, ClientRequestContextCaptor reqCtxCaptor) {
             this.checker = checker;
@@ -155,22 +155,25 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
         @Override
         public void onNext(HealthCheckResponse healthCheckResponse) {
-            health = healthCheckResponse.getStatus() ==
-                    HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
+            servingStatus = healthCheckResponse.getStatus();
         }
 
         @Override
         public void onError(Throwable throwable) {
             final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            checker.updateHealth(health, reqCtx, throwable);
+            checker.updateHealth(toHealth(servingStatus), reqCtx, throwable);
             checker.scheduleNextCheck();
         }
 
         @Override
         public void onCompleted() {
             final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            checker.updateHealth(health, reqCtx, null);
+            checker.updateHealth(toHealth(servingStatus), reqCtx, null);
             checker.scheduleNextCheck();
+        }
+
+        private static double toHealth(HealthCheckResponse.ServingStatus servingStatus) {
+            return servingStatus == HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
         }
     }
 }
