@@ -20,10 +20,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
@@ -46,6 +48,17 @@ public final class AuthServiceBuilder {
         }
         return HttpResponse.of(HttpStatus.UNAUTHORIZED);
     };
+    private AuthFailureHandler basicAuthFailureHandler = (delegate, ctx, req, cause) -> {
+        if (cause != null) {
+            AuthService.logger.warn("Unexpected exception during authorization.", cause);
+        }
+        return HttpResponse.of(ResponseHeaders.builder(HttpStatus.UNAUTHORIZED)
+                                          .add(HttpHeaderNames.WWW_AUTHENTICATE,
+                                               "Basic realm=\"Accessing to the ...\"")
+                                          .build());
+    };
+    private boolean basicAuthAdded;
+    private boolean failureHandlerWasSet;
     private MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.server.auth");
 
     /**
@@ -82,6 +95,7 @@ public final class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
+        basicAuthAdded = true;
         return addTokenAuthorizer(AuthTokenExtractors.basic(),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -90,6 +104,7 @@ public final class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, CharSequence header) {
+        basicAuthAdded = true;
         return addTokenAuthorizer(new BasicTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -152,6 +167,7 @@ public final class AuthServiceBuilder {
      */
     public AuthServiceBuilder onFailure(AuthFailureHandler failureHandler) {
         this.failureHandler = requireNonNull(failureHandler, "failureHandler");
+        this.failureHandlerWasSet = true;
         return this;
     }
 
@@ -183,13 +199,17 @@ public final class AuthServiceBuilder {
      * Returns a newly-created {@link AuthService} based on the {@link Authorizer}s added to this builder.
      */
     public AuthService build(HttpService delegate) {
+        final AuthFailureHandler usedFailureHandler =
+                basicAuthAdded && !failureHandlerWasSet ? basicAuthFailureHandler : failureHandler;
         return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
-                               successHandler, failureHandler, meterIdPrefix);
+                               successHandler, usedFailureHandler, meterIdPrefix);
     }
 
     private AuthService build(HttpService delegate, Authorizer<HttpRequest> authorizer) {
+        final AuthFailureHandler usedFailureHandler =
+                basicAuthAdded && !failureHandlerWasSet ? basicAuthFailureHandler : failureHandler;
         return new AuthService(requireNonNull(delegate, "delegate"), authorizer,
-                               successHandler, failureHandler, meterIdPrefix);
+                               successHandler, usedFailureHandler, meterIdPrefix);
     }
 
     /**
