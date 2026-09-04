@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiFunction;
@@ -374,12 +373,12 @@ public final class FileService extends AbstractHttpService {
         });
     }
 
-    private CompletionStage<AggregatedHttpFile> getOrCache(ServiceRequestContext ctx,
-                                                           @Nullable ContentEncoding encoding,
-                                                           boolean decompress,
-                                                           HttpFileAttributes uncachedAttrs,
-                                                           PathAndEncoding pathAndEncoding,
-                                                           HttpFile uncachedFile) {
+    private CompletableFuture<AggregatedHttpFile> getOrCache(ServiceRequestContext ctx,
+                                                             @Nullable ContentEncoding encoding,
+                                                             boolean decompress,
+                                                             HttpFileAttributes uncachedAttrs,
+                                                             PathAndEncoding pathAndEncoding,
+                                                             HttpFile uncachedFile) {
         assert cache != null;
         final CachedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
         if (cachedFile != null) {
@@ -674,18 +673,21 @@ public final class FileService extends AbstractHttpService {
             }
         }
 
+        @Nullable
         @Override
-        public @Nullable HttpFileAttributes attributes() {
+        public HttpFileAttributes attributes() {
             return delegate.attributes();
         }
 
+        @Nullable
         @Override
-        public @Nullable ResponseHeaders headers() {
+        public ResponseHeaders headers() {
             return delegate.headers();
         }
 
+        @Nullable
         @Override
-        public @Nullable HttpData content() {
+        public HttpData content() {
             return delegate.content();
         }
 
@@ -698,7 +700,7 @@ public final class FileService extends AbstractHttpService {
         public synchronized String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("delegate", delegate)
-                              .add("refCount", refCnt)
+                              .add("refCnt", refCnt)
                               .toString();
         }
     }
