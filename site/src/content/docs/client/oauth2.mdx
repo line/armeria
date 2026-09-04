@@ -8,9 +8,11 @@ Armeria can obtain an access token and attach it to outgoing requests as an
 The client implements the following token requests:
 
 - [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749) [Client Credentials](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)
-  via [AccessTokenRequest#ofClientCredentials(String, String)](type)
+  via [AccessTokenRequest#ofClientCredentials(String,String)](type)
 - [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749) [Resource Owner Password Credentials](https://datatracker.ietf.org/doc/html/rfc6749#section-4.3)
-  via [AccessTokenRequest#ofResourceOwnerPassword(String, String)](type)
+  via [AccessTokenRequest#ofResourceOwnerPassword(String,String)](type).
+  Legacy compatibility only; [RFC 9700 §2.4](https://datatracker.ietf.org/doc/html/rfc9700#section-2.4)
+  says this grant MUST NOT be used for new deployments.
 - [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523) JSON Web Token (JWT) bearer assertions
   via [AccessTokenRequest#ofJsonWebToken(String)](type)
 
@@ -80,7 +82,7 @@ OAuth2AuthorizationGrant grant =
                                 .build();
 ```
 
-- `refreshBefore` — refresh this far before `expires_in`. The default is one minute.
+- `refreshBefore` — refresh this far before the token expires. The default is one minute.
 - `fallbackTokenProvider` — tried before the first token request and after a failed issue or refresh.
 - `newTokenConsumer` — invoked whenever a new token is issued, so you can store it for the fallback.
 - `preload(true)` — request a token when `build()` returns instead of on the first resource call.
