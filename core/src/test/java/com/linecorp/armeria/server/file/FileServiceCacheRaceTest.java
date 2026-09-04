@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -30,7 +31,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
@@ -48,6 +51,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 
@@ -83,9 +87,19 @@ class FileServiceCacheRaceTest {
      */
     @RepeatedTest(4)
     void concurrentColdCacheMissesAreServedIntact() {
-        // A new server means an empty entry cache.
-        try (TestServer server = TestServer.of(FileService.of(tmpDir))) {
+        final RecordingHttpVfs vfs = new RecordingHttpVfs(HttpVfs.of(tmpDir));
+        // Hold every aggregation until all of them are in flight, so that the first request cannot
+        // populate the cache for the rest.
+        vfs.gateAggregations(CONCURRENCY);
+        try (TestServer server = TestServer.of(FileService.of(vfs))) {
             assertAllServedIntact(server.client(), "/foo.html", FOO_CONTENT);
+            // Every request aggregated its own file, so every store but the last was a replacement.
+            assertThat(vfs.aggregatedBufs).hasSize(CONCURRENCY);
+            // Keeping the replaced entries alive must not turn into a leak: only the entry that is still
+            // mapped survives, and every buffer it replaced is released.
+            await().untilAsserted(() -> assertThat(vfs.aggregatedBufs)
+                    .filteredOn(buf -> buf.refCnt() == 0)
+                    .hasSize(CONCURRENCY - 1));
         }
     }
 
@@ -93,20 +107,37 @@ class FileServiceCacheRaceTest {
      * The same lifetime problem, reached through size-based eviction rather than a replacement: an entry is
      * evicted as soon as the other path is cached.
      */
-    @RepeatedTest(4)
-    void concurrentRequestsAreServedIntactWhileTheCacheIsChurning() {
+    @Test
+    void concurrentRequestsAreServedIntactWhileTheCachedFileIsEvicted() {
+        final RecordingHttpVfs vfs = new RecordingHttpVfs(HttpVfs.of(tmpDir));
         // 'maximumSize=1' makes a request for one path evict the entry the other path is serving.
-        try (TestServer server = TestServer.of(FileService.builder(tmpDir)
+        try (TestServer server = TestServer.of(FileService.builder(vfs)
                                                           .entryCacheSpec("maximumSize=1")
                                                           .build())) {
             final WebClient client = server.client();
-            final List<CompletableFuture<AggregatedHttpResponse>> futures = new ArrayList<>();
-            for (int i = 0; i < CONCURRENCY; i++) {
-                futures.add(client.get(i % 2 == 0 ? "/foo.html" : "/bar.html").aggregate());
+            assertServedIntact(client.get("/foo.html").aggregate().join(), FOO_CONTENT);
+            final ByteBuf oldBuf = vfs.aggregatedBufs.get(0);
+
+            final BlockingPoint blockingPoint = vfs.blockNextToHttpFile();
+            final CompletableFuture<AggregatedHttpResponse> oldResponse =
+                    client.get("/foo.html").aggregate();
+            blockingPoint.awaitEntered();
+            try {
+                assertServedIntact(client.get("/bar.html").aggregate().join(), BAR_CONTENT);
+                final int aggregationsBeforeEviction = vfs.aggregatedBufs.size();
+                // Caffeine evicts on its own maintenance thread, so wait until '/foo.html' really left the
+                // cache: it is gone once a fresh request has to aggregate the file again.
+                await().untilAsserted(() -> {
+                    client.get("/foo.html").aggregate().join();
+                    assertThat(vfs.aggregatedBufs).hasSizeGreaterThan(aggregationsBeforeEviction);
+                });
+                // Eviction released the cache ownership, but oldResponse still owns the old content.
+                assertThat(oldBuf.refCnt()).isPositive();
+            } finally {
+                blockingPoint.resume();
             }
-            for (int i = 0; i < futures.size(); i++) {
-                assertServedIntact(futures.get(i).join(), i % 2 == 0 ? FOO_CONTENT : BAR_CONTENT);
-            }
+            assertServedIntact(oldResponse.join(), FOO_CONTENT);
+            await().untilAsserted(() -> assertThat(oldBuf.refCnt()).isZero());
         }
     }
 
@@ -166,10 +197,36 @@ class FileServiceCacheRaceTest {
         }
     }
 
+    /**
+     * A file that is small enough to cache while compressed can outgrow {@code maxCacheEntrySizeBytes} once
+     * it is decompressed, in which case it is served without being cached and belongs to its request alone.
+     */
+    @Test
+    void aDecompressedFileTooLargeToCacheIsServedIntact() throws IOException {
+        final int maxCacheEntrySizeBytes = 1024;
+        final String quxContent = Strings.repeat("qux0123456789abcdef\n", 5000);
+        final Path quxPath = tmpDir.resolve("qux.html.gz");
+        try (OutputStream out = new GZIPOutputStream(Files.newOutputStream(quxPath))) {
+            out.write(quxContent.getBytes(UTF_8));
+        }
+        // Small enough to cache while compressed, too large to cache once decompressed.
+        assertThat(Files.size(quxPath)).isLessThan(maxCacheEntrySizeBytes);
+        assertThat(quxContent.length()).isGreaterThan(maxCacheEntrySizeBytes);
+
+        try (TestServer server = TestServer.of(FileService.builder(tmpDir)
+                                                          .serveCompressedFiles(true)
+                                                          .autoDecompress(true)
+                                                          .maxCacheEntrySizeBytes(maxCacheEntrySizeBytes)
+                                                          .build())) {
+            assertServedIntact(server.client().get("/qux.html").aggregate().join(), quxContent);
+        }
+    }
+
     private static void assertServedIntact(AggregatedHttpResponse res, String expectedContent) {
-        assertThat(res.status()).withFailMessage("%s%n%s", res.status(), res.contentUtf8())
-                                .isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo(expectedContent);
+        final HttpStatus status = res.status();
+        final String content = res.contentUtf8();
+        assertThat(status).withFailMessage("%s%n%s", status, content).isSameAs(HttpStatus.OK);
+        assertThat(content).isEqualTo(expectedContent);
     }
 
     private static void assertAllServedIntact(WebClient client, String path, String expectedContent) {
@@ -191,9 +248,14 @@ class FileServiceCacheRaceTest {
         private final HttpVfs delegate;
         final List<ByteBuf> aggregatedBufs = new CopyOnWriteArrayList<>();
         private final AtomicReference<BlockingPoint> nextToHttpFile = new AtomicReference<>();
+        private final AtomicReference<Gate> aggregationGate = new AtomicReference<>();
 
         RecordingHttpVfs(HttpVfs delegate) {
             this.delegate = delegate;
+        }
+
+        void gateAggregations(int count) {
+            aggregationGate.set(new Gate(count));
         }
 
         BlockingPoint blockNextToHttpFile() {
@@ -266,13 +328,20 @@ class FileServiceCacheRaceTest {
             @Override
             public CompletableFuture<AggregatedHttpFile> aggregateWithPooledObjects(
                     Executor fileReadExecutor, ByteBufAllocator alloc) {
-                return delegate.aggregateWithPooledObjects(fileReadExecutor, alloc).thenApply(aggregated -> {
-                    final HttpData content = aggregated.content();
+                return delegate.aggregateWithPooledObjects(fileReadExecutor, alloc).thenCompose(agg -> {
+                    final HttpData content = agg.content();
                     if (content != null && content.isPooled()) {
                         // A duplicate shares the reference count with the original buffer.
                         aggregatedBufs.add(content.byteBuf(ByteBufAccessMode.DUPLICATE));
                     }
-                    return new BlockingAggregatedHttpFile(aggregated);
+                    final AggregatedHttpFile file = new BlockingAggregatedHttpFile(agg);
+                    final Gate gate = aggregationGate.get();
+                    if (gate == null) {
+                        return UnmodifiableFuture.completedFuture(file);
+                    }
+                    // Resume on the read executor, so that the requests really run in parallel
+                    // instead of serially on whichever thread opened the gate.
+                    return gate.arrive().thenApplyAsync(unused -> file, fileReadExecutor);
                 });
             }
 
@@ -357,6 +426,27 @@ class FileServiceCacheRaceTest {
             public HttpService asService() {
                 return (ctx, req) -> HttpResponse.of(read(ctx.blockingTaskExecutor(), ctx.alloc()));
             }
+        }
+    }
+
+    /**
+     * Releases every aggregation at once, but only once {@code count} of them have arrived.
+     */
+    private static final class Gate {
+
+        private final int count;
+        private final AtomicInteger arrived = new AtomicInteger();
+        private final CompletableFuture<Void> opened = new CompletableFuture<>();
+
+        Gate(int count) {
+            this.count = count;
+        }
+
+        CompletableFuture<Void> arrive() {
+            if (arrived.incrementAndGet() >= count) {
+                opened.complete(null);
+            }
+            return opened;
         }
     }
 
