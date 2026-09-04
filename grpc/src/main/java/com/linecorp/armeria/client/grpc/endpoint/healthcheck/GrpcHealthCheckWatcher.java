@@ -66,6 +66,9 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
                 .build(HealthGrpc.HealthStub.class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void check() {
         lock();
@@ -88,6 +91,9 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void cancelActiveCheck() {
         if (activeRequestContext != null) {
