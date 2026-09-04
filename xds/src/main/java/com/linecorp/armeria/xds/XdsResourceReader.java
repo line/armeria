@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2026 LY Corporation
  *
  * LY Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,8 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ServiceLoader;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.io.Resources;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.util.JsonFormat;
@@ -143,12 +145,26 @@ public final class XdsResourceReader {
     }
 
     /**
+     * Reads a protobuf message of the specified type from the given {@link URL}.
+     * This works uniformly for classpath resources, file paths and remote URLs.
+     */
+    public static <T extends GeneratedMessageV3> T from(URL url, Class<T> clazz) {
+        requireNonNull(url, "url");
+        requireNonNull(clazz, "clazz");
+        return from(readUrl(url), clazz);
+    }
+
+    /**
      * Reads a protobuf message of the specified type from a YAML or JSON file at the given path.
      */
     public static <T extends GeneratedMessageV3> T fromFile(Path path, Class<T> clazz) {
         requireNonNull(path, "path");
         requireNonNull(clazz, "clazz");
-        return from(readFile(path), clazz);
+        try {
+            return from(path.toUri().toURL(), clazz);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid path: " + path, e);
+        }
     }
 
     /**
@@ -158,6 +174,37 @@ public final class XdsResourceReader {
         requireNonNull(path, "path");
         requireNonNull(clazz, "clazz");
         return fromFile(Paths.get(path), clazz);
+    }
+
+    /**
+     * Reads a protobuf message of the specified type from a classpath resource.
+     * The resource is loaded via the context class loader.
+     *
+     * @throws IllegalArgumentException if the resource is not found on the classpath
+     */
+    public static <T extends GeneratedMessageV3> T fromResource(String resourceName, Class<T> clazz) {
+        requireNonNull(resourceName, "resourceName");
+        requireNonNull(clazz, "clazz");
+        return fromResource(resourceName, XdsResourceReader.class.getClassLoader(), clazz);
+    }
+
+    /**
+     * Reads a protobuf message of the specified type from a classpath resource.
+     * The resource is loaded via the specified {@link ClassLoader}.
+     *
+     * @throws IllegalArgumentException if the resource is not found on the classpath
+     */
+    public static <T extends GeneratedMessageV3> T fromResource(String resourceName,
+                                                                 ClassLoader classLoader,
+                                                                 Class<T> clazz) {
+        requireNonNull(resourceName, "resourceName");
+        requireNonNull(classLoader, "classLoader");
+        requireNonNull(clazz, "clazz");
+        final URL url = classLoader.getResource(resourceName);
+        if (url == null) {
+            throw new IllegalArgumentException("Classpath resource not found: " + resourceName);
+        }
+        return from(url, clazz);
     }
 
     @SuppressWarnings("unchecked")
@@ -174,12 +221,11 @@ public final class XdsResourceReader {
         return (T) builder.build();
     }
 
-    private static String readFile(Path path) {
+    private static String readUrl(URL url) {
         try {
-            final byte[] bytes = Files.readAllBytes(path);
-            return new String(bytes, StandardCharsets.UTF_8);
+            return Resources.toString(url, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read file: " + path, e);
+            throw new UncheckedIOException("Failed to read from: " + url, e);
         }
     }
 

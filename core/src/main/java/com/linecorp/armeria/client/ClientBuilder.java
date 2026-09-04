@@ -80,11 +80,10 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
 
     ClientBuilder(URI uri) {
         checkArgument(uri.getScheme() != null, "uri must have scheme: %s", uri);
-        checkArgument(uri.getRawAuthority() != null, "uri must have authority: %s", uri);
-        this.uri = uri;
         endpointGroup = null;
         path = null;
         scheme = Scheme.parse(uri.getScheme());
+        this.uri = scheme.executionProtocol().validateUri(uri);
     }
 
     ClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
