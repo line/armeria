@@ -105,6 +105,13 @@ class GrpcSerdeExecutorTest {
     private static final AtomicReference<Thread> responseStreamThread = new AtomicReference<>();
     private static final AtomicReference<Thread> handlerThread = new AtomicReference<>();
     private static final AtomicReference<CompletableFuture<Void>> requestReceived = new AtomicReference<>();
+    private static final AtomicReference<CompletableFuture<Void>> requestHalfClosed = new AtomicReference<>();
+    private static final AtomicReference<CountDownLatch> requestParseStarted = new AtomicReference<>();
+    private static final AtomicReference<CountDownLatch> requestParseRelease = new AtomicReference<>();
+    private static final AtomicReference<RuntimeException> requestParseFailure = new AtomicReference<>();
+    private static final AtomicReference<CountDownLatch> requestCompleteStarted = new AtomicReference<>();
+    private static final AtomicReference<CountDownLatch> requestCompleteRelease = new AtomicReference<>();
+    private static final AtomicReference<ServerCall<?, ?>> blockingServerCall = new AtomicReference<>();
 
     private static final TrackingAllocator cancellingServerAllocator = new TrackingAllocator();
     private static final TrackingAllocator leakServerAllocator = new TrackingAllocator();
@@ -131,10 +138,42 @@ class GrpcSerdeExecutorTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service(GrpcService.builder()
-                                  .addService(recordingService())
+                                  .addService(ServerInterceptors.intercept(
+                                          recordingService(), new ServerInterceptor() {
+                                              @Override
+                                              public <I, O> Listener<I> interceptCall(
+                                                      ServerCall<I, O> call, Metadata headers,
+                                                      ServerCallHandler<I, O> next) {
+                                                  blockingServerCall.set(call);
+                                                  return next.startCall(call, headers);
+                                              }
+                                          }))
                                   .useMethodMarshaller(true)
                                   .useBlockingTaskExecutor(true)
                                   .build());
+            sb.decorator((delegate, ctx, req) -> {
+                final HttpRequest observed = new FilteredHttpRequest(req) {
+                    @Override
+                    protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+                        final CountDownLatch started = requestCompleteStarted.get();
+                        if (started != null) {
+                            ctx.eventLoop().execute(() -> {
+                                started.countDown();
+                                final CountDownLatch release = requestCompleteRelease.get();
+                                assert release != null;
+                                BlockingUtils.blockingRun(() -> release.await(10, TimeUnit.SECONDS));
+                            });
+                        }
+                    }
+
+                    @Override
+                    protected HttpObject filter(HttpObject obj) {
+                        return obj;
+                    }
+                };
+                ctx.updateRequest(observed);
+                return delegate.serve(ctx, observed);
+            });
         }
     };
 
@@ -300,6 +339,13 @@ class GrpcSerdeExecutorTest {
         responseStreamThread.set(null);
         handlerThread.set(null);
         requestReceived.set(new CompletableFuture<>());
+        requestHalfClosed.set(new CompletableFuture<>());
+        requestParseStarted.set(null);
+        requestParseRelease.set(null);
+        requestParseFailure.set(null);
+        requestCompleteStarted.set(null);
+        requestCompleteRelease.set(null);
+        blockingServerCall.set(null);
         cancellingServerAllocator.allocated.clear();
         leakServerAllocator.allocated.clear();
     }
@@ -341,6 +387,68 @@ class GrpcSerdeExecutorTest {
                 .allSatisfy(buf -> assertThat(buf.refCnt()).isZero()));
         // ... and the message must not have been deserialized.
         assertThat(requestParseCount).hasValue(0);
+    }
+
+    @Test
+    void halfCloseIsNotInvokedAfterRequestDeserializationFails() throws Exception {
+        final CountDownLatch parseStarted = new CountDownLatch(1);
+        final CountDownLatch parseRelease = new CountDownLatch(1);
+        final CountDownLatch completeStarted = new CountDownLatch(1);
+        final CountDownLatch completeRelease = new CountDownLatch(1);
+        requestParseStarted.set(parseStarted);
+        requestParseRelease.set(parseRelease);
+        requestParseFailure.set(Status.INTERNAL.withDescription("request deserialization failed")
+                                               .asRuntimeException());
+        requestCompleteStarted.set(completeStarted);
+        requestCompleteRelease.set(completeRelease);
+
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            final TestServiceStub client =
+                    GrpcClients.builder(blockingServer.httpUri())
+                               .factory(factory)
+                               .build(TestServiceStub.class);
+            final CompletableFuture<Void> completion = new CompletableFuture<>();
+            final StreamObserver<StreamingOutputCallRequest> requestObserver =
+                    client.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
+                        @Override
+                        public void onNext(StreamingOutputCallResponse value) {}
+
+                        @Override
+                        public void onError(Throwable t) {
+                            completion.completeExceptionally(t);
+                        }
+
+                        @Override
+                        public void onCompleted() {
+                            completion.complete(null);
+                        }
+                    });
+            requestObserver.onNext(BIDI_REQUEST);
+            assertThat(parseStarted.await(10, TimeUnit.SECONDS)).isTrue();
+            requestObserver.onCompleted();
+            // Wait until onRequestComplete() queues invokeHalfClose(), and then keep the event loop blocked
+            // so that it cannot process the close requested by the failing deserialization task.
+            assertThat(completeStarted.await(10, TimeUnit.SECONDS)).isTrue();
+
+            final ServerCall<?, ?> call = blockingServerCall.get();
+            assertThat(call).isInstanceOf(AbstractServerCall.class);
+            final CountDownLatch blockingTasksDrained = new CountDownLatch(1);
+            ((AbstractServerCall<?, ?>) call).blockingExecutor().execute(blockingTasksDrained::countDown);
+            parseRelease.countDown();
+            assertThat(blockingTasksDrained.await(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(requestHalfClosed.get()).isNotDone();
+
+            completeRelease.countDown();
+            assertThatThrownBy(() -> completion.get(10, TimeUnit.SECONDS))
+                    .isInstanceOfSatisfying(ExecutionException.class, cause ->
+                            assertThat(cause.getCause())
+                                    .isInstanceOfSatisfying(StatusRuntimeException.class, statusCause ->
+                                            assertThat(statusCause.getStatus().getCode())
+                                                    .isEqualTo(Status.Code.INTERNAL)));
+        } finally {
+            parseRelease.countDown();
+            completeRelease.countDown();
+        }
     }
 
     @ParameterizedTest
@@ -505,6 +613,7 @@ class GrpcSerdeExecutorTest {
 
                             @Override
                             public void onCompleted() {
+                                requestHalfClosed.get().complete(null);
                                 caller.execute(responseObserver::onCompleted);
                             }
                         }))
@@ -551,6 +660,17 @@ class GrpcSerdeExecutorTest {
         public T parse(InputStream stream) {
             requestParseThread.set(Thread.currentThread());
             requestParseCount.incrementAndGet();
+            final CountDownLatch parseStarted = requestParseStarted.get();
+            if (parseStarted != null) {
+                parseStarted.countDown();
+                final CountDownLatch parseRelease = requestParseRelease.get();
+                assert parseRelease != null;
+                BlockingUtils.blockingRun(() -> parseRelease.await(10, TimeUnit.SECONDS));
+            }
+            final RuntimeException failure = requestParseFailure.get();
+            if (failure != null) {
+                throw failure;
+            }
             return delegate.parse(stream);
         }
     }

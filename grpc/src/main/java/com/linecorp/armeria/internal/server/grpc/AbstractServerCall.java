@@ -136,6 +136,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private volatile boolean cancelled;
     private volatile boolean clientStreamClosed;
     private volatile boolean listenerClosed;
+    private volatile boolean requestMessageProcessingFailed;
     private boolean closeCalled;
 
     protected AbstractServerCall(HttpRequest req,
@@ -378,8 +379,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void deserializeAndInvokeOnMessage(DeframedMessage message, boolean endOfStream) {
-        if (blockingExecutor != null && cancelled) {
-            // Do not deserialize the message if the call is cancelled after
+        if (shouldSkipRequestCallback()) {
+            // Do not deserialize the message if the call is cancelled or a previous message failed after
             // this task was scheduled to blockingTaskExecutor.
             message.close();
             return;
@@ -398,6 +399,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
             }
         } catch (Throwable cause) {
+            requestMessageProcessingFailed = true;
             close(cause, true);
             return;
         }
@@ -422,9 +424,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeOnReady() {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onReady() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (shouldSkipRequestCallback()) {
+            // Do not call listener.onReady() if the call is cancelled or request message processing failed
+            // after this task was scheduled to blockingTaskExecutor.
             return;
         }
         try {
@@ -449,9 +451,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeHalfClose() {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onHalfClose() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (shouldSkipRequestCallback()) {
+            // Do not call listener.onHalfClose() if the call is cancelled or request message processing failed
+            // after this task was scheduled to blockingTaskExecutor.
             return;
         }
         try (SafeCloseable ignored = ctx.push()) {
@@ -460,6 +462,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         } catch (Throwable t) {
             close(t);
         }
+    }
+
+    private boolean shouldSkipRequestCallback() {
+        return blockingExecutor != null && (cancelled || requestMessageProcessingFailed);
     }
 
     private void invokeOnComplete() {
