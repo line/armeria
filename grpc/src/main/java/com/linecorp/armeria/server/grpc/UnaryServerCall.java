@@ -128,15 +128,14 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void sendMessage(O message) {
-        // Serialize and compress the message on the caller's thread so that the event loop is not
-        // occupied by serialization.
+        // Serialize and compress the message on the caller's thread before handing the payload
+        // to the event loop.
         final HttpData payload;
         try {
             payload = toPayload(message);
         } catch (Throwable e) {
-            // Report the failure when the call is closed, as it was reported when the message was serialized
-            // in `doClose()`. Closing the call here instead would let `close(Status.OK)` from the service
-            // preempt an asynchronous exception handler and complete the call with a wrong status.
+            // Defer reporting until `doClose()` so that `close(Status.OK)` from the service cannot
+            // overtake an asynchronous exception handler and complete the call with the wrong status.
             if (ctx.eventLoop().inEventLoop()) {
                 doFailSendMessage(message, e);
             } else {

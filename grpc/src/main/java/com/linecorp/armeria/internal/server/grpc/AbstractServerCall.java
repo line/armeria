@@ -411,8 +411,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         clientStreamClosed = true;
         if (!closeCalled) {
             if (!messageReceived) {
-                // If a message was received, its request content is logged when it is deserialized,
-                // which may happen later than this on `blockingTaskExecutor`.
+                // If a message was received, log its content during deserialization, which may still
+                // be pending on the blocking executor.
                 maybeLogRequestContent(null);
             }
             if (blockingExecutor != null) {

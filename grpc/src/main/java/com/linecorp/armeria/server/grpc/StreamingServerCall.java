@@ -134,8 +134,8 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     @Override
     public void sendMessage(O message) {
         pendingMessagesUpdater.incrementAndGet(this);
-        // Serialize and compress the message on the caller's thread so that the event loop is not
-        // occupied by serialization.
+        // Serialize and compress the message on the caller's thread before handing the payload
+        // to the event loop.
         final HttpData payload;
         try {
             payload = toPayload(message);
