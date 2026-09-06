@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
@@ -67,6 +68,9 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     // The serialized `responseMessage`. Released by `onListenerClosed()` if it was not written.
     @Nullable
     private HttpData responsePayload;
+    // The cause of the serialization failure of `responseMessage`, if any. Reported by `doClose()`.
+    @Nullable
+    private Throwable responseFailure;
 
     UnaryServerCall(HttpRequest req, MethodDescriptor<I, O> method, String simpleMethodName,
                     CompressorRegistry compressorRegistry, DecompressorRegistry decompressorRegistry,
@@ -130,7 +134,14 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
         try {
             payload = toPayload(message);
         } catch (Throwable e) {
-            close(e, true);
+            // Report the failure when the call is closed, as it was reported when the message was serialized
+            // in `doClose()`. Closing the call here instead would let `close(Status.OK)` from the service
+            // preempt an asynchronous exception handler and complete the call with a wrong status.
+            if (ctx.eventLoop().inEventLoop()) {
+                doFailSendMessage(message, e);
+            } else {
+                ctx.eventLoop().execute(() -> doFailSendMessage(message, e));
+            }
             return;
         }
         if (ctx.eventLoop().inEventLoop()) {
@@ -163,6 +174,18 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
         responsePayload = payload;
     }
 
+    private void doFailSendMessage(O message, Throwable cause) {
+        if (isCancelled()) {
+            // call was already closed by a client or a timeout scheduler
+            return;
+        }
+        checkState(responseHeaders() != null, "sendHeaders has not been called");
+        checkState(responseMessage == null, "responseMessage is set already");
+        checkState(!isCloseCalled(), "call is closed");
+        responseMessage = message;
+        responseFailure = cause;
+    }
+
     @Override
     protected void onListenerClosed() {
         if (responsePayload != null) {
@@ -188,6 +211,10 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             if (status.isOk()) {
                 assert responseHeaders != null;
                 assert responseMessage != null;
+                if (responseFailure != null) {
+                    // `sendMessage()` failed to serialize the response.
+                    Exceptions.throwUnsafely(responseFailure);
+                }
                 assert responsePayload != null;
                 final HttpData responseBody = responsePayload;
                 final HttpObject responseTrailers = responseTrailers(ctx, status, metadata, false);
