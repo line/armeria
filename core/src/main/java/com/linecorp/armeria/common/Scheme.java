@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ExecutionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A pair of {@link SerializationFormat} and {@link ExecutionProtocol}.
@@ -116,6 +117,7 @@ public final class Scheme implements Comparable<Scheme> {
      * This method returns the same {@link Scheme} instance for the same combination of
      * {@link SerializationFormat} and {@link ExecutionProtocol}.
      */
+    @UnstableApi
     public static Scheme of(SerializationFormat serializationFormat, ExecutionProtocol executionProtocol) {
         final Scheme scheme = SCHEMES.get(
                 requireNonNull(serializationFormat, "serializationFormat").uriText() + '+' +
@@ -153,6 +155,7 @@ public final class Scheme implements Comparable<Scheme> {
     /**
      * Returns the {@link ExecutionProtocol}.
      */
+    @UnstableApi
     public ExecutionProtocol executionProtocol() {
         return executionProtocol;
     }

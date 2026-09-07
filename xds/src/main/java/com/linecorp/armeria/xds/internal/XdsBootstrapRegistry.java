@@ -90,16 +90,17 @@ public final class XdsBootstrapRegistry {
     public static CachedPreprocessors preprocessors(String bootstrapName, String listenerName) {
         requireNonNull(bootstrapName, "bootstrapName");
         requireNonNull(listenerName, "listenerName");
+        // Resolve the bootstrap before computeIfAbsent to avoid re-entry issues
+        // if newBootstrap() transitively calls preprocessors().
+        final XdsBootstrap bootstrap = find(bootstrapName);
+        requireNonNull(bootstrap,
+                       "No XdsBootstrap registered with name '" + bootstrapName + "'. " +
+                       "Provide an XdsBootstrapProvider via SPI before creating xDS clients.");
         final String cacheKey = bootstrapName + '\0' + listenerName;
-        return preprocessorCache.computeIfAbsent(cacheKey, k -> {
-            final XdsBootstrap bootstrap = find(bootstrapName);
-            requireNonNull(bootstrap,
-                           "No XdsBootstrap registered with name '" + bootstrapName + "'. " +
-                           "Provide an XdsBootstrapProvider via SPI before creating xDS clients.");
-            return new CachedPreprocessors(
-                    XdsHttpPreprocessor.ofListener(listenerName, bootstrap),
-                    XdsRpcPreprocessor.ofListener(listenerName, bootstrap));
-        });
+        return preprocessorCache.computeIfAbsent(cacheKey, k ->
+                new CachedPreprocessors(
+                        XdsHttpPreprocessor.ofListener(listenerName, bootstrap),
+                        XdsRpcPreprocessor.ofListener(listenerName, bootstrap)));
     }
 
     /**
