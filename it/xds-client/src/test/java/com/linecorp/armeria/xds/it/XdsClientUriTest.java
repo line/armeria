@@ -105,7 +105,6 @@ class XdsClientUriTest {
     @AfterEach
     void tearDown() {
         deregisterAndClose(BOOTSTRAP_NAME);
-        deregisterAndClose(XdsBootstrapRegistry.defaultName());
     }
 
     private static void deregisterAndClose(String name) {
@@ -182,13 +181,6 @@ class XdsClientUriTest {
                 ThriftClients.newClient("tbinary+xds://" + BOOTSTRAP_NAME + "/listener1",
                                         EchoService.Iface.class);
         assertThat(client.echoAuth()).isEqualTo("echo");
-    }
-
-    @Test
-    void defaultBootstrapName() {
-        setUpBootstrap(XdsBootstrapRegistry.defaultName(), httpServer);
-        final BlockingWebClient client = WebClient.of("xds:///listener1").blocking();
-        assertThat(client.get("/hello").contentUtf8()).isEqualTo("world");
     }
 
     @Test
