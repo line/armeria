@@ -453,5 +453,6 @@ message HealthCheck {
   // :ref:`transport socket matches <envoy_v3_api_field_config.cluster.v3.Cluster.transport_socket_matches>`,
   // the cluster's :ref:`transport socket <envoy_v3_api_field_config.cluster.v3.Cluster.transport_socket>`
   // will be used for health check socket configuration.
+  option (armeria.xds.supported.field) = 23;
   google.protobuf.Struct transport_socket_match_criteria = 23;
 }

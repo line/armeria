@@ -24,8 +24,10 @@ import java.util.List;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.xds.TransportSocketMatchSnapshot;
@@ -43,18 +45,39 @@ import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 
 final class XdsEndpointUtil {
 
-    static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster) {
+    static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster,
+                                            TransportSocketSnapshot transportSocket,
+                                            List<TransportSocketMatchSnapshot> transportSocketMatches) {
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
             if (healthCheck.hasHttpHealthCheck()) {
                 final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
-                return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
+                final ClientTlsSpec healthCheckTlsSpec =
+                        resolveHealthCheckTlsSpec(healthCheck, transportSocket, transportSocketMatches);
+                return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck,
+                                                                healthCheckTlsSpec)
                         .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
                         .build();
             }
         }
         return delegate;
+    }
+
+    @Nullable
+    private static ClientTlsSpec resolveHealthCheckTlsSpec(
+            HealthCheck healthCheck,
+            TransportSocketSnapshot defaultTransportSocket,
+            List<TransportSocketMatchSnapshot> transportSocketMatches) {
+        if (healthCheck.hasTransportSocketMatchCriteria()) {
+            final TransportSocketMatchSnapshot matched =
+                    TransportSocketMatchUtil.selectMatch(transportSocketMatches,
+                                                         healthCheck.getTransportSocketMatchCriteria());
+            if (matched != null) {
+                return matched.transportSocket().clientTlsSpec();
+            }
+        }
+        return defaultTransportSocket.clientTlsSpec();
     }
 
     static List<Endpoint> convertLoadAssignment(
