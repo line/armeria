@@ -20,6 +20,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.IntPredicate;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -69,6 +70,7 @@ public final class DefaultHttpHealthChecker implements HttpHealthChecker {
     private final String authority;
     private final String path;
     private final boolean useGet;
+    private final IntPredicate expectedStatuses;
     private boolean wasHealthy;
     private int maxLongPollingSeconds;
     private int pingIntervalSeconds;
@@ -76,8 +78,17 @@ public final class DefaultHttpHealthChecker implements HttpHealthChecker {
     private HttpResponse lastResponse;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
+    private static final IntPredicate DEFAULT_EXPECTED_STATUSES =
+            statusCode -> HttpStatusClass.valueOf(statusCode) == HttpStatusClass.SUCCESS;
+
     public DefaultHttpHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, String path, boolean useGet,
                                     SessionProtocol protocol, @Nullable String host) {
+        this(ctx, endpoint, path, useGet, protocol, host, DEFAULT_EXPECTED_STATUSES);
+    }
+
+    public DefaultHttpHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, String path, boolean useGet,
+                                    SessionProtocol protocol, @Nullable String host,
+                                    IntPredicate expectedStatuses) {
         this.ctx = ctx;
         webClient = WebClient.builder(protocol, endpoint)
                              .options(ctx.clientOptions())
@@ -86,6 +97,7 @@ public final class DefaultHttpHealthChecker implements HttpHealthChecker {
         authority = host != null ? host : endpoint.authority();
         this.path = path;
         this.useGet = useGet;
+        this.expectedStatuses = expectedStatuses;
     }
 
     public void start() {
@@ -213,34 +225,28 @@ public final class DefaultHttpHealthChecker implements HttpHealthChecker {
 
                 final HttpStatus status = headers.status();
                 final HttpStatusClass statusClass = status.codeClass();
-                switch (statusClass) {
-                    case INFORMATIONAL:
-                        maybeSchedulePingCheck();
-                        break;
-                    case SERVER_ERROR:
-                        receivedExpectedResponse = true;
-                        break;
-                    case SUCCESS:
-                        isHealthy = true;
-                        receivedExpectedResponse = true;
-                        break;
-                    default:
-                        if (status == HttpStatus.NOT_MODIFIED) {
-                            isHealthy = wasHealthy;
-                            receivedExpectedResponse = true;
-                        } else {
-                            // Do not use long polling on an unexpected status for safety.
-                            maxLongPollingSeconds = 0;
+                if (statusClass == HttpStatusClass.INFORMATIONAL) {
+                    maybeSchedulePingCheck();
+                } else if (statusClass == HttpStatusClass.SERVER_ERROR) {
+                    receivedExpectedResponse = true;
+                } else if (status == HttpStatus.NOT_MODIFIED) {
+                    isHealthy = wasHealthy;
+                    receivedExpectedResponse = true;
+                } else if (expectedStatuses.test(status.code())) {
+                    isHealthy = true;
+                    receivedExpectedResponse = true;
+                } else {
+                    // Do not use long polling on an unexpected status for safety.
+                    maxLongPollingSeconds = 0;
 
-                            if (statusClass == HttpStatusClass.CLIENT_ERROR) {
-                                logger.warn("{} Unexpected 4xx health check response: {} A 4xx response " +
-                                            "generally indicates a misconfiguration of the client. " +
-                                            "Did you happen to forget to configure the {}'s client options?",
-                                            reqCtx, headers, HealthCheckedEndpointGroup.class.getSimpleName());
-                            } else {
-                                logger.warn("{} Unexpected health check response: {}", reqCtx, headers);
-                            }
-                        }
+                    if (statusClass == HttpStatusClass.CLIENT_ERROR) {
+                        logger.warn("{} Unexpected 4xx health check response: {} A 4xx response " +
+                                    "generally indicates a misconfiguration of the client. " +
+                                    "Did you happen to forget to configure the {}'s client options?",
+                                    reqCtx, headers, HealthCheckedEndpointGroup.class.getSimpleName());
+                    } else {
+                        logger.warn("{} Unexpected health check response: {}", reqCtx, headers);
+                    }
                 }
             } finally {
                 subscription.request(1);

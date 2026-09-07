@@ -146,6 +146,7 @@ message HealthCheck {
     // 200-only policy - 200 must be included explicitly as needed. Ranges follow half-open
     // semantics of :ref:`Int64Range <envoy_v3_api_msg_type.v3.Int64Range>`. The start and end of each
     // range are required. Only statuses in the range [100, 600) are allowed.
+    option (armeria.xds.supported.field) = 9;
     repeated type.v3.Int64Range expected_statuses = 9;
 
     // Specifies a list of HTTP response statuses considered retriable. If provided, responses in this range
