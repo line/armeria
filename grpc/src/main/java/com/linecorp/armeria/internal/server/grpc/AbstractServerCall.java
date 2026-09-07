@@ -380,8 +380,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     private void deserializeAndInvokeOnMessage(DeframedMessage message, boolean endOfStream) {
         if (shouldSkipRequestCallback()) {
-            // Do not deserialize the message if the call is cancelled or a previous message failed after
-            // this task was scheduled to blockingTaskExecutor.
+            // Skip cancelled calls and messages queued before a previous message failed.
             message.close();
             return;
         }
@@ -425,8 +424,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void invokeOnReady() {
         if (shouldSkipRequestCallback()) {
-            // Do not call listener.onReady() if the call is cancelled or request message processing failed
-            // after this task was scheduled to blockingTaskExecutor.
+            // Skip cancelled calls and callbacks queued before request message processing failed.
             return;
         }
         try {
@@ -452,8 +450,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void invokeHalfClose() {
         if (shouldSkipRequestCallback()) {
-            // Do not call listener.onHalfClose() if the call is cancelled or request message processing failed
-            // after this task was scheduled to blockingTaskExecutor.
+            // Skip cancelled calls and callbacks queued before request message processing failed.
             return;
         }
         try (SafeCloseable ignored = ctx.push()) {
@@ -465,7 +462,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private boolean shouldSkipRequestCallback() {
-        return blockingExecutor != null && (cancelled || requestMessageProcessingFailed);
+        return cancelled || (blockingExecutor != null && requestMessageProcessingFailed);
     }
 
     private void invokeOnComplete() {

@@ -211,7 +211,8 @@ class StreamingServerCallTest {
 
         assertThatThrownBy(() -> rejectingCall.sendMessage(SimpleResponse.getDefaultInstance()))
                 .isInstanceOf(RejectedExecutionException.class);
-        assertThat(allocator.allocated).allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
+        assertThat(allocator.allocated).isNotEmpty()
+                                       .allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
         assertThat(rejectingCall.isReady()).isTrue();
     }
 

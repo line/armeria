@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -223,7 +224,9 @@ class GrpcSerdeExecutorTest {
                         // that the deserialization task is queued behind and runs after the cancellation.
                         final ServerCall<?, ?> serverCall = serverCallCaptor.get();
                         assertThat(serverCall).isInstanceOf(AbstractServerCall.class);
-                        ((AbstractServerCall<?, ?>) serverCall).blockingExecutor().execute(() -> {
+                        final Executor blockingExecutor = requireNonNull(
+                                ((AbstractServerCall<?, ?>) serverCall).blockingExecutor(), "blockingExecutor");
+                        blockingExecutor.execute(() -> {
                             await().until(serverCall::isCancelled);
                         });
                     }
@@ -433,7 +436,9 @@ class GrpcSerdeExecutorTest {
             final ServerCall<?, ?> call = blockingServerCall.get();
             assertThat(call).isInstanceOf(AbstractServerCall.class);
             final CountDownLatch blockingTasksDrained = new CountDownLatch(1);
-            ((AbstractServerCall<?, ?>) call).blockingExecutor().execute(blockingTasksDrained::countDown);
+            final Executor blockingExecutor = requireNonNull(
+                    ((AbstractServerCall<?, ?>) call).blockingExecutor(), "blockingExecutor");
+            blockingExecutor.execute(blockingTasksDrained::countDown);
             parseRelease.countDown();
             assertThat(blockingTasksDrained.await(10, TimeUnit.SECONDS)).isTrue();
             assertThat(requestHalfClosed.get()).isNotDone();

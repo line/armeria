@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
@@ -136,6 +137,19 @@ class UnaryServerCallTest {
     }
 
     @Test
+    void messageReadAfterCancellation() {
+        res.abort();
+        await().untilAsserted(() -> verify(listener).onCancel());
+
+        final ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(buf, 0), true);
+
+        verify(listener, never()).onMessage(any());
+        verify(listener, never()).onHalfClose();
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
     void messageRead_notWrappedByteBuf() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onRequestMessage(new DeframedMessage(buf, 0), true);
@@ -201,7 +215,8 @@ class UnaryServerCallTest {
 
         assertThatThrownBy(() -> rejectingCall.sendMessage(SimpleResponse.getDefaultInstance()))
                 .isInstanceOf(RejectedExecutionException.class);
-        assertThat(allocator.allocated).allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
+        assertThat(allocator.allocated).isNotEmpty()
+                                       .allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
     }
 
     @Test
@@ -412,7 +427,7 @@ class UnaryServerCallTest {
 
     private static UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(
             HttpResponse response, CompletableFuture<HttpResponse> resFuture,
-            ServiceRequestContext ctx, boolean unsafeWrapRequestBuffers, Executor blockingExecutor) {
+            ServiceRequestContext ctx, boolean unsafeWrapRequestBuffers, @Nullable Executor blockingExecutor) {
         return new UnaryServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
