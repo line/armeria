@@ -273,9 +273,13 @@ final class RetryStateFactory {
                     XdsCommonUtil.durationToMillis(retryBackOff.getBaseInterval(), 25);
             final long maxIntervalMillis =
                     XdsCommonUtil.durationToMillis(retryBackOff.getMaxInterval(), baseIntervalMillis * 10);
+            final double multiplier = retryBackOff.hasExponentialBackoffFactor()
+                                      ? retryBackOff.getExponentialBackoffFactor().getValue()
+                                      : 2.0;
             final Backoff defaultBackoff = Backoff.builderForExponential()
                                                   .initialDelayMillis(baseIntervalMillis)
                                                   .maxDelayMillis(maxIntervalMillis)
+                                                  .multiplier(multiplier)
                                                   .jitter(0, 0.5)
                                                   .build();
             backoff = new DelegatingBackoff(defaultBackoff);
