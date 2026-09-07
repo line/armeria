@@ -76,11 +76,13 @@ message RouteConfiguration {
   // :ref:`envoy_v3_api_msg_config.route.v3.RouteAction`. For more information, including details on
   // header value syntax, see the documentation on :ref:`custom request headers
   // <config_http_conn_man_headers_custom_request_headers>`.
+  option (armeria.xds.supported.field) = 6;
   repeated core.v3.HeaderValueOption request_headers_to_add = 6
       [(validate.rules).repeated = {max_items: 1000}];
 
   // Specifies a list of HTTP headers that should be removed from each request
   // routed by the HTTP connection manager.
+  option (armeria.xds.supported.field) = 8;
   repeated string request_headers_to_remove = 8 [
     (validate.rules).repeated = {items {string {well_known_regex: HTTP_HEADER_NAME strict: false}}}
   ];
@@ -91,6 +93,7 @@ message RouteConfiguration {
   // This order can be reversed by setting this field to true. In other words, most specific level mutation
   // is evaluated last.
   //
+  option (armeria.xds.supported.field) = 10;
   bool most_specific_header_mutations_wins = 10;
 
   // An optional boolean that specifies whether the clusters that the route
