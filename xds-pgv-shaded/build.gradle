@@ -1,7 +1,3 @@
-tasks.withType(Test).configureEach {
-    failOnNoDiscoveredTests = false
-}
-
 project.ext.shadowExclusions += "io/envoyproxy/pgv/validate/Validate.class"
 project.ext.shadowExclusions += "io/envoyproxy/pgv/validate/Validate\$*.class"
 
