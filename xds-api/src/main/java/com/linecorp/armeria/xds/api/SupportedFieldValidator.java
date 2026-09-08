@@ -34,9 +34,8 @@ import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.xds.api.SupportedFieldProto.FieldSupport;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.xds.api.SupportedFieldProto.FieldSupport;
 
 /**
  * Validates protobuf messages against the {@code (armeria.xds.supported.field)} and
