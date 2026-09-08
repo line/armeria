@@ -24,7 +24,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.Metadata;
@@ -34,7 +33,6 @@ final class DefaultRouteCluster implements RouteCluster {
     private final ClusterSnapshot clusterSnapshot;
     private final Metadata metadataMatch;
     private final HttpClient httpClient;
-    private final RpcClient rpcClient;
 
     DefaultRouteCluster(ClusterSnapshot clusterSnapshot, Metadata metadataMatch,
                         @Nullable ClientDecoration retryDecoration,
@@ -43,7 +41,6 @@ final class DefaultRouteCluster implements RouteCluster {
         this.clusterSnapshot = requireNonNull(clusterSnapshot, "clusterSnapshot");
         this.metadataMatch = requireNonNull(metadataMatch, "metadataMatch");
         httpClient = FilterUtil.buildHttpClient(retryDecoration, downstreamDecoration, upstreamDecoration);
-        rpcClient = FilterUtil.buildRpcClient(retryDecoration, downstreamDecoration, upstreamDecoration);
     }
 
     @Override
@@ -59,11 +56,6 @@ final class DefaultRouteCluster implements RouteCluster {
     @Override
     public HttpClient httpClient() {
         return httpClient;
-    }
-
-    @Override
-    public RpcClient rpcClient() {
-        return rpcClient;
     }
 
     @Override

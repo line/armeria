@@ -300,7 +300,6 @@ class WeightedClusterFilterConfigTest {
                 // All RouteCluster instances must have non-null chain accessors
                 for (var entry : wc) {
                     assertThat(entry.httpClient()).isNotNull();
-                    assertThat(entry.rpcClient()).isNotNull();
                 }
                 // Single-cluster select also returns chains
                 final var selected = routeEntries.get(0).resolve();

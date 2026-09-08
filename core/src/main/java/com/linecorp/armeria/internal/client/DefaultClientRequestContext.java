@@ -48,7 +48,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -182,7 +181,6 @@ public final class DefaultClientRequestContext
 
     private final ResponseTimeoutMode responseTimeoutMode;
     private Function<HttpClient, HttpClient> httpClientCustomizer = Function.identity();
-    private Function<RpcClient, RpcClient> rpcClientCustomizer = Function.identity();
     @Nullable
     private ClientTlsSpec clientTlsSpec;
     @Nullable
@@ -625,16 +623,6 @@ public final class DefaultClientRequestContext
     @Override
     public Function<HttpClient, HttpClient> httpClientCustomizer() {
         return httpClientCustomizer;
-    }
-
-    @Override
-    public void rpcClientCustomizer(Function<RpcClient, RpcClient> rpcClientCustomizer) {
-        this.rpcClientCustomizer = this.rpcClientCustomizer.andThen(rpcClientCustomizer);
-    }
-
-    @Override
-    public Function<RpcClient, RpcClient> rpcClientCustomizer() {
-        return rpcClientCustomizer;
     }
 
     private void failEarly(Throwable cause) {
