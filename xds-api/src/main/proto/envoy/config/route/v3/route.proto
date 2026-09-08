@@ -32,11 +32,17 @@ message RouteConfiguration {
   // :ref:`route_config_name
   // <envoy_v3_api_field_extensions.filters.network.http_connection_manager.v3.Rds.route_config_name>` in
   // :ref:`envoy_v3_api_msg_extensions.filters.network.http_connection_manager.v3.Rds`.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string name = 1;
 
   // An array of virtual hosts that make up the route table.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   repeated VirtualHost virtual_hosts = 2;
 
   // An array of virtual hosts will be dynamically loaded via the VHDS API.
@@ -136,7 +142,10 @@ message RouteConfiguration {
   // .. note::
   //     This option will not strip the port number (if any) contained in route config
   //     :ref:`envoy_v3_api_msg_config.route.v3.VirtualHost`.domains field.
-  option (armeria.xds.supported.field) = 14;
+  option (armeria.xds.supported.field) = {
+      number: 14,
+      since: "1.39.0"
+  };
   bool ignore_port_in_host_matching = 14;
 
   // Normally, virtual host matching is done using the :authority (or

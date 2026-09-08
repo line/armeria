@@ -143,7 +143,10 @@ message Listener {
   // The unique name by which this listener is known. If no name is provided,
   // Envoy will allocate an internal UUID for the listener. If the listener is to be dynamically
   // updated or removed via :ref:`LDS <config_listeners_lds>` a unique name must be provided.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string name = 1;
 
   // The address that the listener should listen on. In general, the address must be unique, though
@@ -175,7 +178,10 @@ message Listener {
   //
   // Example using SNI for filter chain selection can be found in the
   // :ref:`FAQ entry <faq_how_to_setup_sni>`.
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+      number: 3,
+      since: "1.41.0"
+  };
   repeated FilterChain filter_chains = 3;
 
   // Discover filter chains configurations by external service. Dynamic discovery of filter chains is allowed
@@ -211,7 +217,10 @@ message Listener {
 
   // The default filter chain if none of the filter chain matches. If no default filter chain is supplied,
   // the connection will be closed. The filter chain match is ignored in this field.
-  option (armeria.xds.supported.field) = 25;
+  option (armeria.xds.supported.field) = {
+      number: 25,
+      since: "1.41.0"
+  };
   FilterChain default_filter_chain = 25;
 
   // Soft limit on size of the listener’s new connection read and write buffers.
@@ -333,7 +342,10 @@ message Listener {
   // and the top-level Listener should essentially be a oneof that selects between the
   // socket listener and the various types of API listener. That way, a given Listener message
   // can structurally only contain the fields of the relevant type.]
-  option (armeria.xds.supported.field) = 19;
+  option (armeria.xds.supported.field) = {
+      number: 19,
+      since: "1.39.0"
+  };
   ApiListener api_listener = 19;
 
   // The listener's connection balancer configuration, currently only applicable to TCP listeners.

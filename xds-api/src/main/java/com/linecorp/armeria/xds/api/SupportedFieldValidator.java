@@ -34,6 +34,8 @@ import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.xds.api.SupportedFieldProto.FieldSupport;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -45,11 +47,17 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <p>Supported fields are annotated in the proto files, e.g.:
  * <pre>{@code
  * message Address {
- *   option (armeria.xds.supported.field) = 2;
+ *   option (armeria.xds.supported.field) = {
+ *     number: 2,
+ *     since: "1.39.0"
+ *   };
  *   string address = 2;
  *
  *   oneof port_specifier {
- *     option (armeria.xds.supported.oneof_field) = 3;
+ *     option (armeria.xds.supported.oneof_field) = {
+ *       number: 3,
+ *       since: "1.39.0"
+ *     };
  *     uint32 port_value = 3;
  *   }
  * }
@@ -170,10 +178,19 @@ public final class SupportedFieldValidator {
     }
 
     private static boolean unsupportedEnumValue(EnumValueDescriptor ev) {
-        final List<Integer> supportedValues =
+        final List<FieldSupport> supportedValues =
                 ev.getType().getOptions().getExtension(SupportedFieldProto.supported.enumValue);
         // If no enum values are annotated, treat as "no opinion" — skip validation.
-        return !supportedValues.isEmpty() && !supportedValues.contains(ev.getNumber());
+        if (supportedValues.isEmpty()) {
+            return false;
+        }
+        final int number = ev.getNumber();
+        for (FieldSupport fs : supportedValues) {
+            if (fs.getNumber() == number) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isGoogleApi(String pkg) {
@@ -182,11 +199,15 @@ public final class SupportedFieldValidator {
 
     private Set<FieldDescriptor> supportedFields(Descriptors.Descriptor descriptor) {
         return supportedFieldsCache.computeIfAbsent(descriptor, d -> {
-            final Set<Integer> supportedNumbers = new HashSet<>(
-                    d.getOptions().getExtension(SupportedFieldProto.supported.field));
+            final Set<Integer> supportedNumbers = new HashSet<>();
+            for (FieldSupport fs : d.getOptions().getExtension(SupportedFieldProto.supported.field)) {
+                supportedNumbers.add(fs.getNumber());
+            }
             for (Descriptors.OneofDescriptor oneof : d.getOneofs()) {
-                supportedNumbers.addAll(
-                        oneof.getOptions().getExtension(SupportedFieldProto.supported.oneofField));
+                for (FieldSupport fs : oneof.getOptions()
+                                             .getExtension(SupportedFieldProto.supported.oneofField)) {
+                    supportedNumbers.add(fs.getNumber());
+                }
             }
             final Set<FieldDescriptor> result = new HashSet<>();
             for (FieldDescriptor fd : d.getFields()) {

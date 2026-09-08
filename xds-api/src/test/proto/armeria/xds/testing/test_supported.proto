@@ -10,34 +10,64 @@ import "google/protobuf/wrappers.proto";
 import "google/protobuf/duration.proto";
 
 message TestCluster {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.39.0"
+  };
   string name = 1;
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+    number: 2,
+    since: "1.39.0"
+  };
   TestDiscoveryType type = 2;
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+    number: 3,
+    since: "1.39.0"
+  };
   TestEdsConfig eds_config = 3;
   string unsupported_field = 4;
   TestOutlierDetection outlier_detection = 5;
-  option (armeria.xds.supported.field) = 6;
+  option (armeria.xds.supported.field) = {
+    number: 6,
+    since: "1.39.0"
+  };
   google.protobuf.Any typed_config = 6;
-  option (armeria.xds.supported.field) = 7;
+  option (armeria.xds.supported.field) = {
+    number: 7,
+    since: "1.39.0"
+  };
   google.protobuf.UInt32Value max_requests = 7;
-  option (armeria.xds.supported.field) = 8;
+  option (armeria.xds.supported.field) = {
+    number: 8,
+    since: "1.39.0"
+  };
   google.protobuf.Duration timeout = 8;
-  option (armeria.xds.supported.field) = 9;
+  option (armeria.xds.supported.field) = {
+    number: 9,
+    since: "1.39.0"
+  };
   map<string, TestDiscoveryType> type_map = 9;
 }
 
 enum TestDiscoveryType {
-  option (armeria.xds.supported.enum_value) = 0;
+  option (armeria.xds.supported.enum_value) = {
+    number: 0,
+    since: "1.39.0"
+  };
   STATIC = 0;
-  option (armeria.xds.supported.enum_value) = 1;
+  option (armeria.xds.supported.enum_value) = {
+    number: 1,
+    since: "1.39.0"
+  };
   EDS = 1;
   LOGICAL_DNS = 2;
 }
 
 message TestEdsConfig {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.39.0"
+  };
   string service_name = 1;
   string unsupported_nested = 2;
 }
