@@ -94,10 +94,7 @@ class GrpcSerdeExecutorTest {
 
     private static final String CALLER_THREAD_NAME = "serde-caller";
 
-    /**
-     * The thread from which the services below send their responses, so that a test can tell whether
-     * a response was serialized on the thread that called {@code sendMessage()}.
-     */
+    // Sends responses from a dedicated thread to verify where serialization runs.
     private static final Executor caller =
             Executors.newSingleThreadExecutor(r -> new Thread(r, CALLER_THREAD_NAME));
 
@@ -585,11 +582,7 @@ class GrpcSerdeExecutorTest {
         return server.requestContextCaptor().take();
     }
 
-    /**
-     * Binds {@code UnaryCall} and {@code FullDuplexCall} with marshallers which record the threads that
-     * perform the (de)serialization, and handlers which record the thread that receives the request and
-     * send the responses from the {@link #caller} thread.
-     */
+    // Records request processing threads and sends responses from `caller`.
     private static ServerServiceDefinition recordingService() {
         final MethodDescriptor<SimpleRequest, SimpleResponse> unaryMethod =
                 recording(TestServiceGrpc.getUnaryCallMethod());

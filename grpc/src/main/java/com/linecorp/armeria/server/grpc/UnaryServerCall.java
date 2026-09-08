@@ -211,7 +211,6 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                 assert responseHeaders != null;
                 assert responseMessage != null;
                 if (responseFailure != null) {
-                    // `sendMessage()` failed to serialize the response.
                     Exceptions.throwUnsafely(responseFailure);
                 }
                 assert responsePayload != null;

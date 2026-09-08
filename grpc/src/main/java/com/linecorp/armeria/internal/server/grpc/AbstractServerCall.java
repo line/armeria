@@ -380,7 +380,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     private void deserializeAndInvokeOnMessage(DeframedMessage message, boolean endOfStream) {
         if (shouldSkipRequestCallback()) {
-            // Skip cancelled calls and messages queued before a previous message failed.
             message.close();
             return;
         }
@@ -424,7 +423,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void invokeOnReady() {
         if (shouldSkipRequestCallback()) {
-            // Skip cancelled calls and callbacks queued before request message processing failed.
             return;
         }
         try {
@@ -450,7 +448,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void invokeHalfClose() {
         if (shouldSkipRequestCallback()) {
-            // Skip cancelled calls and callbacks queued before request message processing failed.
             return;
         }
         try (SafeCloseable ignored = ctx.push()) {
@@ -462,6 +459,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private boolean shouldSkipRequestCallback() {
+        // Skip cancelled calls and callbacks queued before request message processing failed.
         return cancelled || (blockingExecutor != null && requestMessageProcessingFailed);
     }
 
