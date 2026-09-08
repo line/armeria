@@ -478,6 +478,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static void completeLogIfBytesNotTransferred(AggregatedHttpResponse response,
                                                          ClientRequestContext ctx) {
         if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
+            final HttpRequest req = ctx.request();
+            if (req != null) {
+                req.abort();
+            }
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             logBuilder.endRequest();
             logBuilder.responseHeaders(response.headers());
@@ -492,6 +496,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             HttpResponse response, @Nullable ResponseHeaders headers, ClientRequestContext ctx,
             @Nullable Throwable responseCause) {
         if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)) {
+            final HttpRequest req = ctx.request();
+            if (req != null) {
+                req.abort();
+            }
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             if (responseCause != null) {
                 logBuilder.endRequest(responseCause);
