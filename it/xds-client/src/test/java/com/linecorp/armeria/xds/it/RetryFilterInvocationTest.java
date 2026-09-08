@@ -108,7 +108,7 @@ class RetryFilterInvocationTest {
         final HttpFilterFactory mockFactory = mockUpstreamFactory();
 
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(
-                bootstrapYaml("reset"), Bootstrap.class);
+                bootstrapYaml("5xx"), Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
                                                      .extensionFactories(downstreamFactory, upstreamFactory,
