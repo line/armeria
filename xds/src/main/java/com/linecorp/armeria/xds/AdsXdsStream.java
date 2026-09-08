@@ -18,6 +18,8 @@ package com.linecorp.armeria.xds;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -51,9 +53,14 @@ final class AdsXdsStream extends RefCountedStream<ParsedResources> implements Xd
     private final ConfigSourceLifecycleObserver lifecycleObserver;
     private final Set<XdsType> targetTypes;
     private final SnapshotStream<InterestedResources> interestStream;
+    private final Map<XdsType, String> lastAckedVersions = new EnumMap<>(XdsType.class);
 
     StateCoordinator stateCoordinator() {
         return stateCoordinator;
+    }
+
+    Map<XdsType, String> lastAckedVersions() {
+        return lastAckedVersions;
     }
 
     private int connBackoffAttempts = 1;
