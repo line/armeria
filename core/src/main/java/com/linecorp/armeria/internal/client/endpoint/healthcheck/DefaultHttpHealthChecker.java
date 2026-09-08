@@ -227,13 +227,13 @@ public final class DefaultHttpHealthChecker implements HttpHealthChecker {
                 final HttpStatusClass statusClass = status.codeClass();
                 if (statusClass == HttpStatusClass.INFORMATIONAL) {
                     maybeSchedulePingCheck();
-                } else if (statusClass == HttpStatusClass.SERVER_ERROR) {
-                    receivedExpectedResponse = true;
                 } else if (status == HttpStatus.NOT_MODIFIED) {
                     isHealthy = wasHealthy;
                     receivedExpectedResponse = true;
                 } else if (expectedStatuses.test(status.code())) {
                     isHealthy = true;
+                    receivedExpectedResponse = true;
+                } else if (statusClass == HttpStatusClass.SERVER_ERROR) {
                     receivedExpectedResponse = true;
                 } else {
                     // Do not use long polling on an unexpected status for safety.
