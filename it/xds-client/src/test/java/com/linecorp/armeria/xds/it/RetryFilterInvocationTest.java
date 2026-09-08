@@ -234,8 +234,10 @@ class RetryFilterInvocationTest {
                 return new XdsHttpFilter() {
                     @Override
                     public DecoratingHttpClientFunction httpDecorator() {
-                        return (delegate, ctx, req) ->
-                                HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                        return (delegate, ctx, req) -> {
+                            req.abort();
+                            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                        };
                     }
                 };
             }
