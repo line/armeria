@@ -55,7 +55,8 @@ final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
     @Override
     public HttpClient build() {
         if (client != null) {
-            return new ArmeriaHttpClient(this, client.getWebClient());
+            return new ArmeriaHttpClient(this, client.getWebClient(), client.getWebSocketClient(),
+                                         client.getClosed());
         }
 
         final WebClientBuilder clientBuilder = WebClient.builder();
