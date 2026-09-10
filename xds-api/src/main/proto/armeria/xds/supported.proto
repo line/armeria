@@ -3,6 +3,10 @@ package armeria.xds;
 
 option java_package = "com.linecorp.armeria.xds.api";
 option java_outer_classname = "SupportedFieldProto";
+// Intentionally NOT java_multiple_files: the only message here, `supported`, is a lowercase namespacing
+// holder for the option extensions (so usage reads as `(armeria.xds.supported.field)`), not a real data
+// message. Emitting it with java_multiple_files would produce a non-idiomatic top-level lowercase
+// `supported` class, so keep it nested under the SupportedFieldProto outer class.
 
 import "google/protobuf/descriptor.proto";
 
