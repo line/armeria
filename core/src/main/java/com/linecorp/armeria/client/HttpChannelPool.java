@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.ConnectionEventListener;
@@ -550,8 +551,13 @@ final class HttpChannelPool implements AsyncCloseable {
                 }
                 promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }
-        } catch (Exception e) {
-            promise.completeExceptionally(UnprocessedRequestException.of(e));
+        } catch (Throwable t) {
+            // Complete the promise before rethrowing, so that a fatal error cannot leave the request
+            // pending forever. The cause is not wrapped with UnprocessedRequestException here because
+            // HttpClientDelegate already does that for every acquisition failure, and wrapping could
+            // fail for the same reason the original attempt did.
+            promise.completeExceptionally(t);
+            Exceptions.throwIfFatal(t);
         }
     }
 
