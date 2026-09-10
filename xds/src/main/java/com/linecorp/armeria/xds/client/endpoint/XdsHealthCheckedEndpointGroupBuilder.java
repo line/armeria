@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntPredicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
 import io.envoyproxy.envoy.config.endpoint.v3.Endpoint.HealthCheckConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
+import io.envoyproxy.envoy.type.v3.Int64Range;
 
 final class XdsHealthCheckedEndpointGroupBuilder
         extends AbstractHealthCheckedEndpointGroupBuilder<XdsHealthCheckedEndpointGroupBuilder> {
@@ -45,12 +48,14 @@ final class XdsHealthCheckedEndpointGroupBuilder
 
     private final Cluster cluster;
     private final HttpHealthCheck httpHealthCheck;
+    private final IntPredicate expectedStatuses;
 
     XdsHealthCheckedEndpointGroupBuilder(EndpointGroup delegate, Cluster cluster,
                                          HttpHealthCheck httpHealthCheck) {
         super(delegate);
         this.cluster = cluster;
         this.httpHealthCheck = httpHealthCheck;
+        expectedStatuses = toExpectedStatuses(httpHealthCheck);
     }
 
     @Override
@@ -68,7 +73,7 @@ final class XdsHealthCheckedEndpointGroupBuilder
             final DefaultHttpHealthChecker checker =
                     new DefaultHttpHealthChecker(ctx, endpoint(healthCheckConfig, ctx.originalEndpoint()),
                                                  path, httpMethod(httpHealthCheck) == HttpMethod.GET,
-                                                 protocol(cluster), host);
+                                                 protocol(cluster), host, expectedStatuses);
             checker.start();
             return checker;
         };
@@ -92,6 +97,22 @@ final class XdsHealthCheckedEndpointGroupBuilder
         } else {
             return SessionProtocol.HTTP;
         }
+    }
+
+    private static IntPredicate toExpectedStatuses(HttpHealthCheck httpHealthCheck) {
+        final List<Int64Range> ranges = httpHealthCheck.getExpectedStatusesList();
+        if (ranges.isEmpty()) {
+            // Envoy default: 200 only
+            return statusCode -> statusCode == 200;
+        }
+        return statusCode -> {
+            for (Int64Range range : ranges) {
+                if (statusCode >= range.getStart() && statusCode < range.getEnd()) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     private static Endpoint endpoint(HealthCheckConfig healthCheckConfig, Endpoint endpoint) {
