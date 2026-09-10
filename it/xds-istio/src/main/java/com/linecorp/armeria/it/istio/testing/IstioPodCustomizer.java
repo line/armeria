@@ -40,6 +40,7 @@ public final class IstioPodCustomizer implements PodCustomizer {
                   // SotW doesn't have per-resource subscriptions, so this doesn't occur.
                   .addToAnnotations("proxy.istio.io/config",
                                     "{\"proxyMetadata\":{\"ISTIO_DELTA_XDS\":\"false\"}}")
+                  .addToAnnotations("traffic.sidecar.istio.io/excludeOutboundPorts", "8080")
                   .endMetadata()
                   .editSpec()
                   .editMatchingContainer(c -> "test".equals(c.getName()))
