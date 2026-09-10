@@ -448,23 +448,28 @@ message HeaderValueOption {
     // - Duplicate header added in the ``HeaderMap`` for other headers.
     //
     // If the header doesn't exist then this will add new header with specified key and value.
+    option (armeria.xds.supported.enum_value) = 0;
     APPEND_IF_EXISTS_OR_ADD = 0;
 
     // This action will add the header if it doesn't already exist. If the header
     // already exists then this will be a no-op.
+    option (armeria.xds.supported.enum_value) = 1;
     ADD_IF_ABSENT = 1;
 
     // This action will overwrite the specified value by discarding any existing values if
     // the header already exists. If the header doesn't exist then this will add the header
     // with specified key and value.
+    option (armeria.xds.supported.enum_value) = 2;
     OVERWRITE_IF_EXISTS_OR_ADD = 2;
 
     // This action will overwrite the specified value by discarding any existing values if
     // the header already exists. If the header doesn't exist then this will be no-op.
+    option (armeria.xds.supported.enum_value) = 3;
     OVERWRITE_IF_EXISTS = 3;
   }
 
   // Header name/value pair that this option applies to.
+  option (armeria.xds.supported.field) = 1;
   HeaderValue header = 1 [(validate.rules).message = {required: true}];
 
   // Should the value be appended? If true (default), the value is appended to
@@ -483,10 +488,12 @@ message HeaderValueOption {
   // or to only add this header if it's absent.
   // Value defaults to :ref:`APPEND_IF_EXISTS_OR_ADD
   // <envoy_v3_api_enum_value_config.core.v3.HeaderValueOption.HeaderAppendAction.APPEND_IF_EXISTS_OR_ADD>`.
+  option (armeria.xds.supported.field) = 3;
   HeaderAppendAction append_action = 3 [(validate.rules).enum = {defined_only: true}];
 
   // Is the header value allowed to be empty? If false (default), custom headers with empty values are dropped,
   // otherwise they are added.
+  option (armeria.xds.supported.field) = 4;
   bool keep_empty_value = 4;
 }
 
