@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
 
 /**
  * A factory which creates a {@link LoggingService} decorator.
@@ -38,15 +39,26 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
         final float failureSamplingRate =
                 parameter.failureSamplingRate() >= 0.0f ? parameter.failureSamplingRate()
                                                         : parameter.samplingRate();
-        return LoggingService.builder()
-                             .logWriter(LogWriter.builder()
-                                                 .requestLogLevel(parameter.requestLogLevel())
-                                                 .successfulResponseLogLevel(
-                                                         parameter.successfulResponseLogLevel())
-                                                 .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                                                 .build())
-                             .successSamplingRate(successSamplingRate)
-                             .failureSamplingRate(failureSamplingRate)
-                             .newDecorator();
+        final LogWriter logWriter = LogWriter.builder()
+                                             .requestLogLevel(parameter.requestLogLevel())
+                                             .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                                             .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                                             .build();
+        final LoggingServiceBuilder builder
+                = LoggingService.builder()
+                                .logWriter(logWriter)
+                                .successSamplingRate(successSamplingRate)
+                                .failureSamplingRate(failureSamplingRate);
+
+        if (
+                parameter.slowRequestSamplingPercentile() >= 0.0f ||
+                parameter.slowRequestSamplingUpperBoundMillis() >= 0
+        ) {
+            builder.slowRequestSamplingPercentile(parameter.slowRequestSamplingPercentile(),
+                                                  parameter.slowRequestSamplingWindowMillis(),
+                                                  parameter.slowRequestSamplingLowerBoundMillis(),
+                                                  parameter.slowRequestSamplingUpperBoundMillis());
+        }
+        return builder.newDecorator();
     }
 }

@@ -29,6 +29,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
  * overhead of tracing will occur and/or if a trace will be reported to the collection tier.
@@ -42,6 +44,76 @@ package com.linecorp.armeria.common.util;
  */
 @FunctionalInterface
 public interface Sampler<T> {
+
+    /**
+     * Returns a sampler that applies logical or operator to both samplers decisions.
+     */
+    default Sampler<T> or(Sampler<T> other) {
+        return new OrSampler<>(this, requireNonNull(other, "other"));
+    }
+
+    /**
+     * Returns a sampler that applies logical and operator to both samplers decisions.
+     */
+    default Sampler<T> and(Sampler<T> other) {
+        return new AndSampler<>(this, requireNonNull(other, "other"));
+    }
+
+    /**
+     * Returns a sampler that applies logical not operator to the sampler decision.
+     */
+    default Sampler<T> not() {
+        return object -> !isSampled(object);
+    }
+
+    /**
+     * Returns a sampler that returns {@code true} if the value is greater than the given value.
+     */
+    static <T extends Comparable<T>> Sampler<T> greaterThan(T val) {
+        requireNonNull(val, "val");
+        return object -> object.compareTo(val) > 0;
+    }
+
+    /**
+     * Returns a sampler that returns {@code true} if the value is less than or equal to the given value.
+     */
+    static <T extends Comparable<T>> Sampler<T> greaterThanOrEqual(T val) {
+        requireNonNull(val, "val");
+        return object -> object.compareTo(val) >= 0;
+    }
+
+    /**
+     * Returns a sampler that returns {@code true} if the value is less than the given value.
+     */
+    static <T extends Comparable<T>> Sampler<T> lessThan(T val) {
+        requireNonNull(val, "val");
+        return object -> object.compareTo(val) < 0;
+    }
+
+    /**
+     * Returns a sampler that returns {@code true} if the value is less than or equal to the given value.
+     */
+    static <T extends Comparable<T>> Sampler<T> lessThanOrEqual(T val) {
+        requireNonNull(val, "val");
+        return object -> object.compareTo(val) <= 0;
+    }
+
+    /**
+     * Returns a sampler that returns {@code true} if the value is equal to the given value.
+     */
+    static <T extends Comparable<T>> Sampler<T> equal(T val) {
+        requireNonNull(val, "val");
+        return object -> object.compareTo(val) == 0;
+    }
+
+    /**
+     * Returns a sampler that returns {@code true} if the value is inside the percentile distribution
+     * in the given time window.
+     */
+    static Sampler<Long> percentile(float percentile, long windowMilliseconds) {
+        return new TimeWindowPercentileSampler(percentile, windowMilliseconds);
+    }
+
     /**
      * Returns a probabilistic sampler which samples at the specified {@code probability}
      * between {@code 0.0} and {@code 1.0}.
