@@ -1119,6 +1119,25 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void requestEnd() {
+        requestEnd0(System.nanoTime());
+    }
+
+    @Override
+    public void requestEnd(long requestEndTimeNanos) {
+        requestEnd0(requestEndTimeNanos);
+    }
+
+    private void requestEnd0(long requestEndTimeNanos) {
+        if (isAvailable(REQUEST_END_TIME)) {
+            return;
+        }
+
+        this.requestEndTimeNanos = requestEndTimeNanos;
+        updateFlags(REQUEST_END_TIME);
+    }
+
+    @Override
     public void endRequest() {
         endRequest0(null);
     }
@@ -1183,7 +1202,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             setNamesIfAbsent();
         }
 
-        this.requestEndTimeNanos = requestEndTimeNanos;
+        // Set requestEndTimeNanos if it is not already set
+        if (!isAvailable(REQUEST_END_TIME)) {
+            this.requestEndTimeNanos = requestEndTimeNanos;
+        }
 
         setRequestCause(requestCause);
         updateFlags(flags);

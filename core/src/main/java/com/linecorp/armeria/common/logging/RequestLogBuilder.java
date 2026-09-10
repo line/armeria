@@ -190,6 +190,18 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void requestCause(Throwable cause);
 
     /**
+     * Sets the {@link RequestLog#requestEndTimeNanos()}.
+     */
+    @UnstableApi
+    void requestEnd();
+
+    /**
+     * Sets the {@link RequestLog#requestEndTimeNanos()} with the specified timestamp.
+     */
+    @UnstableApi
+    void requestEnd(long requestEndTimeNanos);
+
+    /**
      * Finishes the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
      *   <li>{@link RequestLog#requestEndTimeNanos()}</li>
