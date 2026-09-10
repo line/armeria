@@ -112,7 +112,7 @@ project(':brave6').projectDir = file('brave/brave6')
 includeWithFlags ':core',                                'java', 'publish', 'shade', 'trim', 'native'
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
-includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
+includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'kotlin2.2', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
 // GraphQL-Java requires Java 11+.
 includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
@@ -129,7 +129,7 @@ includeWithFlags ':junit4',                              'java', 'publish', 'rel
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':jsonrpc',                             'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
-includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
+includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'kotlin2.2', 'native'
 includeWithFlags ':kubernetes',                          'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
 project(':logback').projectDir = file('logback/logback')
