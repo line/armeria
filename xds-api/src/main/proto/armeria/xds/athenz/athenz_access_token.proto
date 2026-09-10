@@ -17,9 +17,18 @@ import "armeria/xds/supported.proto";
 // Connection-level attributes (protocol/port/SNI/ALPN) are excluded because a
 // library data plane cannot supply them.
 enum WellKnownEndpointAttribute {
-  option (armeria.xds.supported.enum_value) = 1;
-  option (armeria.xds.supported.enum_value) = 2;
-  option (armeria.xds.supported.enum_value) = 3;
+  option (armeria.xds.supported.enum_value) = {
+    number: 1,
+    since: "1.41.0"
+  };
+  option (armeria.xds.supported.enum_value) = {
+    number: 2,
+    since: "1.41.0"
+  };
+  option (armeria.xds.supported.enum_value) = {
+    number: 3,
+    since: "1.41.0"
+  };
 
   WELL_KNOWN_ENDPOINT_ATTRIBUTE_UNSPECIFIED = 0;
   WELL_KNOWN_ENDPOINT_ATTRIBUTE_HOST = 1;          // :authority
@@ -31,10 +40,16 @@ enum WellKnownEndpointAttribute {
 message EndpointAttribute {
   oneof attribute {
     option (validate.required) = true;
-    option (armeria.xds.supported.oneof_field) = 1;
+    option (armeria.xds.supported.oneof_field) = {
+    number: 1,
+    since: "1.41.0"
+  };
     WellKnownEndpointAttribute well_known = 1
     [(validate.rules).enum = {defined_only: true not_in: 0}];
-    option (armeria.xds.supported.oneof_field) = 2;
+    option (armeria.xds.supported.oneof_field) = {
+    number: 2,
+    since: "1.41.0"
+  };
     // Implementation-specific attribute name, documented per syntax_version.
     string custom = 2 [(validate.rules).string = {min_len: 1}];
   }
@@ -43,27 +58,45 @@ message EndpointAttribute {
 // Placeholders: ${host|method|path}, ${custom.<name>},
 // ${match.<name>.<index>}; $$ is a literal $. Unknown or missing -> rule fails.
 message StringTemplate {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.41.0"
+  };
   string template = 1 [(validate.rules).string = {min_len: 1}];
 }
 
 message MappingString {
   oneof string_specifier {
     option (validate.required) = true;
-    option (armeria.xds.supported.oneof_field) = 1;
+    option (armeria.xds.supported.oneof_field) = {
+    number: 1,
+    since: "1.41.0"
+  };
     string literal = 1 [(validate.rules).string = {min_len: 1}];
-    option (armeria.xds.supported.oneof_field) = 2;
+    option (armeria.xds.supported.oneof_field) = {
+    number: 2,
+    since: "1.41.0"
+  };
     StringTemplate template = 2 [(validate.rules).message = {required: true}];
   }
 }
 
 message EndpointAttributeMatch {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.41.0"
+  };
   // Capture namespace referenced from templates as ${match.<name>.<index>}.
   string name = 1;
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+    number: 2,
+    since: "1.41.0"
+  };
   EndpointAttribute attribute = 2 [(validate.rules).message = {required: true}];
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+    number: 3,
+    since: "1.41.0"
+  };
   envoy.type.matcher.v3.StringMatcher matcher = 3
   [(validate.rules).message = {required: true}];
 }
@@ -71,19 +104,34 @@ message EndpointAttributeMatch {
 // All conditions must match (empty = match all); rules are tried in order,
 // first match wins.
 message AssertionMappingRule {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.41.0"
+  };
   string name = 1;
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+    number: 2,
+    since: "1.41.0"
+  };
   repeated EndpointAttributeMatch conditions = 2;
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+    number: 3,
+    since: "1.41.0"
+  };
   MappingString action = 3 [(validate.rules).message = {required: true}];
-  option (armeria.xds.supported.field) = 4;
+  option (armeria.xds.supported.field) = {
+    number: 4,
+    since: "1.41.0"
+  };
   MappingString resource = 4 [(validate.rules).message = {required: true}];
 }
 
 // No matching rule, or a rule whose action/resource fails to resolve -> deny.
 message AssertionMapping {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.41.0"
+  };
   repeated AssertionMappingRule rules = 1
   [(validate.rules).repeated = {min_items: 1}];
 }
@@ -91,24 +139,42 @@ message AssertionMapping {
 // Outbound: token to acquire for a destination. Static per cluster; routing
 // selects the cluster, so there is no per-request mapping here.
 message AccessTokenTarget {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.41.0"
+  };
   string target_domain = 1 [(validate.rules).string = {min_len: 1}];
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+    number: 2,
+    since: "1.41.0"
+  };
   // Roles included in the token scope; usually one.
   repeated string target_roles = 2
   [(validate.rules).repeated = {min_items: 1, items {string {min_len: 1}}}];
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+    number: 3,
+    since: "1.41.0"
+  };
   // Consumers reject versions they do not implement.
   uint32 syntax_version = 3 [(validate.rules).uint32 = {gte: 1}];
 }
 
 // Inbound: token evaluation for a listener.
 message AccessTokenConstraint {
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+    number: 1,
+    since: "1.41.0"
+  };
   string constraint_domain = 1 [(validate.rules).string = {min_len: 1}];
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+    number: 2,
+    since: "1.41.0"
+  };
   uint32 syntax_version = 2 [(validate.rules).uint32 = {gte: 1}];
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+    number: 3,
+    since: "1.41.0"
+  };
   // Optional explicit rules for (action, resource). When unset, the default
   // mapping applies: action = lower(method), resource = request path.
   AssertionMapping assertion_mapping = 3;

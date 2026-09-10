@@ -73,7 +73,10 @@ message Locality {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.Locality";
 
   // Region this :ref:`zone <envoy_v3_api_field_config.core.v3.Locality.zone>` belongs to.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string region = 1;
 
   // Defines the local service zone where Envoy is running. Though optional, it
@@ -84,13 +87,19 @@ message Locality {
   // <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html>`_
   // on AWS, `Zone <https://cloud.google.com/compute/docs/regions-zones/>`_ on
   // GCP, etc.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   string zone = 2;
 
   // When used for locality of upstream hosts, this field further splits zone
   // into smaller chunks of sub-zones so they can be load balanced
   // independently.
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+      number: 3,
+      since: "1.39.0"
+  };
   string sub_zone = 3;
 }
 
@@ -158,7 +167,10 @@ message Node {
   // <config_cluster_manager_cds>`, and :ref:`HTTP tracing
   // <arch_overview_tracing>`, either in this message or via
   // :option:`--service-node`.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.41.0"
+  };
   string id = 1;
 
   // Defines the local service cluster name where Envoy is running. Though
@@ -187,16 +199,27 @@ message Node {
   map<string, xds.core.v3.ContextParams> dynamic_parameters = 12;
 
   // Locality specifying where the Envoy instance is running.
-  option (armeria.xds.supported.field) = 4;
+  option (armeria.xds.supported.field) = {
+      number: 4,
+      since: "1.39.0"
+  };
   Locality locality = 4;
 
   // Free-form string that identifies the entity requesting config.
   // E.g. "envoy" or "grpc"
+  option (armeria.xds.supported.field) = {
+      number: 6,
+      since: "1.42.0"
+  };
   string user_agent_name = 6;
 
   oneof user_agent_version_type {
     // Free-form string that identifies the version of the entity requesting config.
     // E.g. "1.12.2" or "abcd1234", or "SpecialEnvoyBuild"
+    option (armeria.xds.supported.oneof_field) = {
+        number: 7,
+        since: "1.42.0"
+    };
     string user_agent_version = 7;
 
     // Structured version of the entity requesting config.
@@ -252,7 +275,10 @@ message Metadata {
   // :ref:`typed_filter_metadata <envoy_v3_api_field_config.core.v3.Metadata.typed_filter_metadata>`
   // fields are present in the metadata with same keys,
   // only ``typed_filter_metadata`` field will be parsed.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   map<string, google.protobuf.Struct> filter_metadata = 1
       [(validate.rules).map = {keys {string {min_len: 1}}}];
 
@@ -409,7 +435,10 @@ message HeaderValue {
   option (udpa.annotations.versioning).previous_message_type = "envoy.api.v2.core.HeaderValue";
 
   // Header name.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string key = 1
       [(validate.rules).string =
            {min_len: 1 max_bytes: 16384 well_known_regex: HTTP_HEADER_NAME strict: false}];
@@ -421,7 +450,10 @@ message HeaderValue {
   // unknown header values are replaced with the empty string instead of ``-``.
   // Header value is encoded as string. This does not work for non-utf8 characters.
   // Only one of ``value`` or ``raw_value`` can be set.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   string value = 2 [
     (validate.rules).string = {max_bytes: 16384 well_known_regex: HTTP_HEADER_VALUE strict: false},
     (udpa.annotations.field_migrate).oneof_promotion = "value_type"
@@ -502,7 +534,10 @@ message HeaderMap {
 // events inside this directory trigger the watch.
 message WatchedDirectory {
   // Directory path to watch.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string path = 1 [(validate.rules).string = {min_len: 1}];
 }
 
@@ -515,15 +550,24 @@ message DataSource {
     option (validate.required) = true;
 
     // Local filesystem data source.
-    option (armeria.xds.supported.oneof_field) = 1;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 1,
+        since: "1.39.0"
+    };
     string filename = 1 [(validate.rules).string = {min_len: 1}];
 
     // Bytes inlined in the configuration.
-    option (armeria.xds.supported.oneof_field) = 2;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 2,
+        since: "1.39.0"
+    };
     bytes inline_bytes = 2;
 
     // String inlined in the configuration.
-    option (armeria.xds.supported.oneof_field) = 3;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 3,
+        since: "1.39.0"
+    };
     string inline_string = 3;
 
     // Environment variable data source.
@@ -633,7 +677,10 @@ message TransportSocket {
 
   reserved "config";
 
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   // The name of the transport socket to instantiate. The name must match a supported transport
   // socket implementation.
   string name = 1 [(validate.rules).string = {min_len: 1}];
@@ -641,7 +688,10 @@ message TransportSocket {
   // Implementation specific configuration which depends on the implementation being instantiated.
   // See the supported transport socket implementations for further documentation.
   oneof config_type {
-    option (armeria.xds.supported.oneof_field) = 3;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 3,
+        since: "1.39.0"
+    };
     google.protobuf.Any typed_config = 3;
   }
 }

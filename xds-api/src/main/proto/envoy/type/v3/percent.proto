@@ -20,7 +20,10 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 message Percent {
   option (udpa.annotations.versioning).previous_message_type = "envoy.type.Percent";
 
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   double value = 1 [(validate.rules).double = {lte: 100.0 gte: 0.0}];
 }
 
@@ -52,11 +55,17 @@ message FractionalPercent {
   }
 
   // Specifies the numerator. Defaults to 0.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.41.0"
+  };
   uint32 numerator = 1;
 
   // Specifies the denominator. If the denominator specified is less than the numerator, the final
   // fractional percentage is capped at 1 (100%).
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.41.0"
+  };
   DenominatorType denominator = 2 [(validate.rules).enum = {defined_only: true}];
 }

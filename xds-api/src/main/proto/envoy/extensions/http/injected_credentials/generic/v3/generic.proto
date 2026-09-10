@@ -25,13 +25,19 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 message Generic {
   // The SDS configuration for the credential that will be injected to the specified HTTP request header.
   // It must be a generic secret.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.40.0"
+  };
   transport_sockets.tls.v3.SdsSecretConfig credential = 1
       [(validate.rules).message = {required: true}];
 
   // The header that will be injected to the HTTP request with the provided credential.
   // If not set, filter will default to: ``Authorization``
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.40.0"
+  };
   string header = 2
       [(validate.rules).string = {well_known_regex: HTTP_HEADER_NAME ignore_empty: true}];
 

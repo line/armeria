@@ -23,6 +23,7 @@ import java.util.Map;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.xds.configsource.SotwConfigSourceSubscriptionFactory;
 import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
@@ -49,7 +50,7 @@ final class ControlPlaneClientManager implements SafeCloseable {
                               ConfigSourceMapper configSourceMapper,
                               XdsExtensionRegistry extensionRegistry,
                               SnapshotWatcher<Object> defaultWatcher) {
-        bootstrapNode = bootstrap.getNode();
+        bootstrapNode = populateUserAgent(bootstrap.getNode());
         this.eventLoop = eventLoop;
         this.bootstrapClusters = bootstrapClusters;
         this.configSourceMapper = configSourceMapper;
@@ -130,6 +131,19 @@ final class ControlPlaneClientManager implements SafeCloseable {
             default:
                 return null;
         }
+    }
+
+    private static Node populateUserAgent(Node node) {
+        if (!node.getUserAgentName().isEmpty()) {
+            return node;
+        }
+        final Node.Builder builder = node.toBuilder()
+                                         .setUserAgentName("armeria");
+        final String version = Version.get("armeria-core").artifactVersion();
+        if (!"unknown".equals(version)) {
+            builder.setUserAgentVersion(version);
+        }
+        return builder.build();
     }
 
     Map<ConfigSource, ConfigSourceHandler> clientMap() {
