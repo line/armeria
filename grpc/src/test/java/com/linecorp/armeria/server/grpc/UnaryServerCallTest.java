@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,6 +32,8 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -52,6 +55,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
@@ -69,8 +73,11 @@ import io.grpc.Metadata.Key;
 import io.grpc.ServerCall.Listener;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.EventLoop;
 import io.netty.util.AsciiString;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -130,6 +137,19 @@ class UnaryServerCallTest {
     }
 
     @Test
+    void messageReadAfterCancellation() {
+        res.abort();
+        await().untilAsserted(() -> verify(listener).onCancel());
+
+        final ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(buf, 0), true);
+
+        verify(listener, never()).onMessage(any());
+        verify(listener, never()).onHalfClose();
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
     void messageRead_notWrappedByteBuf() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onRequestMessage(new DeframedMessage(buf, 0), true);
@@ -159,6 +179,44 @@ class UnaryServerCallTest {
                                                   0), true);
 
         verify(listener, never()).onMessage(any());
+    }
+
+    @Test
+    void requestMessageIsReleasedWhenBlockingExecutorRejects() {
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse response = HttpResponse.of(responseFuture);
+        final Executor rejectingExecutor = task -> {
+            throw new RejectedExecutionException();
+        };
+        final UnaryServerCall<SimpleRequest, SimpleResponse> rejectingCall =
+                newServerCall(response, responseFuture, ctx, false, rejectingExecutor);
+        rejectingCall.setListener(listener);
+        final ByteBuf buf = GrpcTestUtil.requestByteBuf();
+
+        rejectingCall.onRequestMessage(new DeframedMessage(buf, 0), true);
+
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
+    void responsePayloadIsReleasedWhenEventLoopRejects() {
+        final TrackingAllocator allocator = new TrackingAllocator();
+        final EventLoop rejectingEventLoop = mock(EventLoop.class);
+        doThrow(new RejectedExecutionException()).when(rejectingEventLoop).execute(any(Runnable.class));
+        final ServiceRequestContext rejectingCtx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
+                                     .eventLoop(rejectingEventLoop)
+                                     .alloc(allocator)
+                                     .build();
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse response = HttpResponse.of(responseFuture);
+        final UnaryServerCall<SimpleRequest, SimpleResponse> rejectingCall =
+                newServerCall(response, responseFuture, rejectingCtx, false, null);
+
+        assertThatThrownBy(() -> rejectingCall.sendMessage(SimpleResponse.getDefaultInstance()))
+                .isInstanceOf(RejectedExecutionException.class);
+        assertThat(allocator.allocated).isNotEmpty()
+                                       .allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
     }
 
     @Test
@@ -364,6 +422,12 @@ class UnaryServerCallTest {
             HttpResponse response,
             CompletableFuture<HttpResponse> resFuture,
             boolean unsafeWrapRequestBuffers) {
+        return newServerCall(response, resFuture, ctx, unsafeWrapRequestBuffers, null);
+    }
+
+    private static UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(
+            HttpResponse response, CompletableFuture<HttpResponse> resFuture,
+            ServiceRequestContext ctx, boolean unsafeWrapRequestBuffers, @Nullable Executor blockingExecutor) {
         return new UnaryServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
@@ -382,9 +446,39 @@ class UnaryServerCallTest {
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
                 exceptionHandler,
-                /* blockingExecutor */ null,
+                blockingExecutor,
                 /* autoCompress */ false,
                 /* useMethodMarshaller */ false,
                 /* enableEnvoyHttp1Bridge */ false);
+    }
+
+    private static final class TrackingAllocator extends AbstractByteBufAllocator {
+
+        private final UnpooledByteBufAllocator delegate = new UnpooledByteBufAllocator(true);
+        private final List<ByteBuf> allocated = new ArrayList<>();
+
+        TrackingAllocator() {
+            super(true);
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return track(delegate.heapBuffer(initialCapacity, maxCapacity));
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            return track(delegate.directBuffer(initialCapacity, maxCapacity));
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
+
+        private ByteBuf track(ByteBuf buf) {
+            allocated.add(buf);
+            return buf;
+        }
     }
 }

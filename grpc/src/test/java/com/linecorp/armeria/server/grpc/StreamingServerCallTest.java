@@ -19,9 +19,11 @@ package com.linecorp.armeria.server.grpc;
 import static com.linecorp.armeria.internal.common.grpc.TestServiceImpl.EXTRA_HEADER_KEY;
 import static com.linecorp.armeria.internal.common.grpc.TestServiceImpl.EXTRA_HEADER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -71,8 +74,11 @@ import io.grpc.Metadata.Key;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.Status;
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.channel.EventLoop;
 import io.netty.util.AsciiString;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -188,6 +194,26 @@ class StreamingServerCallTest {
         assertThat(call.isCancelled()).isFalse();
         completionFuture.completeExceptionally(ClosedSessionException.get());
         await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
+    }
+
+    @Test
+    void responsePayloadIsReleasedWhenEventLoopRejects() {
+        final TrackingAllocator allocator = new TrackingAllocator();
+        final EventLoop rejectingEventLoop = mock(EventLoop.class);
+        doThrow(new RejectedExecutionException()).when(rejectingEventLoop).execute(any(Runnable.class));
+        final ServiceRequestContext rejectingCtx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
+                                     .eventLoop(rejectingEventLoop)
+                                     .alloc(allocator)
+                                     .build();
+        final StreamingServerCall<SimpleRequest, SimpleResponse> rejectingCall =
+                newServerCall(res, rejectingCtx, false);
+
+        assertThatThrownBy(() -> rejectingCall.sendMessage(SimpleResponse.getDefaultInstance()))
+                .isInstanceOf(RejectedExecutionException.class);
+        assertThat(allocator.allocated).isNotEmpty()
+                                       .allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
+        assertThat(rejectingCall.isReady()).isTrue();
     }
 
     @Test
@@ -355,6 +381,11 @@ class StreamingServerCallTest {
 
     private StreamingServerCall<SimpleRequest, SimpleResponse> newServerCall(HttpResponseWriter response,
                                                                              boolean unsafeWrapRequestBuffers) {
+        return newServerCall(response, ctx, unsafeWrapRequestBuffers);
+    }
+
+    private static StreamingServerCall<SimpleRequest, SimpleResponse> newServerCall(
+            HttpResponseWriter response, ServiceRequestContext ctx, boolean unsafeWrapRequestBuffers) {
         return new StreamingServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
@@ -375,5 +406,35 @@ class StreamingServerCallTest {
                 /* blockingExecutor */ null,
                 false,
                 false);
+    }
+
+    private static final class TrackingAllocator extends AbstractByteBufAllocator {
+
+        private final UnpooledByteBufAllocator delegate = new UnpooledByteBufAllocator(true);
+        private final List<ByteBuf> allocated = new ArrayList<>();
+
+        TrackingAllocator() {
+            super(true);
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return track(delegate.heapBuffer(initialCapacity, maxCapacity));
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            return track(delegate.directBuffer(initialCapacity, maxCapacity));
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return false;
+        }
+
+        private ByteBuf track(ByteBuf buf) {
+            allocated.add(buf);
+            return buf;
+        }
     }
 }

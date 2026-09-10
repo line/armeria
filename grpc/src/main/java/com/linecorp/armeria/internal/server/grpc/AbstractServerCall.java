@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,6 +136,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private volatile boolean cancelled;
     private volatile boolean clientStreamClosed;
     private volatile boolean listenerClosed;
+    private volatile boolean requestMessageProcessingFailed;
     private boolean closeCalled;
 
     protected AbstractServerCall(HttpRequest req,
@@ -282,10 +284,18 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected abstract void doClose(ServerStatusAndMetadata statusAndMetadata);
 
+    /**
+     * Invoked once when the listener is closed, i.e. when the call is complete or cancelled, right before
+     * {@code onComplete()} or {@code onCancel()} is delivered to the listener, so that a subclass can
+     * release the resources which were prepared for a response but never written.
+     */
+    protected void onListenerClosed() {}
+
     protected final void closeListener(ServerStatusAndMetadata statusAndMetadata) {
         final boolean cancelled = statusAndMetadata.shouldCancel();
         if (!listenerClosed) {
             listenerClosed = true;
+            onListenerClosed();
 
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Failed to deserialize a message into a request
@@ -329,9 +339,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     public void onRequestMessage(DeframedMessage message, boolean endOfStream) {
         try {
-            final I request;
-            final ByteBuf buf = message.buf();
-
             boolean success = false;
             try {
                 // Special case for unary calls.
@@ -354,28 +361,58 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             }
 
-            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-            request = marshaller.deserializeRequest(message, grpcWebText);
-            maybeLogRequestContent(request);
-
-            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
-                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
-            }
-
+            // Deserialize the message on the thread that invokes the listener, so that the event loop
+            // is not occupied by deserialization (and decompression) when `blockingTaskExecutor` is used.
             if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+                try {
+                    blockingExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
+                } catch (RejectedExecutionException cause) {
+                    message.close();
+                    throw cause;
+                }
             } else {
-                invokeOnMessage(request, endOfStream);
+                deserializeAndInvokeOnMessage(message, endOfStream);
             }
         } catch (Throwable cause) {
             close(cause, true);
         }
     }
 
+    private void deserializeAndInvokeOnMessage(DeframedMessage message, boolean endOfStream) {
+        if (shouldSkipRequestCallback()) {
+            message.close();
+            return;
+        }
+
+        final I request;
+        try {
+            final ByteBuf buf = message.buf();
+            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+            // `deserializeRequest()` releases the buffer (unless `unsafeWrapRequestBuffers` is enabled)
+            // or closes the stream, even if it fails.
+            request = marshaller.deserializeRequest(message, grpcWebText);
+            maybeLogRequestContent(request);
+
+            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
+                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
+            }
+        } catch (Throwable cause) {
+            requestMessageProcessingFailed = true;
+            close(cause, true);
+            return;
+        }
+
+        invokeOnMessage(request, endOfStream);
+    }
+
     protected final void onRequestComplete() {
         clientStreamClosed = true;
         if (!closeCalled) {
-            maybeLogRequestContent(null);
+            if (!messageReceived) {
+                // If a message was received, log its content during deserialization, which may still
+                // be pending on the blocking executor.
+                maybeLogRequestContent(null);
+            }
             if (blockingExecutor != null) {
                 blockingExecutor.execute(this::invokeHalfClose);
             } else {
@@ -385,9 +422,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeOnReady() {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onReady() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (shouldSkipRequestCallback()) {
             return;
         }
         try {
@@ -400,11 +435,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void invokeOnMessage(I request, boolean halfClose) {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onMessage() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
-            return;
-        }
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onMessage(request);
@@ -417,9 +447,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final void invokeHalfClose() {
-        if (blockingExecutor != null && cancelled) {
-            // Do not call listener.onHalfClose() if the call is cancelled after
-            // this task was scheduled to blockingTaskExecutor.
+        if (shouldSkipRequestCallback()) {
             return;
         }
         try (SafeCloseable ignored = ctx.push()) {
@@ -428,6 +456,11 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         } catch (Throwable t) {
             close(t);
         }
+    }
+
+    private boolean shouldSkipRequestCallback() {
+        // Skip cancelled calls and callbacks queued before request message processing failed.
+        return cancelled || (blockingExecutor != null && requestMessageProcessingFailed);
     }
 
     private void invokeOnComplete() {
@@ -478,14 +511,18 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     @Override
     public void sendHeaders(Metadata metadata) {
+        // Decide the compressor and build the response headers on the caller's thread, because
+        // `sendMessage()` serializes and compresses a message on the caller's thread, which may happen
+        // before the event loop runs `doSendHeaders()`.
+        final ResponseHeaders headers = buildResponseHeaders(metadata);
         if (ctx.eventLoop().inEventLoop()) {
-            doSendHeaders(metadata);
+            doSendHeaders(headers);
         } else {
-            ctx.eventLoop().execute(() -> doSendHeaders(metadata));
+            ctx.eventLoop().execute(() -> doSendHeaders(headers));
         }
     }
 
-    private void doSendHeaders(Metadata metadata) {
+    private void doSendHeaders(ResponseHeaders headers) {
         if (isCancelled()) {
             // call was already closed by a client or a timeout scheduler.
             return;
@@ -493,6 +530,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
+        // https://github.com/grpc/proposal/blob/4c4a06d95eb1e7d3d7d84c4c9505a99f2a721db9/A6-client-retries.md#L263
+        // gRPC servers should delay the Response-Headers until the first response message or
+        // until the application code chooses to send headers.
+        responseHeaders = headers;
+    }
+
+    private ResponseHeaders buildResponseHeaders(Metadata metadata) {
         final Compressor oldCompressor = compressor;
         if (messageCompression && !clientAcceptEncoding.isEmpty()) {
             final List<String> acceptedEncodings =
@@ -542,11 +586,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             });
         }
-
-        // https://github.com/grpc/proposal/blob/4c4a06d95eb1e7d3d7d84c4c9505a99f2a721db9/A6-client-retries.md#L263
-        // gRPC servers should delay the Response-Headers until the first response message or
-        // until the application code chooses to send headers.
-        responseHeaders = headers;
+        return headers;
     }
 
     protected final HttpData toPayload(O message) throws IOException {
