@@ -24,6 +24,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.initializeConnectionLifespan;
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
@@ -155,6 +156,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         // which caches the remote address once its underlying transport returns a non-null address.
         ch.remoteAddress();
 
+        initializeConnectionLifespan(ch, config.maxConnectionAgeMillis(),
+                                     config.maxConnectionAgeJitterRate());
+
         // Disable the write buffer watermark notification because we manage backpressure by ourselves.
         ChannelUtil.disableWriterBufferWatermark(ch);
 
@@ -213,6 +217,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+        final double maxConnectionAgeJitterRate = config.maxConnectionAgeJitterRate();
         final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
         final boolean needsKeepAliveHandler =
                 needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
@@ -223,6 +228,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
             keepAliveHandler = new Http1ServerKeepAliveHandler(ch, keepAliveTimer, idleTimeoutMillis,
                                                                maxConnectionAgeMillis,
+                                                               maxConnectionAgeJitterRate,
                                                                maxNumRequestsPerConnection);
         } else {
             keepAliveHandler = new NoopKeepAliveHandler();
@@ -235,7 +241,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                                                           gracefulShutdownSupport,
                                                                           responseEncoder,
                                                                           H1C, connectionContext);
-        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder, httpServerHandler));
+        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder, httpServerHandler, idleTimeoutMillis));
         p.addLast(httpServerHandler);
     }
 
@@ -628,6 +634,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+            final double maxConnectionAgeJitterRate = config.maxConnectionAgeJitterRate();
             final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
             final boolean needsKeepAliveHandler =
                     needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
@@ -637,6 +644,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             if (needsKeepAliveHandler) {
                 keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
                                                                    maxConnectionAgeMillis,
+                                                                   maxConnectionAgeJitterRate,
                                                                    maxNumRequestsPerConnection);
             } else {
                 keepAliveHandler = new NoopKeepAliveHandler();
@@ -751,38 +759,41 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
 
         private final ServerHttp1ObjectEncoder responseEncoder;
-        private final KeepAliveHandler keepAliveHandler;
         private final HttpServer httpServer;
+        private final long protocolDetectionIdleTimeoutMillis;
+        @Nullable
+        private ScheduledFuture<?> protocolDetectionIdleTimeoutFuture;
         @Nullable
         private String name;
 
-        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder, HttpServer httpServer) {
+        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder, HttpServer httpServer,
+                                 long protocolDetectionIdleTimeoutMillis) {
             this.responseEncoder = responseEncoder;
-            keepAliveHandler = responseEncoder.keepAliveHandler();
             this.httpServer = httpServer;
+            this.protocolDetectionIdleTimeoutMillis = protocolDetectionIdleTimeoutMillis;
         }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            keepAliveHandler.initialize(ctx);
             super.handlerAdded(ctx);
             name = ctx.name();
+            resetProtocolDetectionIdleTimeout(ctx);
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            keepAliveHandler.destroy();
+            cancelProtocolDetectionIdleTimeout();
             super.channelInactive(ctx);
         }
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            keepAliveHandler.onReadOrWrite();
-
             if (in.readableBytes() < 4) {
+                resetProtocolDetectionIdleTimeout(ctx);
                 return;
             }
 
+            cancelProtocolDetectionIdleTimeout();
             if (in.getInt(in.readerIndex()) == 0x50524920) { // If starts with 'PRI '
                 // Probably HTTP/2; received the HTTP/2 preface string.
                 configureHttp2(ctx);
@@ -792,6 +803,21 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             }
 
             ctx.pipeline().remove(this);
+        }
+
+        private void resetProtocolDetectionIdleTimeout(ChannelHandlerContext ctx) {
+            cancelProtocolDetectionIdleTimeout();
+            if (protocolDetectionIdleTimeoutMillis > 0) {
+                protocolDetectionIdleTimeoutFuture = ctx.executor().schedule(
+                        (Runnable) ctx::close, protocolDetectionIdleTimeoutMillis, TimeUnit.MILLISECONDS);
+            }
+        }
+
+        private void cancelProtocolDetectionIdleTimeout() {
+            if (protocolDetectionIdleTimeoutFuture != null) {
+                protocolDetectionIdleTimeoutFuture.cancel(false);
+                protocolDetectionIdleTimeoutFuture = null;
+            }
         }
 
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {

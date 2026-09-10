@@ -21,22 +21,30 @@ import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ServerKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ServerKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
                                 long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
-                                boolean keepAliveOnPing) {
+                                long maxConnectionAgeMillis, double maxConnectionAgeJitterRate,
+                                int maxNumRequestsPerConnection, boolean keepAliveOnPing) {
         super(channel, frameWriter, "server", keepAliveTimer,
-              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-              keepAliveOnPing, ConnectionEventListener.NOOP);
+              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxConnectionAgeJitterRate,
+              maxNumRequestsPerConnection, keepAliveOnPing, ConnectionEventListener.NOOP);
     }
 
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
         final HttpServer server = HttpServer.get(ctx);
         return server != null && server.unfinishedRequests() != 0;
+    }
+
+    @Override
+    protected ChannelFuture closeIdleConnectionOnMaxAge(ChannelHandlerContext ctx) {
+        // Bypass Http2ServerConnectionHandler.close(), which starts a graceful drain. Because the
+        // connection is idle, it can be closed immediately at its effective max-age deadline.
+        return ctx.close();
     }
 }
