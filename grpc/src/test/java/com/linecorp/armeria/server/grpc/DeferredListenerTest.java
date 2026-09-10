@@ -24,13 +24,13 @@ import static org.mockito.Mockito.mock;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
@@ -72,11 +72,9 @@ class DeferredListenerTest {
         }
         assertListenerEvents(serverCall, eventLoop);
 
-        final Executor blockingExecutor =
-                MoreExecutors.newSequentialExecutor(CommonPools.blockingTaskExecutor());
         final UnaryServerCall<SimpleRequest, SimpleResponse> blockingServerCall =
-                newServerCall(eventLoop, blockingExecutor);
-        assertListenerEvents(blockingServerCall, blockingExecutor);
+                newServerCall(eventLoop, CommonPools.blockingTaskExecutor());
+        assertListenerEvents(blockingServerCall, blockingServerCall.callExecutor());
     }
 
     private static void assertListenerEvents(ServerCall<SimpleRequest, SimpleResponse> serverCall,
@@ -105,8 +103,77 @@ class DeferredListenerTest {
                 .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete", "onCancel");
     }
 
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void pendingMessageIsNotOvertakenByLaterMessage(boolean blocking) throws Exception {
+        // Listener future still pending. Queue: [onMessage(m1) running] [drain] [onMessage(m2)].
+        // m1 must keep its place ahead of m2 even though it arrived before the delegate was set.
+        final UnaryServerCall<SimpleRequest, SimpleResponse> call = newServerCall(blocking);
+        final Executor executor = call.callExecutor();
+        final TestListener testListener = new TestListener();
+        final CompletableFuture<ServerCall.Listener<SimpleRequest>> future = new CompletableFuture<>();
+        final DeferredListener<SimpleRequest> listener = new DeferredListener<>(call, future);
+        final SimpleRequest m1 = SimpleRequest.newBuilder().setResponseSize(1).build();
+        final SimpleRequest m2 = SimpleRequest.newBuilder().setResponseSize(2).build();
+        final CountDownLatch m1Started = new CountDownLatch(1);
+        final CountDownLatch m2Queued = new CountDownLatch(1);
+
+        executor.execute(() -> {
+            m1Started.countDown();
+            try {
+                m2Queued.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            listener.onMessage(m1);
+        });
+        assertThat(m1Started.await(10, TimeUnit.SECONDS)).isTrue();
+        future.complete(testListener);                      // drain task queued behind the running task
+        executor.execute(() -> listener.onMessage(m2));
+        m2Queued.countDown();
+
+        await().untilAsserted(() -> assertThat(testListener.messages).hasSize(2));
+        assertThat(testListener.messages).containsExactly(m1, m2);
+    }
+
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void pendingMessageIsDeliveredBeforeLaterTerminalCallback(boolean blocking) throws Exception {
+        // Same shape, but the task queued behind the drain is a terminal callback.
+        final UnaryServerCall<SimpleRequest, SimpleResponse> call = newServerCall(blocking);
+        final Executor executor = call.callExecutor();
+        final TestListener testListener = new TestListener();
+        final CompletableFuture<ServerCall.Listener<SimpleRequest>> future = new CompletableFuture<>();
+        final DeferredListener<SimpleRequest> listener = new DeferredListener<>(call, future);
+        final SimpleRequest m1 = SimpleRequest.newBuilder().setResponseSize(1).build();
+        final CountDownLatch m1Started = new CountDownLatch(1);
+        final CountDownLatch completeQueued = new CountDownLatch(1);
+
+        executor.execute(() -> {
+            m1Started.countDown();
+            try {
+                completeQueued.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            listener.onMessage(m1);
+        });
+        assertThat(m1Started.await(10, TimeUnit.SECONDS)).isTrue();
+        future.complete(testListener);
+        executor.execute(listener::onComplete);
+        completeQueued.countDown();
+
+        await().untilAsserted(() -> assertThat(testListener.events).hasSize(2));
+        assertThat(testListener.events).containsExactly("onMessage", "onComplete");
+    }
+
     private static void executeAndAwait(Executor executor, Runnable task) {
         CompletableFuture.runAsync(task, executor).join();
+    }
+
+    private static UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(boolean blocking) {
+        return newServerCall(CommonPools.workerGroup().next(),
+                             blocking ? CommonPools.blockingTaskExecutor() : null);
     }
 
     private static UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(
@@ -127,10 +194,14 @@ class DeferredListenerTest {
     private static class TestListener extends ServerCall.Listener<SimpleRequest> {
 
         final List<String> events = new CopyOnWriteArrayList<>();
+        final List<SimpleRequest> messages = new CopyOnWriteArrayList<>();
 
         @Override
         public void onMessage(SimpleRequest message) {
             events.add("onMessage");
+            if (message != null) {
+                messages.add(message);
+            }
         }
 
         @Override

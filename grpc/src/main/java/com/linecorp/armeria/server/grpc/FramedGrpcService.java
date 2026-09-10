@@ -40,7 +40,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -57,7 +56,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
@@ -296,7 +294,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final Executor blockingExecutor;
         if (useBlockingTaskExecutor || registry.needToUseBlockingTaskExecutor(methodDef)) {
             ctx.setAttr(GRPC_USE_BLOCKING_EXECUTOR, true);
-            blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
+            blockingExecutor = ctx.blockingTaskExecutor();
         } else {
             ctx.setAttr(GRPC_USE_BLOCKING_EXECUTOR, false);
             blockingExecutor = null;
@@ -304,13 +302,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final AbstractServerCall<I, O> call = newServerCall(simpleMethodName, methodDef, ctx, req,
                                                             res, resFuture, serializationFormat,
                                                             blockingExecutor);
-        if (blockingExecutor != null) {
-            blockingExecutor.execute(() -> startCall(methodDef, ctx, req, methodDescriptor, call));
-        } else {
-            try (SafeCloseable ignored = ctx.push()) {
-                startCall(methodDef, ctx, req, methodDescriptor, call);
-            }
-        }
+        call.callExecutor().execute(() -> startCall(methodDef, ctx, req, methodDescriptor, call));
     }
 
     private static <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,

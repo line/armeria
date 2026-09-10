@@ -163,12 +163,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     // Invoke onReady() only when server can send multiple messages.
                     res.whenConsumed().thenRun(() -> {
                         if (!isCloseCalled() && pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                            final Executor blockingExecutor = blockingExecutor();
-                            if (blockingExecutor != null) {
-                                blockingExecutor.execute(this::invokeOnReady);
-                            } else {
-                                invokeOnReady();
-                            }
+                            callExecutor().execute(this::invokeOnReady);
                         }
                     });
                 }
