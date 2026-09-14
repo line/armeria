@@ -84,13 +84,18 @@ public final class TailPreClient<I extends Request, O extends Response, C extend
         checkState(tailDelegating != null,
                    "Failed to find TailRpcClient in the decorator chain. " +
                    "A decorator may have been added that does not properly delegate Unwrappable.as().");
-        final RpcClient rawDelegate = tailDelegating.defaultDelegate();
+        final TailHttpClient tailHttp = rpcClient.as(TailHttpClient.class);
+        checkState(tailHttp != null,
+                   "Failed to find TailHttpClient in the decorator chain. " +
+                   "A decorator may have been added that does not properly delegate Unwrappable.as().");
+        final HttpClient rawHttpDelegate = tailHttp.defaultDelegate();
         final TailPreClient<RpcRequest, RpcResponse, RpcClient> tail =
                 new TailPreClient<>(rpcClient, futureConverter, errorResponseFactory,
                                     (ctx, delegate) -> {
-                                        final RpcClient inner = ctx.rpcClientCustomizer().apply(rawDelegate);
-                                        if (inner != rawDelegate) {
-                                            TailRpcClient.setDelegate(ctx, inner);
+                                        final HttpClient httpInner =
+                                                ctx.httpClientCustomizer().apply(rawHttpDelegate);
+                                        if (httpInner != rawHttpDelegate) {
+                                            TailHttpClient.setDelegate(ctx, httpInner);
                                         }
                                         return delegate;
                                     });
