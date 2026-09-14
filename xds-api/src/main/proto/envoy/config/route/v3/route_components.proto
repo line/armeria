@@ -132,13 +132,19 @@ message VirtualHost {
   // enclosing :ref:`envoy_v3_api_msg_config.route.v3.RouteConfiguration`. For more information, including
   // details on header value syntax, see the documentation on :ref:`custom request headers
   // <config_http_conn_man_headers_custom_request_headers>`.
-  option (armeria.xds.supported.field) = 7;
+  option (armeria.xds.supported.field) = {
+      number: 7,
+      since: "1.42.0"
+  };
   repeated core.v3.HeaderValueOption request_headers_to_add = 7
       [(validate.rules).repeated = {max_items: 1000}];
 
   // Specifies a list of HTTP headers that should be removed from each request
   // handled by this virtual host.
-  option (armeria.xds.supported.field) = 13;
+  option (armeria.xds.supported.field) = {
+      number: 13,
+      since: "1.42.0"
+  };
   repeated string request_headers_to_remove = 13 [(validate.rules).repeated = {
     items {string {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}}
   }];
@@ -388,13 +394,19 @@ message Route {
   // :ref:`envoy_v3_api_msg_config.route.v3.RouteConfiguration`. For more information, including details on
   // header value syntax, see the documentation on :ref:`custom request headers
   // <config_http_conn_man_headers_custom_request_headers>`.
-  option (armeria.xds.supported.field) = 9;
+  option (armeria.xds.supported.field) = {
+      number: 9,
+      since: "1.42.0"
+  };
   repeated core.v3.HeaderValueOption request_headers_to_add = 9
       [(validate.rules).repeated = {max_items: 1000}];
 
   // Specifies a list of HTTP headers that should be removed from each request
   // matching this route.
-  option (armeria.xds.supported.field) = 12;
+  option (armeria.xds.supported.field) = {
+      number: 12,
+      since: "1.42.0"
+  };
   repeated string request_headers_to_remove = 12 [(validate.rules).repeated = {
     items {string {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}}
   }];
@@ -543,13 +555,19 @@ message WeightedCluster {
     // :ref:`envoy_v3_api_msg_config.route.v3.RouteConfiguration`. For more information, including details on
     // header value syntax, see the documentation on :ref:`custom request headers
     // <config_http_conn_man_headers_custom_request_headers>`.
-    option (armeria.xds.supported.field) = 4;
+    option (armeria.xds.supported.field) = {
+        number: 4,
+        since: "1.42.0"
+    };
     repeated core.v3.HeaderValueOption request_headers_to_add = 4
         [(validate.rules).repeated = {max_items: 1000}];
 
     // Specifies a list of HTTP headers that should be removed from each request when
     // this cluster is selected through the enclosing :ref:`envoy_v3_api_msg_config.route.v3.RouteAction`.
-    option (armeria.xds.supported.field) = 9;
+    option (armeria.xds.supported.field) = {
+        number: 9,
+        since: "1.42.0"
+    };
     repeated string request_headers_to_remove = 9 [(validate.rules).repeated = {
       items {string {well_known_regex: HTTP_HEADER_NAME strict: false}}
     }];
@@ -1751,7 +1769,10 @@ message RetryPolicy {
     google.protobuf.Duration max_interval = 2 [(validate.rules).duration = {gt {}}];
 
     // Specifies the exponential backoff factor that Envoy doesn't support. (2x is by default).
-    option (armeria.xds.supported.field) = 1000;
+    option (armeria.xds.supported.field) = {
+        number: 1000,
+        since: "1.42.0"
+    };
     google.protobuf.UInt32Value exponential_backoff_factor = 1000 [(validate.rules).uint32 = {gt: 1}];
   }
 
