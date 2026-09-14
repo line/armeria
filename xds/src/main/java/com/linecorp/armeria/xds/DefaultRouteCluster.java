@@ -32,14 +32,17 @@ final class DefaultRouteCluster implements RouteCluster {
 
     private final ClusterSnapshot clusterSnapshot;
     private final Metadata metadataMatch;
+    private final RequestHeadersMutator requestHeadersMutator;
     private final HttpClient httpClient;
 
     DefaultRouteCluster(ClusterSnapshot clusterSnapshot, Metadata metadataMatch,
+                        RequestHeadersMutator requestHeadersMutator,
                         @Nullable ClientDecoration retryDecoration,
                         ClientDecoration downstreamDecoration,
                         ClientDecoration upstreamDecoration) {
         this.clusterSnapshot = requireNonNull(clusterSnapshot, "clusterSnapshot");
         this.metadataMatch = requireNonNull(metadataMatch, "metadataMatch");
+        this.requestHeadersMutator = requireNonNull(requestHeadersMutator, "requestHeadersMutator");
         httpClient = FilterUtil.buildHttpClient(retryDecoration, downstreamDecoration, upstreamDecoration);
     }
 
@@ -56,6 +59,11 @@ final class DefaultRouteCluster implements RouteCluster {
     @Override
     public HttpClient httpClient() {
         return httpClient;
+    }
+
+    @Override
+    public RequestHeadersMutator requestHeadersMutator() {
+        return requestHeadersMutator;
     }
 
     @Override
