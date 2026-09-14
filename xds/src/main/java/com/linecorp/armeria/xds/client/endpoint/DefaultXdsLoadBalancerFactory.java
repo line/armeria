@@ -139,7 +139,8 @@ final class DefaultXdsLoadBalancerFactory implements XdsLoadBalancerFactory {
                                                                       transportSocket, transportSocketMatches);
                         final EndpointGroup staticGroup = EndpointGroup.of(endpoints);
                         final EndpointGroup healthChecked = XdsEndpointUtil.maybeHealthChecked(
-                                staticGroup, clusterXdsResource.resource());
+                                staticGroup, clusterXdsResource.resource(), transportSocket,
+                                transportSocketMatches);
                         return XdsEndpointUtil.endpointGroupToStream(healthChecked)
                                               .map(resolved -> new ResolvedEndpoints(
                                                       snapshot, resolved));
