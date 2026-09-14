@@ -123,11 +123,13 @@ message VirtualHost {
   // enclosing :ref:`envoy_v3_api_msg_config.route.v3.RouteConfiguration`. For more information, including
   // details on header value syntax, see the documentation on :ref:`custom request headers
   // <config_http_conn_man_headers_custom_request_headers>`.
+  option (armeria.xds.supported.field) = 7;
   repeated core.v3.HeaderValueOption request_headers_to_add = 7
       [(validate.rules).repeated = {max_items: 1000}];
 
   // Specifies a list of HTTP headers that should be removed from each request
   // handled by this virtual host.
+  option (armeria.xds.supported.field) = 13;
   repeated string request_headers_to_remove = 13 [(validate.rules).repeated = {
     items {string {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}}
   }];
@@ -356,11 +358,13 @@ message Route {
   // :ref:`envoy_v3_api_msg_config.route.v3.RouteConfiguration`. For more information, including details on
   // header value syntax, see the documentation on :ref:`custom request headers
   // <config_http_conn_man_headers_custom_request_headers>`.
+  option (armeria.xds.supported.field) = 9;
   repeated core.v3.HeaderValueOption request_headers_to_add = 9
       [(validate.rules).repeated = {max_items: 1000}];
 
   // Specifies a list of HTTP headers that should be removed from each request
   // matching this route.
+  option (armeria.xds.supported.field) = 12;
   repeated string request_headers_to_remove = 12 [(validate.rules).repeated = {
     items {string {min_len: 1 well_known_regex: HTTP_HEADER_NAME strict: false}}
   }];
@@ -500,11 +504,13 @@ message WeightedCluster {
     // :ref:`envoy_v3_api_msg_config.route.v3.RouteConfiguration`. For more information, including details on
     // header value syntax, see the documentation on :ref:`custom request headers
     // <config_http_conn_man_headers_custom_request_headers>`.
+    option (armeria.xds.supported.field) = 4;
     repeated core.v3.HeaderValueOption request_headers_to_add = 4
         [(validate.rules).repeated = {max_items: 1000}];
 
     // Specifies a list of HTTP headers that should be removed from each request when
     // this cluster is selected through the enclosing :ref:`envoy_v3_api_msg_config.route.v3.RouteAction`.
+    option (armeria.xds.supported.field) = 9;
     repeated string request_headers_to_remove = 9 [(validate.rules).repeated = {
       items {string {well_known_regex: HTTP_HEADER_NAME strict: false}}
     }];
