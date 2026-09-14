@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
@@ -146,12 +145,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
         if (ctx.eventLoop().inEventLoop()) {
             doSendMessage(message, payload);
         } else {
-            try {
-                ctx.eventLoop().execute(() -> doSendMessage(message, payload));
-            } catch (RejectedExecutionException cause) {
-                payload.close();
-                throw cause;
-            }
+            ctx.eventLoop().execute(() -> doSendMessage(message, payload));
         }
     }
 
