@@ -2,7 +2,3 @@ dependencies {
     // Logback
     api project(':logback12')
 }
-
-tasks.withType(Test).configureEach {
-    failOnNoDiscoveredTests = false
-}

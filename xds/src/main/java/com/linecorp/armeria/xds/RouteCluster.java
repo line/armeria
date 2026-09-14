@@ -48,4 +48,9 @@ public interface RouteCluster {
      * Returns the pre-built {@link RpcClient} chain for this route.
      */
     RpcClient rpcClient();
+
+    /**
+     * Returns the {@link RequestHeadersMutator} for mutating request headers.
+     */
+    RequestHeadersMutator requestHeadersMutator();
 }

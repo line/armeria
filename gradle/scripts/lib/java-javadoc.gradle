@@ -457,7 +457,7 @@ class DownloadJavadocPackageListTask extends DefaultTask {
         return [success, javadocUrl, listFileDir.asFile]
     }
 
-    private def downloadListFile(File listFile, URL listUrl) {
+    def downloadListFile(File listFile, URL listUrl) {
         // Do not attempt to download more than once.
         if (!visitedUrls.add(listUrl.toString())) {
             return
