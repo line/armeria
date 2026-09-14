@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
@@ -39,7 +40,7 @@ public final class ClientBuilderParamsBuilder {
 
     private final URI uri;
     private final EndpointGroup endpointGroup;
-    private final ExecutionProtocol executionProtocol;
+    private final SessionProtocol sessionProtocol;
 
     private SerializationFormat serializationFormat;
     private String absolutePathRef;
@@ -52,7 +53,7 @@ public final class ClientBuilderParamsBuilder {
     ClientBuilderParamsBuilder(ClientBuilderParams params) {
         uri = params.uri();
         endpointGroup = params.endpointGroup();
-        executionProtocol = params.scheme().executionProtocol();
+        sessionProtocol = params.scheme().sessionProtocol();
 
         serializationFormat = params.scheme().serializationFormat();
         absolutePathRef = params.absolutePathRef();
@@ -61,14 +62,13 @@ public final class ClientBuilderParamsBuilder {
     }
 
     ClientBuilderParamsBuilder(URI uri) {
+        this.uri = uri;
         final Scheme scheme = Scheme.parse(uri.getScheme());
         final EndpointGroup endpointGroup;
-        uri = scheme.executionProtocol().validateUri(uri);
-        final String rawAuthority = uri.getRawAuthority();
         if (ClientBuilderParamsUtil.isInternalUri(uri)) {
             endpointGroup = UndefinedEndpointGroup.of();
         } else {
-            endpointGroup = Endpoint.parse(rawAuthority);
+            endpointGroup = Endpoint.parse(uri.getRawAuthority());
         }
         final String absolutePathRef;
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
@@ -82,10 +82,9 @@ public final class ClientBuilderParamsBuilder {
             }
             absolutePathRef = buf.toString();
         }
-        this.uri = uri;
         this.endpointGroup = endpointGroup;
         serializationFormat = scheme.serializationFormat();
-        executionProtocol = scheme.executionProtocol();
+        sessionProtocol = scheme.sessionProtocol();
         this.absolutePathRef = absolutePathRef;
     }
 
@@ -105,7 +104,7 @@ public final class ClientBuilderParamsBuilder {
         }
         this.uri = uri;
         serializationFormat = scheme.serializationFormat();
-        executionProtocol = scheme.executionProtocol();
+        sessionProtocol = scheme.sessionProtocol();
         this.absolutePathRef = normalizedAbsolutePathRef;
     }
 
@@ -151,7 +150,7 @@ public final class ClientBuilderParamsBuilder {
         final SerializationFormat serializationFormat = this.serializationFormat;
         final String absolutePathRef = this.absolutePathRef;
         final ClientFactory factory = options.factory();
-        final Scheme scheme = factory.validateScheme(Scheme.of(serializationFormat, executionProtocol));
+        final Scheme scheme = factory.validateScheme(Scheme.of(serializationFormat, sessionProtocol));
         final String schemeStr = scheme.shortUriText();
 
         final String path = nullOrEmptyToSlash(absolutePathRef);

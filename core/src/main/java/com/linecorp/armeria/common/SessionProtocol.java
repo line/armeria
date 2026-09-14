@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,14 +27,13 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.client.ExecutionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
  */
-public enum SessionProtocol implements ExecutionProtocol {
+public enum SessionProtocol {
     /**
      * HTTP - over TLS, HTTP/2 preferred.
      */
@@ -190,16 +188,8 @@ public enum SessionProtocol implements ExecutionProtocol {
     /**
      * Returns the textual representation of this format for use in a {@link Scheme}.
      */
-    @Override
     public String uriText() {
         return uriText;
-    }
-
-    @Override
-    public URI validateUri(URI uri) {
-        checkArgument(uri.getAuthority() != null,
-                      "URI must have an authority for %s (uri: %s)", this, uri);
-        return uri;
     }
 
     /**

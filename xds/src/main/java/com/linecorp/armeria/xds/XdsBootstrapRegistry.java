@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.internal;
+package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -37,13 +37,15 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.ShutdownHooks;
-import com.linecorp.armeria.xds.DefaultXdsBootstrapProvider;
-import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.XdsBootstrapProvider;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 import com.linecorp.armeria.xds.client.endpoint.XdsRpcPreprocessor;
 
+/**
+ * A registry of {@link XdsBootstrap}s discovered via {@link XdsBootstrapProvider} SPI.
+ */
+@UnstableApi
 public final class XdsBootstrapRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(XdsBootstrapRegistry.class);
@@ -52,10 +54,6 @@ public final class XdsBootstrapRegistry {
 
     private static final String DEFAULT_NAME =
             System.getProperty(DEFAULT_BOOTSTRAP_PROPERTY, DefaultXdsBootstrapProvider.DEFAULT_NAME);
-
-    public static String defaultName() {
-        return DEFAULT_NAME;
-    }
 
     private static final ConcurrentHashMap<String, Supplier<XdsBootstrap>> registry;
 
@@ -81,18 +79,40 @@ public final class XdsBootstrapRegistry {
         spiNames = ImmutableSet.copyOf(loaded.keySet());
     }
 
+    /**
+     * Returns the default bootstrap name.
+     */
+    public static String defaultName() {
+        return DEFAULT_NAME;
+    }
+
+    /**
+     * Returns the {@link XdsBootstrap} registered with the specified name, or {@code null} if not found.
+     */
     @Nullable
-    public static XdsBootstrap find(String name) {
+    public static XdsBootstrap bootstrap(String name) {
         final Supplier<XdsBootstrap> supplier = registry.get(requireNonNull(name, "name"));
         return supplier != null ? supplier.get() : null;
     }
 
-    public static CachedPreprocessors preprocessors(String bootstrapName, String listenerName) {
+    /**
+     * Returns an {@link HttpPreprocessor} for the specified bootstrap and listener name.
+     */
+    public static HttpPreprocessor httpPreprocessor(String bootstrapName, String listenerName) {
+        return preprocessors(bootstrapName, listenerName).http;
+    }
+
+    /**
+     * Returns an {@link RpcPreprocessor} for the specified bootstrap and listener name.
+     */
+    public static RpcPreprocessor rpcPreprocessor(String bootstrapName, String listenerName) {
+        return preprocessors(bootstrapName, listenerName).rpc;
+    }
+
+    static CachedPreprocessors preprocessors(String bootstrapName, String listenerName) {
         requireNonNull(bootstrapName, "bootstrapName");
         requireNonNull(listenerName, "listenerName");
-        // Resolve the bootstrap before computeIfAbsent to avoid re-entry issues
-        // if newBootstrap() transitively calls preprocessors().
-        final XdsBootstrap bootstrap = find(bootstrapName);
+        final XdsBootstrap bootstrap = bootstrap(bootstrapName);
         requireNonNull(bootstrap,
                        "No XdsBootstrap registered with name '" + bootstrapName + "'. " +
                        "Provide an XdsBootstrapProvider via SPI before creating xDS clients.");
@@ -103,12 +123,8 @@ public final class XdsBootstrapRegistry {
                         XdsRpcPreprocessor.ofListener(listenerName, bootstrap)));
     }
 
-    /**
-     * Registers a bootstrap for testing. This method is not intended for production use;
-     * use {@link XdsBootstrapProvider} SPI instead.
-     */
     @VisibleForTesting
-    public static synchronized void register(String name, XdsBootstrap bootstrap) {
+    static synchronized void register(String name, XdsBootstrap bootstrap) {
         requireNonNull(name, "name");
         requireNonNull(bootstrap, "bootstrap");
         final Supplier<XdsBootstrap> existing = registry.putIfAbsent(name, () -> bootstrap);
@@ -116,38 +132,25 @@ public final class XdsBootstrapRegistry {
                    "An XdsBootstrap is already registered with name '%s'", name);
     }
 
-    /**
-     * Deregisters a bootstrap and its cached preprocessors for testing.
-     * SPI-loaded bootstraps cannot be deregistered.
-     */
     @VisibleForTesting
     @Nullable
-    public static synchronized XdsBootstrap deregister(String name) {
+    static synchronized XdsBootstrap deregister(String name) {
         requireNonNull(name, "name");
         checkArgument(!spiNames.contains(name),
                       "Cannot deregister SPI-loaded bootstrap '%s'", name);
         final Supplier<XdsBootstrap> supplier = registry.remove(name);
-        // Remove all cached preprocessors associated with this bootstrap name.
         final String prefix = name + '\0';
         preprocessorCache.keySet().removeIf(s -> s.startsWith(prefix));
         return supplier != null ? supplier.get() : null;
     }
 
-    public static final class CachedPreprocessors {
-        private final HttpPreprocessor http;
-        private final RpcPreprocessor rpc;
+    static final class CachedPreprocessors {
+        final HttpPreprocessor http;
+        final RpcPreprocessor rpc;
 
         CachedPreprocessors(HttpPreprocessor http, RpcPreprocessor rpc) {
             this.http = http;
             this.rpc = rpc;
-        }
-
-        public HttpPreprocessor http() {
-            return http;
-        }
-
-        public RpcPreprocessor rpc() {
-            return rpc;
         }
     }
 

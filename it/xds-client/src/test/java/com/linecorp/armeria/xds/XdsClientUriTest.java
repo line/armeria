@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.it;
+package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,8 +36,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.internal.XdsBootstrapRegistry;
+import com.linecorp.armeria.xds.it.XdsResourceReader;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.grpc.health.v1.HealthCheckRequest;

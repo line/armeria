@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -24,17 +23,15 @@ import java.util.Map;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ExecutionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A pair of {@link SerializationFormat} and {@link ExecutionProtocol}.
+ * A pair of {@link SerializationFormat} and {@link SessionProtocol}.
  * <p>
  * A {@link Scheme} is represented and used as the scheme of a URI in the following format:
  * </p>
  * <pre>{@code
- * SerializationFormat.uriText() + '+' + ExecutionProtocol.uriText()
+ * SerializationFormat.uriText() + '+' + SessionProtocol.uriText()
  * }</pre>
  * <p>
  * For example:
@@ -43,7 +40,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <li>{@code "tbinary+https"}</li>
  * <li>{@code "tcompact+h2c"}</li>
  * <li>{@code "none+http"}</li>
- * <li>{@code "gproto+xds"}</li>
  * </ul>
  */
 public final class Scheme implements Comparable<Scheme> {
@@ -54,7 +50,7 @@ public final class Scheme implements Comparable<Scheme> {
         // Pre-populate all possible scheme combos.
         final ImmutableMap.Builder<String, Scheme> schemes = ImmutableMap.builder();
         for (SerializationFormat f : SerializationFormat.values()) {
-            for (ExecutionProtocol p : ExecutionProtocol.values()) {
+            for (SessionProtocol p : SessionProtocol.values()) {
                 final String ftxt = f.uriText();
                 final String ptxt = p.uriText();
 
@@ -113,36 +109,26 @@ public final class Scheme implements Comparable<Scheme> {
     }
 
     /**
-     * Returns the {@link Scheme} of the specified {@link SerializationFormat} and {@link ExecutionProtocol}.
-     * This method returns the same {@link Scheme} instance for the same combination of
-     * {@link SerializationFormat} and {@link ExecutionProtocol}.
-     */
-    @UnstableApi
-    public static Scheme of(SerializationFormat serializationFormat, ExecutionProtocol executionProtocol) {
-        final Scheme scheme = SCHEMES.get(
-                requireNonNull(serializationFormat, "serializationFormat").uriText() + '+' +
-                requireNonNull(executionProtocol, "executionProtocol").uriText());
-        checkArgument(scheme != null, "unregistered executionProtocol: %s", executionProtocol);
-        return scheme;
-    }
-
-    /**
      * Returns the {@link Scheme} of the specified {@link SerializationFormat} and {@link SessionProtocol}.
      * This method returns the same {@link Scheme} instance for the same combination of
      * {@link SerializationFormat} and {@link SessionProtocol}.
      */
     public static Scheme of(SerializationFormat serializationFormat, SessionProtocol sessionProtocol) {
-        return of(serializationFormat, (ExecutionProtocol) sessionProtocol);
+        final Scheme scheme = SCHEMES.get(
+                requireNonNull(serializationFormat, "serializationFormat").uriText() + '+' +
+                requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+        assert scheme != null;
+        return scheme;
     }
 
     private final SerializationFormat serializationFormat;
-    private final ExecutionProtocol executionProtocol;
+    private final SessionProtocol sessionProtocol;
     private final String uriText;
 
-    private Scheme(SerializationFormat serializationFormat, ExecutionProtocol executionProtocol) {
+    private Scheme(SerializationFormat serializationFormat, SessionProtocol sessionProtocol) {
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-        this.executionProtocol = requireNonNull(executionProtocol, "executionProtocol");
-        uriText = serializationFormat().uriText() + '+' + executionProtocol().uriText();
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
+        uriText = serializationFormat().uriText() + '+' + sessionProtocol().uriText();
     }
 
     /**
@@ -153,40 +139,27 @@ public final class Scheme implements Comparable<Scheme> {
     }
 
     /**
-     * Returns the {@link ExecutionProtocol}.
-     */
-    @UnstableApi
-    public ExecutionProtocol executionProtocol() {
-        return executionProtocol;
-    }
-
-    /**
      * Returns the {@link SessionProtocol}.
-     * If the {@link ExecutionProtocol} is not a {@link SessionProtocol},
-     * {@link ExecutionProtocol#defaultSessionProtocol()} is returned as a fallback.
      */
     public SessionProtocol sessionProtocol() {
-        if (executionProtocol instanceof SessionProtocol) {
-            return (SessionProtocol) executionProtocol;
-        }
-        return executionProtocol.defaultSessionProtocol();
+        return sessionProtocol;
     }
 
     /**
-     * Returns the textual representation ({@code "serializationFormat+executionProtocol"}).
+     * Returns the textual representation ({@code "serializationFormat+sessionProtocol"}).
      */
     public String uriText() {
         return uriText;
     }
 
     /**
-     * Returns the textual representation ({@code "serializationFormat+executionProtocol"}).
+     * Returns the textual representation ({@code "serializationFormat+sessionProtocol"}).
      * If the {@link #serializationFormat()} is {@link SerializationFormat#NONE}, the serializationFormat
      * is omitted.
      */
     public String shortUriText() {
         if (serializationFormat() == SerializationFormat.NONE) {
-            return executionProtocol().uriText();
+            return sessionProtocol().uriText();
         } else {
             return uriText;
         }
