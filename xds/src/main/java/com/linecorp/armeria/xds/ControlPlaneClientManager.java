@@ -139,7 +139,7 @@ final class ControlPlaneClientManager implements SafeCloseable {
         }
         final Node.Builder builder = node.toBuilder()
                                          .setUserAgentName("armeria");
-        final String version = Version.get("armeria-core").artifactVersion();
+        final String version = Version.get("armeria").artifactVersion();
         if (!"unknown".equals(version)) {
             builder.setUserAgentVersion(version);
         }
