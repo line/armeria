@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package jp.co.lycorp.ftd.athenz.v1;
 
+option java_multiple_files = true;
+
 import "validate/validate.proto";
 import "envoy/type/matcher/v3/string.proto";
 import "armeria/xds/supported.proto";

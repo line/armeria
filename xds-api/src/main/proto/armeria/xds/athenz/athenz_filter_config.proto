@@ -3,6 +3,7 @@ syntax = "proto3";
 package armeria.xds.athenz;
 
 option java_package = "com.linecorp.armeria.xds.athenz";
+option java_multiple_files = true;
 
 import "validate/validate.proto";
 import "armeria/xds/supported.proto";
