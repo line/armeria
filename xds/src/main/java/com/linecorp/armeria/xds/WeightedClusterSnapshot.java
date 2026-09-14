@@ -24,7 +24,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.loadbalancer.Weighted;
@@ -44,7 +43,6 @@ public final class WeightedClusterSnapshot implements RouteCluster, Weighted {
     private final Metadata metadataMatch;
     private final RequestHeadersMutator requestHeadersMutator;
     private final HttpClient httpClient;
-    private final RpcClient rpcClient;
 
     WeightedClusterSnapshot(ClusterSnapshot clusterSnapshot, int weight, Metadata metadataMatch,
                             ClusterWeight clusterWeight, RequestHeadersMutationChain baseMutationChain,
@@ -59,7 +57,6 @@ public final class WeightedClusterSnapshot implements RouteCluster, Weighted {
                 clusterWeight.getRequestHeadersToRemoveList());
         requestHeadersMutator = baseMutationChain.append(wcMutation);
         httpClient = FilterUtil.buildHttpClient(retryDecoration, downstreamDecoration, upstreamDecoration);
-        rpcClient = FilterUtil.buildRpcClient(retryDecoration, downstreamDecoration, upstreamDecoration);
     }
 
     /**
@@ -89,11 +86,6 @@ public final class WeightedClusterSnapshot implements RouteCluster, Weighted {
     @Override
     public HttpClient httpClient() {
         return httpClient;
-    }
-
-    @Override
-    public RpcClient rpcClient() {
-        return rpcClient;
     }
 
     @Override
