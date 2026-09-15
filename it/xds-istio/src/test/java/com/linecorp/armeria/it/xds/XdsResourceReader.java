@@ -16,6 +16,12 @@
 
 package com.linecorp.armeria.it.xds;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -78,6 +84,21 @@ final class XdsResourceReader {
                            .jsonString();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static final Path BOOTSTRAP_PATH = Path.of("/etc/istio/proxy/envoy-rev.json");
+
+    /**
+     * Waits for the Istio bootstrap file to exist, reads it, and rewrites the
+     * {@code xds-grpc} cluster to connect directly to Istiod.
+     */
+    static String readBootstrap() {
+        await().untilAsserted(() -> assertThat(BOOTSTRAP_PATH).exists());
+        try {
+            return rewriteXdsGrpcBootstrap(Files.readString(BOOTSTRAP_PATH));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read " + BOOTSTRAP_PATH, e);
         }
     }
 
