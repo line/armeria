@@ -18,10 +18,14 @@ package com.linecorp.armeria.it.kotlin;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -29,11 +33,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.JarInputStream;
+import java.util.jar.JarOutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Makes sure a user does not have to upgrade Kotlin in order to upgrade Armeria.
@@ -133,34 +140,122 @@ class KotlinBaselineCompatibilityTest {
                 .containsExactly(expected);
     }
 
+    @Test
+    void retainsHighestKotlinMetadataVersionInAnyPosition(@TempDir Path tempDir) throws IOException {
+        assertHighestMetadataVersion(tempDir.resolve("first.jar"),
+                                     new int[] { 2, 3, 0 }, new int[] { 2, 2, 0 }, new int[] { 2, 1, 0 });
+        assertHighestMetadataVersion(tempDir.resolve("middle.jar"),
+                                     new int[] { 2, 2, 0 }, new int[] { 2, 3, 0 }, new int[] { 2, 1, 0 });
+        assertHighestMetadataVersion(tempDir.resolve("last.jar"),
+                                     new int[] { 2, 2, 0 }, new int[] { 2, 1, 0 }, new int[] { 2, 3, 0 });
+    }
+
+    @Test
+    void scansDuplicateKotlinModuleNames(@TempDir Path tempDir) throws IOException {
+        assertHighestDuplicateMetadataVersion(tempDir.resolve("first.jar"),
+                                              new int[] { 2, 3, 0 }, new int[] { 2, 2, 0 },
+                                              new int[] { 2, 1, 0 });
+        assertHighestDuplicateMetadataVersion(tempDir.resolve("middle.jar"),
+                                              new int[] { 2, 2, 0 }, new int[] { 2, 3, 0 },
+                                              new int[] { 2, 1, 0 });
+        assertHighestDuplicateMetadataVersion(tempDir.resolve("last.jar"),
+                                              new int[] { 2, 2, 0 }, new int[] { 2, 1, 0 },
+                                              new int[] { 2, 3, 0 });
+    }
+
     private static int[] metadataVersion(File jar) {
         if (!jar.isFile()) {
             return null;
         }
-        try (JarFile jarFile = new JarFile(jar)) {
-            final JarEntry entry = jarFile.stream()
-                                          .filter(e -> e.getName().startsWith("META-INF/") &&
-                                                       e.getName().endsWith(".kotlin_module"))
-                                          .findFirst()
-                                          .orElse(null);
-            if (entry == null) {
-                return null;
-            }
-            // A .kotlin_module starts with the metadata version: the number of components followed by
-            // the components themselves, all as big-endian ints.
-            try (InputStream in = jarFile.getInputStream(entry);
-                 DataInputStream data = new DataInputStream(in)) {
-                final int length = data.readInt();
-                assertThat(length).as("metadata version length of %s", jar.getName()).isBetween(2, 8);
-                final int[] version = new int[length];
-                for (int i = 0; i < length; i++) {
-                    version[i] = data.readInt();
+        try (InputStream in = Files.newInputStream(jar.toPath());
+             JarInputStream jarInput = new JarInputStream(in);
+             DataInputStream data = new DataInputStream(jarInput)) {
+            int[] highest = null;
+            JarEntry entry;
+            while ((entry = jarInput.getNextJarEntry()) != null) {
+                if (entry.getName().startsWith("META-INF/") &&
+                    entry.getName().endsWith(".kotlin_module")) {
+                    final int[] version = readMetadataVersion(data, entry, jar);
+                    if (highest == null || compareVersion(version, highest) > 0) {
+                        highest = version;
+                    }
                 }
-                return version;
+                jarInput.closeEntry();
             }
+            return highest;
         } catch (IOException e) {
             throw new UncheckedIOException("failed to read " + jar, e);
         }
+    }
+
+    private static void assertHighestMetadataVersion(Path jar, int[]... versions) throws IOException {
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
+            for (int i = 0; i < versions.length; i++) {
+                writeMetadataVersion(out, "module" + i, versions[i]);
+            }
+        }
+        assertThat(metadataVersion(jar.toFile())).containsExactly(2, 3, 0);
+    }
+
+    private static void assertHighestDuplicateMetadataVersion(Path jar, int[]... versions)
+            throws IOException {
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
+            for (int i = 0; i < versions.length; i++) {
+                writeMetadataVersion(out, "module" + i, versions[i]);
+            }
+        }
+
+        // JarOutputStream rejects duplicate names, so patch equal-length names in both ZIP records.
+        final byte[] content = Files.readAllBytes(jar);
+        String zip = new String(content, StandardCharsets.ISO_8859_1);
+        for (int i = 1; i < versions.length; i++) {
+            zip = zip.replace("module" + i, "module0");
+        }
+        Files.write(jar, zip.getBytes(StandardCharsets.ISO_8859_1));
+
+        final String[] expectedNames = new String[versions.length];
+        Arrays.fill(expectedNames, "META-INF/module0.kotlin_module");
+        try (JarFile jarFile = new JarFile(jar.toFile())) {
+            assertThat(jarFile.stream()
+                              .map(JarEntry::getName)
+                              .filter(name -> name.endsWith(".kotlin_module")))
+                    .containsExactly(expectedNames);
+        }
+        assertThat(metadataVersion(jar.toFile())).containsExactly(2, 3, 0);
+    }
+
+    private static void writeMetadataVersion(JarOutputStream out, String name, int... version)
+            throws IOException {
+        out.putNextEntry(new JarEntry("META-INF/" + name + ".kotlin_module"));
+        final DataOutputStream data = new DataOutputStream(out);
+        data.writeInt(version.length);
+        for (int component : version) {
+            data.writeInt(component);
+        }
+        out.closeEntry();
+    }
+
+    private static int[] readMetadataVersion(DataInputStream data, JarEntry entry, File jar)
+            throws IOException {
+        // A .kotlin_module starts with the metadata version: the number of components followed by
+        // the components themselves, all as big-endian ints.
+        final int length = data.readInt();
+        assertThat(length).as("metadata version length of %s in %s", entry.getName(), jar.getName())
+                          .isBetween(2, 8);
+        final int[] version = new int[length];
+        for (int i = 0; i < length; i++) {
+            version[i] = data.readInt();
+        }
+        return version;
+    }
+
+    private static int compareVersion(int[] a, int[] b) {
+        for (int i = 0; i < Math.min(a.length, b.length); i++) {
+            if (a[i] != b[i]) {
+                return Integer.compare(a[i], b[i]);
+            }
+        }
+        return Integer.compare(a.length, b.length);
     }
 
     private static int compareMinor(int[] a, int[] b) {
