@@ -91,6 +91,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
+    private final double maxConnectionAgeJitterRate;
     private final long connectionDrainDurationMicros;
     private final int maxNumRequestsPerConnection;
 
@@ -145,7 +146,7 @@ final class DefaultServerConfig implements ServerConfig {
             VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, boolean keepAliveOnPing, long pingIntervalMillis,
-            long maxConnectionAgeMillis,
+            long maxConnectionAgeMillis, double maxConnectionAgeJitterRate,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             float http2StreamWindowUpdateRatio, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
@@ -186,6 +187,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.maxNumRequestsPerConnection =
                 validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
         this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+        this.maxConnectionAgeJitterRate = maxConnectionAgeJitterRate;
         this.connectionDrainDurationMicros = validateNonNegative(connectionDrainDurationMicros,
                                                                  "connectionDrainDurationMicros");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
@@ -566,6 +568,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long maxConnectionAgeMillis() {
         return maxConnectionAgeMillis;
+    }
+
+    @Override
+    public double maxConnectionAgeJitterRate() {
+        return maxConnectionAgeJitterRate;
     }
 
     @Override
