@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
 
 import io.netty.channel.EventLoop;
 
@@ -194,6 +195,11 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpsValues()}.
      */
     static WebClientBuilder builder(URI uri) {
+        requireNonNull(uri, "uri");
+        final SchemePreprocessorRegistry.Match match = SchemePreprocessorRegistry.find(uri.getScheme());
+        if (match != null) {
+            return new WebClientBuilder(match.provider().preprocessor(uri), null);
+        }
         return new WebClientBuilder(uri);
     }
 

@@ -10,6 +10,7 @@ dependencies {
     }
 
     testImplementation project(':athenz')
+    testImplementation project(':grpc')
     testImplementation project(':thrift0.18')
     testImplementation project(':xds-athenz')
     testImplementation project(':xds-kubernetes')

@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
 
 /**
  * A client designed for calling <a href="https://restfulapi.net/">RESTful APIs</a> conveniently.
@@ -193,6 +194,11 @@ public interface RestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpsValues()}.
      */
     static RestClientBuilder builder(URI uri) {
+        requireNonNull(uri, "uri");
+        final SchemePreprocessorRegistry.Match match = SchemePreprocessorRegistry.find(uri.getScheme());
+        if (match != null) {
+            return new RestClientBuilder(match.provider().preprocessor(uri), null);
+        }
         return new RestClientBuilder(uri);
     }
 
