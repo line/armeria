@@ -21,20 +21,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.net.SocketAddress;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
+import com.linecorp.armeria.client.proxy.ProxyConfig;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -43,6 +52,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
@@ -62,6 +74,81 @@ class HttpClientFactoryTest {
             });
         }
     };
+
+    @ParameterizedTest
+    @MethodSource("fatalErrors")
+    void fatalErrorDuringChannelAcquisitionDoesNotLeaveRequestPending(Error fatalError) {
+        try (ClientFactory clientFactory = newFailingClientFactory(throwingOnToString(fatalError))) {
+            final CompletableFuture<AggregatedHttpResponse> response =
+                    WebClient.builder(server.httpUri())
+                             .factory(clientFactory)
+                             .build()
+                             .get("/")
+                             .aggregate();
+
+            await().until(response::isDone);
+            assertThat(response).isCompletedExceptionally();
+        }
+    }
+
+    private static Stream<Error> fatalErrors() {
+        return Stream.of(new StackOverflowError(), new NoClassDefFoundError());
+    }
+
+    @Test
+    void unwrappableFatalErrorCompletesChannelAcquisition() {
+        final Error fatalError = new StackOverflowError() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public String toString() {
+                throw this;
+            }
+        };
+        try (ClientFactory clientFactory = newFailingClientFactory(throwingOnToString(fatalError))) {
+            final HttpClientFactory factory = (HttpClientFactory) clientFactory.unwrap();
+            final EventLoop eventLoop = clientFactory.eventLoopGroup().next();
+            final HttpChannelPool pool = factory.pool(eventLoop);
+            final CompletableFuture<CompletableFuture<PooledChannel>> acquisitionFutureFuture =
+                    new CompletableFuture<>();
+            eventLoop.execute(() -> acquisitionFutureFuture.complete(
+                    pool.acquireLater(SessionProtocol.H1C, SerializationFormat.NONE,
+                                      new HttpChannelPool.PoolKey(server.httpEndpoint(), ProxyConfig.direct(),
+                                                                  null, null),
+                                      ClientConnectionTimings.builder())));
+            final CompletableFuture<PooledChannel> acquisitionFuture = acquisitionFutureFuture.join();
+
+            await().until(acquisitionFuture::isDone);
+            assertThat(acquisitionFuture).isCompletedExceptionally();
+        }
+    }
+
+    private static Throwable throwingOnToString(Error error) {
+        return new Throwable() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public String toString() {
+                throw error;
+            }
+        };
+    }
+
+    private static ClientFactory newFailingClientFactory(Throwable connectFailure) {
+        return ClientFactory.builder()
+                            .option(ClientFactoryOptions.CHANNEL_PIPELINE_CUSTOMIZER, pipeline -> {
+                                pipeline.addLast(new ChannelOutboundHandlerAdapter() {
+                                    @Override
+                                    public void connect(ChannelHandlerContext ctx,
+                                                        SocketAddress remoteAddress,
+                                                        SocketAddress localAddress,
+                                                        ChannelPromise promise) {
+                                        ctx.executor().execute(() -> promise.setFailure(connectFailure));
+                                    }
+                                });
+                            })
+                            .build();
+    }
 
     @Test
     void numConnections() {
