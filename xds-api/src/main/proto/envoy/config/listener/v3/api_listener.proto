@@ -31,6 +31,9 @@ message ApiListener {
   // it would have caused circular dependencies for go protos: lds.proto depends on this file,
   // and http_connection_manager.proto depends on rds.proto, which is in the same directory as
   // lds.proto, so lds.proto cannot depend on this file.]
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   google.protobuf.Any api_listener = 1;
 }

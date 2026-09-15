@@ -32,11 +32,17 @@ message RouteConfiguration {
   // :ref:`route_config_name
   // <envoy_v3_api_field_extensions.filters.network.http_connection_manager.v3.Rds.route_config_name>` in
   // :ref:`envoy_v3_api_msg_extensions.filters.network.http_connection_manager.v3.Rds`.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string name = 1;
 
   // An array of virtual hosts that make up the route table.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   repeated VirtualHost virtual_hosts = 2;
 
   // An array of virtual hosts will be dynamically loaded via the VHDS API.
@@ -76,13 +82,19 @@ message RouteConfiguration {
   // :ref:`envoy_v3_api_msg_config.route.v3.RouteAction`. For more information, including details on
   // header value syntax, see the documentation on :ref:`custom request headers
   // <config_http_conn_man_headers_custom_request_headers>`.
-  option (armeria.xds.supported.field) = 6;
+  option (armeria.xds.supported.field) = {
+      number: 6,
+      since: "1.42.0"
+  };
   repeated core.v3.HeaderValueOption request_headers_to_add = 6
       [(validate.rules).repeated = {max_items: 1000}];
 
   // Specifies a list of HTTP headers that should be removed from each request
   // routed by the HTTP connection manager.
-  option (armeria.xds.supported.field) = 8;
+  option (armeria.xds.supported.field) = {
+      number: 8,
+      since: "1.42.0"
+  };
   repeated string request_headers_to_remove = 8 [
     (validate.rules).repeated = {items {string {well_known_regex: HTTP_HEADER_NAME strict: false}}}
   ];
@@ -93,7 +105,10 @@ message RouteConfiguration {
   // This order can be reversed by setting this field to true. In other words, most specific level mutation
   // is evaluated last.
   //
-  option (armeria.xds.supported.field) = 10;
+  option (armeria.xds.supported.field) = {
+      number: 10,
+      since: "1.42.0"
+  };
   bool most_specific_header_mutations_wins = 10;
 
   // An optional boolean that specifies whether the clusters that the route
@@ -139,7 +154,10 @@ message RouteConfiguration {
   // .. note::
   //     This option will not strip the port number (if any) contained in route config
   //     :ref:`envoy_v3_api_msg_config.route.v3.VirtualHost`.domains field.
-  option (armeria.xds.supported.field) = 14;
+  option (armeria.xds.supported.field) = {
+      number: 14,
+      since: "1.39.0"
+  };
   bool ignore_port_in_host_matching = 14;
 
   // Normally, virtual host matching is done using the :authority (or

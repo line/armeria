@@ -71,10 +71,16 @@ message HttpProtocolOptions {
     oneof protocol_config {
       option (validate.required) = true;
 
-      option (armeria.xds.supported.oneof_field) = 1;
+      option (armeria.xds.supported.oneof_field) = {
+          number: 1,
+          since: "1.41.0"
+      };
       config.core.v3.Http1ProtocolOptions http_protocol_options = 1;
 
-      option (armeria.xds.supported.oneof_field) = 2;
+      option (armeria.xds.supported.oneof_field) = {
+          number: 2,
+          since: "1.41.0"
+      };
       config.core.v3.Http2ProtocolOptions http2_protocol_options = 2;
 
       // .. warning::
@@ -153,7 +159,10 @@ message HttpProtocolOptions {
     option (validate.required) = true;
 
     // To explicitly configure either HTTP/1 or HTTP/2 (but not both!) use ``explicit_http_config``.
-    option (armeria.xds.supported.oneof_field) = 3;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 3,
+        since: "1.41.0"
+    };
     ExplicitHttpConfig explicit_http_config = 3;
 
     // This allows switching on protocol based on what protocol the downstream
@@ -161,7 +170,10 @@ message HttpProtocolOptions {
     UseDownstreamHttpConfig use_downstream_protocol_config = 4;
 
     // This allows switching on protocol based on ALPN
-    option (armeria.xds.supported.oneof_field) = 5;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 5,
+        since: "1.41.0"
+    };
     AutoHttpConfig auto_config = 5;
   }
 
