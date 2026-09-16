@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsBootstrapRegistry;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
@@ -46,7 +47,23 @@ public final class XdsHttpPreprocessor extends XdsPreprocessor<HttpRequest, Http
         implements HttpPreprocessor {
 
     /**
-     * Creates a {@link XdsHttpPreprocessor}.
+     * Returns an {@link HttpPreprocessor} for the specified listener name using the default
+     * {@link XdsBootstrap} registered via {@link XdsBootstrapRegistry}.
+     */
+    public static HttpPreprocessor ofListener(String listenerName) {
+        return XdsBootstrapRegistry.httpPreprocessor(XdsBootstrapRegistry.defaultName(), listenerName);
+    }
+
+    /**
+     * Returns an {@link HttpPreprocessor} for the specified bootstrap and listener name
+     * from the {@link XdsBootstrapRegistry}.
+     */
+    public static HttpPreprocessor ofListener(String bootstrapName, String listenerName) {
+        return XdsBootstrapRegistry.httpPreprocessor(bootstrapName, listenerName);
+    }
+
+    /**
+     * Creates a {@link XdsHttpPreprocessor} with an explicit {@link XdsBootstrap}.
      */
     public static XdsHttpPreprocessor ofListener(String listenerName, XdsBootstrap xdsBootstrap) {
         requireNonNull(listenerName, "listenerName");
