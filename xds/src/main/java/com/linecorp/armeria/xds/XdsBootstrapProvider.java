@@ -31,7 +31,7 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
  * <pre>{@code
  * public class MyProvider implements XdsBootstrapProvider {
  *     @Override
- *     public String name() { return "default"; }
+ *     public String name() { return "my-provider"; }
  *
  *     @Override
  *     public String resource() { return "xds-bootstrap.yaml"; }
