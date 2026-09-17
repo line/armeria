@@ -131,7 +131,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final int maxResponseMessageLength;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
-    private final boolean useClientTimeoutHeader;
+    private final GrpcClientTimeoutHandler clientTimeoutHandler;
     private final boolean useMethodMarshaller;
     private final String advertisedEncodingsHeader;
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
@@ -152,7 +152,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       int maxRequestMessageLength, int maxResponseMessageLength,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
-                      boolean useClientTimeoutHeader,
+                      GrpcClientTimeoutHandler clientTimeoutHandler,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
                       boolean autoCompression, boolean useMethodMarshaller,
@@ -166,7 +166,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
-        this.useClientTimeoutHeader = useClientTimeoutHeader;
+        this.clientTimeoutHandler = requireNonNull(clientTimeoutHandler, "clientTimeoutHandler");
         jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxRequestMessageLength = maxRequestMessageLength;
@@ -229,16 +229,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                             new Metadata()));
         }
 
-        if (useClientTimeoutHeader) {
+        if (clientTimeoutHandler != GrpcClientTimeoutHandlers.DISABLED) {
             final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
             if (timeoutHeader != null) {
+                final long timeoutNanos;
                 try {
-                    final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
-                    if (timeout == 0) {
-                        ctx.clearRequestTimeout();
-                    } else {
-                        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(timeout));
-                    }
+                    timeoutNanos = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
                     final InternalGrpcExceptionHandler exceptionHandler = registry.getExceptionHandler(method);
@@ -255,6 +251,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                             });
                     return HttpResponse.of(future);
                 }
+                applyClientTimeout(ctx, Duration.ofNanos(timeoutNanos));
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
                     // For unframed gRPC, we use the default timeout.
@@ -262,7 +259,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
                     // an infinite timeout.
                     // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
-                    ctx.clearRequestTimeout();
+                    applyClientTimeout(ctx, Duration.ZERO);
                 }
             }
         }
@@ -282,6 +279,19 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       serializationFormat);
         }
         return res;
+    }
+
+    private void applyClientTimeout(ServiceRequestContext ctx, Duration clientTimeout) {
+        final Duration timeout = clientTimeoutHandler.apply(ctx, clientTimeout);
+        if (timeout == null) {
+            // Leave the request timeout configured for the server untouched.
+            return;
+        }
+        if (GrpcClientTimeoutHandlers.isInfinite(timeout)) {
+            ctx.clearRequestTimeout();
+        } else {
+            ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, timeout);
+        }
     }
 
     private <I, O> void startCall(
