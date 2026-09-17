@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring.xds;
 
 import java.util.List;
 
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -29,6 +30,7 @@ import org.springframework.core.env.Environment;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsBootstrapRegistry;
 import com.linecorp.armeria.xds.XdsExtensionFactory;
 import com.linecorp.armeria.xds.XdsResourceReader;
 
@@ -112,6 +114,12 @@ public class SpringXdsAutoConfiguration {
      */
     static final String BOOTSTRAP_PROPERTY = "armeria.xds.bootstrap";
 
+    /**
+     * The property key for the xDS bootstrap registry name.
+     */
+    private static final String BOOTSTRAP_NAME_PROPERTY = "armeria.xds.bootstrap-name";
+    private static final String DEFAULT_BOOTSTRAP_NAME = "spring";
+
     @Bean
     @ConditionalOnMissingBean
     SpringConfigSourceFactory springConfigSourceFactory(Environment environment) {
@@ -123,9 +131,18 @@ public class SpringXdsAutoConfiguration {
     XdsBootstrap xdsBootstrap(Environment environment, List<XdsExtensionFactory> extensionFactories) {
         final String bootstrapYaml = environment.getRequiredProperty(BOOTSTRAP_PROPERTY);
         final Bootstrap bootstrap = XdsResourceReader.from(bootstrapYaml, Bootstrap.class);
-        return XdsBootstrap.builder(bootstrap)
-                           .extensionFactories(extensionFactories)
-                           .build();
+        final XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                      .extensionFactories(extensionFactories)
+                                                      .build();
+        final String name = environment.getProperty(BOOTSTRAP_NAME_PROPERTY, DEFAULT_BOOTSTRAP_NAME);
+        XdsBootstrapRegistry.register(name, xdsBootstrap);
+        return xdsBootstrap;
+    }
+
+    @Bean
+    DisposableBean xdsBootstrapDeregistration(Environment environment) {
+        final String name = environment.getProperty(BOOTSTRAP_NAME_PROPERTY, DEFAULT_BOOTSTRAP_NAME);
+        return () -> XdsBootstrapRegistry.deregister(name);
     }
 
     @Bean

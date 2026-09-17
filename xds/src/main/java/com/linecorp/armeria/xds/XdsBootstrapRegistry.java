@@ -29,7 +29,6 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -113,9 +112,7 @@ public final class XdsBootstrapRegistry {
         requireNonNull(bootstrapName, "bootstrapName");
         requireNonNull(listenerName, "listenerName");
         final XdsBootstrap bootstrap = bootstrap(bootstrapName);
-        requireNonNull(bootstrap,
-                       "No XdsBootstrap registered with name '" + bootstrapName + "'. " +
-                       "Provide an XdsBootstrapProvider via SPI before creating xDS clients.");
+        requireNonNull(bootstrap, "No XdsBootstrap registered with name '" + bootstrapName + "'.");
         final String cacheKey = bootstrapName + '\0' + listenerName;
         return preprocessorCache.computeIfAbsent(cacheKey, k ->
                 new CachedPreprocessors(
@@ -123,8 +120,13 @@ public final class XdsBootstrapRegistry {
                         XdsRpcPreprocessor.ofListener(listenerName, bootstrap)));
     }
 
-    @VisibleForTesting
-    static synchronized void register(String name, XdsBootstrap bootstrap) {
+    /**
+     * Registers an {@link XdsBootstrap} with the specified name. The bootstrap can then be
+     * looked up via {@link #bootstrap(String)} or used with {@code xds://} URIs.
+     *
+     * @throws IllegalStateException if a bootstrap is already registered with the given name
+     */
+    public static synchronized void register(String name, XdsBootstrap bootstrap) {
         requireNonNull(name, "name");
         requireNonNull(bootstrap, "bootstrap");
         final Supplier<XdsBootstrap> existing = registry.putIfAbsent(name, () -> bootstrap);
@@ -132,9 +134,14 @@ public final class XdsBootstrapRegistry {
                    "An XdsBootstrap is already registered with name '%s'", name);
     }
 
-    @VisibleForTesting
+    /**
+     * Deregisters the {@link XdsBootstrap} with the specified name and returns it,
+     * or {@code null} if no bootstrap was registered with the given name.
+     *
+     * @throws IllegalArgumentException if the name belongs to an SPI-loaded bootstrap
+     */
     @Nullable
-    static synchronized XdsBootstrap deregister(String name) {
+    public static synchronized XdsBootstrap deregister(String name) {
         requireNonNull(name, "name");
         checkArgument(!spiNames.contains(name),
                       "Cannot deregister SPI-loaded bootstrap '%s'", name);
