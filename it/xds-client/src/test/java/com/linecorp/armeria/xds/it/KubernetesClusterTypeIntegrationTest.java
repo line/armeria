@@ -82,9 +82,28 @@ class KubernetesClusterTypeIntegrationTest {
 
     @Test
     void basicEndpointDiscovery() {
-        final Bootstrap bootstrap = bootstrapYaml(client.getMasterUrl().toString());
+        final Bootstrap bootstrap = bootstrapYaml(client.getMasterUrl().toString(),
+                                                  "armeria.cluster.kubernetes");
         final KubernetesClusterTypeFactory factory = KubernetesClusterTypeFactory.of(
                 client.getConfiguration(),
+                (clusterName, endpoints) -> backendCla(clusterName));
+
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .extensionFactories(factory)
+                                                     .build();
+             XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("listener1", xdsBootstrap)) {
+            final BlockingWebClient webClient = WebClient.of(preprocessor).blocking();
+            assertThat(webClient.get("/hello").contentUtf8()).isEqualTo("world");
+        }
+    }
+
+    @Test
+    void customFactoryName() {
+        final String customName = "custom.cluster.k8s";
+        final Bootstrap bootstrap = bootstrapYaml(client.getMasterUrl().toString(), customName);
+        final KubernetesClusterTypeFactory factory = KubernetesClusterTypeFactory.of(
+                customName, client.getConfiguration(),
                 (clusterName, endpoints) -> backendCla(clusterName));
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
@@ -183,7 +202,7 @@ class KubernetesClusterTypeIntegrationTest {
         return XdsResourceReader.fromYaml(yaml, ClusterLoadAssignment.class);
     }
 
-    private static Bootstrap bootstrapYaml(String apiServerUrl) {
+    private static Bootstrap bootstrapYaml(String apiServerUrl, String clusterTypeName) {
         //language=YAML
         final String yaml = """
                 static_resources:
@@ -211,14 +230,14 @@ class KubernetesClusterTypeIntegrationTest {
                   clusters:
                   - name: cluster1
                     cluster_type:
-                      name: armeria.cluster.kubernetes
+                      name: %s
                       typed_config:
                         "@type": type.googleapis.com/armeria.xds.kubernetes.KubernetesClusterConfig
                         service_name: test-service
                         namespace: test
                         mode: POD
                         api_server_url: "%s"
-                """.formatted(apiServerUrl);
+                """.formatted(clusterTypeName, apiServerUrl);
         return XdsResourceReader.fromYaml(yaml, Bootstrap.class);
     }
 }

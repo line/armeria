@@ -64,24 +64,24 @@ import io.fabric8.kubernetes.client.ConfigBuilder;
 @UnstableApi
 public final class KubernetesClusterTypeFactory implements ClusterTypeFactory {
 
-    private static final String NAME = "armeria.cluster.kubernetes";
+    private static final String DEFAULT_NAME = "armeria.cluster.kubernetes";
     private static final String TYPE_URL =
             "type.googleapis.com/armeria.xds.kubernetes.KubernetesClusterConfig";
     private static final List<String> TYPE_URLS = ImmutableList.of(TYPE_URL);
 
     /**
-     * Returns a new factory with the default Kubernetes client configuration and the default
+     * Returns a new factory with the default name, Kubernetes client configuration and the default
      * {@link KubernetesEndpointMapper}.
      */
     public static KubernetesClusterTypeFactory of() {
-        return of(new ConfigBuilder().build(), KubernetesEndpointMapper.of());
+        return of(DEFAULT_NAME, new ConfigBuilder().build(), KubernetesEndpointMapper.of());
     }
 
     /**
      * Returns a new factory with the specified {@link KubernetesEndpointMapper}.
      */
     public static KubernetesClusterTypeFactory of(KubernetesEndpointMapper mapper) {
-        return of(new ConfigBuilder().build(), requireNonNull(mapper, "mapper"));
+        return of(DEFAULT_NAME, new ConfigBuilder().build(), requireNonNull(mapper, "mapper"));
     }
 
     /**
@@ -91,7 +91,8 @@ public final class KubernetesClusterTypeFactory implements ClusterTypeFactory {
      * by the proto config fields ({@code api_server_url}, {@code credential}).
      */
     public static KubernetesClusterTypeFactory of(Config baseConfig) {
-        return of(requireNonNull(baseConfig, "baseConfig"), KubernetesEndpointMapper.of());
+        return of(DEFAULT_NAME, requireNonNull(baseConfig, "baseConfig"),
+                  KubernetesEndpointMapper.of());
     }
 
     /**
@@ -99,21 +100,38 @@ public final class KubernetesClusterTypeFactory implements ClusterTypeFactory {
      * {@link KubernetesEndpointMapper}.
      */
     public static KubernetesClusterTypeFactory of(Config baseConfig, KubernetesEndpointMapper mapper) {
-        return new KubernetesClusterTypeFactory(requireNonNull(baseConfig, "baseConfig"),
+        return of(DEFAULT_NAME, requireNonNull(baseConfig, "baseConfig"),
+                  requireNonNull(mapper, "mapper"));
+    }
+
+    /**
+     * Returns a new factory with the specified name, base {@link Config} and
+     * {@link KubernetesEndpointMapper}.
+     *
+     * <p>The name is used to match the {@code cluster_type.name} field in xDS cluster configuration.
+     * This allows multiple factories with different mappers to coexist in the same JVM.
+     */
+    public static KubernetesClusterTypeFactory of(String name, Config baseConfig,
+                                                  KubernetesEndpointMapper mapper) {
+        return new KubernetesClusterTypeFactory(requireNonNull(name, "name"),
+                                                requireNonNull(baseConfig, "baseConfig"),
                                                 requireNonNull(mapper, "mapper"));
     }
 
+    private final String name;
     private final Config baseConfig;
     private final KubernetesEndpointMapper mapper;
 
-    private KubernetesClusterTypeFactory(Config baseConfig, KubernetesEndpointMapper mapper) {
+    private KubernetesClusterTypeFactory(String name, Config baseConfig,
+                                         KubernetesEndpointMapper mapper) {
+        this.name = name;
         this.baseConfig = baseConfig;
         this.mapper = mapper;
     }
 
     @Override
     public String name() {
-        return NAME;
+        return name;
     }
 
     @Override
