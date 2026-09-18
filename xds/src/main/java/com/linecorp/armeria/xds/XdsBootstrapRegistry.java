@@ -29,6 +29,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -134,14 +135,9 @@ public final class XdsBootstrapRegistry {
                    "An XdsBootstrap is already registered with name '%s'", name);
     }
 
-    /**
-     * Deregisters the {@link XdsBootstrap} with the specified name and returns it,
-     * or {@code null} if no bootstrap was registered with the given name.
-     *
-     * @throws IllegalArgumentException if the name belongs to an SPI-loaded bootstrap
-     */
+    @VisibleForTesting
     @Nullable
-    public static synchronized XdsBootstrap deregister(String name) {
+    static synchronized XdsBootstrap deregister(String name) {
         requireNonNull(name, "name");
         checkArgument(!spiNames.contains(name),
                       "Cannot deregister SPI-loaded bootstrap '%s'", name);

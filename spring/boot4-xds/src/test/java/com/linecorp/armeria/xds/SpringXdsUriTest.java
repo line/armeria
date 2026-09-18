@@ -14,31 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.xds;
+package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.spring.xds.SpringXdsAutoConfiguration;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.xds.XdsBootstrap;
-import com.linecorp.armeria.xds.XdsBootstrapRegistry;
 
-@SpringBootTest(classes = SpringXdsUriTest.TestApp.class)
 class SpringXdsUriTest {
-
-    private static final String CUSTOM_BOOTSTRAP_NAME = "custom-spring";
 
     @RegisterExtension
     @Order(0)
@@ -49,11 +41,42 @@ class SpringXdsUriTest {
         }
     };
 
-    @DynamicPropertySource
-    static void xdsProperties(DynamicPropertyRegistry registry) {
-        registry.add("armeria.xds.listener.test-listener", () ->
-                //language=YAML
-                """
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner()
+                    .withConfiguration(AutoConfigurations.of(SpringXdsAutoConfiguration.class))
+                    .withPropertyValues(
+                            "armeria.xds.listener.test-listener=" + listenerYaml(),
+                            "armeria.xds.cluster.test-cluster=" + clusterYaml());
+
+    @Test
+    void defaultBootstrapName() {
+        contextRunner.run(context -> {
+            try {
+                final WebClient client = WebClient.of("xds://spring/test-listener");
+                assertThat(client.blocking().get("/hello").contentUtf8()).isEqualTo("world");
+            } finally {
+                XdsBootstrapRegistry.deregister("spring");
+            }
+        });
+    }
+
+    @Test
+    void customBootstrapName() {
+        contextRunner.withPropertyValues("armeria.xds.bootstrap-name=custom-spring")
+                     .run(context -> {
+                         try {
+                             final WebClient client =
+                                     WebClient.of("xds://custom-spring/test-listener");
+                             assertThat(client.blocking().get("/hello").contentUtf8())
+                                     .isEqualTo("world");
+                         } finally {
+                             XdsBootstrapRegistry.deregister("custom-spring");
+                         }
+                     });
+    }
+
+    private static String listenerYaml() {
+        return """
                 name: test-listener
                 api_listener:
                   api_listener:
@@ -74,10 +97,11 @@ class SpringXdsUriTest {
                       - name: envoy.filters.http.router
                         typed_config:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                """);
-        registry.add("armeria.xds.cluster.test-cluster", () ->
-                //language=YAML
-                """
+                """;
+    }
+
+    private String clusterYaml() {
+        return """
                 name: test-cluster
                 type: STATIC
                 load_assignment:
@@ -89,31 +113,6 @@ class SpringXdsUriTest {
                               socket_address:
                                 address: 127.0.0.1
                                 port_value: %d
-                """.formatted(server.httpPort()));
-    }
-
-    @SpringBootApplication
-    static class TestApp {
-    }
-
-    @Autowired
-    XdsBootstrap xdsBootstrap;
-
-    @AfterAll
-    static void tearDown() {
-        XdsBootstrapRegistry.deregister(CUSTOM_BOOTSTRAP_NAME);
-    }
-
-    @Test
-    void defaultBootstrapName() {
-        final WebClient client = WebClient.of("xds://spring/test-listener");
-        assertThat(client.blocking().get("/hello").contentUtf8()).isEqualTo("world");
-    }
-
-    @Test
-    void customBootstrapName() {
-        XdsBootstrapRegistry.register(CUSTOM_BOOTSTRAP_NAME, xdsBootstrap);
-        final WebClient client = WebClient.of("xds://" + CUSTOM_BOOTSTRAP_NAME + "/test-listener");
-        assertThat(client.blocking().get("/hello").contentUtf8()).isEqualTo("world");
+                """.formatted(server.httpPort());
     }
 }

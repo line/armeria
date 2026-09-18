@@ -18,7 +18,6 @@ package com.linecorp.armeria.spring.xds;
 
 import java.util.List;
 
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -137,12 +136,6 @@ public class SpringXdsAutoConfiguration {
         final String name = environment.getProperty(BOOTSTRAP_NAME_PROPERTY, DEFAULT_BOOTSTRAP_NAME);
         XdsBootstrapRegistry.register(name, xdsBootstrap);
         return xdsBootstrap;
-    }
-
-    @Bean
-    DisposableBean xdsBootstrapDeregistration(Environment environment) {
-        final String name = environment.getProperty(BOOTSTRAP_NAME_PROPERTY, DEFAULT_BOOTSTRAP_NAME);
-        return () -> XdsBootstrapRegistry.deregister(name);
     }
 
     @Bean
