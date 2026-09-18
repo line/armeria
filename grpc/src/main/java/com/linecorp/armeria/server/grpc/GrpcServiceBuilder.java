@@ -847,8 +847,9 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets the {@link GrpcClientTimeoutHandler} that decides the request timeout to use for a request that
-     * carries a {@code grpc-timeout} header. By default, the timeout requested by the client is used as it is.
+     * Sets the {@link GrpcClientTimeoutHandler} that decides the request timeout to use for the timeout
+     * requested by a client via the {@code grpc-timeout} header. By default, the timeout requested by the
+     * client is used as it is.
      *
      * <p>For example, the following server never lets a client request a timeout longer than its own:
      * <pre>{@code

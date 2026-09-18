@@ -26,7 +26,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * Decides the request timeout to use for a request that carries a {@code grpc-timeout} header.
+ * Decides the request timeout to use for the timeout requested by a client via the {@code grpc-timeout}
+ * header. A request without the header is treated as a request for an infinite timeout, as the gRPC
+ * specification requires, so the handler is invoked with {@link Duration#ZERO} in that case as well.
  *
  * <p>This allows a server to adjust or reject the timeout requested by a client, e.g. to make sure that
  * an untrusted client cannot ask for an arbitrarily long timeout:
@@ -92,7 +94,8 @@ public interface GrpcClientTimeoutHandler {
      *
      * @param ctx the {@link ServiceRequestContext} of the request
      * @param clientTimeout the timeout requested via the {@code grpc-timeout} header. {@link Duration#ZERO}
-     *                      means that the client asked for an infinite timeout.
+     *                      means that the client asked for an infinite timeout, either explicitly or by
+     *                      omitting the header.
      *
      * @return the timeout to use, or {@link Duration#ZERO} to use an infinite timeout.
      *         {@code null} to leave the request timeout configured for the server untouched.
