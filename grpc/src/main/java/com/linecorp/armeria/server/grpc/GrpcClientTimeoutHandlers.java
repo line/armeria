@@ -21,9 +21,16 @@ import java.time.Duration;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class GrpcClientTimeoutHandlers {
+
+    /**
+     * The largest timeout {@link TimeoutHeaderUtil#fromHeaderValue(String)} can return, because it saturates
+     * on overflow.
+     */
+    private static final Duration MAX_TIMEOUT = Duration.ofNanos(Long.MAX_VALUE);
 
     static final GrpcClientTimeoutHandler ENABLED = new GrpcClientTimeoutHandler() {
         @Override
@@ -88,6 +95,10 @@ final class GrpcClientTimeoutHandlers {
         public Duration apply(ServiceRequestContext ctx, Duration clientTimeout) {
             if (isInfinite(clientTimeout)) {
                 return clientTimeout;
+            }
+            if (clientTimeout.compareTo(MAX_TIMEOUT.minus(buffer)) >= 0) {
+                // Adding the buffer would overflow.
+                return MAX_TIMEOUT;
             }
             return clientTimeout.plus(buffer);
         }

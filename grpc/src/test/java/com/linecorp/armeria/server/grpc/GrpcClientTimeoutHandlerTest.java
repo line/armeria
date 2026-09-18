@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class GrpcClientTimeoutHandlerTest {
@@ -68,6 +69,18 @@ class GrpcClientTimeoutHandlerTest {
         assertThat(handler.apply(ctx(2000), Duration.ofSeconds(30))).isEqualTo(Duration.ofSeconds(31));
         // An infinite client timeout is left alone.
         assertThat(handler.apply(ctx(2000), Duration.ZERO)).isEqualTo(Duration.ZERO);
+    }
+
+    @Test
+    void withBufferDoesNotOverflow() {
+        // 'grpc-timeout' saturates at Long.MAX_VALUE nanoseconds, e.g. for '99999999H'.
+        final Duration maxTimeout = Duration.ofNanos(Long.MAX_VALUE);
+        assertThat(TimeoutHeaderUtil.fromHeaderValue("99999999H")).isEqualTo(Long.MAX_VALUE);
+        assertThat(GrpcClientTimeoutHandler.withBuffer(Duration.ofSeconds(1)).apply(ctx(2000), maxTimeout))
+                .isEqualTo(maxTimeout);
+        assertThat(GrpcClientTimeoutHandler.withBuffer(Duration.ofSeconds(Long.MAX_VALUE))
+                                           .apply(ctx(2000), Duration.ofSeconds(1)))
+                .isEqualTo(maxTimeout);
     }
 
     @Test
