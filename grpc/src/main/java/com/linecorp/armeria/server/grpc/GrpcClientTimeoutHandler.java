@@ -25,6 +25,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.grpc.ServerMethodDefinition;
+
 /**
  * Decides the request timeout to use for the timeout requested by a client via the {@code grpc-timeout}
  * header. A request without the header is treated as a request for an infinite timeout, as the gRPC
@@ -53,9 +55,9 @@ public interface GrpcClientTimeoutHandler {
     }
 
     /**
-     * Returns a {@link GrpcClientTimeoutHandler} that ignores the {@code grpc-timeout} header, so that the
-     * request timeout configured for the Armeria server is always used, e.g. the one set via
-     * {@link ServerBuilder#requestTimeout(Duration)}.
+     * Returns a {@link GrpcClientTimeoutHandler} that ignores the {@code grpc-timeout} header entirely, even
+     * if the client asks for a shorter timeout than the server's, so that the request timeout configured for
+     * the Armeria server is always used, e.g. the one set via {@link ServerBuilder#requestTimeout(Duration)}.
      */
     static GrpcClientTimeoutHandler disabled() {
         return GrpcClientTimeoutHandlers.DISABLED;
@@ -65,6 +67,9 @@ public interface GrpcClientTimeoutHandler {
      * Returns a {@link GrpcClientTimeoutHandler} that limits the timeout requested by the client to the
      * request timeout configured for the {@link ServiceRequestContext}. A client that asks for a longer
      * timeout, or for no timeout at all, gets the server timeout instead.
+     *
+     * <p>Unlike {@link #disabled()}, a client is still free to ask for a shorter timeout than the server's,
+     * which is honored as it is. Only the upper bound is enforced.
      *
      * <p>Note that this returns the client timeout as it is if the server has no request timeout configured.
      */
@@ -93,6 +98,7 @@ public interface GrpcClientTimeoutHandler {
      * Returns the request timeout to set for the specified {@link ServiceRequestContext}.
      *
      * @param ctx the {@link ServiceRequestContext} of the request
+     * @param method the {@link ServerMethodDefinition} the request is routed to
      * @param clientTimeout the timeout requested via the {@code grpc-timeout} header. {@link Duration#ZERO}
      *                      means that the client asked for an infinite timeout, either explicitly or by
      *                      omitting the header.
@@ -101,5 +107,5 @@ public interface GrpcClientTimeoutHandler {
      *         {@code null} to leave the request timeout configured for the server untouched.
      */
     @Nullable
-    Duration apply(ServiceRequestContext ctx, Duration clientTimeout);
+    Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method, Duration clientTimeout);
 }

@@ -229,7 +229,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                             new Metadata()));
         }
 
-        if (clientTimeoutHandler != GrpcClientTimeoutHandlers.DISABLED) {
+        if (clientTimeoutHandler != GrpcClientTimeoutHandler.disabled()) {
             final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
             if (timeoutHeader != null) {
                 final long timeoutNanos;
@@ -251,7 +251,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                             });
                     return HttpResponse.of(future);
                 }
-                applyClientTimeout(ctx, Duration.ofNanos(timeoutNanos));
+                applyClientTimeout(ctx, method, Duration.ofNanos(timeoutNanos));
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
                     // For unframed gRPC, we use the default timeout.
@@ -259,7 +259,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
                     // an infinite timeout.
                     // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
-                    applyClientTimeout(ctx, Duration.ZERO);
+                    applyClientTimeout(ctx, method, Duration.ZERO);
                 }
             }
         }
@@ -281,8 +281,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         return res;
     }
 
-    private void applyClientTimeout(ServiceRequestContext ctx, Duration clientTimeout) {
-        final Duration timeout = clientTimeoutHandler.apply(ctx, clientTimeout);
+    private void applyClientTimeout(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                                    Duration clientTimeout) {
+        final Duration timeout = clientTimeoutHandler.apply(ctx, method, clientTimeout);
         if (timeout == null) {
             // Leave the request timeout configured for the server untouched.
             return;

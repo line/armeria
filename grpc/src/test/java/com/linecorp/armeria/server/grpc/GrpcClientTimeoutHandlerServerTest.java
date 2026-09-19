@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,26 @@ class GrpcClientTimeoutHandlerServerTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension perMethodServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(SERVER_TIMEOUT_MILLIS);
+            sb.service(GrpcService.builder()
+                                  .clientTimeoutHandler((ctx, method, clientTimeout) -> {
+                                      // Give 'UnaryCall' a tighter bound than the rest.
+                                      if ("UnaryCall".equals(
+                                              method.getMethodDescriptor().getBareMethodName())) {
+                                          return Duration.ofSeconds(1);
+                                      }
+                                      return GrpcClientTimeoutHandler.boundedByServerTimeout()
+                                                                     .apply(ctx, method, clientTimeout);
+                                  })
+                                  .addService(new TimeoutReportingService())
+                                  .build());
+        }
+    };
+
     @Test
     void longClientTimeoutIsBounded() {
         final TestServiceBlockingStub client =
@@ -75,6 +96,16 @@ class GrpcClientTimeoutHandlerServerTest {
         assertThat(requestTimeoutMillis(client)).isEqualTo(SERVER_TIMEOUT_MILLIS);
     }
 
+    @Test
+    void timeoutCanBeDecidedPerMethod() {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(perMethodServer.httpUri(), TestServiceBlockingStub.class)
+                           .withDeadlineAfter(1, TimeUnit.HOURS);
+        final SimpleRequest req = SimpleRequest.getDefaultInstance();
+        assertThat(Long.parseLong(client.unaryCall(req).getUsername())).isEqualTo(1000);
+        assertThat(Long.parseLong(client.unaryCall2(req).getUsername())).isEqualTo(SERVER_TIMEOUT_MILLIS);
+    }
+
     private static long requestTimeoutMillis(TestServiceBlockingStub client) {
         return Long.parseLong(client.unaryCall(SimpleRequest.getDefaultInstance()).getUsername());
     }
@@ -82,6 +113,15 @@ class GrpcClientTimeoutHandlerServerTest {
     private static class TimeoutReportingService extends TestServiceImplBase {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            reportTimeout(responseObserver);
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            reportTimeout(responseObserver);
+        }
+
+        private static void reportTimeout(StreamObserver<SimpleResponse> responseObserver) {
             final long timeoutMillis = ServiceRequestContext.current().requestTimeoutMillis();
             responseObserver.onNext(SimpleResponse.newBuilder()
                                                   .setUsername(String.valueOf(timeoutMillis))

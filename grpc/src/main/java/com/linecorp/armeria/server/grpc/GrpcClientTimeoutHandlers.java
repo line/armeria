@@ -24,6 +24,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.grpc.ServerMethodDefinition;
+
 final class GrpcClientTimeoutHandlers {
 
     /**
@@ -34,7 +36,8 @@ final class GrpcClientTimeoutHandlers {
 
     static final GrpcClientTimeoutHandler ENABLED = new GrpcClientTimeoutHandler() {
         @Override
-        public Duration apply(ServiceRequestContext ctx, Duration clientTimeout) {
+        public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                              Duration clientTimeout) {
             return clientTimeout;
         }
 
@@ -47,7 +50,8 @@ final class GrpcClientTimeoutHandlers {
     static final GrpcClientTimeoutHandler DISABLED = new GrpcClientTimeoutHandler() {
         @Nullable
         @Override
-        public Duration apply(ServiceRequestContext ctx, Duration clientTimeout) {
+        public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                              Duration clientTimeout) {
             return null;
         }
 
@@ -59,7 +63,8 @@ final class GrpcClientTimeoutHandlers {
 
     static final GrpcClientTimeoutHandler BOUNDED_BY_SERVER_TIMEOUT = new GrpcClientTimeoutHandler() {
         @Override
-        public Duration apply(ServiceRequestContext ctx, Duration clientTimeout) {
+        public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                              Duration clientTimeout) {
             final long serverTimeoutMillis = ctx.config().requestTimeoutMillis();
             if (serverTimeoutMillis == 0) {
                 // The server does not have a request timeout, so there is nothing to bound the client
@@ -92,7 +97,8 @@ final class GrpcClientTimeoutHandlers {
         }
 
         @Override
-        public Duration apply(ServiceRequestContext ctx, Duration clientTimeout) {
+        public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                              Duration clientTimeout) {
             if (isInfinite(clientTimeout)) {
                 return clientTimeout;
             }
