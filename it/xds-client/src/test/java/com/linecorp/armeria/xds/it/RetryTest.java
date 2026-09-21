@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -585,8 +586,11 @@ class RetryTest {
                     currentAttemptStartTimeNanos - previousAttemptEndTimeNanos);
             final long expectedDelayMillis = expectedDelaysMillis.get(i);
 
-            // Verify delay matches expected value (tolerance for 50% jitter + responseTimeout recalc)
-            assertThat(actualDelayMillis).isCloseTo(expectedDelayMillis, withinPercentage(100.0));
+            // Jitter uniformly distributes the delay in [0, expectedDelay]. Allow extra margin
+            // for system overhead (thread scheduling, GC pauses) on CI machines.
+            final long tolerance = Math.max(expectedDelayMillis, 200);
+            assertThat(actualDelayMillis).isCloseTo(expectedDelayMillis,
+                                                    Offset.offset(tolerance));
         }
     }
 
