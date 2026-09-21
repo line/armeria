@@ -27,6 +27,7 @@ pull_request_rules:
       - -files ~= ^(?!(?:site|docs-client)/package(?:-lock)?\.json$)
       - check-success=site
       - -check-failure ~= ^build-
+      - -check-pending ~= ^build-
     actions:
       merge:
         method: squash
