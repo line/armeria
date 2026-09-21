@@ -116,6 +116,29 @@ class KubernetesClusterTypeIntegrationTest {
         }
     }
 
+    @Test
+    void twoNamedFactories() {
+        final String nameA = "factory.a";
+        final String nameB = "factory.b";
+        final KubernetesClusterTypeFactory factoryA = KubernetesClusterTypeFactory.of(
+                nameA, client.getConfiguration(),
+                (clusterName, endpoints) -> backendCla(clusterName));
+        final KubernetesClusterTypeFactory factoryB = KubernetesClusterTypeFactory.of(
+                nameB, client.getConfiguration(),
+                (clusterName, endpoints) -> backendCla(clusterName));
+
+        final Bootstrap bootstrap = twoClusterBootstrapYaml(
+                client.getMasterUrl().toString(), nameA, nameB);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .extensionFactories(factoryA, factoryB)
+                                                     .build();
+             XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("listener1", xdsBootstrap)) {
+            final BlockingWebClient webClient = WebClient.of(preprocessor).blocking();
+            assertThat(webClient.get("/hello").contentUtf8()).isEqualTo("world");
+        }
+    }
+
     private void createK8sResources() {
         final Deployment deployment = newDeployment();
         final Service service = newService();
@@ -238,6 +261,55 @@ class KubernetesClusterTypeIntegrationTest {
                         mode: POD
                         api_server_url: "%s"
                 """.formatted(clusterTypeName, apiServerUrl);
+        return XdsResourceReader.fromYaml(yaml, Bootstrap.class);
+    }
+
+    private static Bootstrap twoClusterBootstrapYaml(String apiServerUrl,
+                                                     String nameA, String nameB) {
+        //language=YAML
+        final String yaml = """
+                static_resources:
+                  listeners:
+                  - name: listener1
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network\
+                .http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: route1
+                          virtual_hosts:
+                          - name: local_service1
+                            domains: [ "*" ]
+                            routes:
+                            - match:
+                                prefix: /
+                              route:
+                                cluster: clusterA
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  clusters:
+                  - name: clusterA
+                    cluster_type:
+                      name: %s
+                      typed_config:
+                        "@type": type.googleapis.com/armeria.xds.kubernetes.KubernetesClusterConfig
+                        service_name: test-service
+                        namespace: test
+                        mode: POD
+                        api_server_url: "%s"
+                  - name: clusterB
+                    cluster_type:
+                      name: %s
+                      typed_config:
+                        "@type": type.googleapis.com/armeria.xds.kubernetes.KubernetesClusterConfig
+                        service_name: test-service
+                        namespace: test
+                        mode: POD
+                        api_server_url: "%s"
+                """.formatted(nameA, apiServerUrl, nameB, apiServerUrl);
         return XdsResourceReader.fromYaml(yaml, Bootstrap.class);
     }
 }
