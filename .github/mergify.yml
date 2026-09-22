@@ -26,6 +26,7 @@ pull_request_rules:
       - title ~= ^Bump \S+ from (\d+)\.(\d+)\.\d+ to \1\.\2\.\d+ in /(?:site|docs-client)\Z
       - -files ~= ^(?!(?:site|docs-client)/package(?:-lock)?\.json$)
       - check-success=site
+      - check-success=docs-client-e2e
       - -check-failure ~= ^build-
       - -check-pending ~= ^build-
     actions:
