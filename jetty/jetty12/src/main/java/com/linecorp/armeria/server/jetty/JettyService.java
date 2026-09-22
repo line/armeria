@@ -41,6 +41,7 @@ import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpStream;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.internal.HttpConnection;
 import org.eclipse.jetty.util.Callback;
 import org.slf4j.Logger;
@@ -160,6 +161,23 @@ public final class JettyService implements HttpService {
             jettyServer = serverFactory.apply(armeriaServer.config().blockingTaskExecutor());
             connector = new ArmeriaConnector(jettyServer, armeriaServer);
             jettyServer.addConnector(connector);
+
+            // Jetty assigns a random port if the port is set to -1. In order to disable Jetty from binding to a
+            // random port, we remove the connector added. This is useful as Armeria redirects requests to the
+            // Jetty servlet. See: https://github.com/line/armeria/issues/5039
+            Arrays.stream(jettyServer.getConnectors())
+                  .filter(connector -> connector instanceof ServerConnector)
+                  .filter(connector -> ((ServerConnector) connector).getPort() == 0)
+                  .forEach(connector -> {
+                      jettyServer.removeConnector(connector);
+                      try {
+                          final int localPort = ((ServerConnector) connector).getLocalPort();
+                          logger.info("Stopping unintended Jetty on port: {}", localPort);
+                          connector.stop();
+                      } catch (Exception ignored) {
+                          // Ignore the exception as we are stopping the unintended Jetty.
+                      }
+                  });
 
             if (!jettyServer.isRunning()) {
                 logger.info("Starting an embedded Jetty: {}", jettyServer);
