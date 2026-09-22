@@ -100,7 +100,10 @@ message ClusterLoadAssignment {
     //
     // Read more at :ref:`priority levels <arch_overview_load_balancing_priority_levels>` and
     // :ref:`localities <arch_overview_load_balancing_locality_weighted_lb>`.
-    option (armeria.xds.supported.field) = 3;
+    option (armeria.xds.supported.field) = {
+        number: 3,
+        since: "1.39.0"
+    };
     google.protobuf.UInt32Value overprovisioning_factor = 3 [(validate.rules).uint32 = {gt: 0}];
 
     // The max time until which the endpoints from this assignment can be used.
@@ -118,7 +121,10 @@ message ClusterLoadAssignment {
     // .. note::
     //   This is not currently implemented for
     //   :ref:`locality weighted load balancing <arch_overview_load_balancing_locality_weighted_lb>`.
-    option (armeria.xds.supported.field) = 6;
+    option (armeria.xds.supported.field) = {
+        number: 6,
+        since: "1.39.0"
+    };
     bool weighted_priority_health = 6;
   }
 
@@ -126,11 +132,17 @@ message ClusterLoadAssignment {
   // <envoy_v3_api_field_config.cluster.v3.Cluster.EdsClusterConfig.service_name>` value if specified
   // in the cluster :ref:`EdsClusterConfig
   // <envoy_v3_api_msg_config.cluster.v3.Cluster.EdsClusterConfig>`.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   string cluster_name = 1 [(validate.rules).string = {min_len: 1}];
 
   // List of endpoints to load balance to.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   repeated LocalityLbEndpoints endpoints = 2;
 
   // Map of named endpoints that can be referenced in LocalityLbEndpoints.
@@ -138,6 +150,9 @@ message ClusterLoadAssignment {
   map<string, Endpoint> named_endpoints = 5;
 
   // Load balancing policy settings.
-  option (armeria.xds.supported.field) = 4;
+  option (armeria.xds.supported.field) = {
+      number: 4,
+      since: "1.39.0"
+  };
   Policy policy = 4;
 }

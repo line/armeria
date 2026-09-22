@@ -38,11 +38,17 @@ message UpstreamTlsContext {
   //
   //   Server certificate verification is not enabled by default. To enable verification, configure
   //   :ref:`trusted_ca<envoy_v3_api_field_extensions.transport_sockets.tls.v3.CertificateValidationContext.trusted_ca>`.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   CommonTlsContext common_tls_context = 1;
 
   // SNI string to use when creating TLS backend connections.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   string sni = 2 [(validate.rules).string = {max_bytes: 255}];
 
   // If true, replaces the SNI for the connection with the hostname of the upstream host, if
@@ -108,12 +114,18 @@ message DownstreamTlsContext {
   }
 
   // Common TLS context settings.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.41.0"
+  };
   CommonTlsContext common_tls_context = 1;
 
   // If specified, Envoy will reject connections without a valid client
   // certificate.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.41.0"
+  };
   google.protobuf.BoolValue require_client_certificate = 2;
 
   // If specified, Envoy will reject connections without a valid and matching SNI.
@@ -250,13 +262,19 @@ message CommonTlsContext {
         "envoy.api.v2.auth.CommonTlsContext.CombinedCertificateValidationContext";
 
     // How to validate peer certificates.
-    option (armeria.xds.supported.field) = 1;
+    option (armeria.xds.supported.field) = {
+        number: 1,
+        since: "1.39.0"
+    };
     CertificateValidationContext default_validation_context = 1
         [(validate.rules).message = {required: true}];
 
     // Config for fetching validation context via SDS API. Note SDS API allows certificates to be
     // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
-    option (armeria.xds.supported.field) = 2;
+    option (armeria.xds.supported.field) = {
+        number: 2,
+        since: "1.39.0"
+    };
     SdsSecretConfig validation_context_sds_secret_config = 2
         [(validate.rules).message = {required: true}];
 
@@ -284,7 +302,10 @@ message CommonTlsContext {
   //
   // If ``tls_certificate_provider_instance`` is set, this field is ignored.
   // If this field is set, ``tls_certificate_sds_secret_configs`` is ignored.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   repeated TlsCertificate tls_certificates = 2;
 
   // Configs for fetching TLS certificates via SDS API. Note SDS API allows certificates to be
@@ -295,7 +316,10 @@ message CommonTlsContext {
   //
   // If ``tls_certificates`` or ``tls_certificate_provider_instance`` are set, this field
   // is ignored.
-  option (armeria.xds.supported.field) = 6;
+  option (armeria.xds.supported.field) = {
+      number: 6,
+      since: "1.39.0"
+  };
   repeated SdsSecretConfig tls_certificate_sds_secret_configs = 6;
 
   // Certificate provider instance for fetching TLS certs.
@@ -325,12 +349,18 @@ message CommonTlsContext {
 
   oneof validation_context_type {
     // How to validate peer certificates.
-    option (armeria.xds.supported.oneof_field) = 3;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 3,
+        since: "1.39.0"
+    };
     CertificateValidationContext validation_context = 3;
 
     // Config for fetching validation context via SDS API. Note SDS API allows certificates to be
     // fetched/refreshed over the network asynchronously with respect to the TLS handshake.
-    option (armeria.xds.supported.oneof_field) = 7;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 7,
+        since: "1.39.0"
+    };
     SdsSecretConfig validation_context_sds_secret_config = 7;
 
     // Combines the default ``CertificateValidationContext`` with the SDS-provided dynamic context for certificate
@@ -344,7 +374,10 @@ message CommonTlsContext {
     // * **Boolean Fields:** Boolean fields are combined using a logical OR operation.
     //
     // The resulting ``CertificateValidationContext`` is used to perform certificate validation.
-    option (armeria.xds.supported.oneof_field) = 8;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 8,
+        since: "1.39.0"
+    };
     CombinedCertificateValidationContext combined_validation_context = 8;
 
     // Certificate provider for fetching validation context.
