@@ -92,6 +92,10 @@ jwt = "4.6.0"
 # kafka >=4.0.0 requires java 11
 kafka = "3.9.2"
 kotlin = "2.4.10"
+# The oldest Kotlin a user of armeria-kotlin can stay on. Kotlin binaries are readable only by the
+# compiler of the same or the next minor version, so this decides that floor; armeria-kotlin is
+# compiled against it and publishes it as its kotlin-stdlib requirement.
+kotlin-baseline = "2.2.21"
 kotlin-coroutine = "1.11.0"
 krotodc = "1.2.2"
 ktlint-gradle-plugin = "14.2.0"
@@ -837,12 +841,15 @@ javadocs = "https://kafka.apache.org/33/javadoc/"
 [libraries.kotlin-allopen]
 module = "org.jetbrains.kotlin:kotlin-allopen"
 version.ref = "kotlin"
+[libraries.kotlin-stdlib]
+module = "org.jetbrains.kotlin:kotlin-stdlib"
+version.ref = "kotlin-baseline"
 [libraries.kotlin-stdlib-jdk8]
 module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 version.ref = "kotlin"
 [libraries.kotlin-reflect]
 module = "org.jetbrains.kotlin:kotlin-reflect"
-version.ref = "kotlin"
+version.ref = "kotlin-baseline"
 
 [libraries.kotlin-coroutines-core]
 module = "org.jetbrains.kotlinx:kotlinx-coroutines-core"
