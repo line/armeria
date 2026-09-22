@@ -18,7 +18,9 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -97,6 +99,10 @@ public interface AggregatedHttpFile {
     /**
      * Returns the {@link AggregatedHttpResponse} generated from this file.
      *
+     * <p>When this file has pooled content, the returned response owns a retained duplicate of it. The caller
+     * must release the response content, either explicitly or by converting it to an {@link HttpResponse} and
+     * sending it to a client.
+     *
      * @return the {@link AggregatedHttpResponse} of the file, or {@code null} if the file does not exist.
      */
     @Nullable
@@ -107,6 +113,11 @@ public interface AggregatedHttpFile {
         } else {
             final HttpData content = content();
             assert content != null;
+            if (content.isPooled()) {
+                return AggregatedHttpResponse.of(
+                        headers, HttpData.wrap(content.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE))
+                                         .withEndOfStream(content.isEndOfStream()));
+            }
             return AggregatedHttpResponse.of(headers, content);
         }
     }
