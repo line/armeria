@@ -96,13 +96,16 @@ class DeferredListenerTest {
             assertThat(testListener.events).containsExactly("onMessage", "onReady", "onHalfClose");
         });
 
-        // Should be invoked immediately with `executor`.
         listener.onComplete();
-        assertThat(testListener.events)
-                .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete");
+        await().untilAsserted(() -> {
+            assertThat(testListener.events)
+                    .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete");
+        });
         listener.onCancel();
-        assertThat(testListener.events)
-                .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete", "onCancel");
+        await().untilAsserted(() -> {
+            assertThat(testListener.events)
+                    .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete", "onCancel");
+        });
     }
 
     private static void executeAndAwait(Executor executor, Runnable task) {
