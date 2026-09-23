@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -29,23 +30,39 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
-class GrpcClientTimeoutHandlerServerTest {
+class GrpcTimeoutPolicyServerTest {
 
-    private static final long SERVER_TIMEOUT_MILLIS = 2000;
+    private static final long SERVICE_TIMEOUT_MILLIS = 2000;
+    private static final Duration MAX = Duration.ofSeconds(10);
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.requestTimeoutMillis(SERVER_TIMEOUT_MILLIS);
+            sb.requestTimeoutMillis(SERVICE_TIMEOUT_MILLIS);
             sb.service(GrpcService.builder()
-                                  .clientTimeoutHandler(GrpcClientTimeoutHandler.boundedByServerTimeout())
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(MAX))
+                                  .addService(new TimeoutReportingService())
+                                  .build());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension offsetServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(SERVICE_TIMEOUT_MILLIS);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader()
+                                                                  .withOffset(Duration.ofSeconds(-5)))
                                   .addService(new TimeoutReportingService())
                                   .build());
         }
@@ -55,16 +72,16 @@ class GrpcClientTimeoutHandlerServerTest {
     static ServerExtension perMethodServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.requestTimeoutMillis(SERVER_TIMEOUT_MILLIS);
+            sb.requestTimeoutMillis(SERVICE_TIMEOUT_MILLIS);
             sb.service(GrpcService.builder()
-                                  .clientTimeoutHandler((ctx, method, clientTimeout) -> {
+                                  .timeoutPolicy((ctx, method, clientTimeout) -> {
                                       // Give 'UnaryCall' a tighter bound than the rest.
                                       if ("UnaryCall".equals(
                                               method.getMethodDescriptor().getBareMethodName())) {
                                           return Duration.ofSeconds(1);
                                       }
-                                      return GrpcClientTimeoutHandler.boundedByServerTimeout()
-                                                                     .apply(ctx, method, clientTimeout);
+                                      return GrpcTimeoutPolicy.useGrpcTimeoutHeader(MAX)
+                                                              .apply(ctx, method, clientTimeout);
                                   })
                                   .addService(new TimeoutReportingService())
                                   .build());
@@ -72,28 +89,48 @@ class GrpcClientTimeoutHandlerServerTest {
     };
 
     @Test
-    void longClientTimeoutIsBounded() {
+    void longClientTimeoutIsCapped() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
-        final long timeoutMillis = requestTimeoutMillis(client.withDeadlineAfter(1, TimeUnit.HOURS));
-        assertThat(timeoutMillis).isEqualTo(SERVER_TIMEOUT_MILLIS);
+        assertThat(requestTimeoutMillis(client.withDeadlineAfter(1, TimeUnit.HOURS)))
+                .isEqualTo(MAX.toMillis());
     }
 
     @Test
     void shortClientTimeoutIsKept() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
-        final long timeoutMillis = requestTimeoutMillis(client.withDeadlineAfter(500, TimeUnit.MILLISECONDS));
-        assertThat(timeoutMillis).isLessThanOrEqualTo(500);
+        assertThat(requestTimeoutMillis(client.withDeadlineAfter(500, TimeUnit.MILLISECONDS)))
+                .isLessThanOrEqualTo(500);
     }
 
     @Test
-    void missingClientTimeoutIsBounded() {
+    void missingClientTimeoutIsCapped() {
         // A client that does not send a 'grpc-timeout' header must not get an infinite timeout, either.
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .responseTimeoutMillis(0)
                                                           .build(TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client)).isEqualTo(SERVER_TIMEOUT_MILLIS);
+        assertThat(requestTimeoutMillis(client)).isEqualTo(MAX.toMillis());
+    }
+
+    @Test
+    void negativeOffsetShortensTheTimeout() {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(offsetServer.httpUri(), TestServiceBlockingStub.class);
+        assertThat(requestTimeoutMillis(client.withDeadlineAfter(30, TimeUnit.SECONDS)))
+                .isLessThanOrEqualTo(25_000)
+                .isGreaterThan(24_000);
+    }
+
+    @Test
+    void exhaustedDeadlineFailsImmediately() {
+        // 3s minus the 5s offset leaves nothing, so the request must fail instead of becoming infinite.
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(offsetServer.httpUri(), TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client.withDeadlineAfter(3, TimeUnit.SECONDS)))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                });
     }
 
     @Test
@@ -103,7 +140,7 @@ class GrpcClientTimeoutHandlerServerTest {
                            .withDeadlineAfter(1, TimeUnit.HOURS);
         final SimpleRequest req = SimpleRequest.getDefaultInstance();
         assertThat(Long.parseLong(client.unaryCall(req).getUsername())).isEqualTo(1000);
-        assertThat(Long.parseLong(client.unaryCall2(req).getUsername())).isEqualTo(SERVER_TIMEOUT_MILLIS);
+        assertThat(Long.parseLong(client.unaryCall2(req).getUsername())).isEqualTo(MAX.toMillis());
     }
 
     private static long requestTimeoutMillis(TestServiceBlockingStub client) {

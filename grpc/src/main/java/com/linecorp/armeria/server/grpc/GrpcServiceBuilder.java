@@ -148,7 +148,7 @@ public final class GrpcServiceBuilder {
 
     private boolean unsafeWrapRequestBuffers;
 
-    private GrpcClientTimeoutHandler clientTimeoutHandler = GrpcClientTimeoutHandler.enabled();
+    private GrpcTimeoutPolicy timeoutPolicy = GrpcTimeoutPolicy.useGrpcTimeoutHeader();
 
     private boolean useMethodMarshaller;
 
@@ -837,34 +837,35 @@ public final class GrpcServiceBuilder {
      * <p>It is recommended to disable this when clients are not trusted code, e.g., for gRPC-Web clients that
      * can come from arbitrary browsers.
      *
-     * @deprecated Use {@link #clientTimeoutHandler(GrpcClientTimeoutHandler)} with
-     *             {@link GrpcClientTimeoutHandler#enabled()} or {@link GrpcClientTimeoutHandler#disabled()}.
+     * @deprecated Use {@link #timeoutPolicy(GrpcTimeoutPolicy)} with
+     *             {@link GrpcTimeoutPolicy#useGrpcTimeoutHeader()} or
+     *             {@link GrpcTimeoutPolicy#useServiceTimeout()}.
      */
     @Deprecated
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
-        return clientTimeoutHandler(useClientTimeoutHeader ? GrpcClientTimeoutHandler.enabled()
-                                                           : GrpcClientTimeoutHandler.disabled());
+        return timeoutPolicy(useClientTimeoutHeader ? GrpcTimeoutPolicy.useGrpcTimeoutHeader()
+                                                    : GrpcTimeoutPolicy.useServiceTimeout());
     }
 
     /**
-     * Sets the {@link GrpcClientTimeoutHandler} that decides the request timeout to use for the timeout
-     * requested by a client via the {@code grpc-timeout} header. By default, the timeout requested by the
-     * client is used as it is.
+     * Sets the {@link GrpcTimeoutPolicy} that decides the request timeout to use for the timeout a client
+     * requested via the {@code grpc-timeout} header. By default, the timeout a client requested is used as
+     * it is.
      *
-     * <p>For example, the following server never lets a client request a timeout longer than its own:
+     * <p>For example, the following server never lets a client ask for a timeout longer than 10 seconds:
      * <pre>{@code
      * Server.builder()
-     *       .requestTimeout(Duration.ofSeconds(10))
      *       .service(GrpcService.builder()
      *                           .addService(myService)
-     *                           .clientTimeoutHandler(GrpcClientTimeoutHandler.boundedByServerTimeout())
+     *                           .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(
+     *                                   Duration.ofSeconds(10)))
      *                           .build())
      *       .build();
      * }</pre>
      */
     @UnstableApi
-    public GrpcServiceBuilder clientTimeoutHandler(GrpcClientTimeoutHandler clientTimeoutHandler) {
-        this.clientTimeoutHandler = requireNonNull(clientTimeoutHandler, "clientTimeoutHandler");
+    public GrpcServiceBuilder timeoutPolicy(GrpcTimeoutPolicy timeoutPolicy) {
+        this.timeoutPolicy = requireNonNull(timeoutPolicy, "timeoutPolicy");
         return this;
     }
 
@@ -1098,7 +1099,7 @@ public final class GrpcServiceBuilder {
                 maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
-                clientTimeoutHandler,
+                timeoutPolicy,
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService,
                 autoCompression,
