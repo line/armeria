@@ -74,14 +74,15 @@ public final class GrpcHealthCheckedEndpointGroupBuilder
                         ctx.protocol(), service);
                 healthChecker.start();
                 return healthChecker;
-            } else if (healthCheckMethod == GrpcHealthCheckMethod.WATCH) {
+            }
+            if (healthCheckMethod == GrpcHealthCheckMethod.WATCH) {
                 final GrpcHealthCheckWatcher healthChecker = new GrpcHealthCheckWatcher(ctx, ctx.endpoint(),
                         ctx.protocol(), service);
                 healthChecker.start();
                 return healthChecker;
             }
             // should not get here
-            throw new IllegalArgumentException("Invalid health check method");
+            throw new Error();
         }
     }
 }
