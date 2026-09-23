@@ -44,7 +44,7 @@ import io.grpc.stub.StreamObserver;
  */
 class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GrpcHealthCheckWatcher.class);
+    private static final Logger logger = LoggerFactory.getLogger(GrpcHealthCheckWatcher.class);
 
     private final HealthCheckerContext ctx;
     @Nullable
@@ -60,15 +60,14 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
         requireNonNull(sessionProtocol, "sessionProtocol");
         this.service = service;
 
-        this.stub = GrpcClients.builder(sessionProtocol, endpoint)
+        stub = GrpcClients.builder(sessionProtocol, endpoint)
                 .options(ctx.clientOptions())
                 .responseTimeout(Duration.ZERO) // disable timeout for streaming watch rpc
+                .maxResponseLength(0) // disable the total response length limit for the long-lived stream
+                .maxResponseMessageLength(3200) // limit the length of each individual message instead
                 .build(HealthGrpc.HealthStub.class);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void check() {
         lock();
@@ -83,7 +82,7 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
             }
 
             try (ClientRequestContextCaptor reqCtxCaptor = Clients.newContextCaptor()) {
-                stub.watch(builder.build(), new WatchObserver(this, reqCtxCaptor));
+                stub.watch(builder.build(), new WatchObserver(this));
                 activeRequestContext = reqCtxCaptor.get();
             }
         } finally {
@@ -91,9 +90,6 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void cancelActiveCheck() {
         if (activeRequestContext != null) {
@@ -102,25 +98,20 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
         }
     }
 
-    private void updateHealth(double health, ClientRequestContext reqCtx, @Nullable Throwable throwable) {
+    private void updateHealth(double health, ClientRequestContext reqCtx,
+                              @Nullable ResponseHeaders responseHeaders, @Nullable Throwable throwable) {
         lock();
         try {
             if (isClosed()) {
                 return;
             }
 
-            // extract the headers from the ctx log
-            ResponseHeaders responseHeaders = null;
-            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-                responseHeaders = reqCtx.log().partial().responseHeaders();
-            }
-
             if (throwable != null) {
-                logCheckFailure(LOGGER, ctx.endpoint(), throwable);
+                logCheckFailure(logger, ctx.endpoint(), throwable);
             } else if (health == HEALTHY) {
-                LOGGER.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
+                logger.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
             } else {
-                LOGGER.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
+                logger.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
             }
             ctx.updateHealth(health, reqCtx, responseHeaders, throwable);
         } finally {
@@ -138,12 +129,11 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
             if (immediate) {
                 // The stream delivered at least one message before it closed, so the server was
                 // reachable moments ago; reconnect immediately instead of backing off.
-                ctx.executor().execute(GrpcHealthCheckWatcher.this::check);
+                ctx.executor().execute(this::check);
             } else {
                 // No message was ever received on this stream attempt; back off before retrying,
                 // to avoid tight-looping against an unhealthy or unavailable server.
-                ctx.executor().schedule(GrpcHealthCheckWatcher.this::check,
-                                        ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+                ctx.executor().schedule(this::check, ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
             }
         } finally {
             unlock();
@@ -159,35 +149,48 @@ class GrpcHealthCheckWatcher extends AbstractGrpcHealthChecker {
     private static final class WatchObserver implements StreamObserver<HealthCheckResponse> {
 
         private final GrpcHealthCheckWatcher checker;
-        private final ClientRequestContextCaptor reqCtxCaptor;
         private boolean receivedMessage;
+        @Nullable
+        private ResponseHeaders responseHeaders;
 
-        WatchObserver(GrpcHealthCheckWatcher checker, ClientRequestContextCaptor reqCtxCaptor) {
+        WatchObserver(GrpcHealthCheckWatcher checker) {
             this.checker = checker;
-            this.reqCtxCaptor = reqCtxCaptor;
         }
 
         @Override
         public void onNext(HealthCheckResponse healthCheckResponse) {
             receivedMessage = true;
-            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+            final ClientRequestContext reqCtx = ClientRequestContext.current();
             final double health = healthCheckResponse.getStatus() ==
                     HealthCheckResponse.ServingStatus.SERVING ? HEALTHY : UNHEALTHY;
-            checker.updateHealth(health, reqCtx, null);
+            checker.updateHealth(health, reqCtx, responseHeaders(reqCtx), null);
         }
 
         @Override
         public void onError(Throwable throwable) {
-            final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            checker.updateHealth(UNHEALTHY, reqCtx, throwable);
+            final ClientRequestContext reqCtx = ClientRequestContext.current();
+            checker.updateHealth(UNHEALTHY, reqCtx, responseHeaders(reqCtx), throwable);
             checker.scheduleNextCheck(receivedMessage);
         }
 
         @Override
         public void onCompleted() {
-            final ClientRequestContext reqCtx = reqCtxCaptor.get();
-            checker.updateHealth(UNHEALTHY, reqCtx, null);
+            final ClientRequestContext reqCtx = ClientRequestContext.current();
+            checker.updateHealth(UNHEALTHY, reqCtx, responseHeaders(reqCtx), null);
             checker.scheduleNextCheck(receivedMessage);
+        }
+
+        /**
+         * Returns the {@link ResponseHeaders} for this watch request, fetching and caching them from the
+         * {@link ClientRequestContext} log on first use - there's only one {@link ResponseHeaders} for the
+         * life of the stream, so there's no need to look it up again on every message.
+         */
+        @Nullable
+        private ResponseHeaders responseHeaders(ClientRequestContext reqCtx) {
+            if (responseHeaders == null && reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+                responseHeaders = reqCtx.log().partial().responseHeaders();
+            }
+            return responseHeaders;
         }
     }
 }

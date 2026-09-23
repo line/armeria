@@ -43,7 +43,7 @@ import io.grpc.stub.StreamObserver;
  */
 final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GrpcHealthChecker.class);
+    private static final Logger logger = LoggerFactory.getLogger(GrpcHealthChecker.class);
 
     private final HealthCheckerContext ctx;
     @Nullable
@@ -59,14 +59,11 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
         requireNonNull(sessionProtocol, "sessionProtocol");
         this.service = service;
 
-        this.stub = GrpcClients.builder(sessionProtocol, endpoint)
+        stub = GrpcClients.builder(sessionProtocol, endpoint)
                 .options(ctx.clientOptions())
                 .build(HealthGrpc.HealthStub.class);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void check() {
         lock();
@@ -81,7 +78,7 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
             }
 
             try (ClientRequestContextCaptor reqCtxCaptor = Clients.newContextCaptor()) {
-                stub.check(builder.build(), new CheckObserver(this, reqCtxCaptor));
+                stub.check(builder.build(), new CheckObserver(this));
                 activeRequestContext = reqCtxCaptor.get();
             }
         } finally {
@@ -89,9 +86,6 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void cancelActiveCheck() {
         if (activeRequestContext != null) {
@@ -114,11 +108,11 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
             }
 
             if (throwable != null) {
-                logCheckFailure(LOGGER, ctx.endpoint(), throwable);
+                logCheckFailure(logger, ctx.endpoint(), throwable);
             } else if (health == HEALTHY) {
-                LOGGER.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
+                logger.trace("Health check returned healthy from endpoint {}", ctx.endpoint());
             } else {
-                LOGGER.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
+                logger.trace("Health check returned unhealthy from endpoint {}", ctx.endpoint());
             }
             ctx.updateHealth(health, reqCtx, responseHeaders, throwable);
         } finally {
@@ -135,8 +129,7 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
             // schedule next check using the retry backoff, to avoid tight-looping against
             // an unhealthy or unavailable server
-            ctx.executor().schedule(GrpcHealthChecker.this::check,
-                                    ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+            ctx.executor().schedule(this::check, ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
         } finally {
             unlock();
         }
@@ -151,12 +144,10 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
     private static final class CheckObserver implements StreamObserver<HealthCheckResponse> {
 
         private final GrpcHealthChecker checker;
-        private final ClientRequestContextCaptor reqCtxCaptor;
         private HealthCheckResponse.ServingStatus servingStatus = HealthCheckResponse.ServingStatus.UNKNOWN;
 
-        CheckObserver(GrpcHealthChecker checker, ClientRequestContextCaptor reqCtxCaptor) {
+        CheckObserver(GrpcHealthChecker checker) {
             this.checker = checker;
-            this.reqCtxCaptor = reqCtxCaptor;
         }
 
         @Override
@@ -166,14 +157,14 @@ final class GrpcHealthChecker extends AbstractGrpcHealthChecker {
 
         @Override
         public void onError(Throwable throwable) {
-            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+            final ClientRequestContext reqCtx = ClientRequestContext.current();
             checker.updateHealth(toHealth(servingStatus), reqCtx, throwable);
             checker.scheduleNextCheck();
         }
 
         @Override
         public void onCompleted() {
-            final ClientRequestContext reqCtx = reqCtxCaptor.get();
+            final ClientRequestContext reqCtx = ClientRequestContext.current();
             checker.updateHealth(toHealth(servingStatus), reqCtx, null);
             checker.scheduleNextCheck();
         }
