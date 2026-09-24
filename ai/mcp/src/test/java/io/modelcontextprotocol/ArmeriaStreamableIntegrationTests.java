@@ -229,7 +229,7 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
     @AfterEach
     public void after() {
         if (httpServer != null) {
-            httpServer.closeAsync();
+            httpServer.stop().join();
         }
     }
 }
