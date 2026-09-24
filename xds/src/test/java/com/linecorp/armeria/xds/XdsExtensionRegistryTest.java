@@ -19,6 +19,8 @@ package com.linecorp.armeria.xds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
@@ -28,21 +30,15 @@ import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.xds.client.endpoint.ClusterTypeFactory;
+import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
+import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class XdsExtensionRegistryTest {
-
-    private static XdsExtensionRegistry createRegistry() {
-        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
-        return XdsExtensionRegistry.of(new XdsResourceValidator(),
-                                       watchService,
-                                       meterRegistry,
-                                       new MeterIdPrefix("test"),
-                                       ImmutableList.of());
-    }
 
     private static final DirectoryWatchService watchService = new DirectoryWatchService();
 
@@ -52,69 +48,134 @@ class XdsExtensionRegistryTest {
     }
 
     @Test
-    void queryWithTypeMismatch() {
-        // HttpConnectionManagerFactory is registered by default and is not an HttpFilterFactory
-        final XdsExtensionRegistry registry = createRegistry();
-        assertThatThrownBy(() -> registry.queryByTypeUrl(
-                "type.googleapis.com/envoy.extensions.filters.network" +
-                ".http_connection_manager.v3.HttpConnectionManager",
-                HttpFilterFactory.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("expected");
-    }
-
-    @Test
     void spiFactoriesLoadedByDefault() {
-        // SPI should load RouterFilterFactory
         final XdsExtensionRegistry registry = createRegistry();
-        final HttpFilterFactory resolved = registry.queryByName(
-                "envoy.filters.http.router", HttpFilterFactory.class);
-        assertThat(resolved).isNotNull();
-        assertThat(resolved).isInstanceOf(HttpFilterFactory.class);
+        assertThat(registry.queryByName("envoy.filters.http.router", HttpFilterFactory.class))
+                .isNotNull();
     }
 
     @Test
-    void emptyRegistryReturnsNull() {
+    void queryByNameReturnsNull() {
         final XdsExtensionRegistry registry = createRegistry();
         assertThat(registry.queryByName("nonexistent.filter", HttpFilterFactory.class)).isNull();
-        assertThat(registry.queryByTypeUrl("type.googleapis.com/nonexistent",
-                                            HttpFilterFactory.class)).isNull();
     }
 
     @Test
-    void assertValidDelegatesToValidator() {
+    void assertValid() {
         final XdsExtensionRegistry registry = createRegistry();
-        // Should not throw for a valid message
-        final Duration valid = Duration.newBuilder().setSeconds(42).build();
-        registry.assertValid(valid);
+        registry.assertValid(Duration.newBuilder().setSeconds(42).build());
     }
 
     @Test
-    void unpackDelegatesToValidator() {
+    void unpack() {
         final XdsExtensionRegistry registry = createRegistry();
         final Duration original = Duration.newBuilder().setSeconds(42).build();
-        final Any packed = Any.pack(original);
-        final Duration unpacked = registry.unpack(packed, Duration.class);
-        assertThat(unpacked).isEqualTo(original);
+        assertThat(registry.unpack(Any.pack(original), Duration.class)).isEqualTo(original);
     }
 
     @Test
     void queryPreferTypeUrl() {
         final XdsExtensionRegistry registry = createRegistry();
-        // RouterFilterFactory is registered by both name and type URL via SPI
         final String routerTypeUrl =
                 "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router";
         final Any any = Any.newBuilder().setTypeUrl(routerTypeUrl).build();
-
-        // query() checks type URL first
         assertThat(registry.query(any, "envoy.filters.http.router", HttpFilterFactory.class))
                 .isNotNull();
-        // falls back to name when type URL doesn't match
+
         final Any unknownAny = Any.newBuilder().setTypeUrl("unknown").build();
         assertThat(registry.query(unknownAny, "envoy.filters.http.router",
                                   HttpFilterFactory.class))
                 .isNotNull();
-        // returns null when neither matches
         assertThat(registry.query(unknownAny, "unknown", HttpFilterFactory.class)).isNull();
+    }
+
+    @Test
+    void queryDisambiguatesByName() {
+        final String sharedTypeUrl = "type.googleapis.com/test.SharedConfig";
+        final TestClusterTypeFactory factoryA = new TestClusterTypeFactory("factoryA", sharedTypeUrl);
+        final TestClusterTypeFactory factoryB = new TestClusterTypeFactory("factoryB", sharedTypeUrl);
+        final XdsExtensionRegistry registry = createRegistry(factoryA, factoryB);
+
+        final Any any = Any.newBuilder().setTypeUrl(sharedTypeUrl).build();
+        assertThat(registry.query(any, "factoryA", ClusterTypeFactory.class))
+                .isSameAs(factoryA);
+        assertThat(registry.query(any, "factoryB", ClusterTypeFactory.class))
+                .isSameAs(factoryB);
+    }
+
+    @Test
+    void duplicateNameWithinLevelThrows() {
+        final String typeUrl = "type.googleapis.com/test.Config";
+        final TestClusterTypeFactory first = new TestClusterTypeFactory("sameName", typeUrl);
+        final TestClusterTypeFactory second = new TestClusterTypeFactory("sameName", typeUrl);
+        assertThatThrownBy(() -> createRegistry(first, second))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Duplicate factory name")
+                .hasMessageContaining("sameName");
+    }
+
+    @Test
+    void crossLevelOverwrites() {
+        final String builtInName = "armeria.cluster.static";
+        final TestClusterTypeFactory override =
+                new TestClusterTypeFactory(builtInName, "type.googleapis.com/test.Override");
+        final XdsExtensionRegistry registry = createRegistry(override);
+
+        final ClusterTypeFactory resolved = registry.queryByName(builtInName, ClusterTypeFactory.class);
+        assertThat(resolved).isNotNull();
+        assertThat(resolved).isNotSameAs(override);
+    }
+
+    @Test
+    void disambiguateDoesNotFallThroughToByName() {
+        final String sharedTypeUrl = "type.googleapis.com/test.SharedConfig";
+        final TestClusterTypeFactory factoryA = new TestClusterTypeFactory("factoryA", sharedTypeUrl);
+        final TestClusterTypeFactory factoryB = new TestClusterTypeFactory("factoryB", sharedTypeUrl);
+        final TestClusterTypeFactory factoryC =
+                new TestClusterTypeFactory("factoryC", "type.googleapis.com/test.OtherConfig");
+        final XdsExtensionRegistry registry = createRegistry(factoryA, factoryB, factoryC);
+
+        final Any sharedAny = Any.newBuilder().setTypeUrl(sharedTypeUrl).build();
+        assertThat(registry.query(sharedAny, "factoryC", ClusterTypeFactory.class)).isNull();
+    }
+
+    private static XdsExtensionRegistry createRegistry() {
+        return createRegistry(new XdsExtensionFactory[0]);
+    }
+
+    private static XdsExtensionRegistry createRegistry(XdsExtensionFactory... factories) {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        return XdsExtensionRegistry.of(new XdsResourceValidator(),
+                                       watchService,
+                                       meterRegistry,
+                                       new MeterIdPrefix("test"),
+                                       ImmutableList.copyOf(factories));
+    }
+
+    private static final class TestClusterTypeFactory implements ClusterTypeFactory {
+
+        private final String name;
+        private final List<String> typeUrls;
+
+        TestClusterTypeFactory(String name, String typeUrl) {
+            this.name = name;
+            typeUrls = ImmutableList.of(typeUrl);
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public List<String> typeUrls() {
+            return typeUrls;
+        }
+
+        @Override
+        public SnapshotStream<EndpointSnapshot> createEndpointStream(ClusterXdsResource clusterXdsResource,
+                                                                     FactoryContext context) {
+            throw new UnsupportedOperationException("Test-only factory");
+        }
     }
 }
