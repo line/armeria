@@ -34,7 +34,12 @@ import MenuIcon from '@material-ui/icons/Menu';
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { hot } from 'react-hot-loader/root';
-import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
+import {
+  Redirect,
+  Route,
+  RouteComponentProps,
+  withRouter,
+} from 'react-router-dom';
 
 import EnumPage from '../EnumPage';
 import HomePage from '../HomePage';
@@ -597,16 +602,14 @@ const App: React.FunctionComponent<Props> = (props) => {
     const redirectPath = `/methods${pathname.substring(
       pathname.indexOf('/', 2),
     )}`;
-    props.history.push(`${redirectPath}${search || ''}`);
-    return null;
+    return <Redirect to={`${redirectPath}${search || ''}`} />;
   }
   if (pathname.startsWith('/namedType')) {
     const name = pathname.substring(pathname.indexOf('/', 2) + 1);
     const redirectBase = specification.getStructByName(name)
       ? '/structs/'
       : '/enums/';
-    props.history.push(`${redirectBase}${name}${search || ''}`);
-    return null;
+    return <Redirect to={`${redirectBase}${name}${search || ''}`} />;
   }
 
   return (

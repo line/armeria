@@ -15,7 +15,8 @@
  */
 
 import React, { ChangeEvent, Dispatch, useCallback, useReducer } from 'react';
-import { extractUrlPath, Method, ServiceType } from '../../lib/specification';
+import { GraphQLSchema } from 'graphql';
+import { Method, ServiceType } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
@@ -33,6 +34,12 @@ interface OwnProps {
   useRequestBody: boolean;
   requestBody: string;
   jsonSchemas: any;
+  graphqlSchema: GraphQLSchema | null | undefined;
+  graphqlQuery: string;
+  graphqlVariablesText: string;
+  graphqlStateMethodId: string;
+  onGraphqlQueryChange: (value: string) => void;
+  onGraphqlVariablesTextChange: (value: string) => void;
   setRequestBody: Dispatch<React.SetStateAction<string>>;
   additionalPath: string;
   setAdditionalPath: Dispatch<React.SetStateAction<string>>;
@@ -70,6 +77,12 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
   requestBody,
   setRequestBody,
   jsonSchemas,
+  graphqlSchema,
+  graphqlQuery,
+  graphqlVariablesText,
+  graphqlStateMethodId,
+  onGraphqlQueryChange,
+  onGraphqlVariablesTextChange,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [additionalQueriesOpen, toggleAdditionalQueriesOpen] = useReducer(
@@ -175,10 +188,14 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
       {useRequestBody && serviceType === ServiceType.GRAPHQL ? (
         <GraphqlRequestBody
           requestBodyOpen={requestBodyOpen}
-          requestBody={requestBody}
           onEditRequestBodyClick={toggleRequestBodyOpen}
-          onDebugFormChange={onDebugFormChange}
-          schemaUrlPath={extractUrlPath(method)}
+          methodId={method.id}
+          schema={graphqlSchema}
+          query={graphqlQuery}
+          variablesText={graphqlVariablesText}
+          stateMethodId={graphqlStateMethodId}
+          onQueryChange={onGraphqlQueryChange}
+          onVariablesTextChange={onGraphqlVariablesTextChange}
         />
       ) : (
         <RequestBody

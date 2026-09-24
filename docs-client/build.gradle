@@ -1,3 +1,5 @@
+import com.github.gradle.node.npm.task.NpxTask
+
 import static org.gradle.internal.os.OperatingSystem.current
 
 plugins {
@@ -51,6 +53,18 @@ task copyWeb(type: Copy) {
 }
 
 tasks.assemble.dependsOn tasks.copyWeb
+
+tasks.register('installE2eBrowser', NpxTask) {
+    dependsOn tasks.npmInstall
+    command = 'playwright'
+    args = ['install', '--with-deps', '--only-shell', 'chromium']
+}
+
+tasks.register('e2e', NpmTask) {
+    dependsOn tasks.build
+    dependsOn tasks.installE2eBrowser
+    args = ['run', 'test:e2e']
+}
 
 if (!rootProject.hasProperty('noLint')) {
     task eslint(type: NpmTask) {
