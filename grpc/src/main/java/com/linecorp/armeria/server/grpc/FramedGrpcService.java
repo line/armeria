@@ -131,7 +131,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final int maxResponseMessageLength;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
-    private final boolean useClientTimeoutHeader;
+    private final GrpcTimeoutPolicy timeoutPolicy;
     private final boolean useMethodMarshaller;
     private final String advertisedEncodingsHeader;
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
@@ -152,7 +152,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       int maxRequestMessageLength, int maxResponseMessageLength,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
-                      boolean useClientTimeoutHeader,
+                      GrpcTimeoutPolicy timeoutPolicy,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
                       boolean autoCompression, boolean useMethodMarshaller,
@@ -166,7 +166,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
-        this.useClientTimeoutHeader = useClientTimeoutHeader;
+        this.timeoutPolicy = requireNonNull(timeoutPolicy, "timeoutPolicy");
         jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxRequestMessageLength = maxRequestMessageLength;
@@ -229,43 +229,26 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                             new Metadata()));
         }
 
-        if (useClientTimeoutHeader) {
-            final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
-            if (timeoutHeader != null) {
-                try {
-                    final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
-                    if (timeout == 0) {
-                        ctx.clearRequestTimeout();
-                    } else {
-                        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(timeout));
-                    }
-                } catch (IllegalArgumentException e) {
-                    final Metadata metadata = new Metadata();
-                    final InternalGrpcExceptionHandler exceptionHandler = registry.getExceptionHandler(method);
-                    assert exceptionHandler != null;
-                    final Status status = Status.INVALID_ARGUMENT.withCause(e);
-                    final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
-                    assert defaultHeaders != null;
-                    final CompletableFuture<HttpResponse> future =
-                            exceptionHandler.handle(ctx, status, e, metadata).thenApply(newStatus -> {
-                                final ResponseHeaders headers =
-                                        (ResponseHeaders) AbstractServerCall.statusToTrailers(
-                                                ctx, defaultHeaders.toBuilder(), newStatus, metadata);
-                                return HttpResponse.of(headers);
-                            });
-                    return HttpResponse.of(future);
-                }
-            } else {
-                if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
-                    // For unframed gRPC, we use the default timeout.
-                } else {
-                    // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
-                    // an infinite timeout.
-                    // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
-                    ctx.clearRequestTimeout();
-                }
+        final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
+        if (timeoutHeader != null) {
+            final long timeoutNanos;
+            try {
+                timeoutNanos = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
+            } catch (IllegalArgumentException e) {
+                return failRequest(ctx, method, serializationFormat, Status.INVALID_ARGUMENT.withCause(e), e);
+            }
+            if (!applyTimeout(ctx, method, Duration.ofNanos(timeoutNanos))) {
+                return failRequest(ctx, serializationFormat, Status.DEADLINE_EXCEEDED);
+            }
+        } else if (!Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
+            // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
+            // an infinite timeout.
+            // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
+            if (!applyTimeout(ctx, method, null)) {
+                return failRequest(ctx, serializationFormat, Status.DEADLINE_EXCEEDED);
             }
         }
+        // For unframed gRPC without the header, the timeout configured for the service is used.
 
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
@@ -282,6 +265,55 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       serializationFormat);
         }
         return res;
+    }
+
+    /**
+     * Applies the timeout the {@link GrpcTimeoutPolicy} decided on, and returns {@code false} if the deadline
+     * has already been exceeded.
+     */
+    private boolean applyTimeout(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                                 @Nullable Duration clientTimeout) {
+        final Duration timeout = timeoutPolicy.apply(ctx, method, clientTimeout);
+        if (timeout == null) {
+            ctx.clearRequestTimeout();
+            return true;
+        }
+        if (timeout.isZero() || timeout.isNegative()) {
+            return false;
+        }
+        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, timeout);
+        return true;
+    }
+
+    private HttpResponse failRequest(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
+                                     SerializationFormat serializationFormat, Status status,
+                                     Throwable cause) {
+        final Metadata metadata = new Metadata();
+        final InternalGrpcExceptionHandler exceptionHandler = registry.getExceptionHandler(method);
+        assert exceptionHandler != null;
+        final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+        assert defaultHeaders != null;
+        final CompletableFuture<HttpResponse> future =
+                exceptionHandler.handle(ctx, status, cause, metadata).thenApply(newStatus -> {
+                    final ResponseHeaders headers =
+                            (ResponseHeaders) AbstractServerCall.statusToTrailers(
+                                    ctx, defaultHeaders.toBuilder(), newStatus, metadata);
+                    return HttpResponse.of(headers);
+                });
+        return HttpResponse.of(future);
+    }
+
+    /**
+     * Returns a response that fails the request with the specified {@link Status}, without consulting the
+     * exception handlers, because there is no exception to handle.
+     */
+    private HttpResponse failRequest(ServiceRequestContext ctx, SerializationFormat serializationFormat,
+                                     Status status) {
+        final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+        assert defaultHeaders != null;
+        return HttpResponse.of(
+                (ResponseHeaders) AbstractServerCall.statusToTrailers(
+                        ctx, defaultHeaders.toBuilder(), status, new Metadata()));
     }
 
     private <I, O> void startCall(
