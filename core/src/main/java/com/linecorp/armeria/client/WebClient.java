@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -477,7 +478,12 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Sends an HTTP POST request with the specified content serialized as JSON.
+     *
+     * @param path the path to the endpoint
+     * @param content the object to be serialized and sent as a JSON payload
+     * @return the {@link HttpResponse} to the request
      */
+    @UnstableApi
     @CheckReturnValue
     default HttpResponse postJson(String path, Object content) {
         return postJson(path, null, content);
@@ -486,19 +492,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP POST request with the specified content serialized as JSON,
      * appending the given query parameters to the path.
+     *
+     * @param path the path to the endpoint
+     * @param params the query parameters to append to the path
+     * @param content the object to be serialized and sent as a JSON payload
+     * @return the {@link HttpResponse} to the request
      */
+    @UnstableApi
     @CheckReturnValue
     default HttpResponse postJson(String path, @Nullable QueryParams params, Object content) {
         requireNonNull(content, "content");
+        final byte[] jsonBytes;
         try {
-            final byte[] jsonBytes = JacksonUtil.writeValueAsBytes(content);
-            final RequestHeaders headers = RequestHeaders.builder(HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
-                    .contentType(MediaType.JSON)
-                    .build();
-            return execute(headers, jsonBytes);
-        } catch (Exception e) {
+            jsonBytes = JacksonUtil.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to serialize content to JSON", e);
         }
+
+        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
+                .contentType(MediaType.JSON)
+                .build();
+        return execute(headers, jsonBytes);
     }
 
     /**
@@ -571,7 +585,12 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Sends an HTTP PUT request with the specified content serialized as JSON.
+     *
+     * @param path the path to the endpoint
+     * @param content the object to be serialized and sent as a JSON payload
+     * @return the {@link HttpResponse} to the request
      */
+    @UnstableApi
     @CheckReturnValue
     default HttpResponse putJson(String path, Object content) {
         return putJson(path, null, content);
@@ -580,19 +599,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PUT request with the specified content serialized as JSON,
      * appending the given query parameters to the path.
+     *
+     * @param path the path to the endpoint
+     * @param params the query parameters to append to the path
+     * @param content the object to be serialized and sent as a JSON payload
+     * @return the {@link HttpResponse} to the request
      */
+    @UnstableApi
     @CheckReturnValue
     default HttpResponse putJson(String path, @Nullable QueryParams params, Object content) {
         requireNonNull(content, "content");
+        final byte[] jsonBytes;
         try {
-            final byte[] jsonBytes = JacksonUtil.writeValueAsBytes(content);
-            final RequestHeaders headers = RequestHeaders.builder(HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
-                    .contentType(MediaType.JSON)
-                    .build();
-            return execute(headers, jsonBytes);
-        } catch (Exception e) {
+            jsonBytes = JacksonUtil.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to serialize content to JSON", e);
         }
+
+        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
+                .contentType(MediaType.JSON)
+                .build();
+        return execute(headers, jsonBytes);
     }
 
     /**
@@ -666,7 +693,12 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Sends an HTTP PATCH request with the specified content serialized as JSON.
+     *
+     * @param path the path to the endpoint
+     * @param content the object to be serialized and sent as a JSON payload
+     * @return the {@link HttpResponse} to the request
      */
+    @UnstableApi
     @CheckReturnValue
     default HttpResponse patchJson(String path, Object content) {
         return patchJson(path, null, content);
@@ -675,19 +707,27 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     /**
      * Sends an HTTP PATCH request with the specified content serialized as JSON,
      * appending the given query parameters to the path.
+     *
+     * @param path the path to the endpoint
+     * @param params the query parameters to append to the path
+     * @param content the object to be serialized and sent as a JSON payload
+     * @return the {@link HttpResponse} to the request
      */
+    @UnstableApi
     @CheckReturnValue
     default HttpResponse patchJson(String path, @Nullable QueryParams params, Object content) {
         requireNonNull(content, "content");
+        final byte[] jsonBytes;
         try {
-            final byte[] jsonBytes = JacksonUtil.writeValueAsBytes(content);
-            final RequestHeaders headers = RequestHeaders.builder(HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
-                    .contentType(MediaType.JSON)
-                    .build();
-            return execute(headers, jsonBytes);
-        } catch (Exception e) {
+            jsonBytes = JacksonUtil.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to serialize content to JSON", e);
         }
+
+        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
+                .contentType(MediaType.JSON)
+                .build();
+        return execute(headers, jsonBytes);
     }
 
     /**
