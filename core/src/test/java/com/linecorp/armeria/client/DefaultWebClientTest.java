@@ -29,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -78,16 +79,16 @@ class DefaultWebClientTest {
     @Test
     void endpointRemapper() {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
-                                                     Endpoint.of("127.0.0.1", 1));
+                Endpoint.of("127.0.0.1", 1));
         final WebClient client = WebClient.builder("http://group")
-                                          .endpointRemapper(endpoint -> {
-                                              if ("group".equals(endpoint.host())) {
-                                                  return group;
-                                              } else {
-                                                  return endpoint;
-                                              }
-                                          })
-                                          .build();
+                .endpointRemapper(endpoint -> {
+                    if ("group".equals(endpoint.host())) {
+                        return group;
+                    } else {
+                        return endpoint;
+                    }
+                })
+                .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("/").aggregate();
@@ -103,16 +104,16 @@ class DefaultWebClientTest {
     @Test
     void endpointRemapperForUnspecifiedUri() {
         final EndpointGroup group = EndpointGroup.of(Endpoint.of("127.0.0.1", 1),
-                                                     Endpoint.of("127.0.0.1", 1));
+                Endpoint.of("127.0.0.1", 1));
         final WebClient client = WebClient.builder()
-                                          .endpointRemapper(endpoint -> {
-                                              if ("group".equals(endpoint.host())) {
-                                                  return group;
-                                              } else {
-                                                  return endpoint;
-                                              }
-                                          })
-                                          .build();
+                .endpointRemapper(endpoint -> {
+                    if ("group".equals(endpoint.host())) {
+                        return group;
+                    } else {
+                        return endpoint;
+                    }
+                })
+                .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.get("http://group").aggregate();
@@ -129,8 +130,8 @@ class DefaultWebClientTest {
     void testWithQueryParams() {
         final String path = "http://127.0.0.1/helloWorld/test";
         final QueryParams queryParams = QueryParams.builder()
-                                                   .add("q1", "foo")
-                                                   .build();
+                .add("q1", "foo")
+                .build();
         final WebClient client = WebClient.of(UNDEFINED_URI);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.get(path, queryParams).aggregate();
@@ -140,6 +141,47 @@ class DefaultWebClientTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.post(path, queryParams, "").aggregate();
             assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
+        }
+    }
+
+    @Test
+    void testPostJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final WebClient client = WebClient.of(UNDEFINED_URI);
+        // Swapped to Java 8 compatible map initialization
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.postJson(path, payload).aggregate();
+
+            final HttpRequest req = captor.get().request();
+            assertThat(req.path()).isEqualTo("/helloWorld/json");
+            assertThat(req.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+
+            final AggregatedHttpRequest aggregatedReq = req.aggregate().join();
+            assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+        }
+    }
+
+    @Test
+    void testPostJsonWithQueryParams() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final QueryParams queryParams = QueryParams.builder()
+                .add("userId", "123")
+                .build();
+        final WebClient client = WebClient.of(UNDEFINED_URI);
+        // Swapped to Java 8 compatible map initialization
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.postJson(path, queryParams, payload).aggregate();
+
+            final HttpRequest req = captor.get().request();
+            assertThat(req.path()).isEqualTo("/helloWorld/json?userId=123");
+            assertThat(req.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+
+            final AggregatedHttpRequest aggregatedReq = req.aggregate().join();
+            assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
         }
     }
 
@@ -164,17 +206,17 @@ class DefaultWebClientTest {
 
         final WebClient client =
                 builder.decorator((delegate, ctx, req) -> {
-                           if ("/".equals(prefix)) {
-                               assertThat(req.path()).isEqualTo("/hello");
-                           } else {
-                               assertThat(req.path()).isEqualTo("/prefix/hello");
-                           }
-                           assertThat(ctx.sessionProtocol()).isEqualTo(HTTP);
-                           assertThat(ctx.endpointGroup()).isEqualTo(endpoint);
-                           assertThat(ctx.eventLoop().withoutContext()).isEqualTo(eventLoop);
-                           return HttpResponse.of(200);
-                       })
-                       .build();
+                            if ("/".equals(prefix)) {
+                                assertThat(req.path()).isEqualTo("/hello");
+                            } else {
+                                assertThat(req.path()).isEqualTo("/prefix/hello");
+                            }
+                            assertThat(ctx.sessionProtocol()).isEqualTo(HTTP);
+                            assertThat(ctx.endpointGroup()).isEqualTo(endpoint);
+                            assertThat(ctx.eventLoop().withoutContext()).isEqualTo(eventLoop);
+                            return HttpResponse.of(200);
+                        })
+                        .build();
         final CompletableFuture<AggregatedHttpResponse> cf = client.get("/hello").aggregate();
         final AggregatedHttpResponse res = cf.join();
         assertThat(res.status().code()).isEqualTo(200);
@@ -198,7 +240,7 @@ class DefaultWebClientTest {
         assertThat(clientPreprocessors.rpcPreprocessors()).isEmpty();
 
         clientPreprocessors = WebClient.builder(http1).preprocessor(http2).build()
-                                       .options().clientPreprocessors();
+                .options().clientPreprocessors();
         assertThat(clientPreprocessors.preprocessors()).containsExactly(http1, http2);
         assertThat(clientPreprocessors.rpcPreprocessors()).isEmpty();
     }
@@ -219,15 +261,15 @@ class DefaultWebClientTest {
         });
         final CompletableFuture<AggregatedHttpResponse> cf = webClient.get("/hello").aggregate();
         assertThatThrownBy(cf::join).isInstanceOf(CompletionException.class)
-                                    .cause()
-                                    .isSameAs(exception);
+                .cause()
+                .isSameAs(exception);
     }
 
     @Test
     void undefinedUriWithPath() {
         final ClientBuilderParams params = WebClient.of().paramsBuilder()
-                                                    .absolutePathRef("/echo-path")
-                                                    .build();
+                .absolutePathRef("/echo-path")
+                .build();
         assertThatThrownBy(() -> ClientFactory.ofDefault().newClient(params))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Cannot set a prefix path for clients created by 'WebClient.of().'");
