@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
 import io.netty.util.AsciiString;
@@ -85,15 +84,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final State state = new State(config, ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
-
-        // The response timeout of the original context is transferred to the derived contexts created for
-        // each retry attempt. Disable the timeout of the original context so that it is not triggered
-        // while retrying, and set the timeout on each derived context instead.
-        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
-        if (ctxExt != null) {
-            ctxExt.responseCancellationScheduler().cancelScheduled();
-        }
-
+        // The per-attempt timeout is applied to each derived context in setResponseTimeout().
+        // The original context is left untouched so its configured timeout is preserved
+        // (e.g. for the DEADLINE_EXCEEDED description). Its scheduled timeout is cancelled
+        // automatically when the first derived context is created.
         return doExecute(ctx, req);
     }
 
