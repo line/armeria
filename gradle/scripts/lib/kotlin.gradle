@@ -4,6 +4,14 @@ configure(projectsWithFlags('kotlin')) {
 
     apply plugin: 'kotlin'
 
+    // A module that pins a Kotlin language version also compiles and publishes against that baseline's
+    // kotlin-stdlib. Without this, the Kotlin Gradle plugin injects its own version, which then lands in
+    // the published POM as a compile scope dependency and forces every user onto that Kotlin version.
+    if (extractKotlinTargetVersion(project) != null &&
+            managedVersions.containsKey('org.jetbrains.kotlin:kotlin-stdlib')) {
+        kotlin.coreLibrariesVersion = managedVersions['org.jetbrains.kotlin:kotlin-stdlib']
+    }
+
     // compileJmhKotlin is injected by 'jmh' plugin while a benchmark module is being initialized.
     afterEvaluate {
         def target = project.tasks.findByName('compileJava')?.targetCompatibility ?:

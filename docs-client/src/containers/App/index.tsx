@@ -144,6 +144,12 @@ const useStyles = makeStyles((theme: Theme) =>
     httpMethodTrace: {
       background: '#5d12ec',
     },
+    httpMethodQuery: {
+      background: '#0f9d8f',
+    },
+    httpMethodUnknown: {
+      background: '#757575',
+    },
     mainHeader: {
       textDecoration: 'none',
       color: 'white',
@@ -588,9 +594,13 @@ const App: React.FunctionComponent<Props> = (props) => {
       if (httpMethod === 'TRACE') {
         methodClass = classes.httpMethodTrace;
       }
+      if (httpMethod === 'QUERY') {
+        methodClass = classes.httpMethodQuery;
+      }
 
       if (methodClass === undefined) {
-        throw new Error(`unsupported http method: ${httpMethod}`);
+        // Use a neutral color instead of failing to render the whole page.
+        methodClass = classes.httpMethodUnknown;
       }
       return `${classes.httpMethodCommon} ${methodClass}`;
     },
