@@ -79,12 +79,12 @@ class AbstractServerCallTest {
                     protected void beforeSubscribe(Subscriber<? super HttpObject> subscriber,
                                                    Subscription subscription) {
                         // This is called right before
-                        // blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+                        // callExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
                         // in AbstractServerCall.
                         // https://github.com/line/armeria/blob/0960d091bfc7f350c17e68f57cc627de584b9705/grpc/src/main/java/com/linecorp/armeria/internal/server/grpc/AbstractServerCall.java#L363
                         final ServerCall<?, ?> serverCall = serverCallCaptor.get();
                         assertThat(serverCall).isInstanceOf(AbstractServerCall.class);
-                        ((AbstractServerCall<?, ?>) serverCall).blockingExecutor.execute(() -> {
+                        ((AbstractServerCall<?, ?>) serverCall).callExecutor.execute(() -> {
                             // invokeOnMessage is not called until the request is cancelled.
                             await().until(serverCall::isCancelled);
                             // Now, AbstractServerCall.invokeOnMessage() is called and it doesn't call

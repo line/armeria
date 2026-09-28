@@ -63,17 +63,25 @@ class InvalidRequestMessageTest {
                                   .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
                                   .maxRequestMessageLength(100)
                                   .build());
+            sb.serviceUnder("/blocking/", GrpcService.builder()
+                                                   .addService(new TestServiceImpl(
+                                                           Executors.newSingleThreadScheduledExecutor()))
+                                                   .maxRequestMessageLength(100)
+                                                   .useBlockingTaskExecutor(true)
+                                                   .build());
             sb.decorator(LoggingService.newDecorator());
         }
     };
 
-    @CsvSource({ "UnaryCall", "StreamingOutputCall" })
+    @CsvSource({ "UnaryCall, false", "StreamingOutputCall, false",
+                 "UnaryCall, true", "StreamingOutputCall, true" })
     @ParameterizedTest
-    void invalidProto(String methodName) throws InterruptedException {
+    void invalidProto(String methodName, boolean blocking) throws InterruptedException {
         final UnaryGrpcClient client = Clients.builder(server.httpUri(UnaryGrpcSerializationFormats.PROTO))
                                               .build(UnaryGrpcClient.class);
+        final String prefix = blocking ? "/blocking/" : "/";
         assertThatThrownBy(() -> {
-            client.execute('/' + TestServiceGrpc.SERVICE_NAME + '/' + methodName, "INVALID".getBytes())
+            client.execute(prefix + TestServiceGrpc.SERVICE_NAME + '/' + methodName, "INVALID".getBytes())
                   .join();
         }).isInstanceOf(CompletionException.class)
           .hasCauseInstanceOf(ArmeriaStatusException.class)
@@ -81,7 +89,9 @@ class InvalidRequestMessageTest {
 
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
         final RequestLog log = ctx.log().whenComplete().join();
-        assertThat(log.requestCause())
+        // The HTTP request may complete before the queued deserialization task runs.
+        // The deserialization failure must still be recorded as the response cause.
+        assertThat(log.responseCause())
                 .isInstanceOf(StatusRuntimeException.class)
                 .hasMessageContaining("Invalid protobuf byte sequence");
     }

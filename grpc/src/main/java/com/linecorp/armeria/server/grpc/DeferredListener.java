@@ -16,30 +16,31 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.grpc.CallExecutor;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
-import io.netty.util.concurrent.EventExecutor;
 
 final class DeferredListener<I> extends ServerCall.Listener<I> {
-    @Nullable
-    private final Executor blockingExecutor;
-    @Nullable
-    private final EventExecutor eventLoop;
 
-    // The following values are intentionally non-volatile, although the callback methods, which can be called
-    // by non-`sequentialExecutor()` thread, access the values. Because `maybeAddPendingTask()` double-checks
-    // the status of the values in the `sequentialExecutor()`.
+    private static final Logger logger = LoggerFactory.getLogger(DeferredListener.class);
+
+    private final AbstractServerCall<I, ?> serverCall;
+    private final CallExecutor callExecutor;
+
+    // The following fields are intentionally non-volatile because they are accessed only by the tasks
+    // running on `callExecutor`.
     @Nullable
     private ArrayDeque<Consumer<Listener<I>>> pendingQueue = new ArrayDeque<>();
 
@@ -51,15 +52,8 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         final AbstractServerCall<I, ?> armeriaServerCall = ServerCallUtil.findArmeriaServerCall(serverCall);
         checkState(armeriaServerCall != null, "Cannot use %s with a non-Armeria gRPC server. ServerCall: %s",
                    AsyncServerInterceptor.class.getName(), serverCall);
-        // As per `ServerCall.Listener`'s Javadoc, the caller should call one simultaneously. `blockingExecutor`
-        // is a sequential executor which is wrapped by `MoreExecutors.newSequentialExecutor()`. So both
-        // `blockingExecutor` and `eventLoop` guarantees the execution order.
-        blockingExecutor = armeriaServerCall.blockingExecutor();
-        if (blockingExecutor == null) {
-            eventLoop = armeriaServerCall.eventLoop();
-        } else {
-            eventLoop = null;
-        }
+        this.serverCall = armeriaServerCall;
+        callExecutor = armeriaServerCall.callExecutor();
 
         listenerFuture.handleAsync((delegate, cause) -> {
             if (cause != null) {
@@ -87,7 +81,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                 pendingQueue = null;
             }
             return null;
-        }, sequentialExecutor());
+        }, callExecutor);
     }
 
     @Override
@@ -116,29 +110,33 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private void maybeAddPendingTask(Consumer<ServerCall.Listener<I>> task) {
+        if (callExecutor.inExecutor()) {
+            // Already part of the current task. Resubmitting would let later callbacks overtake this one.
+            processTask(task);
+        } else {
+            callExecutor.execute(() -> {
+                try {
+                    processTask(task);
+                } catch (Throwable cause) {
+                    callClosed = true;
+                    if (!serverCall.isCloseCalled()) {
+                        serverCall.close(cause);
+                    } else {
+                        logger.warn("Error in deferred gRPC listener callback.", cause);
+                    }
+                }
+            });
+        }
+    }
+
+    private void processTask(Consumer<ServerCall.Listener<I>> task) {
         if (callClosed) {
             return;
         }
-
-        if (!shouldBePending()) {
-            task.accept(delegate);
-            return;
-        }
-
-        if (eventLoop != null && eventLoop.inEventLoop()) {
+        if (shouldBePending()) {
             addPendingTask(task);
         } else {
-            // It is unavoidable to reschedule the task to ensure the execution order.
-            sequentialExecutor().execute(() -> {
-                if (callClosed) {
-                    return;
-                }
-                if (!shouldBePending()) {
-                    task.accept(delegate);
-                } else {
-                    addPendingTask(task);
-                }
-            });
+            task.accept(delegate);
         }
     }
 
@@ -149,9 +147,5 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
     private boolean shouldBePending() {
         return delegate == null;
-    }
-
-    private Executor sequentialExecutor() {
-        return firstNonNull(eventLoop, blockingExecutor);
     }
 }
