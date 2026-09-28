@@ -185,7 +185,9 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                             if (blockingExecutor != null) {
                                 blockingExecutor.execute(this::invokeOnReady);
                             } else {
-                                invokeOnReady();
+                                // `whenConsumed()` may complete inline. Submit to the event loop to avoid
+                                // reentering the listener.
+                                ctx.eventLoop().execute(this::invokeOnReady);
                             }
                         }
                     });
