@@ -79,24 +79,18 @@ class GrpcTimeoutPolicyTest {
     }
 
     @Test
-    void useServiceTimeoutIgnoresOffset() {
-        assertThat(GrpcTimeoutPolicy.useServiceTimeout().withOffset(Duration.ofSeconds(-1)))
-                .isSameAs(GrpcTimeoutPolicy.useServiceTimeout());
-    }
-
-    @Test
     void withNegativeOffset() {
         final GrpcTimeoutPolicy policy =
-                GrpcTimeoutPolicy.useGrpcTimeoutHeader().withOffset(Duration.ofMillis(-500));
+                GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(10), Duration.ofMillis(-500));
         assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(5))).isEqualTo(Duration.ofMillis(4500));
-        // An infinite timeout is left alone.
-        assertThat(policy.apply(ctx(2000), METHOD, null)).isNull();
+        // An absent header falls back to the max, which is shifted as well.
+        assertThat(policy.apply(ctx(2000), METHOD, null)).isEqualTo(Duration.ofMillis(9500));
     }
 
     @Test
     void negativeOffsetCanExhaustTheDeadline() {
         final GrpcTimeoutPolicy policy =
-                GrpcTimeoutPolicy.useGrpcTimeoutHeader().withOffset(Duration.ofSeconds(-5));
+                GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(10), Duration.ofSeconds(-5));
         // 5s minus 5s must not be mistaken for an infinite timeout.
         assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(5))).isZero();
         assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(3))).isNegative();
@@ -105,9 +99,9 @@ class GrpcTimeoutPolicyTest {
     @Test
     void withPositiveOffset() {
         final GrpcTimeoutPolicy policy =
-                GrpcTimeoutPolicy.useGrpcTimeoutHeader().withOffset(Duration.ofSeconds(1));
+                GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(60), Duration.ofSeconds(1));
         assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(30))).isEqualTo(Duration.ofSeconds(31));
-        assertThat(policy.apply(ctx(2000), METHOD, null)).isNull();
+        assertThat(policy.apply(ctx(2000), METHOD, null)).isEqualTo(Duration.ofSeconds(61));
     }
 
     @Test
@@ -115,28 +109,19 @@ class GrpcTimeoutPolicyTest {
         // 'grpc-timeout' saturates at Long.MAX_VALUE nanoseconds, e.g. for '99999999H'.
         final Duration maxTimeout = Duration.ofNanos(Long.MAX_VALUE);
         assertThat(TimeoutHeaderUtil.fromHeaderValue("99999999H")).isEqualTo(Long.MAX_VALUE);
-        assertThat(GrpcTimeoutPolicy.useGrpcTimeoutHeader()
-                                    .withOffset(Duration.ofSeconds(1))
+        assertThat(GrpcTimeoutPolicy.useGrpcTimeoutHeader(maxTimeout, Duration.ofSeconds(1))
                                     .apply(ctx(2000), METHOD, maxTimeout))
                 .isEqualTo(maxTimeout);
-        assertThat(GrpcTimeoutPolicy.useGrpcTimeoutHeader()
-                                    .withOffset(Duration.ofSeconds(Long.MAX_VALUE))
+        assertThat(GrpcTimeoutPolicy.useGrpcTimeoutHeader(maxTimeout,
+                                                          Duration.ofSeconds(Long.MAX_VALUE))
                                     .apply(ctx(2000), METHOD, Duration.ofSeconds(1)))
                 .isEqualTo(maxTimeout);
     }
 
     @Test
     void withZeroOffset() {
-        final GrpcTimeoutPolicy policy = GrpcTimeoutPolicy.useGrpcTimeoutHeader();
-        assertThat(policy.withOffset(Duration.ZERO)).isSameAs(policy);
-    }
-
-    @Test
-    void offsetAppliesToACustomPolicy() {
-        final GrpcTimeoutPolicy policy =
-                (ctx, method, clientTimeout) -> Duration.ofSeconds(3);
-        assertThat(policy.withOffset(Duration.ofSeconds(-1)).apply(ctx(2000), METHOD, null))
-                .isEqualTo(Duration.ofSeconds(2));
+        assertThat(GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(10), Duration.ZERO))
+                .hasToString(GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(10)).toString());
     }
 
     private static ServiceRequestContext ctx(long serviceTimeoutMillis) {

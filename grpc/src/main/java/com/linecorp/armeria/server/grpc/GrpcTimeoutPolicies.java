@@ -57,12 +57,6 @@ final class GrpcTimeoutPolicies {
         }
 
         @Override
-        public GrpcTimeoutPolicy withOffset(Duration offset) {
-            // Nothing to shift; the service timeout is what it is.
-            return this;
-        }
-
-        @Override
         public String toString() {
             return "GrpcTimeoutPolicy.useServiceTimeout()";
         }
@@ -71,63 +65,38 @@ final class GrpcTimeoutPolicies {
     static final class Bounded implements GrpcTimeoutPolicy {
 
         private final Duration max;
-
-        Bounded(Duration max) {
-            this.max = max;
-        }
-
-        @Override
-        public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
-                              @Nullable Duration clientTimeout) {
-            if (clientTimeout == null || clientTimeout.compareTo(max) > 0) {
-                return max;
-            }
-            return clientTimeout;
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper("GrpcTimeoutPolicy.useGrpcTimeoutHeader")
-                              .add("max", max)
-                              .toString();
-        }
-    }
-
-    static final class WithOffset implements GrpcTimeoutPolicy {
-
-        private final GrpcTimeoutPolicy delegate;
+        @Nullable
         private final Duration offset;
 
-        WithOffset(GrpcTimeoutPolicy delegate, Duration offset) {
-            this.delegate = delegate;
+        Bounded(Duration max, @Nullable Duration offset) {
+            this.max = max;
             this.offset = offset;
         }
 
-        @Nullable
         @Override
         public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
                               @Nullable Duration clientTimeout) {
-            final Duration timeout = delegate.apply(ctx, method, clientTimeout);
-            if (timeout == null) {
-                // An infinite timeout is left alone.
-                return null;
+            Duration timeout = max;
+            if (clientTimeout != null && clientTimeout.compareTo(max) < 0) {
+                timeout = clientTimeout;
             }
-            if (offset.isNegative()) {
-                // Shortening a timeout never overflows, and a non-positive result fails the request
-                // immediately.
-                return timeout.plus(offset);
+            if (offset == null) {
+                return timeout;
             }
             if (timeout.compareTo(MAX_TIMEOUT.minus(offset)) >= 0) {
                 // Adding the offset would overflow.
                 return MAX_TIMEOUT;
             }
+            // A negative offset shortens the timeout, and a non-positive result fails the request
+            // immediately.
             return timeout.plus(offset);
         }
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper("GrpcTimeoutPolicy.withOffset")
-                              .add("delegate", delegate)
+            return MoreObjects.toStringHelper("GrpcTimeoutPolicy.useGrpcTimeoutHeader")
+                              .omitNullValues()
+                              .add("max", max)
                               .add("offset", offset)
                               .toString();
         }

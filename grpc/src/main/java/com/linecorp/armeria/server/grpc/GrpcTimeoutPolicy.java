@@ -63,11 +63,30 @@ public interface GrpcTimeoutPolicy {
      * @throws IllegalArgumentException if the {@code max} is zero or negative
      */
     static GrpcTimeoutPolicy useGrpcTimeoutHeader(Duration max) {
+        return useGrpcTimeoutHeader(max, Duration.ZERO);
+    }
+
+    /**
+     * Returns a {@link GrpcTimeoutPolicy} that uses the timeout a client requested bounded by the specified
+     * {@code max}, and then shifts it by the specified {@code offset}.
+     *
+     * <p>A negative {@code offset} shortens the timeout, which lets a server respond with
+     * {@code DEADLINE_EXCEEDED} before the client gives up, rather than seeing the call cancelled:
+     * <pre>{@code
+     * GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(10), Duration.ofMillis(-500));
+     * }</pre>
+     *
+     * <p>If the {@code offset} shortens a timeout to zero or less, the request fails immediately.
+     *
+     * @throws IllegalArgumentException if the {@code max} is zero or negative
+     */
+    static GrpcTimeoutPolicy useGrpcTimeoutHeader(Duration max, Duration offset) {
         requireNonNull(max, "max");
+        requireNonNull(offset, "offset");
         if (max.isZero() || max.isNegative()) {
             throw new IllegalArgumentException("max: " + max + " (expected: > 0)");
         }
-        return new GrpcTimeoutPolicies.Bounded(max);
+        return new GrpcTimeoutPolicies.Bounded(max, offset.isZero() ? null : offset);
     }
 
     /**
@@ -96,26 +115,4 @@ public interface GrpcTimeoutPolicy {
     @Nullable
     Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
                    @Nullable Duration clientTimeout);
-
-    /**
-     * Returns a {@link GrpcTimeoutPolicy} that shifts the timeout this {@link GrpcTimeoutPolicy} returns by
-     * the specified {@code offset}.
-     *
-     * <p>A negative {@code offset} shortens the timeout, which lets a server respond with
-     * {@code DEADLINE_EXCEEDED} before the client gives up, rather than seeing the call cancelled:
-     * <pre>{@code
-     * GrpcTimeoutPolicy.useGrpcTimeoutHeader()
-     *                  .withOffset(Duration.ofMillis(-500));
-     * }</pre>
-     *
-     * <p>An infinite timeout is left alone. If the offset shortens a timeout to zero or less, the request
-     * fails immediately.
-     */
-    default GrpcTimeoutPolicy withOffset(Duration offset) {
-        requireNonNull(offset, "offset");
-        if (offset.isZero()) {
-            return this;
-        }
-        return new GrpcTimeoutPolicies.WithOffset(this, offset);
-    }
 }

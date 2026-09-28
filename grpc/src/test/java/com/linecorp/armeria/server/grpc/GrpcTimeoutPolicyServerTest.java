@@ -61,8 +61,8 @@ class GrpcTimeoutPolicyServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.requestTimeoutMillis(SERVICE_TIMEOUT_MILLIS);
             sb.service(GrpcService.builder()
-                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader()
-                                                                  .withOffset(Duration.ofSeconds(-5)))
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(
+                                          MAX, Duration.ofSeconds(-5)))
                                   .addService(new TimeoutReportingService())
                                   .build());
         }
@@ -117,9 +117,9 @@ class GrpcTimeoutPolicyServerTest {
     void negativeOffsetShortensTheTimeout() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(offsetServer.httpUri(), TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client.withDeadlineAfter(30, TimeUnit.SECONDS)))
-                .isLessThanOrEqualTo(25_000)
-                .isGreaterThan(24_000);
+        assertThat(requestTimeoutMillis(client.withDeadlineAfter(8, TimeUnit.SECONDS)))
+                .isLessThanOrEqualTo(3_000)
+                .isGreaterThan(2_000);
     }
 
     @Test
