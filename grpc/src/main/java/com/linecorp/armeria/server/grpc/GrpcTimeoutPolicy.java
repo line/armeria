@@ -74,6 +74,9 @@ public interface GrpcTimeoutPolicy {
      * Returns a {@link GrpcTimeoutPolicy} that ignores the {@code grpc-timeout} header, even if a client asks
      * for a shorter timeout, so that the request timeout configured for the Armeria server is always used,
      * e.g. the one set via {@link ServerBuilder#requestTimeout(Duration)}.
+     *
+     * <p>Note that this leaves the request timeout of a {@link ServiceRequestContext} untouched, so a timeout
+     * a decorator set is kept as it is.
      */
     static GrpcTimeoutPolicy useServiceTimeout() {
         return GrpcTimeoutPolicies.USE_SERVICE_TIMEOUT;
