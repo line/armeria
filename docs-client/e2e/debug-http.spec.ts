@@ -576,6 +576,44 @@ test('resets the request editor when navigating between body methods', async ({
   await expect(editor.locator('.view-lines')).not.toContainText('custom');
 });
 
+test('renders and sends a QUERY request with a body and content type', async ({
+  page,
+}) => {
+  await gotoMethod(page, 'example.HttpService', 'query', 'QUERY');
+  const queryMethod = page
+    .getByRole('button')
+    .filter({ has: page.getByText('query()', { exact: true }) });
+  await expect(queryMethod.getByText('QUERY', { exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(15, 157, 143)',
+  );
+
+  const dialog = await openDebug(page);
+  const editor = dialog.locator('.monaco-editor');
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('.view-lines')).toContainText('QUERY');
+  const body = '{"verb":"QUERY","payload":{"value":"browser"}}';
+  await setMonacoValue(editor, body);
+
+  const request = page.waitForRequest((candidate) =>
+    candidate.url().endsWith('/verbs/query'),
+  );
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  const sentRequest = await request;
+  expect(sentRequest.method()).toBe('QUERY');
+  expect(sentRequest.headers()['content-type']).toBe(
+    'application/json; charset=utf-8',
+  );
+  expect(sentRequest.postData()).toBe(body);
+
+  await expect(dialog).toContainText('"method": "QUERY"');
+  await expect(dialog).toContainText(
+    '"content-type": "application/json; charset=utf-8"',
+  );
+  await expect(dialog).toContainText('"verb": "QUERY"');
+  await expect(dialog).toContainText('"value": "browser"');
+});
+
 for (const item of [
   { method: 'options', verb: 'OPTIONS', body: null },
   { method: 'head', verb: 'HEAD', body: null },

@@ -153,6 +153,10 @@ const httpMethods = [
     endpoints: [endpoint('exact:/verbs/patch', annotatedHttpMimeType)],
     exampleRequests: ['{"verb":"PATCH"}'],
   }),
+  method(httpServiceName, 'query', 'QUERY', {
+    endpoints: [endpoint('exact:/verbs/query', annotatedHttpMimeType)],
+    exampleRequests: ['{"verb":"QUERY"}'],
+  }),
   method(httpServiceName, 'delete', 'DELETE', {
     endpoints: [endpoint('exact:/verbs/delete', annotatedHttpMimeType)],
     exampleRequests: ['{"verb":"DELETE"}'],
