@@ -122,6 +122,7 @@ const requestBodyAllowedHttpMethods: string[] = [
   'PUT',
   'PATCH',
   'DELETE',
+  'QUERY',
 ];
 
 function needsToUseRequestBody(httpMethod: string) {
