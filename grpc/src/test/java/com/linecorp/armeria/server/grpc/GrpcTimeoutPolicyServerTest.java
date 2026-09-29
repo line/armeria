@@ -92,16 +92,16 @@ class GrpcTimeoutPolicyServerTest {
     void longClientTimeoutIsCapped() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client.withDeadlineAfter(1, TimeUnit.HOURS)))
-                .isEqualTo(MAX.toMillis());
+        assertTimeoutIsAbout(requestTimeoutMillis(client.withDeadlineAfter(1, TimeUnit.HOURS)),
+                             MAX.toMillis());
     }
 
     @Test
     void shortClientTimeoutIsKept() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client.withDeadlineAfter(500, TimeUnit.MILLISECONDS)))
-                .isLessThanOrEqualTo(500);
+        assertTimeoutIsAbout(requestTimeoutMillis(client.withDeadlineAfter(500, TimeUnit.MILLISECONDS)),
+                             500);
     }
 
     @Test
@@ -110,16 +110,15 @@ class GrpcTimeoutPolicyServerTest {
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .responseTimeoutMillis(0)
                                                           .build(TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client)).isEqualTo(MAX.toMillis());
+        assertTimeoutIsAbout(requestTimeoutMillis(client), MAX.toMillis());
     }
 
     @Test
     void negativeOffsetShortensTheTimeout() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(offsetServer.httpUri(), TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client.withDeadlineAfter(8, TimeUnit.SECONDS)))
-                .isLessThanOrEqualTo(3_000)
-                .isGreaterThan(2_000);
+        // 8s is under the max, so only the offset applies.
+        assertTimeoutIsAbout(requestTimeoutMillis(client.withDeadlineAfter(8, TimeUnit.SECONDS)), 3_000);
     }
 
     @Test
@@ -139,12 +138,22 @@ class GrpcTimeoutPolicyServerTest {
                 GrpcClients.newClient(perMethodServer.httpUri(), TestServiceBlockingStub.class)
                            .withDeadlineAfter(1, TimeUnit.HOURS);
         final SimpleRequest req = SimpleRequest.getDefaultInstance();
-        assertThat(Long.parseLong(client.unaryCall(req).getUsername())).isEqualTo(1000);
-        assertThat(Long.parseLong(client.unaryCall2(req).getUsername())).isEqualTo(MAX.toMillis());
+        assertTimeoutIsAbout(Long.parseLong(client.unaryCall(req).getUsername()), 1000);
+        assertTimeoutIsAbout(Long.parseLong(client.unaryCall2(req).getUsername()), MAX.toMillis());
     }
 
     private static long requestTimeoutMillis(TestServiceBlockingStub client) {
         return Long.parseLong(client.unaryCall(SimpleRequest.getDefaultInstance()).getUsername());
+    }
+
+    /**
+     * Asserts that the specified {@code actualMillis} is the {@code expectedMillis} the policy decided,
+     * give or take a second. A timeout is set from the moment the service is reached, while
+     * {@link ServiceRequestContext#requestTimeoutMillis()} reports it relative to the start of the request, so
+     * the two differ by however long the request took to get there.
+     */
+    private static void assertTimeoutIsAbout(long actualMillis, long expectedMillis) {
+        assertThat(actualMillis).isBetween(expectedMillis, expectedMillis + 1000);
     }
 
     private static class TimeoutReportingService extends TestServiceImplBase {

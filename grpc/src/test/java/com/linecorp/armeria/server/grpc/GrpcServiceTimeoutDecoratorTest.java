@@ -65,7 +65,8 @@ class GrpcServiceTimeoutDecoratorTest {
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .responseTimeoutMillis(0)
                                                           .build(TestServiceBlockingStub.class);
-        assertThat(requestTimeoutMillis(client)).isEqualTo(DECORATOR_TIMEOUT_MILLIS);
+        assertThat(requestTimeoutMillis(client))
+                .isBetween(DECORATOR_TIMEOUT_MILLIS, DECORATOR_TIMEOUT_MILLIS + 1000);
     }
 
     @Test
@@ -73,7 +74,7 @@ class GrpcServiceTimeoutDecoratorTest {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
         assertThat(requestTimeoutMillis(client.withDeadlineAfter(30, TimeUnit.SECONDS)))
-                .isEqualTo(DECORATOR_TIMEOUT_MILLIS);
+                .isBetween(DECORATOR_TIMEOUT_MILLIS, DECORATOR_TIMEOUT_MILLIS + 1000);
     }
 
     private static long requestTimeoutMillis(TestServiceBlockingStub client) {
