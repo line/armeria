@@ -69,6 +69,18 @@ class GrpcTimeoutPolicyServerTest {
     };
 
     @RegisterExtension
+    static ServerExtension keepServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(SERVICE_TIMEOUT_MILLIS);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy((ctx, method, clientTimeout) -> Duration.ofSeconds(-1))
+                                  .addService(new TimeoutReportingService())
+                                  .build());
+        }
+    };
+
+    @RegisterExtension
     static ServerExtension perMethodServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
@@ -133,6 +145,14 @@ class GrpcTimeoutPolicyServerTest {
     }
 
     @Test
+    void negativeTimeoutKeepsTheCurrentOne() {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(keepServer.httpUri(), TestServiceBlockingStub.class);
+        assertTimeoutIsAbout(requestTimeoutMillis(client.withDeadlineAfter(1, TimeUnit.HOURS)),
+                             SERVICE_TIMEOUT_MILLIS);
+    }
+
+    @Test
     void timeoutCanBeDecidedPerMethod() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(perMethodServer.httpUri(), TestServiceBlockingStub.class)
@@ -147,13 +167,14 @@ class GrpcTimeoutPolicyServerTest {
     }
 
     /**
-     * Asserts that the specified {@code actualMillis} is the {@code expectedMillis} the policy decided,
-     * give or take a second. A timeout is set from the moment the service is reached, while
-     * {@link ServiceRequestContext#requestTimeoutMillis()} reports it relative to the start of the request, so
-     * the two differ by however long the request took to get there.
+     * Asserts that the specified {@code actualMillis} is the {@code expectedMillis} the policy decided, give or
+     * take a second, because a timeout does not survive a round trip to the millisecond. A client subtracts
+     * what its deadline already spent before writing the {@code grpc-timeout} header, and a server sets the
+     * timeout from the moment the service is reached while
+     * {@link ServiceRequestContext#requestTimeoutMillis()} reports it relative to the start of the request.
      */
     private static void assertTimeoutIsAbout(long actualMillis, long expectedMillis) {
-        assertThat(actualMillis).isBetween(expectedMillis, expectedMillis + 1000);
+        assertThat(actualMillis).isBetween(expectedMillis - 1000, expectedMillis + 1000);
     }
 
     private static class TimeoutReportingService extends TestServiceImplBase {

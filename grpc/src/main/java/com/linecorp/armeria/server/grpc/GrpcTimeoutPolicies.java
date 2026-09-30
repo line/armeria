@@ -33,6 +33,12 @@ final class GrpcTimeoutPolicies {
      */
     private static final Duration MAX_TIMEOUT = Duration.ofNanos(Long.MAX_VALUE);
 
+    /**
+     * An arbitrary negative {@link Duration}, which tells a caller to leave the request timeout of a
+     * {@link ServiceRequestContext} as it is.
+     */
+    private static final Duration KEEP_TIMEOUT = Duration.ofSeconds(-1);
+
     static final GrpcTimeoutPolicy USE_GRPC_TIMEOUT_HEADER = new GrpcTimeoutPolicy() {
         @Nullable
         @Override
@@ -48,12 +54,13 @@ final class GrpcTimeoutPolicies {
     };
 
     static final GrpcTimeoutPolicy USE_SERVICE_TIMEOUT = new GrpcTimeoutPolicy() {
-        @Nullable
         @Override
         public Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
                               @Nullable Duration clientTimeout) {
-            final long serviceTimeoutMillis = ctx.config().requestTimeoutMillis();
-            return serviceTimeoutMillis == 0 ? null : Duration.ofMillis(serviceTimeoutMillis);
+            // A ServiceRequestContext already carries the timeout configured for the service, which a
+            // decorator may have updated since, so leave it alone instead of reading it back and setting it
+            // again.
+            return KEEP_TIMEOUT;
         }
 
         @Override
@@ -87,9 +94,10 @@ final class GrpcTimeoutPolicies {
                 // Adding the offset would overflow.
                 return MAX_TIMEOUT;
             }
-            // A negative offset shortens the timeout, and a non-positive result fails the request
-            // immediately.
-            return timeout.plus(offset);
+            final Duration shifted = timeout.plus(offset);
+            // A deadline the offset exhausted must fail the request, so it must not come out negative, which
+            // would mean leaving the request timeout as it is.
+            return shifted.isNegative() ? Duration.ZERO : shifted;
         }
 
         @Override

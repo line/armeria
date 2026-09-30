@@ -273,17 +273,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
      */
     private boolean applyTimeout(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
                                  @Nullable Duration clientTimeout) {
-        if (timeoutPolicy == GrpcTimeoutPolicy.useServiceTimeout()) {
-            // Leave the request timeout alone, so that a timeout a decorator set is not replaced with the
-            // one configured for the service.
-            return true;
-        }
         final Duration timeout = timeoutPolicy.apply(ctx, method, clientTimeout);
         if (timeout == null) {
             ctx.clearRequestTimeout();
             return true;
         }
-        if (timeout.isZero() || timeout.isNegative()) {
+        if (timeout.isNegative()) {
+            // Leave the request timeout alone, so that a timeout a decorator set is not replaced.
+            return true;
+        }
+        if (timeout.isZero()) {
             return false;
         }
         ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, timeout);

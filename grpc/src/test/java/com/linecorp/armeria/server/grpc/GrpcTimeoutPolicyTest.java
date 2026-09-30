@@ -70,12 +70,13 @@ class GrpcTimeoutPolicyTest {
     @Test
     void useServiceTimeout() {
         final GrpcTimeoutPolicy policy = GrpcTimeoutPolicy.useServiceTimeout();
-        assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(30))).isEqualTo(Duration.ofMillis(2000));
+        // A negative duration keeps whatever the context carries, which is the timeout configured for the
+        // service unless a decorator changed it.
+        assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(30))).isNegative();
         // A shorter client timeout is ignored too.
-        assertThat(policy.apply(ctx(2000), METHOD, Duration.ofMillis(500))).isEqualTo(Duration.ofMillis(2000));
-        assertThat(policy.apply(ctx(2000), METHOD, null)).isEqualTo(Duration.ofMillis(2000));
-        // A service without a timeout means no timeout.
-        assertThat(policy.apply(ctx(0), METHOD, Duration.ofSeconds(30))).isNull();
+        assertThat(policy.apply(ctx(2000), METHOD, Duration.ofMillis(500))).isNegative();
+        assertThat(policy.apply(ctx(2000), METHOD, null)).isNegative();
+        assertThat(policy.apply(ctx(0), METHOD, Duration.ofSeconds(30))).isNegative();
     }
 
     @Test
@@ -93,7 +94,9 @@ class GrpcTimeoutPolicyTest {
                 GrpcTimeoutPolicy.useGrpcTimeoutHeader(Duration.ofSeconds(10), Duration.ofSeconds(-5));
         // 5s minus 5s must not be mistaken for an infinite timeout.
         assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(5))).isZero();
-        assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(3))).isNegative();
+        // Nor may an over-shortened deadline come out negative, which would keep the current timeout instead
+        // of failing the request.
+        assertThat(policy.apply(ctx(2000), METHOD, Duration.ofSeconds(3))).isZero();
     }
 
     @Test

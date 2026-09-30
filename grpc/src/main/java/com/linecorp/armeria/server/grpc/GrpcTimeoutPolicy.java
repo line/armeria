@@ -94,8 +94,8 @@ public interface GrpcTimeoutPolicy {
      * for a shorter timeout, so that the request timeout configured for the Armeria server is always used,
      * e.g. the one set via {@link ServerBuilder#requestTimeout(Duration)}.
      *
-     * <p>Note that this leaves the request timeout of a {@link ServiceRequestContext} untouched, so a timeout
-     * a decorator set is kept as it is.
+     * <p>Note that this leaves the request timeout of a {@link ServiceRequestContext} untouched rather than
+     * setting it again, so a timeout a decorator set is kept as it is.
      */
     static GrpcTimeoutPolicy useServiceTimeout() {
         return GrpcTimeoutPolicies.USE_SERVICE_TIMEOUT;
@@ -109,8 +109,10 @@ public interface GrpcTimeoutPolicy {
      * @param clientTimeout the timeout requested via the {@code grpc-timeout} header, or {@code null} if the
      *                      header is absent, which the gRPC specification defines as an infinite timeout
      *
-     * @return the timeout to use, or {@code null} to use an infinite timeout. A zero or negative timeout
-     *         fails the request immediately with {@code DEADLINE_EXCEEDED}.
+     * @return the timeout to use, or {@code null} to use an infinite timeout. {@link Duration#ZERO} fails the
+     *         request immediately with {@code DEADLINE_EXCEEDED}, and a negative {@link Duration} leaves the
+     *         request timeout of the {@link ServiceRequestContext} as it is, which is how you keep a timeout a
+     *         decorator set.
      */
     @Nullable
     Duration apply(ServiceRequestContext ctx, ServerMethodDefinition<?, ?> method,
