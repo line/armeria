@@ -185,6 +185,67 @@ class DefaultWebClientTest {
         }
     }
 
+    @Test
+    void testPutJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final WebClient client = WebClient.of(UNDEFINED_URI);
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.putJson(path, payload).aggregate();
+
+            final HttpRequest req = captor.get().request();
+            assertThat(req.path()).isEqualTo("/helloWorld/json");
+            assertThat(req.method()).isEqualTo(HttpMethod.PUT);
+            assertThat(req.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+
+            final AggregatedHttpRequest aggregatedReq = req.aggregate().join();
+            assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+        }
+    }
+
+    @Test
+    void testPatchJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final WebClient client = WebClient.of(UNDEFINED_URI);
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.patchJson(path, payload).aggregate();
+
+            final HttpRequest req = captor.get().request();
+            assertThat(req.path()).isEqualTo("/helloWorld/json");
+            assertThat(req.method()).isEqualTo(HttpMethod.PATCH);
+            assertThat(req.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+
+            final AggregatedHttpRequest aggregatedReq = req.aggregate().join();
+            assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+        }
+    }
+
+    @Test
+    void testPreparedContentJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final WebClient client = WebClient.of(UNDEFINED_URI);
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.prepare()
+                    .post(path)
+                    .contentJson(payload)
+                    .execute()
+                    .aggregate();
+
+            final HttpRequest req = captor.get().request();
+            assertThat(req.path()).isEqualTo("/helloWorld/json");
+            assertThat(req.method()).isEqualTo(HttpMethod.POST);
+            assertThat(req.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+
+            final AggregatedHttpRequest aggregatedReq = req.aggregate().join();
+            assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+        }
+    }
+
     @ParameterizedTest
     @CsvSource({
             "/, false",
