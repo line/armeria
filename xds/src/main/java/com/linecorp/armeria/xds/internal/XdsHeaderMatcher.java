@@ -116,11 +116,9 @@ public final class XdsHeaderMatcher {
                 matcher = headers -> {
                     final List<String> allHeaders = headers.getAll(headerMatcher.getName());
                     if (allHeaders.isEmpty()) {
-                        if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
-                            return stringMatcher.match("");
-                        } else {
-                            return false;
-                        }
+                        // matches() returns early for a missing header
+                        // unless treat_missing_header_as_empty is set.
+                        return stringMatcher.match("");
                     }
                     if (allHeaders.size() == 1) {
                         return stringMatcher.match(allHeaders.get(0));
