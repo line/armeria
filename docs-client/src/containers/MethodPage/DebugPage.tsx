@@ -36,11 +36,6 @@ import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gis
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
-import {
-  buildClientSchema,
-  getIntrospectionQuery,
-  GraphQLSchema,
-} from 'graphql';
 import { RouteComponentProps } from 'react-router';
 import {
   Dialog,
@@ -64,6 +59,7 @@ import {
 import { TRANSPORTS } from '../../lib/transports';
 import { ResponseData, SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
+import useGraphqlDebugState from './useGraphqlDebugState';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -89,6 +85,7 @@ interface OwnProps {
   useRequestBody: boolean;
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
+  syncDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
   jsonSchemas: any;
   docServiceRoute?: Route;
 }
@@ -196,28 +193,6 @@ const errorResponseData = (error: unknown): ResponseData => ({
   timestamp: new Date().toLocaleString(),
 });
 
-const serializeGraphqlRequestBody = (
-  query: string,
-  variablesText: string,
-): string => {
-  let variables = {};
-  if (variablesText.trim() !== '') {
-    let parsed;
-    try {
-      parsed = JSON.parse(variablesText);
-    } catch (error) {
-      throw new Error(
-        `Failed to parse a JSON object in the GraphQL variables:\n${error}`,
-      );
-    }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('The GraphQL variables must be a JSON object.');
-    }
-    variables = parsed;
-  }
-  return JSON.stringify({ query, variables });
-};
-
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
   exampleHeaders,
@@ -231,6 +206,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useRequestBody,
   debugFormIsOpen,
   setDebugFormIsOpen,
+  syncDebugFormIsOpen,
   jsonSchemas,
   docServiceRoute,
 }) => {
@@ -242,12 +218,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [graphqlQuery, setGraphqlQuery] = useState('');
-  const [graphqlVariablesText, setGraphqlVariablesText] = useState('');
-  const [graphqlStateMethodId, setGraphqlStateMethodId] = useState('');
-  const [graphqlSchema, setGraphqlSchema] = useState<
-    GraphQLSchema | null | undefined
-  >();
   const [keepDebugResponse, toggleKeepDebugResponse] = useReducer(
     toggle,
     false,
@@ -272,132 +242,24 @@ const DebugPage: React.FunctionComponent<Props> = ({
     throw new Error("This method doesn't have a debug transport.");
   }
 
-  const graphqlSchemaUrlPath =
-    serviceType === ServiceType.GRAPHQL ? extractUrlPath(method) : undefined;
+  const {
+    editorState: graphqlEditorState,
+    serializeRequestBody: serializeGraphqlRequestBody,
+    synchronizeWithRequestBody,
+  } = useGraphqlDebugState({ method, serviceType, setRequestBody });
+
+  const formSearchParams = new URLSearchParams(location.search);
+  formSearchParams.delete('debug_form_is_open');
+  const formSearch = formSearchParams.toString();
+  const urlDebugFormIsOpen =
+    new URLSearchParams(location.search).get('debug_form_is_open') === 'true';
 
   useEffect(() => {
-    if (!graphqlSchemaUrlPath) {
-      setGraphqlSchema(undefined);
-      return undefined;
-    }
-
-    const abortController = new AbortController();
-    setGraphqlSchema(null);
-    (async () => {
-      try {
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        };
-        if (process.env.WEBPACK_DEV === 'true') {
-          headers[docServiceDebug] = 'true';
-        }
-        const httpResponse = await fetch(graphqlSchemaUrlPath, {
-          method: 'POST',
-          headers,
-          signal: abortController.signal,
-          body: JSON.stringify({
-            operationName: 'IntrospectionQuery',
-            // See https://github.com/graphql/graphiql/blob/8ac05f8b141b6f5cb4449c62ad67a34115490ac8/packages/graphiql/src/utility/introspectionQueries.ts#L16...L22
-            query: getIntrospectionQuery().replace(
-              'subscriptionType { name }',
-              '',
-            ),
-          }),
-        });
-        const result = await httpResponse.json();
-        if (abortController.signal.aborted) {
-          return;
-        }
-        if (typeof result !== 'string' && 'data' in result) {
-          setGraphqlSchema(buildClientSchema(result.data));
-        } else {
-          setGraphqlSchema(null);
-        }
-      } catch {
-        if (!abortController.signal.aborted) {
-          setGraphqlSchema(null);
-        }
-      }
-    })();
-
-    return () => abortController.abort();
-  }, [graphqlSchemaUrlPath]);
-
-  const syncGraphqlState = useCallback((body: string, methodId: string) => {
-    if (body === '') {
-      setGraphqlQuery('');
-      setGraphqlVariablesText('');
-      setGraphqlStateMethodId(methodId);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(body);
-      if (!parsed || typeof parsed !== 'object') {
-        setGraphqlQuery('');
-        setGraphqlVariablesText('');
-        setGraphqlStateMethodId(methodId);
-        return;
-      }
-      setGraphqlQuery(typeof parsed.query === 'string' ? parsed.query : '');
-      const variables =
-        parsed.variables &&
-        typeof parsed.variables === 'object' &&
-        !Array.isArray(parsed.variables)
-          ? parsed.variables
-          : {};
-      setGraphqlVariablesText(
-        Object.keys(variables).length > 0 ? JSON.stringify(variables) : '',
-      );
-      setGraphqlStateMethodId(methodId);
-    } catch {
-      setGraphqlQuery('');
-      setGraphqlVariablesText('');
-      setGraphqlStateMethodId(methodId);
-    }
-  }, []);
-
-  const updateGraphqlRequestBody = useCallback(
-    (query: string, variablesText: string) => {
-      try {
-        setRequestBody(serializeGraphqlRequestBody(query, variablesText));
-      } catch {
-        setRequestBody(variablesText);
-      }
-    },
-    [],
-  );
-
-  const onGraphqlQueryChange = useCallback(
-    (value: string) => {
-      setGraphqlStateMethodId(method.id);
-      setGraphqlQuery(value);
-      updateGraphqlRequestBody(value, graphqlVariablesText);
-    },
-    [graphqlVariablesText, method.id, updateGraphqlRequestBody],
-  );
-
-  const onGraphqlVariablesTextChange = useCallback(
-    (value: string) => {
-      setGraphqlStateMethodId(method.id);
-      setGraphqlVariablesText(value);
-      updateGraphqlRequestBody(graphqlQuery, value);
-    },
-    [graphqlQuery, method.id, updateGraphqlRequestBody],
-  );
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
+    const urlParams = new URLSearchParams(formSearch);
 
     let urlRequestBody = '';
     if (useRequestBody && urlParams.has('request_body')) {
       urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-    }
-
-    let urlDebugFormIsOpen = false;
-    if (urlParams.has('debug_form_is_open')) {
-      urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
     }
 
     let urlPath;
@@ -430,28 +292,25 @@ const DebugPage: React.FunctionComponent<Props> = ({
       urlRequestBody || method.exampleRequests[0] || '';
     setRequestBody(initialRequestBody);
     if (serviceType === ServiceType.GRAPHQL) {
-      syncGraphqlState(initialRequestBody, method.id);
+      synchronizeWithRequestBody(initialRequestBody, method.id);
     }
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
-
-    if (urlDebugFormIsOpen) {
-      setDebugFormIsOpen(urlDebugFormIsOpen);
-    }
   }, [
     exactPathMapping,
     exampleQueries.length,
     serviceType,
-    location.search,
-    match.params,
+    formSearch,
     method,
     transport,
     useRequestBody,
     keepDebugResponse,
-    docServiceRoute,
-    setDebugFormIsOpen,
-    syncGraphqlState,
+    synchronizeWithRequestBody,
   ]);
+
+  useEffect(() => {
+    syncDebugFormIsOpen(urlDebugFormIsOpen);
+  }, [syncDebugFormIsOpen, urlDebugFormIsOpen]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
@@ -485,7 +344,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     try {
       const exportedRequestBody =
         serviceType === ServiceType.GRAPHQL
-          ? serializeGraphqlRequestBody(graphqlQuery, graphqlVariablesText)
+          ? serializeGraphqlRequestBody()
           : requestBody;
       if (useRequestBody) {
         validateJsonObject(exportedRequestBody, 'request body');
@@ -573,8 +432,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     method,
     transport,
     requestBody,
-    graphqlQuery,
-    graphqlVariablesText,
+    serializeGraphqlRequestBody,
     serviceType,
     showSnackbar,
     additionalQueries,
@@ -666,7 +524,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         // For some reason jsonMinify minifies {} as empty string, so work around it.
         const submittedRequestBody =
           serviceType === ServiceType.GRAPHQL
-            ? serializeGraphqlRequestBody(graphqlQuery, graphqlVariablesText)
+            ? serializeGraphqlRequestBody()
             : requestBody;
         params.set('request_body', jsonMinify(submittedRequestBody) || '{}');
       }
@@ -730,8 +588,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     serviceType,
     requestBody,
-    graphqlQuery,
-    graphqlVariablesText,
+    serializeGraphqlRequestBody,
     exactPathMapping,
     additionalPath,
     history,
@@ -795,12 +652,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                 additionalHeaders={additionalHeaders}
                 setAdditionalHeaders={setAdditionalHeaders}
                 jsonSchemas={jsonSchemas}
-                graphqlSchema={graphqlSchema}
-                graphqlQuery={graphqlQuery}
-                graphqlVariablesText={graphqlVariablesText}
-                graphqlStateMethodId={graphqlStateMethodId}
-                onGraphqlQueryChange={onGraphqlQueryChange}
-                onGraphqlVariablesTextChange={onGraphqlVariablesTextChange}
+                graphqlEditorState={graphqlEditorState}
                 stickyHeaders={stickyHeaders}
                 toggleStickyHeaders={toggleStickyHeaders}
                 requestBody={requestBody}
@@ -923,12 +775,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   additionalHeaders={additionalHeaders}
                   setAdditionalHeaders={setAdditionalHeaders}
                   jsonSchemas={jsonSchemas}
-                  graphqlSchema={graphqlSchema}
-                  graphqlQuery={graphqlQuery}
-                  graphqlVariablesText={graphqlVariablesText}
-                  graphqlStateMethodId={graphqlStateMethodId}
-                  onGraphqlQueryChange={onGraphqlQueryChange}
-                  onGraphqlVariablesTextChange={onGraphqlVariablesTextChange}
+                  graphqlEditorState={graphqlEditorState}
                   stickyHeaders={stickyHeaders}
                   toggleStickyHeaders={toggleStickyHeaders}
                   requestBody={requestBody}

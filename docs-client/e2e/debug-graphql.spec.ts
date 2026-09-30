@@ -110,13 +110,35 @@ test('loads the GraphQL schema, completes a query, and sends variables', async (
 test('keeps GraphQL editors usable without introspection data', async ({
   page,
 }) => {
+  const schemaResponse = page.waitForResponse((response) =>
+    response.url().endsWith('/graphql'),
+  );
+  await gotoMethod(page, 'example.GraphqlService', 'execute', 'POST');
+  await schemaResponse;
+  let editor = page.locator('.monaco-editor');
+  await setMonacoValue(editor, '{ }');
+  let input = editor.locator('textarea.inputarea');
+  await input.press('ArrowLeft');
+  await expectMonacoSuggestion(page, editor, 'greeting');
+  await input.press('Escape');
+
   const noSchemaResponse = page.waitForResponse((response) =>
     response.url().endsWith('/graphql-no-schema'),
   );
   await gotoMethod(page, 'example.GraphqlService', 'noSchema', 'POST');
   await noSchemaResponse;
-  let editor = page.locator('.monaco-editor');
+  editor = page.locator('.monaco-editor');
   await expect(editor).toBeVisible();
+  await setMonacoValue(editor, '{ }');
+  input = editor.locator('textarea.inputarea');
+  await input.press('ArrowLeft');
+  await input.press('Control+Space');
+  await expect(
+    page
+      .locator('.suggest-widget.visible')
+      .getByText('greeting', { exact: true }),
+  ).toHaveCount(0);
+  await input.press('Escape');
   await setMonacoValue(editor, 'query { stale }');
 
   const noDataResponse = page.waitForResponse((response) =>
@@ -388,8 +410,24 @@ test('uses one GraphQL schema owner for inline and dialog editors', async ({
   await expectMonacoSuggestion(page, editor, 'greeting');
   await input.press('Escape');
 
+  const inline = page.getByRole('main');
+  await inline.getByRole('button', { name: '# Query Variables' }).click();
+  const inlineVariables = inline.locator(
+    'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
+  );
+  await inlineVariables.fill('{"name":"Inline"}');
+
   const dialog = await openDebug(page);
+  const dialogVariables = dialog.locator(
+    'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
+  );
+  if (!(await dialogVariables.isVisible())) {
+    await dialog.getByRole('button', { name: '# Query Variables' }).click();
+  }
+  await expect(dialogVariables).toHaveValue('{"name":"Inline"}');
+  await dialogVariables.fill('{"name":"Dialog"}');
   await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(inlineVariables).toHaveValue('{"name":"Dialog"}');
   await page.waitForLoadState('networkidle');
   expect(introspectionRequests).toBe(1);
 

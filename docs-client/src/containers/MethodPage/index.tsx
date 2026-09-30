@@ -152,7 +152,8 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           urlParams.delete('debug_form_is_open');
         }
 
-        const serializedParams = `?${urlParams.toString()}`;
+        const serializedSearch = urlParams.toString();
+        const serializedParams = serializedSearch ? `?${serializedSearch}` : '';
         if (serializedParams !== location.search) {
           history.push(`${location.pathname}${serializedParams}`);
         }
@@ -286,6 +287,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
           debugFormIsOpen={debugFormIsOpen}
           setDebugFormIsOpen={setDebugFormIsOpen}
+          syncDebugFormIsOpen={setDebugFormIsOpenState}
           docServiceRoute={props.specification.getDocServiceRoute()}
         />
       )}

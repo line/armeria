@@ -15,7 +15,6 @@
  */
 
 import React, { ChangeEvent, Dispatch, useCallback, useReducer } from 'react';
-import { GraphQLSchema } from 'graphql';
 import { Method, ServiceType } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
@@ -23,6 +22,7 @@ import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
 import GraphqlRequestBody from './GraphqlRequestBody';
+import { GraphqlEditorState } from './useGraphqlDebugState';
 
 interface OwnProps {
   exactPathMapping: boolean;
@@ -34,12 +34,7 @@ interface OwnProps {
   useRequestBody: boolean;
   requestBody: string;
   jsonSchemas: any;
-  graphqlSchema: GraphQLSchema | null | undefined;
-  graphqlQuery: string;
-  graphqlVariablesText: string;
-  graphqlStateMethodId: string;
-  onGraphqlQueryChange: (value: string) => void;
-  onGraphqlVariablesTextChange: (value: string) => void;
+  graphqlEditorState: GraphqlEditorState;
   setRequestBody: Dispatch<React.SetStateAction<string>>;
   additionalPath: string;
   setAdditionalPath: Dispatch<React.SetStateAction<string>>;
@@ -77,12 +72,7 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
   requestBody,
   setRequestBody,
   jsonSchemas,
-  graphqlSchema,
-  graphqlQuery,
-  graphqlVariablesText,
-  graphqlStateMethodId,
-  onGraphqlQueryChange,
-  onGraphqlVariablesTextChange,
+  graphqlEditorState,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [additionalQueriesOpen, toggleAdditionalQueriesOpen] = useReducer(
@@ -190,12 +180,7 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
           requestBodyOpen={requestBodyOpen}
           onEditRequestBodyClick={toggleRequestBodyOpen}
           methodId={method.id}
-          schema={graphqlSchema}
-          query={graphqlQuery}
-          variablesText={graphqlVariablesText}
-          stateMethodId={graphqlStateMethodId}
-          onQueryChange={onGraphqlQueryChange}
-          onVariablesTextChange={onGraphqlVariablesTextChange}
+          editorState={graphqlEditorState}
         />
       ) : (
         <RequestBody

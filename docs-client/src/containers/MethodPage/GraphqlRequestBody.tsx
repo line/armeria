@@ -18,12 +18,12 @@ import React, { useCallback, useEffect, useReducer, useRef } from 'react';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 
-import { GraphQLSchema } from 'graphql';
 import TextField from '@material-ui/core/TextField';
 import Editor, { useMonaco, loader, OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-graphql';
 import { jsonPrettify } from '../../lib/json-util';
+import { GraphqlEditorState } from './useGraphqlDebugState';
 
 // Required for graphQL plugin to load properly.
 loader.config({ monaco });
@@ -34,12 +34,7 @@ interface Props {
   requestBodyOpen: boolean;
   onEditRequestBodyClick: React.Dispatch<unknown>;
   methodId: string;
-  schema: GraphQLSchema | null | undefined;
-  query: string;
-  variablesText: string;
-  stateMethodId: string;
-  onQueryChange: (value: string) => void;
-  onVariablesTextChange: (value: string) => void;
+  editorState: GraphqlEditorState;
 }
 
 const toggle = (prev: boolean, override: unknown) => {
@@ -53,13 +48,16 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   requestBodyOpen,
   onEditRequestBodyClick,
   methodId,
-  schema,
-  query,
-  variablesText,
-  stateMethodId,
-  onQueryChange,
-  onVariablesTextChange,
+  editorState,
 }) => {
+  const {
+    schema,
+    query,
+    variablesText,
+    stateMethodId,
+    onQueryChange,
+    onVariablesTextChange,
+  } = editorState;
   const [queryOpen, toggleQueryOpen] = useReducer(toggle, true);
   const [variablesOpen, toggleVariablesOpen] = useReducer(toggle, false);
   const previousVariablesText = useRef('');

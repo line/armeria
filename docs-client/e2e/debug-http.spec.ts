@@ -81,7 +81,8 @@ test('sends an exact GET and exposes response, clipboard, clear, and URL state',
   ).toBeVisible();
   const curl = await page.evaluate(() => navigator.clipboard.readText());
   expect(curl).toContain('curl -XGET');
-  expect(curl).toContain("'http://127.0.0.1:3000/hello'");
+  const origin = await page.evaluate(() => window.location.origin);
+  expect(curl).toContain(`'${origin}/hello'`);
   expect(curl).toContain('doc-service-debug: true');
 
   await responseButtons(dialog).nth(1).click();
