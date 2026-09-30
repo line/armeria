@@ -106,8 +106,9 @@ public interface GrpcTimeoutPolicy {
      *
      * @param ctx the {@link ServiceRequestContext} of the request
      * @param method the {@link ServerMethodDefinition} the request is routed to
-     * @param clientTimeout the timeout requested via the {@code grpc-timeout} header, or {@code null} if the
-     *                      header is absent, which the gRPC specification defines as an infinite timeout
+     * @param clientTimeout the timeout requested via the {@code grpc-timeout} header, or {@code null} if a
+     *                      client asked for no timeout, either by omitting the header, which the gRPC
+     *                      specification defines as an infinite timeout, or by sending a zero timeout
      *
      * @return the timeout to use, or {@code null} to use an infinite timeout. {@link Duration#ZERO} fails the
      *         request immediately with {@code DEADLINE_EXCEEDED}, and a negative {@link Duration} leaves the

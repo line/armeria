@@ -237,7 +237,19 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             } catch (IllegalArgumentException e) {
                 return failRequest(ctx, method, serializationFormat, Status.INVALID_ARGUMENT.withCause(e), e);
             }
-            if (!applyTimeout(ctx, method, Duration.ofNanos(timeoutNanos))) {
+            if (timeoutNanos < 0) {
+                // A 'TimeoutValue' is a positive integer, so a negative one is a malformed header, which must
+                // not reach a GrpcTimeoutPolicy where a negative timeout means something else.
+                // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests
+                final IllegalArgumentException cause =
+                        new IllegalArgumentException("negative timeout: " + timeoutHeader);
+                return failRequest(ctx, method, serializationFormat,
+                                   Status.INVALID_ARGUMENT.withCause(cause), cause);
+            }
+            // As per the Armeria convention, a zero timeout means no timeout, which is what an absent header
+            // means as well.
+            final Duration clientTimeout = timeoutNanos == 0 ? null : Duration.ofNanos(timeoutNanos);
+            if (!applyTimeout(ctx, method, clientTimeout)) {
                 return failRequest(ctx, serializationFormat, Status.DEADLINE_EXCEEDED);
             }
         } else if (!Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {

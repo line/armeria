@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -142,6 +143,32 @@ class GrpcTimeoutPolicyServerTest {
                 .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
                     assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
                 });
+    }
+
+    @Test
+    void zeroClientTimeoutMeansNoTimeout() {
+        // A client asking for no timeout must be capped like one that omits the header, rather than failing.
+        assertTimeoutIsAbout(requestTimeoutMillis(clientSendingTimeout("0S")), MAX.toMillis());
+    }
+
+    @Test
+    void negativeClientTimeoutIsRejected() {
+        // A negative 'grpc-timeout' is malformed, and must not be read as a request to keep the timeout.
+        assertThatThrownBy(() -> requestTimeoutMillis(clientSendingTimeout("-1S")))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.INVALID_ARGUMENT);
+                });
+    }
+
+    /**
+     * Returns a client that sends the specified {@code timeoutHeader} verbatim, which a gRPC stub would not
+     * produce on its own.
+     */
+    private static TestServiceBlockingStub clientSendingTimeout(String timeoutHeader) {
+        return GrpcClients.builder(server.httpUri())
+                          .responseTimeoutMillis(0)
+                          .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, timeoutHeader)
+                          .build(TestServiceBlockingStub.class);
     }
 
     @Test
