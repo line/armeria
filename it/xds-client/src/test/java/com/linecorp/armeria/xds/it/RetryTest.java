@@ -822,7 +822,55 @@ class RetryTest {
                              RequestHeaders.builder(HttpMethod.GET, "/")
                                            .add("x-force-retry", "yes")
                                            .add("x-envoy-retry-on", "5xx")
-                                           .add("x-envoy-max-retries", "2").build(), 2)
+                                           .add("x-envoy-max-retries", "2").build(), 2),
+                // Test retriable_request_headers matching with retry_on from the config only
+                //language=YAML
+                Arguments.of("""
+                             {
+                               retry_on: "5xx",
+                               num_retries: 2,
+                               retriable_request_headers: [
+                                 {
+                                   name: "x-can-retry",
+                                   string_match: { exact: "true" }
+                                 }
+                               ]
+                             }
+                             """, ResponseHeaders.of(500),
+                             RequestHeaders.builder(HttpMethod.GET, "/")
+                                           .add("x-can-retry", "true").build(), 2),
+                // Test retriable_request_headers not matching with retry_on from the config only
+                // (should not retry even without x-envoy-* retry headers)
+                //language=YAML
+                Arguments.of("""
+                             {
+                               retry_on: "5xx",
+                               num_retries: 2,
+                               retriable_request_headers: [
+                                 {
+                                   name: "x-can-retry",
+                                   string_match: { exact: "true" }
+                                 }
+                               ]
+                             }
+                             """, ResponseHeaders.of(500),
+                             RequestHeaders.builder(HttpMethod.GET, "/")
+                                           .add("x-can-retry", "false").build(), 0),
+                // Test retriable_request_headers missing header with retry_on from the config only
+                //language=YAML
+                Arguments.of("""
+                             {
+                               retry_on: "5xx",
+                               num_retries: 2,
+                               retriable_request_headers: [
+                                 {
+                                   name: ":method",
+                                   string_match: { exact: "GET" }
+                                 }
+                               ]
+                             }
+                             """, ResponseHeaders.of(500),
+                             RequestHeaders.of(HttpMethod.POST, "/"), 0)
         );
     }
 
