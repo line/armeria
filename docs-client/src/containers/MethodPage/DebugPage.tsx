@@ -218,10 +218,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [keepDebugResponse, toggleKeepDebugResponse] = useReducer(
-    toggle,
-    false,
-  );
 
   const responseCache = useRef<Record<string, ResponseData>>({});
   const currentMethodId = useRef(method.id);
@@ -255,6 +251,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
     new URLSearchParams(location.search).get('debug_form_is_open') === 'true';
 
   useEffect(() => {
+    setResponseData(responseCache.current[method.id] ?? null);
+  }, [method.id]);
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(formSearch);
 
     let urlRequestBody = '';
@@ -283,10 +283,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const urlQueries =
       serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
-    if (!keepDebugResponse) {
-      setResponseData(responseCache.current[method.id] ?? null);
-    }
-    toggleKeepDebugResponse(false);
     setSnackbarOpen(false);
     const initialRequestBody =
       urlRequestBody || method.exampleRequests[0] || '';
@@ -304,7 +300,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     method,
     transport,
     useRequestBody,
-    keepDebugResponse,
     synchronizeWithRequestBody,
   ]);
 
@@ -573,8 +568,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     const serializedParams = `?${params.toString()}`;
     if (serializedParams !== location.search) {
-      // executeRequest may throw error before useEffect, we need to avoid useEffect cleanup the debug response.
-      toggleKeepDebugResponse(true);
       history.push(`${location.pathname}${serializedParams}`);
     }
     await executeRequest(params);

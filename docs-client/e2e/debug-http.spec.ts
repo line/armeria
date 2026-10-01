@@ -558,6 +558,42 @@ test('shows a rejected debug request to the user', async ({
   await expect(dialog).toContainText('Status: –');
 });
 
+test('keeps a canonicalized request error scoped to its method', async ({
+  page,
+}) => {
+  const params = new URLSearchParams({
+    debug_form_is_open: 'true',
+    request_body: '{"name":"example request","details":{"count":1}}',
+    endpoint_path: '/echo',
+    queries: 'a b',
+  });
+  const search = params.toString().replace('queries=a+b', 'queries=a%20b');
+  await page.goto(`/docs/#/methods/example.HttpService/echo/POST?${search}`);
+  let dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await page.evaluate(() => {
+    (window as any).armeria.registerHeaderProvider(() =>
+      Promise.reject(new Error('header provider failed')),
+    );
+  });
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  await expect(page).toHaveURL(/queries=a\+b/);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  await expect(dialog).toContainText('header provider failed');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+
+  const goTo = page.getByPlaceholder('Go to ...');
+  await goTo.fill('HttpService#hello');
+  await goTo.press('Enter');
+  dialog = await openDebug(page);
+  await expect(dialog.getByText('Response Body:')).toHaveCount(0);
+});
+
 test('resets the request editor when navigating between body methods', async ({
   page,
 }) => {
