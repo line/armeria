@@ -477,6 +477,17 @@ public final class MediaType {
     public static final MediaType KEY_ARCHIVE = createConstant(APPLICATION_TYPE, "pkcs12");
 
     /**
+     * <a href="https://pki-tutorial.readthedocs.io/en/latest/mime.html">The PEM format</a>.
+     */
+    public static final MediaType PEM = createConstant(APPLICATION_TYPE, "x-pem-file");
+
+    /**
+     * <a href="https://yaml.org">YAML</a>, as standardized in
+     * <a href="https://www.rfc-editor.org/info/rfc9512">RFC 9512</a>.
+     */
+    public static final MediaType YAML = createConstant(APPLICATION_TYPE, "yaml");
+
+    /**
      * This is a non-standard media type, but is commonly used in serving hosted binary files as it is
      * <a href="http://code.google.com/p/browsersec/wiki/Part2#Survey_of_content_sniffing_behaviors">
      * known not to trigger content sniffing in current browsers</a>. It <i>should not</i> be used in
