@@ -54,6 +54,12 @@ test('sends an exact GET and exposes response, clipboard, clear, and URL state',
   await gotoMethod(page, 'example.HttpService', 'hello', 'GET');
   const dialog = await openDebug(page);
   await expect(page).toHaveURL(/debug_form_is_open=true/);
+  await page.goBack();
+  await expect(page).not.toHaveURL(/debug_form_is_open/);
+  await expect(dialog).toBeHidden();
+  await page.goForward();
+  await expect(page).toHaveURL(/debug_form_is_open=true/);
+  await expect(dialog).toBeVisible();
 
   const endpointPath = textInputs(dialog).first();
   await expect(endpointPath).toHaveValue('/hello');

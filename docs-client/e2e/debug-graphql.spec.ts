@@ -411,27 +411,47 @@ test('uses one GraphQL schema owner for inline and dialog editors', async ({
   await input.press('Escape');
 
   const inline = page.getByRole('main');
-  await inline.getByRole('button', { name: '# Query Variables' }).click();
   const inlineVariables = inline.locator(
     'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
   );
-  await inlineVariables.fill('{"name":"Inline"}');
+  await expect(inlineVariables).toBeHidden();
 
-  const dialog = await openDebug(page);
-  const dialogVariables = dialog.locator(
+  let dialog = await openDebug(page);
+  let dialogVariables = dialog.locator(
     'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
   );
   if (!(await dialogVariables.isVisible())) {
     await dialog.getByRole('button', { name: '# Query Variables' }).click();
   }
-  await expect(dialogVariables).toHaveValue('{"name":"Inline"}');
   await dialogVariables.fill('{"name":"Dialog"}');
   await dialog.getByRole('button', { name: 'Close' }).click();
+  const inlineQueryButton = inline.getByRole('button', {
+    name: '# Query',
+    exact: true,
+  });
+  await inlineQueryButton.click();
+  await expect(editor).toBeHidden();
+  await inlineQueryButton.click();
+  await expect(editor).toBeVisible();
+  await expect(inlineVariables).toBeHidden();
+  await inline.getByRole('button', { name: '# Query Variables' }).click();
   await expect(inlineVariables).toHaveValue('{"name":"Dialog"}');
+  await inlineVariables.fill('{"name":"Inline"}');
+
+  dialog = await openDebug(page);
+  dialogVariables = dialog.locator(
+    'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
+  );
+  await expect(dialogVariables).toBeVisible();
+  await expect(dialogVariables).toHaveValue('{"name":"Inline"}');
+  await dialog.getByRole('button', { name: '# Query Variables' }).click();
+  await expect(dialogVariables).toBeHidden();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(inlineVariables).toBeVisible();
   await page.waitForLoadState('networkidle');
   expect(introspectionRequests).toBe(1);
 
-  editor = page.locator('.monaco-editor');
+  editor = inline.locator('.monaco-editor');
   await setMonacoValue(editor, '{ }');
   input = editor.locator('textarea.inputarea');
   await input.press('ArrowLeft');

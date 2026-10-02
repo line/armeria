@@ -60,14 +60,12 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   } = editorState;
   const [queryOpen, toggleQueryOpen] = useReducer(toggle, true);
   const [variablesOpen, toggleVariablesOpen] = useReducer(toggle, false);
-  const previousVariablesText = useRef('');
   const previousStateMethodId = useRef('');
   const monacoEditor = useMonaco();
 
   useEffect(() => {
     toggleQueryOpen(true);
     toggleVariablesOpen(false);
-    previousVariablesText.current = '';
     previousStateMethodId.current = '';
   }, [methodId]);
 
@@ -77,11 +75,8 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
     }
     if (previousStateMethodId.current !== stateMethodId) {
       toggleVariablesOpen(variablesText !== '');
-    } else if (previousVariablesText.current === '' && variablesText !== '') {
-      toggleVariablesOpen(true);
     }
     previousStateMethodId.current = stateMethodId;
-    previousVariablesText.current = variablesText;
   }, [methodId, stateMethodId, variablesText]);
 
   useEffect(() => {

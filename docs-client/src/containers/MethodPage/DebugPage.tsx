@@ -23,7 +23,6 @@ import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, {
-  Dispatch,
   useCallback,
   useEffect,
   useMemo,
@@ -84,8 +83,7 @@ interface OwnProps {
   exactPathMapping: boolean;
   useRequestBody: boolean;
   debugFormIsOpen: boolean;
-  setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
-  syncDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
+  setDebugFormIsOpen: (open: boolean) => void;
   jsonSchemas: any;
   docServiceRoute?: Route;
 }
@@ -206,7 +204,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useRequestBody,
   debugFormIsOpen,
   setDebugFormIsOpen,
-  syncDebugFormIsOpen,
   jsonSchemas,
   docServiceRoute,
 }) => {
@@ -247,8 +244,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const formSearchParams = new URLSearchParams(location.search);
   formSearchParams.delete('debug_form_is_open');
   const formSearch = formSearchParams.toString();
-  const urlDebugFormIsOpen =
-    new URLSearchParams(location.search).get('debug_form_is_open') === 'true';
 
   useEffect(() => {
     setResponseData(responseCache.current[method.id] ?? null);
@@ -302,10 +297,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     synchronizeWithRequestBody,
   ]);
-
-  useEffect(() => {
-    syncDebugFormIsOpen(urlDebugFormIsOpen);
-  }, [syncDebugFormIsOpen, urlDebugFormIsOpen]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
