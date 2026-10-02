@@ -69,6 +69,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -1525,6 +1527,35 @@ class GrpcClientTest {
                 StatusRuntimeException.class, t -> {
                     assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
                     assertThat(t.getStatus().getDescription()).contains("deadline exceeded after");
+                });
+    }
+
+    @Test
+    void deadlineDescriptionWithRetryingClient() throws Exception {
+        final TestServiceStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .responseTimeoutMillis(3000)
+                           .decorator(RetryingClient.builder(RetryRule.failsafe())
+                                                     .maxTotalAttempts(2)
+                                                     .newDecorator())
+                           .build(TestServiceStub.class);
+        final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
+        stub.streamingOutputCall(
+                StreamingOutputCallRequest
+                        .newBuilder()
+                        .addResponseParameters(
+                                ResponseParameters.newBuilder()
+                                                  .setIntervalUs((int) TimeUnit.SECONDS.toMicros(10)))
+                        .build(),
+                responseObserver);
+        responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
+
+        assertThat(responseObserver.getError()).isInstanceOfSatisfying(
+                StatusRuntimeException.class, t -> {
+                    assertThat(t.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                    assertThat(t.getStatus().getDescription())
+                            .contains("deadline exceeded after " +
+                                      TimeUnit.MILLISECONDS.toNanos(3000) + "ns");
                 });
     }
 
