@@ -202,7 +202,7 @@ xml-apis = "1.4.01"
 # Ensure that we use the same ZooKeeper version as what Curator depends on.
 # See: https://github.com/apache/curator/blob/master/pom.xml
 #      (Switch to the right tag to find out the right version.)
-zookeeper = "3.9.6"
+zookeeper = "3.9.4"
 zookeeper-junit = "1.2"
 
 [boms]
