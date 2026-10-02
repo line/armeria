@@ -20,7 +20,7 @@ date: 2026-10-07
 - **Reproducible Request Bodies**: Streaming uploads larger than 2 GiB can now be retried or
   redirected by building the request with [HttpRequest#reproducible(RequestHeaders,Supplier)](type).
   The body is regenerated from a factory on each attempt instead of being buffered in memory,
-  removing the previous `ContentTooLargeException` cap. Callers who use a plain `HttpRequest`
+  removing the previous [ContentTooLargeException](type) cap. Callers who use a plain `HttpRequest`
   see no behavioral change. #6835 #6841
   ```java
   HttpRequest req = HttpRequest.reproducible(
@@ -57,7 +57,7 @@ date: 2026-10-07
   module. #6957
 - **xDS Spring Boot Integration**: You can now define xDS resources in `application.yml`
   (or via Spring Cloud Config Server) and have them automatically loaded into an
-  `XdsBootstrap` with zero boilerplate using the new `spring/boot4-xds` module. #6891
+  [XdsBootstrap](type) with zero boilerplate using the new `spring/boot4-xds` module. #6891
 - **xDS Kubernetes Endpoint Discovery**: You can now configure xDS clusters to resolve
   endpoints from Kubernetes services using the new `xds-kubernetes` module. #6914
 - **xDS Health Check `expected_statuses`**: xDS health checks now respect `expected_statuses`
@@ -76,9 +76,9 @@ date: 2026-10-07
 ## 📈 Improvements
 
 - gRPC request deserialization now runs on the blocking task executor when
-  `useBlockingTaskExecutor(true)` is configured, and response serialization runs on the
-  `sendMessage()` caller's thread. Previously, both ran on the event loop regardless of the
-  setting. #6241 #6947
+  [GrpcServiceBuilder#useBlockingTaskExecutor(boolean)](type) is enabled, and response
+  serialization runs on the `sendMessage()` caller's thread. Previously, both ran on the
+  event loop regardless of the setting. #6241 #6947
 - Every `supported.*` xDS proto annotation now carries a `since` version, and the xDS client
   identifies itself via `user_agent_name`/`user_agent_version` in the bootstrap Node. #6955
 - The `DEADLINE_EXCEEDED` status description now reports the originally configured response
@@ -91,8 +91,8 @@ date: 2026-10-07
 ## 🛠️ Bug fixes
 
 - [RetryingClient](type) no longer caps the per-attempt timeout at the 15-second default when
-  `responseTimeoutForEachAttempt()` is not explicitly configured. A `responseTimeout` larger
-  than 15 seconds is now honored end-to-end. #6385 #6983
+  [RetryConfigBuilder#responseTimeoutForEachAttempt(Duration)](type) is not explicitly configured.
+  A `responseTimeout` larger than 15 seconds is now honored end-to-end. #6385 #6983
 - [DocService](type) no longer shows a blank page for `QUERY` HTTP methods. #6986
 - [HealthCheckService](type) now returns `405 Method Not Allowed` for `QUERY` requests instead
   of silently accepting them. #6985
@@ -109,9 +109,9 @@ date: 2026-10-07
   even under concurrent `setEndpoints()` calls. This prevents stale endpoints from being routed
   to after rapid health status changes. #6923
 - TLS certificate metrics (`armeria.client.tls.certificate.validity`) are now registered once
-  per `ClientFactory` instead of being duplicated, eliminating spurious Micrometer gauge warnings.
-  #6734 #6920
-- `ClientFactory` instances created for Kubernetes WebSocket watches in
+  per [ClientFactory](type) instead of being duplicated, eliminating spurious Micrometer gauge
+  warnings. #6734 #6920
+- [ClientFactory](type) instances created for Kubernetes WebSocket watches in
   [KubernetesEndpointGroup](type) are now properly released when the root `KubernetesClient` is
   closed. #6805 #6909
 - xDS clusters with `transport_socket_matches` containing both TLS and `raw_buffer` entries now
@@ -121,13 +121,14 @@ date: 2026-10-07
   policy is configured in xDS, matching Envoy's behavior. #6886
 - The SAML single logout handler no longer throws a `NullPointerException` when a
   `LogoutRequest` has no `Issuer` element. #6908
-- Pending `HttpObject`s are now released when queued writes fail, preventing memory leaks. #6902
+- Pending [HttpObject](type)s are now released when queued writes fail, preventing memory leaks.
+  #6902
 
 ## 📃 Documentation
 
 - Added documentation for the [OAuth 2.0 client](/docs/client/oauth2), covering RFC 6749 client
-  credentials and password grants, RFC 7523 JWT, the `OAuth2Client` decorator, and composing
-  retry/circuit-breaker on token and resource clients. #5636 #6935
+  credentials and password grants, RFC 7523 JWT, the [OAuth2Client](type) decorator, and
+  composing retry/circuit-breaker on token and resource clients. #5636 #6935
 - Added a comprehensive xDS example (`examples/xds-example`) with a three-layer service mesh
   demo, a visual dashboard, and Grafana metrics. Run
   `./gradlew :examples:xds-example:run` and `docker compose up` to try it. #6886
