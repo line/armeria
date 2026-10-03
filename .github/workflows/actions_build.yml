@@ -274,6 +274,37 @@ jobs:
           name: npm-debug-logs
           path: /home/runner/.npm/_logs/
 
+  docs-client-e2e:
+    if: github.repository == 'line/armeria'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: setup-build-jdk
+        name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.BUILD_JDK_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Run the docs client E2E test
+        run: ./gradlew --no-daemon --stacktrace --max-workers=2 :docs-client:e2e
+
+      - name: Upload E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docs-client-e2e
+          path: |
+            docs-client/build/playwright/
+            docs-client/build/e2e-coverage/
+          if-no-files-found: ignore
+          retention-days: 3
+
   flaky-tests:
     if: github.repository == 'line/armeria'
     runs-on: ubuntu-latest

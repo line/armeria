@@ -16,13 +16,13 @@
 
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import React, { ChangeEvent, useMemo } from 'react';
+import React, { ChangeEvent, useCallback, useEffect } from 'react';
 
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import { Tooltip } from '@material-ui/core';
 
-import Editor, { loader, useMonaco } from '@monaco-editor/react';
+import Editor, { loader, OnMount, useMonaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { truncate } from '../../lib/strings';
@@ -57,7 +57,7 @@ const RequestBody: React.FunctionComponent<Props> = ({
 
   const supportsJsonSchema =
     serviceType === ServiceType.GRPC || serviceType === ServiceType.THRIFT;
-  useMemo(() => {
+  useEffect(() => {
     if (supportsJsonSchema) {
       // Find the method schema from the JSON Schema structure.
       // Structure: { $defs: { methods: { "method-name": { $id: "service/method/HTTP", ... } } } }
@@ -109,6 +109,15 @@ const RequestBody: React.FunctionComponent<Props> = ({
     }
   }, [monacoEditor, jsonSchemas, method.id, supportsJsonSchema]);
 
+  const onEditorMount = useCallback<OnMount>(
+    (editor) => {
+      if (editor.getValue() !== requestBody) {
+        editor.setValue(requestBody);
+      }
+    },
+    [requestBody],
+  );
+
   return (
     <>
       <Typography variant="body2" paragraph />
@@ -140,14 +149,18 @@ const RequestBody: React.FunctionComponent<Props> = ({
           <Typography variant="body2" paragraph />
           <Editor
             height="30vh"
-            language={supportsJsonSchema ? 'json' : undefined}
+            keepCurrentModel
+            language={supportsJsonSchema ? 'json' : 'plaintext'}
+            path="inmemory://docs-client/request-body"
             theme="vs-light"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
+              occurrencesHighlight: 'off',
             }}
+            onMount={onEditorMount}
             value={requestBody}
-            onChange={(val) => val && onDebugFormChange(val)}
+            onChange={(val) => onDebugFormChange(val ?? '')}
           />
         </>
       )}

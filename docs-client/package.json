@@ -6,7 +6,8 @@
     "build": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" webpack",
     "develop": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" WEBPACK_DEV=true webpack-dev-server",
     "lint": "tsc --project . && eslint --ext .json,.js,.jsx,.ts,.tsx .",
-    "lint:fix": "eslint --fix --ext .json,.js,.jsx,.ts,.tsx ."
+    "lint:fix": "eslint --fix --ext .json,.js,.jsx,.ts,.tsx .",
+    "test:e2e": "node e2e/coverage-report.js clean && playwright test && node e2e/coverage-report.js report"
   },
   "dependencies": {
     "@loadable/component": "^5.16.4",
@@ -36,9 +37,12 @@
     "remark-gfm": "^3.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@babel/core": "^7.26.9",
     "@babel/preset-env": "^7.26.9",
     "@babel/preset-react": "^7.26.3",
+    "@babel/preset-typescript": "^7.26.0",
+    "babel-plugin-istanbul": "^7.0.1",
     "@types/favicons-webpack-plugin": "^2.1.2",
     "@types/html-webpack-plugin": "^3.2.9",
     "@types/json-bigint": "^1.0.4",
@@ -70,9 +74,13 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "favicons": "^7.3.1",
     "favicons-webpack-plugin": "^6.0.1",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.6.3",
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.1.7",
     "license-webpack-plugin": "^4.0.2",
     "prettier": "^2.8.8",
     "sharp": "^0.35.4",
