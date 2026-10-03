@@ -90,6 +90,7 @@ final class RetryStateFactory {
     private final List<XdsHeaderMatcher> retriableRequestHeadersMatchers;
     private final RetryStateImpl defaultRetryState;
     private final RetryConfig<HttpResponse> defaultRetryConfig;
+    private final RetryConfig<HttpResponse> noRetryConfig;
     private final RetryConfig<RpcResponse> defaultRpcRetryConfig;
 
     RetryStateFactory(RetryPolicy retryPolicy) {
@@ -106,6 +107,9 @@ final class RetryStateFactory {
         defaultRetryState = new RetryStateImpl(retryPolicy, policies, numRetries, retriableStatusCodes,
                                                retriableResponseHeaderMatchers);
         defaultRetryConfig = createRetryConfig(defaultRetryState);
+        noRetryConfig = createRetryConfig(new RetryStateImpl(retryPolicy, ImmutableSet.of(), numRetries,
+                                                             retriableStatusCodes,
+                                                             retriableResponseHeaderMatchers));
         defaultRpcRetryConfig = createRpcRetryConfig(defaultRetryState);
     }
 
@@ -139,6 +143,9 @@ final class RetryStateFactory {
                                                                        retriableRequestHeadersMatchers);
                     return createRetryConfig(retryState);
                 }
+            }
+            if (!matchesRetriableRequestHeaders(req.headers(), retriableRequestHeadersMatchers)) {
+                return noRetryConfig;
             }
             return defaultRetryConfig;
         };
@@ -204,17 +211,8 @@ final class RetryStateFactory {
     private static Set<RetryPolicyTypes> retryPoliciesFromRequestHeader(
             RequestHeaders requestHeaders, List<XdsHeaderMatcher> retriableRequestHeadersMatchers,
             Set<RetryPolicyTypes> policies) {
-        if (!retriableRequestHeadersMatchers.isEmpty()) {
-            boolean shouldRetry = false;
-            for (XdsHeaderMatcher headerMatcher: retriableRequestHeadersMatchers) {
-                if (headerMatcher.matches(requestHeaders)) {
-                    shouldRetry = true;
-                    break;
-                }
-            }
-            if (!shouldRetry) {
-                return ImmutableSet.of();
-            }
+        if (!matchesRetriableRequestHeaders(requestHeaders, retriableRequestHeadersMatchers)) {
+            return ImmutableSet.of();
         }
 
         final String retryOn = requestHeaders.get(REQUEST_HEADER_RETRY_ON, "");
@@ -232,6 +230,23 @@ final class RetryStateFactory {
             newPolicies.addAll(parseRetryOn(grpcRetryOn));
         }
         return Sets.immutableEnumSet(newPolicies.build());
+    }
+
+    /**
+     * Returns {@code true} if {@code retriable_request_headers} is not configured or
+     * the given {@link RequestHeaders} match any of its matchers.
+     */
+    private static boolean matchesRetriableRequestHeaders(
+            RequestHeaders requestHeaders, List<XdsHeaderMatcher> retriableRequestHeadersMatchers) {
+        if (retriableRequestHeadersMatchers.isEmpty()) {
+            return true;
+        }
+        for (XdsHeaderMatcher headerMatcher : retriableRequestHeadersMatchers) {
+            if (headerMatcher.matches(requestHeaders)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Set<RetryPolicyTypes> parseRetryOn(String retryOn) {
