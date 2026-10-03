@@ -1,0 +1,200 @@
+---
+date: 2026-10-07
+---
+
+# v1.42.0
+
+## 🌟 New features
+
+- **gRPC Timeout Policy**: You can now bound or adjust the `grpc-timeout` a client requests
+  using [GrpcServiceBuilder#timeoutPolicy(GrpcTimeoutPolicy)](type). This is useful when clients
+  are not trusted and you want to prevent arbitrarily long timeouts without ignoring the header
+  entirely. #5709 #6975
+  ```java
+  GrpcService.builder()
+             .addService(myService)
+             .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader( // 👈👈👈
+                 Duration.ofSeconds(10)))
+             .build();
+  ```
+- **Reproducible Request Bodies**: Streaming uploads larger than 2 GiB can now be retried or
+  redirected by building the request with [HttpRequest#reproducible(RequestHeaders,Supplier)](type).
+  The body is regenerated from a factory on each attempt instead of being buffered in memory,
+  removing the previous [ContentTooLargeException](type) cap. Callers who use a plain `HttpRequest`
+  see no behavioral change. #6835 #6841
+  ```java
+  HttpRequest req = HttpRequest.reproducible(
+      RequestHeaders.of(HttpMethod.PUT, "/upload"),
+      () -> StreamMessage.of(dataPublisher)); // 👈👈👈
+  WebClient client = WebClient.builder("https://example.com")
+                              .decorator(RetryingClient.newDecorator(...))
+                              .build();
+  client.execute(req);
+  ```
+- **gRPC Health Checked Endpoint Group**: You can now create a health-checked endpoint group
+  backed by a standard gRPC health check service using
+  [GrpcHealthCheckedEndpointGroup](type). #5930 #6078
+  ```java
+  EndpointGroup delegate = EndpointGroup.of(
+      Endpoint.of("host1", 8080),
+      Endpoint.of("host2", 8080));
+  EndpointGroup healthChecked =
+      GrpcHealthCheckedEndpointGroup
+          .builder(delegate, GrpcHealthCheckMethod.WATCH) // 👈👈👈
+          .build();
+  ```
+- **xDS URI Scheme Support**: You can now create xDS-backed clients using simple URIs across
+  all client types. Bootstrap configuration is provided via SPI — drop a YAML file on the
+  classpath and register a [XdsBootstrapProvider](type). #6946
+  ```java
+  WebClient.of("xds:///my-listener"); // 👈👈👈
+  GrpcClients.newClient("gproto+xds:///my-listener",
+                         MyServiceGrpc.MyServiceBlockingStub.class);
+  ThriftClients.newClient("tbinary+xds:///my-listener",
+                           MyService.Iface.class);
+  ```
+- **Thrift 0.24.0 Support**: Armeria now supports Thrift 0.24.0 via the new `thrift0.24`
+  module. #6957
+- **xDS Spring Boot Integration**: You can now define xDS resources in `application.yml`
+  (or via Spring Cloud Config Server) and have them automatically loaded into an
+  [XdsBootstrap](type) with zero boilerplate using the new `spring/boot4-xds` module. #6891
+- **xDS Kubernetes Endpoint Discovery**: You can now configure xDS clusters to resolve
+  endpoints from Kubernetes services using the new `xds-kubernetes` module. #6914
+- **xDS Health Check `expected_statuses`**: xDS health checks now respect `expected_statuses`
+  ranges from the `HttpHealthCheck` configuration. When set, only status codes within the
+  specified ranges are considered healthy; when unset, only `200` is treated as healthy,
+  consistent with Envoy. #6951
+- **xDS Retry Backoff Multiplier**: The xDS retry backoff multiplier is now configurable via
+  `exponential_backoff_factor`. When not set, the default 2x multiplier is preserved. #6952
+- **xDS Header Mutations at All Levels**: `request_headers_to_add` and `request_headers_to_remove`
+  are now applied at RouteConfiguration, VirtualHost, Route, and WeightedCluster levels.
+  Cross-level ordering respects `most_specific_header_mutations_wins`. #6950
+- **xDS Health Check Transport Socket Selection**: Health checks now correctly select the
+  transport socket specified by `transport_socket_match_criteria`, enabling separate TLS
+  configurations for health check and data traffic. #6949
+
+## 📈 Improvements
+
+- gRPC request deserialization now runs on the blocking task executor when
+  [GrpcServiceBuilder#useBlockingTaskExecutor(boolean)](type) is enabled, and response
+  serialization runs on the `sendMessage()` caller's thread. Previously, both ran on the
+  event loop regardless of the setting. #6241 #6947
+- Every `supported.*` xDS proto annotation now carries a `since` version, and the xDS client
+  identifies itself via `user_agent_name`/`user_agent_version` in the bootstrap Node. #6955
+- The `DEADLINE_EXCEEDED` status description now reports the originally configured response
+  timeout instead of a slightly smaller value caused by sub-millisecond truncation in
+  [RetryingClient](type). #6894 #6910
+- `armeria-kotlin` and `armeria-grpc-kotlin` now target Kotlin language version 2.2 and declare
+  `kotlin-stdlib` 2.2.21, so a Kotlin 2.1 user can upgrade Armeria without upgrading Kotlin.
+  #6967
+
+## 🛠️ Bug fixes
+
+- [RetryingClient](type) no longer caps the per-attempt timeout at the 15-second default when
+  [RetryConfigBuilder#responseTimeoutForEachAttempt(Duration)](type) is not explicitly configured.
+  A `responseTimeout` larger than 15 seconds is now honored end-to-end. #6385 #6983
+- [DocService](type) no longer shows a blank page for `QUERY` HTTP methods. #6986
+- [HealthCheckService](type) now returns `405 Method Not Allowed` for `QUERY` requests instead
+  of silently accepting them. #6985
+- xDS `range_match` or `string_match` header matchers with `invert_match: true` no longer
+  incorrectly match requests that lack the header, aligning with Envoy and grpc-java behavior.
+  #6987
+- After a SotW xDS stream reconnection, the initial `DiscoveryRequest` now carries the last
+  ACK'd `version_info`, allowing the control plane to avoid unnecessary full resyncs. #6956
+- Pooled request body `ByteBuf`s are no longer leaked when [RetryingClient](type) retries and
+  the request body is not consumed by downstream decorators. #6954
+- [FileService](type) cache entries now stay alive while responses are being streamed, preventing
+  premature eviction. #6945
+- [DynamicEndpointGroup](type) listeners now always observe the latest committed endpoint list,
+  even under concurrent `setEndpoints()` calls. This prevents stale endpoints from being routed
+  to after rapid health status changes. #6923
+- TLS certificate metrics (`armeria.client.tls.certificate.validity`) are now registered once
+  per [ClientFactory](type) instead of being duplicated, eliminating spurious Micrometer gauge
+  warnings. #6734 #6920
+- [ClientFactory](type) instances created for Kubernetes WebSocket watches in
+  [KubernetesEndpointGroup](type) are now properly released when the root `KubernetesClient` is
+  closed. #6805 #6909
+- xDS clusters with `transport_socket_matches` containing both TLS and `raw_buffer` entries now
+  correctly switch between TLS and cleartext per endpoint. Retry attempts across mixed endpoints
+  also preserve the correct session protocol. #6850
+- Virtual host level `retry_policy` is now correctly used as a fallback when no route-level
+  policy is configured in xDS, matching Envoy's behavior. #6886
+- The SAML single logout handler no longer throws a `NullPointerException` when a
+  `LogoutRequest` has no `Issuer` element. #6908
+- Pending [HttpObject](type)s are now released when queued writes fail, preventing memory leaks.
+  #6902
+
+## 📃 Documentation
+
+- Added documentation for the [OAuth 2.0 client](/docs/client/oauth2), covering RFC 6749 client
+  credentials and password grants, RFC 7523 JWT, the [OAuth2Client](type) decorator, and
+  composing retry/circuit-breaker on token and resource clients. #5636 #6935
+- Added a comprehensive xDS example (`examples/xds-example`) with a three-layer service mesh
+  demo, a visual dashboard, and Grafana metrics. Run
+  `./gradlew :examples:xds-example:run` and `docker compose up` to try it. #6886
+
+## 🏚️ Deprecations
+
+- [GrpcServiceBuilder#useClientTimeoutHeader(boolean)](type) is deprecated in favor of
+  [GrpcServiceBuilder#timeoutPolicy(GrpcTimeoutPolicy)](type). #6975
+
+## ☢️ Breaking changes
+
+- xDS filters are now applied at the HTTP layer for both HTTP and RPC clients, matching Envoy's
+  architecture. `XdsHttpFilter.rpcDecorator()` and the `rpcClientCustomizer` path have been
+  removed — filter implementations no longer need to provide separate RPC decorators. Retry
+  behavior for RPC clients now evaluates HTTP status codes (e.g., `5xx`) rather than RPC-level
+  exceptions. #6953
+- Athenz xDS protobuf message classes (`athenz_filter_config.proto` and
+  `athenz_access_token.proto`) are now generated as top-level classes with
+  `java_multiple_files = true`, matching the convention used by other Armeria xDS protos. #6915
+
+## ⛓ Dependencies
+
+- Athenz 1.12.44 → 1.12.48
+- Dropwizard Metrics 4.2.39 → 4.2.40
+- gRPC-Java 1.83.0 → 1.84.0
+- Jackson 2.22.1 → 2.22.3
+- java-jwt 4.6.0 → 4.6.1
+- JSpecify 1.0.0 → 1.0.1
+- Kotlin 2.4.10 → 2.4.20
+- MCP SDK 2.0.0 → 2.0.1
+- Micrometer 1.17.0 → 1.17.1
+- Micrometer Tracing 1.7.0 → 1.7.1
+- Netty 4.2.16 → 4.2.18
+- Prometheus 1.8.0 → 1.9.0
+- Protobuf 4.35.1 → 4.36.2
+- Reactor 3.8.6 → 3.8.7
+- Reactor Kotlin 1.3.1 → 1.3.2
+- SLF4J 2.0.18 → 2.0.20
+- Spring Boot 4.1.0 → 4.1.1
+- Spring Cloud Config Server 5.0.4 → 5.0.5
+- Spring Cloud Context 5.0.2 → 5.0.3
+- Spring Framework 7.0.8 → 7.0.9
+- ZooKeeper 3.9.4 → 3.9.6
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'AzazelSensei',
+  'Gautam-aman',
+  'Hun425',
+  'KarboniteKream',
+  'akashchamp',
+  'arimu1',
+  'dajung-mun',
+  'iamhuman-cheolheelee',
+  'ikhoon',
+  'jaideeppyne',
+  'jrhee17',
+  'kalayciburak',
+  'kasecato',
+  'kdomo',
+  'lanfeitiao',
+  'minwoox',
+  'mmustafasenoglu',
+  'seonWKim',
+  'trustin',
+  'wvuong',
+  'yzfeng2020'
+]} />

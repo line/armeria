@@ -159,8 +159,17 @@ Rewrite every entry following the formatting rules in `references/style-guide.md
 
 The raw script includes the full dependency update PR body, which uses a structured commit message format.
 
-1. **Strip build-only dependencies**: Remove the `- Build` section and all its sub-bullets
-   (these are testImplementation, annotationProcessor, and other non-production deps).
+1. **Strip non-user-facing dependencies**:
+   - Remove the `- Build` section and all its sub-bullets
+     (these are testImplementation, annotationProcessor, and other non-production deps).
+   - Remove **test-only** dependencies (e.g., Apache HttpClient, OkHttp, DGS) that are only
+     used in `testImplementation` / `testFixturesImplementation` and never appear in published POMs.
+   - Remove **shaded** dependencies (e.g., Guava, Bouncy Castle, JCTools) that are relocated
+     into Armeria JARs and invisible to users at runtime.
+   - Remove dependencies that are **not transitive** in any published artifact (e.g., Jsoup).
+   - When unsure, check `dependencies.toml` for the dependency's scope (`testImplementation`,
+     `shaded`, etc.) and verify whether it appears in a published module's `api` or
+     `implementation` configuration.
 2. **Format each entry**: `- LibraryName oldVersion → newVersion`
    - Use the library's common name (e.g., `Jackson`, `Netty`, `gRPC-Java`, not the Maven artifact ID).
    - Use `→` (unicode arrow), not `->`.
