@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.grpc.CallExecutor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -112,8 +113,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final boolean autoCompression;
 
     @VisibleForTesting
-    @Nullable
-    final Executor blockingExecutor;
+    final CallExecutor callExecutor;
     private final InternalGrpcExceptionHandler exceptionHandler;
 
     // Only set once.
@@ -174,7 +174,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers, useMethodMarshaller);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        this.blockingExecutor = blockingExecutor;
+        callExecutor = blockingExecutor != null ? CallExecutor.sequential(blockingExecutor)
+                                                : CallExecutor.of(ctx.eventLoop());
         defaultResponseHeaders = defaultHeaders;
         this.exceptionHandler = exceptionHandler;
 
@@ -278,6 +279,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             statusAndMetadata = statusAndMetadata.withStatus(status);
             statusAndMetadata.shouldCancel(true);
         }
+        // Abort the request before `doClose()` completes the response. Otherwise, the server may abort
+        // the request with `ResponseCompleteException` first, and the gRPC status is not recorded as
+        // the request cause.
+        closeRequest(statusAndMetadata);
         doClose(statusAndMetadata);
     }
 
@@ -306,32 +311,28 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                                  null);
             }
 
-            if (!clientStreamClosed) {
-                clientStreamClosed = true;
-                if (statusAndMetadata.status().isOk()) {
-                    req.abort();
-                } else {
-                    req.abort(statusAndMetadata.asRuntimeException());
-                }
-            }
+            closeRequest(statusAndMetadata);
 
             if (!cancelled) {
-                if (blockingExecutor != null) {
-                    blockingExecutor.execute(this::invokeOnComplete);
-                } else {
-                    invokeOnComplete();
-                }
+                callExecutor.execute(this::invokeOnComplete);
             } else {
                 this.cancelled = true;
-                if (blockingExecutor != null) {
-                    blockingExecutor.execute(this::invokeOnCancel);
-                } else {
-                    invokeOnCancel();
-                }
+                callExecutor.execute(this::invokeOnCancel);
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
                     res.abort(statusAndMetadata.asRuntimeException());
                 }
+            }
+        }
+    }
+
+    private void closeRequest(ServerStatusAndMetadata statusAndMetadata) {
+        if (!clientStreamClosed) {
+            clientStreamClosed = true;
+            if (statusAndMetadata.status().isOk()) {
+                req.abort();
+            } else {
+                req.abort(statusAndMetadata.asRuntimeException());
             }
         }
     }
@@ -353,19 +354,15 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 if (closeCalled) {
                     return;
                 }
+                // Deserialize the message on the thread that invokes the listener, so that the event loop
+                // is not occupied by deserialization (and decompression) when `blockingTaskExecutor` is used.
+                // Transfer ownership only after the deserialization task has been accepted.
+                callExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
                 success = true;
             } finally {
                 if (!success) {
                     message.close();
                 }
-            }
-
-            // Deserialize the message on the thread that invokes the listener, so that the event loop
-            // is not occupied by deserialization (and decompression) when `blockingTaskExecutor` is used.
-            if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> deserializeAndInvokeOnMessage(message, endOfStream));
-            } else {
-                deserializeAndInvokeOnMessage(message, endOfStream);
             }
         } catch (Throwable cause) {
             close(cause, true);
@@ -404,14 +401,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (!closeCalled) {
             if (!messageReceived) {
                 // If a message was received, log its content during deserialization, which may still
-                // be pending on the blocking executor.
+                // be pending on `callExecutor`.
                 maybeLogRequestContent(null);
             }
-            if (blockingExecutor != null) {
-                blockingExecutor.execute(this::invokeHalfClose);
-            } else {
-                invokeHalfClose();
-            }
+            callExecutor.execute(this::invokeHalfClose);
         }
     }
 
@@ -454,7 +447,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     private boolean shouldSkipRequestCallback() {
         // Skip cancelled calls and callbacks queued before request message processing failed.
-        return cancelled || (blockingExecutor != null && requestMessageProcessingFailed);
+        return cancelled || requestMessageProcessingFailed;
     }
 
     private void invokeOnComplete() {
@@ -696,9 +689,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         return cancelled;
     }
 
-    @Nullable
-    public final Executor blockingExecutor() {
-        return blockingExecutor;
+    public final CallExecutor callExecutor() {
+        return callExecutor;
     }
 
     public final EventLoop eventLoop() {

@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -66,17 +67,18 @@ class DeferredListenerTest {
     @ParameterizedTest
     void shouldLazilyExecuteCallbacks(boolean wrap) {
         final EventLoop eventLoop = CommonPools.workerGroup().next();
-        ServerCall<SimpleRequest, SimpleResponse> serverCall = newServerCall(eventLoop, null);
+        final UnaryServerCall<SimpleRequest, SimpleResponse> armeriaCall = newServerCall(eventLoop, null);
+        ServerCall<SimpleRequest, SimpleResponse> serverCall = armeriaCall;
         if (wrap) {
             serverCall = new SimpleForwardingServerCall<SimpleRequest, SimpleResponse>(serverCall) {};
         }
-        assertListenerEvents(serverCall, eventLoop);
+        assertListenerEvents(serverCall, armeriaCall.callExecutor());
 
         final Executor blockingExecutor =
                 MoreExecutors.newSequentialExecutor(CommonPools.blockingTaskExecutor());
         final UnaryServerCall<SimpleRequest, SimpleResponse> blockingServerCall =
                 newServerCall(eventLoop, blockingExecutor);
-        assertListenerEvents(blockingServerCall, blockingExecutor);
+        assertListenerEvents(blockingServerCall, blockingServerCall.callExecutor());
     }
 
     private static void assertListenerEvents(ServerCall<SimpleRequest, SimpleResponse> serverCall,
@@ -96,13 +98,62 @@ class DeferredListenerTest {
             assertThat(testListener.events).containsExactly("onMessage", "onReady", "onHalfClose");
         });
 
-        // Should be invoked immediately with `executor`.
-        listener.onComplete();
+        executeAndAwait(executor, listener::onComplete);
         assertThat(testListener.events)
                 .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete");
-        listener.onCancel();
+        executeAndAwait(executor, listener::onCancel);
         assertThat(testListener.events)
                 .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete", "onCancel");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void listenerReadinessDoesNotReorderCallbacks(boolean blocking) {
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final UnaryServerCall<SimpleRequest, SimpleResponse> call =
+                newServerCall(eventLoop, blocking ? CommonPools.blockingTaskExecutor() : null);
+        final CompletableFuture<ServerCall.Listener<SimpleRequest>> future = new CompletableFuture<>();
+        final DeferredListener<SimpleRequest> listener = new DeferredListener<>(call, future);
+        final TestListener delegate = new TestListener();
+        executeAndAwait(call.callExecutor(), () -> {
+            call.callExecutor().execute(() -> listener.onMessage(null));
+            future.complete(delegate);
+            call.callExecutor().execute(listener::onHalfClose);
+        });
+        executeAndAwait(call.callExecutor(), () -> {});
+        assertThat(delegate.events).containsExactly("onMessage", "onHalfClose");
+    }
+
+    @Test
+    void readyListenerCallbacksFromOutsideExecutorWaitForQueuedCallbacks() {
+        final UnaryServerCall<SimpleRequest, SimpleResponse> call =
+                newServerCall(CommonPools.workerGroup().next(), null);
+        final TestListener delegate = new TestListener();
+        final DeferredListener<SimpleRequest> listener =
+                new DeferredListener<>(call, UnmodifiableFuture.completedFuture(delegate));
+        executeAndAwait(call.callExecutor(), () -> {});
+        listener.onMessage(null);
+        listener.onHalfClose();
+        executeAndAwait(call.callExecutor(), () -> {});
+        assertThat(delegate.events).containsExactly("onMessage", "onHalfClose");
+    }
+
+    @Test
+    void readyListenerFailureFromOutsideExecutorClosesCall() {
+        final UnaryServerCall<SimpleRequest, SimpleResponse> call =
+                newServerCall(CommonPools.workerGroup().next(), null);
+        final TestListener delegate = new TestListener() {
+            @Override
+            public void onMessage(SimpleRequest message) {
+                throw new IllegalArgumentException("listener failure");
+            }
+        };
+        final DeferredListener<SimpleRequest> listener =
+                new DeferredListener<>(call, UnmodifiableFuture.completedFuture(delegate));
+        executeAndAwait(call.callExecutor(), () -> call.setListener(listener));
+        listener.onMessage(null);
+        executeAndAwait(call.callExecutor(), () -> {});
+        assertThat(call.isCloseCalled()).isTrue();
     }
 
     private static void executeAndAwait(Executor executor, Runnable task) {
