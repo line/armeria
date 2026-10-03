@@ -1,0 +1,6 @@
+{
+  "resources":[
+    {"pattern":"class.mustache"}, 
+    {"pattern":"org/slf4j/impl/StaticLoggerBinder.class"}
+  ]
+}
