@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -70,7 +71,7 @@ class RetryingClientRequestLeakTest {
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(attemptCount.get()).isEqualTo(3);
 
-        // The sentinel ByteBuf should have been fully released.
-        assertThat(sentinel.refCnt()).isZero();
+        // The sentinel ByteBuf is released asynchronously after the response future completes.
+        await().untilAsserted(() -> assertThat(sentinel.refCnt()).isZero());
     }
 }
