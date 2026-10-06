@@ -44,6 +44,7 @@ const Mailchimp: React.FC<MailchimpProps> = (givenProps) => {
         enterButton={
           <Button
             type={props.buttonType || 'default'}
+            loading={sending}
             title="Sign up for our newsletters"
           >
             Subscribe

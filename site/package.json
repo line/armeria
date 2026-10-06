@@ -11,6 +11,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start --no-open",
+    "test:e2e": "playwright test",
     "build": "docusaurus build && tsx merge-feeds.ts",
     "build:dev": "docusaurus build --dev",
     "swizzle": "docusaurus swizzle",
@@ -69,6 +70,7 @@
     "@docusaurus/tsconfig": "^3.10.0",
     "@docusaurus/types": "^3.10.0",
     "@octokit/core": "^7.0.4",
+    "@playwright/test": "^1.63.0",
     "@types/fs-extra": "^11.0.4",
     "@types/minimatch": "^5.1.2",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
