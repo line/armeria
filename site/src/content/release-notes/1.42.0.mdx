@@ -90,9 +90,6 @@ date: 2026-10-07
 
 ## 🛠️ Bug fixes
 
-- [RetryingClient](type) no longer caps the per-attempt timeout at the 15-second default when
-  [RetryConfigBuilder#responseTimeoutForEachAttempt(Duration)](type) is not explicitly configured.
-  A `responseTimeout` larger than 15 seconds is now honored end-to-end. #6385 #6983
 - [DocService](type) no longer shows a blank page for `QUERY` HTTP methods. #6986
 - [HealthCheckService](type) now returns `405 Method Not Allowed` for `QUERY` requests instead
   of silently accepting them. #6985
