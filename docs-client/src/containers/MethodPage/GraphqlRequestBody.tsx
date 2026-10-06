@@ -14,12 +14,12 @@
  * under the License.
  */
 
-import React, { useCallback, useEffect, useReducer, useRef } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 
 import TextField from '@material-ui/core/TextField';
-import Editor, { useMonaco, loader, OnMount } from '@monaco-editor/react';
+import Editor, { useMonaco, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-graphql';
 import { jsonPrettify } from '../../lib/json-util';
@@ -29,6 +29,7 @@ import { GraphqlEditorState } from './useGraphqlDebugState';
 loader.config({ monaco });
 
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
+const graphqlModelPath = 'inmemory://docs-client/graphql-request';
 
 interface Props {
   requestBodyOpen: boolean;
@@ -97,14 +98,14 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
     );
   }, [monacoEditor, schema]);
 
-  const onEditorMount = useCallback<OnMount>(
-    (editor) => {
-      if (editor.getValue() !== query) {
-        editor.setValue(query);
-      }
-    },
-    [query],
-  );
+  useEffect(() => {
+    const model = monacoEditor?.editor.getModel(
+      monaco.Uri.parse(graphqlModelPath),
+    );
+    if (model && model.getValue() !== query) {
+      model.setValue(query);
+    }
+  }, [monacoEditor, query]);
 
   return (
     <>
@@ -123,7 +124,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
               height="30vh"
               keepCurrentModel
               language="graphql"
-              path="inmemory://docs-client/graphql-request"
+              path={graphqlModelPath}
               theme="vs-light"
               value={query}
               options={{
@@ -131,7 +132,6 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
                 fontSize: 14,
                 occurrencesHighlight: 'off',
               }}
-              onMount={onEditorMount}
               onChange={(val) => onQueryChange(val ?? '')}
             />
           </div>

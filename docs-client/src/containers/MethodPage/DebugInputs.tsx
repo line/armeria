@@ -143,6 +143,32 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
     [setRequestBody],
   );
 
+  let requestBodyInput: React.ReactNode = null;
+  if (useRequestBody && serviceType === ServiceType.GRAPHQL) {
+    requestBodyInput = (
+      <GraphqlRequestBody
+        requestBodyOpen={requestBodyOpen}
+        onEditRequestBodyClick={toggleRequestBodyOpen}
+        methodId={method.id}
+        editorState={graphqlEditorState}
+      />
+    );
+  } else if (useRequestBody) {
+    requestBodyInput = (
+      <RequestBody
+        exampleRequests={method.exampleRequests}
+        onSelectedRequestBodyChange={onSelectedRequestBodyChange}
+        requestBodyOpen={requestBodyOpen}
+        requestBody={requestBody}
+        onEditRequestBodyClick={toggleRequestBodyOpen}
+        onDebugFormChange={onDebugFormChange}
+        method={method}
+        serviceType={serviceType}
+        jsonSchemas={jsonSchemas}
+      />
+    );
+  }
+
   return (
     <>
       <EndpointPath
@@ -175,26 +201,7 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
         onHeadersFormChange={onHeadersFormChange}
         onStickyHeadersChange={toggleStickyHeaders}
       />
-      {useRequestBody && serviceType === ServiceType.GRAPHQL ? (
-        <GraphqlRequestBody
-          requestBodyOpen={requestBodyOpen}
-          onEditRequestBodyClick={toggleRequestBodyOpen}
-          methodId={method.id}
-          editorState={graphqlEditorState}
-        />
-      ) : (
-        <RequestBody
-          exampleRequests={method.exampleRequests}
-          onSelectedRequestBodyChange={onSelectedRequestBodyChange}
-          requestBodyOpen={requestBodyOpen}
-          requestBody={requestBody}
-          onEditRequestBodyClick={toggleRequestBodyOpen}
-          onDebugFormChange={onDebugFormChange}
-          method={method}
-          serviceType={serviceType}
-          jsonSchemas={jsonSchemas}
-        />
-      )}
+      {requestBodyInput}
     </>
   );
 };

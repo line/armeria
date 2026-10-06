@@ -181,6 +181,19 @@ const ResponseStatusBar: React.FC<{
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
+const getRequestBody = (
+  method: Method,
+  useRequestBody: boolean,
+  search: string,
+): string => {
+  const params = new URLSearchParams(search);
+  const urlRequestBody =
+    useRequestBody && params.has('request_body')
+      ? jsonPrettify(params.get('request_body')!)
+      : '';
+  return urlRequestBody || method.exampleRequests[0] || '';
+};
+
 const errorResponseData = (error: unknown): ResponseData => ({
   body:
     error instanceof Object ? error.toString?.() ?? '<unknown>' : '<unknown>',
@@ -207,7 +220,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
   jsonSchemas,
   docServiceRoute,
 }) => {
-  const [requestBody, setRequestBody] = useState('');
+  const debugFormSearchParams = new URLSearchParams(location.search);
+  debugFormSearchParams.delete('debug_form_is_open');
+  const debugFormSearch = debugFormSearchParams.toString();
+  const initialRequestBody = getRequestBody(
+    method,
+    useRequestBody,
+    debugFormSearch,
+  );
+  const [requestBody, setRequestBody] = useState(initialRequestBody);
   const [additionalQueries, setAdditionalQueries] = useState('');
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [additionalPath, setAdditionalPath] = useState('');
@@ -238,24 +259,19 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const {
     editorState: graphqlEditorState,
     serializeRequestBody: serializeGraphqlRequestBody,
-    synchronizeWithRequestBody,
-  } = useGraphqlDebugState({ method, serviceType, setRequestBody });
-
-  const formSearchParams = new URLSearchParams(location.search);
-  formSearchParams.delete('debug_form_is_open');
-  const formSearch = formSearchParams.toString();
+    synchronizeWithRequestBody: synchronizeGraphqlWithRequestBody,
+  } = useGraphqlDebugState({
+    method,
+    serviceType,
+    initialRequestBody,
+  });
 
   useEffect(() => {
     setResponseData(responseCache.current[method.id] ?? null);
   }, [method.id]);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(formSearch);
-
-    let urlRequestBody = '';
-    if (useRequestBody && urlParams.has('request_body')) {
-      urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-    }
+    const urlParams = new URLSearchParams(debugFormSearch);
 
     let urlPath;
     if (
@@ -279,11 +295,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
       serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
     setSnackbarOpen(false);
-    const initialRequestBody =
-      urlRequestBody || method.exampleRequests[0] || '';
-    setRequestBody(initialRequestBody);
     if (serviceType === ServiceType.GRAPHQL) {
-      synchronizeWithRequestBody(initialRequestBody, method.id);
+      synchronizeGraphqlWithRequestBody(initialRequestBody, method.id);
+    } else {
+      setRequestBody(initialRequestBody);
     }
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
@@ -291,11 +306,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     exactPathMapping,
     exampleQueries.length,
     serviceType,
-    formSearch,
+    debugFormSearch,
     method,
     transport,
     useRequestBody,
-    synchronizeWithRequestBody,
+    initialRequestBody,
+    synchronizeGraphqlWithRequestBody,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */

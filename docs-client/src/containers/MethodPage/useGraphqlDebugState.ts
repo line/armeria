@@ -14,14 +14,7 @@
  * under the License.
  */
 
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   buildClientSchema,
   getIntrospectionQuery,
@@ -42,8 +35,39 @@ export interface GraphqlEditorState {
 interface Props {
   method: Method;
   serviceType: ServiceType;
-  setRequestBody: Dispatch<SetStateAction<string>>;
+  initialRequestBody: string;
 }
+
+interface GraphqlRequestState {
+  query: string;
+  variablesText: string;
+}
+
+const parseGraphqlRequestBody = (body: string): GraphqlRequestState => {
+  if (body === '') {
+    return { query: '', variablesText: '' };
+  }
+
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || typeof parsed !== 'object') {
+      return { query: '', variablesText: '' };
+    }
+    const variables =
+      parsed.variables &&
+      typeof parsed.variables === 'object' &&
+      !Array.isArray(parsed.variables)
+        ? parsed.variables
+        : {};
+    return {
+      query: typeof parsed.query === 'string' ? parsed.query : '',
+      variablesText:
+        Object.keys(variables).length > 0 ? JSON.stringify(variables) : '',
+    };
+  } catch {
+    return { query: '', variablesText: '' };
+  }
+};
 
 const serializeGraphqlRequestBody = (
   query: string,
@@ -70,11 +94,14 @@ const serializeGraphqlRequestBody = (
 const useGraphqlDebugState = ({
   method,
   serviceType,
-  setRequestBody,
+  initialRequestBody,
 }: Props) => {
-  const [query, setQuery] = useState('');
-  const [variablesText, setVariablesText] = useState('');
-  const [stateMethodId, setStateMethodId] = useState('');
+  const [{ query, variablesText, stateMethodId }, setRequestState] = useState(
+    () => ({
+      ...parseGraphqlRequestBody(initialRequestBody),
+      stateMethodId: method.id,
+    }),
+  );
   const [schema, setSchema] = useState<GraphQLSchema | null | undefined>();
 
   const schemaUrlPath =
@@ -130,72 +157,21 @@ const useGraphqlDebugState = ({
   }, [schemaUrlPath]);
 
   const synchronizeWithRequestBody = useCallback(
-    (body: string, methodId: string) => {
-      if (body === '') {
-        setQuery('');
-        setVariablesText('');
-        setStateMethodId(methodId);
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(body);
-        if (!parsed || typeof parsed !== 'object') {
-          setQuery('');
-          setVariablesText('');
-          setStateMethodId(methodId);
-          return;
-        }
-        setQuery(typeof parsed.query === 'string' ? parsed.query : '');
-        const variables =
-          parsed.variables &&
-          typeof parsed.variables === 'object' &&
-          !Array.isArray(parsed.variables)
-            ? parsed.variables
-            : {};
-        setVariablesText(
-          Object.keys(variables).length > 0 ? JSON.stringify(variables) : '',
-        );
-        setStateMethodId(methodId);
-      } catch {
-        setQuery('');
-        setVariablesText('');
-        setStateMethodId(methodId);
-      }
-    },
+    (body: string, methodId: string) =>
+      setRequestState({
+        ...parseGraphqlRequestBody(body),
+        stateMethodId: methodId,
+      }),
     [],
   );
 
-  const updateRequestBody = useCallback(
-    (nextQuery: string, nextVariablesText: string) => {
-      try {
-        setRequestBody(
-          serializeGraphqlRequestBody(nextQuery, nextVariablesText),
-        );
-      } catch {
-        setRequestBody(nextVariablesText);
-      }
-    },
-    [setRequestBody],
-  );
+  const onQueryChange = useCallback((value: string) => {
+    setRequestState((current) => ({ ...current, query: value }));
+  }, []);
 
-  const onQueryChange = useCallback(
-    (value: string) => {
-      setStateMethodId(method.id);
-      setQuery(value);
-      updateRequestBody(value, variablesText);
-    },
-    [method.id, updateRequestBody, variablesText],
-  );
-
-  const onVariablesTextChange = useCallback(
-    (value: string) => {
-      setStateMethodId(method.id);
-      setVariablesText(value);
-      updateRequestBody(query, value);
-    },
-    [method.id, query, updateRequestBody],
-  );
+  const onVariablesTextChange = useCallback((value: string) => {
+    setRequestState((current) => ({ ...current, variablesText: value }));
+  }, []);
 
   const editorState = useMemo<GraphqlEditorState>(
     () => ({

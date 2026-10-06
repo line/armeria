@@ -52,8 +52,16 @@ test('sends an exact GET and exposes response, clipboard, clear, and URL state',
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await gotoMethod(page, 'example.HttpService', 'hello', 'GET');
+  await expect(
+    page
+      .getByRole('main')
+      .getByRole('button', { name: 'Request body', exact: true }),
+  ).toHaveCount(0);
   const dialog = await openDebug(page);
   await expect(page).toHaveURL(/debug_form_is_open=true/);
+  await expect(
+    dialog.getByRole('button', { name: 'Request body', exact: true }),
+  ).toHaveCount(0);
   await page.goBack();
   await expect(page).not.toHaveURL(/debug_form_is_open/);
   await expect(dialog).toBeHidden();
@@ -603,19 +611,58 @@ test('keeps a canonicalized request error scoped to its method', async ({
 test('resets the request editor when navigating between body methods', async ({
   page,
 }) => {
-  await gotoMethod(page, 'example.HttpService', 'put', 'PUT');
+  await gotoMethod(page, 'example.GraphqlService', 'execute', 'POST');
   let dialog = await openDebug(page);
   let editor = dialog.locator('.monaco-editor');
-  await expect(editor.locator('.view-lines')).toContainText('PUT');
-  await setMonacoValue(editor, '{"verb":"custom"}');
+  await expect(editor.locator('.view-lines')).toContainText('greeting');
+  await setMonacoValue(editor, 'query { stale }');
   await dialog.getByRole('button', { name: 'Close' }).click();
 
   const goTo = page.getByPlaceholder('Go to ...');
+  await goTo.fill('HttpService#put');
+  await goTo.press('Enter');
+  const inlineEditor = page.getByRole('main').locator('.monaco-editor');
+  await expect(inlineEditor.locator('.view-lines')).toContainText('PUT');
+  await expect(inlineEditor.locator('.view-lines')).not.toContainText(
+    'greeting',
+  );
+  const inlineInput = inlineEditor.locator('textarea.inputarea');
+  await inlineInput.focus();
+  await inlineInput.press('End');
+  await inlineInput.pressSequentially(' undo');
+  await expect(inlineEditor.locator('.view-lines')).toContainText('undo');
+  const bodyToggle = page
+    .getByRole('main')
+    .getByRole('button', { name: 'Request body', exact: true });
+  await bodyToggle.click();
+  await expect(inlineEditor).toBeHidden();
+  await bodyToggle.click();
+  await inlineInput.press('ControlOrMeta+Z');
+  await expect(inlineEditor.locator('.view-lines')).not.toContainText('undo');
+  await expect(inlineEditor.locator('.view-lines')).toContainText('PUT');
+  dialog = await openDebug(page);
+  editor = dialog.locator('.monaco-editor');
+  await expect(editor.locator('.view-lines')).toContainText('PUT');
+  await expect(editor.locator('.view-lines')).not.toContainText('greeting');
+  await setMonacoValue(editor, '{"verb":"custom"}');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+
   await goTo.fill('HttpService#patch');
   await goTo.press('Enter');
   dialog = await openDebug(page);
   editor = dialog.locator('.monaco-editor');
   await expect(editor.locator('.view-lines')).toContainText('PATCH');
+  await expect(editor.locator('.view-lines')).not.toContainText('custom');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+
+  await goTo.fill('GraphqlService#execute');
+  await goTo.press('Enter');
+  await expect(inlineEditor.locator('.view-lines')).toContainText('greeting');
+  await expect(inlineEditor.locator('.view-lines')).not.toContainText('stale');
+  dialog = await openDebug(page);
+  editor = dialog.locator('.monaco-editor');
+  await expect(editor.locator('.view-lines')).toContainText('greeting');
+  await expect(editor.locator('.view-lines')).not.toContainText('stale');
   await expect(editor.locator('.view-lines')).not.toContainText('custom');
 });
 
@@ -666,7 +713,15 @@ for (const item of [
 ]) {
   test(`sends the ${item.verb} HTTP method`, async ({ page }) => {
     await gotoMethod(page, 'example.HttpService', item.method, item.verb);
+    await expect(
+      page
+        .getByRole('main')
+        .getByRole('button', { name: 'Request body', exact: true }),
+    ).toHaveCount(item.body ? 1 : 0);
     const dialog = await openDebug(page);
+    await expect(
+      dialog.getByRole('button', { name: 'Request body', exact: true }),
+    ).toHaveCount(item.body ? 1 : 0);
     await dialog.getByRole('button', { name: 'Submit' }).click();
     if (item.verb === 'HEAD') {
       await expect(dialog).toContainText('<zero-length response>');

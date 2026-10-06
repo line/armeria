@@ -16,19 +16,21 @@
 
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import React, { ChangeEvent, useCallback, useEffect } from 'react';
+import React, { ChangeEvent, useEffect } from 'react';
 
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import { Tooltip } from '@material-ui/core';
 
-import Editor, { loader, OnMount, useMonaco } from '@monaco-editor/react';
+import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { truncate } from '../../lib/strings';
 import { Method, ServiceType } from '../../lib/specification';
 
 loader.config({ monaco });
+
+const requestBodyModelPath = 'inmemory://docs-client/request-body';
 
 interface Props {
   exampleRequests: string[];
@@ -109,14 +111,14 @@ const RequestBody: React.FunctionComponent<Props> = ({
     }
   }, [monacoEditor, jsonSchemas, method.id, supportsJsonSchema]);
 
-  const onEditorMount = useCallback<OnMount>(
-    (editor) => {
-      if (editor.getValue() !== requestBody) {
-        editor.setValue(requestBody);
-      }
-    },
-    [requestBody],
-  );
+  useEffect(() => {
+    const model = monacoEditor?.editor.getModel(
+      monaco.Uri.parse(requestBodyModelPath),
+    );
+    if (model && model.getValue() !== requestBody) {
+      model.setValue(requestBody);
+    }
+  }, [monacoEditor, requestBody]);
 
   return (
     <>
@@ -151,14 +153,13 @@ const RequestBody: React.FunctionComponent<Props> = ({
             height="30vh"
             keepCurrentModel
             language={supportsJsonSchema ? 'json' : 'plaintext'}
-            path="inmemory://docs-client/request-body"
+            path={requestBodyModelPath}
             theme="vs-light"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
               occurrencesHighlight: 'off',
             }}
-            onMount={onEditorMount}
             value={requestBody}
             onChange={(val) => onDebugFormChange(val ?? '')}
           />

@@ -188,11 +188,28 @@ test('resets GraphQL state and schema when switching methods', async ({
   });
   await dialog.getByRole('button', { name: 'Close' }).click();
 
+  const inline = page.getByRole('main');
+  await inline.getByRole('button', { name: '# Query Variables' }).click();
+  await expect(
+    inline.locator(
+      'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
+    ),
+  ).toBeVisible();
+  await inline.getByRole('button', { name: '# Query', exact: true }).click();
+  await expect(inline.locator('.monaco-editor')).toBeHidden();
+
   const alternateSchema = page.waitForResponse((response) =>
     response.url().endsWith('/graphql-alternate'),
   );
   await gotoMethod(page, 'example.GraphqlService', 'alternate', 'POST');
   await alternateSchema;
+  await expect(inline.locator('.monaco-editor')).toBeVisible();
+  await expect(inline.locator('.monaco-editor .view-lines')).toHaveText('');
+  await expect(
+    inline.locator(
+      'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
+    ),
+  ).toHaveCount(0);
   dialog = await openDebug(page);
   editor = dialog.locator('.monaco-editor');
   await expect(editor.locator('.view-lines')).toHaveText('');
@@ -403,20 +420,51 @@ test('uses one GraphQL schema owner for inline and dialog editors', async ({
   await gotoMethod(page, 'example.GraphqlService', 'execute', 'POST');
   await schemaResponse;
 
-  let editor = page.locator('.monaco-editor');
+  const inline = page.getByRole('main');
+  let editor = inline.locator('.monaco-editor');
+  await expect(editor.locator('.view-lines')).toContainText('greeting');
+  const requestBodyButton = inline.getByRole('button', {
+    name: 'Graphql Request body',
+    exact: true,
+  });
+  const queryInput = editor.locator('textarea.inputarea');
+  await queryInput.focus();
+  await queryInput.press('End');
+  await queryInput.pressSequentially(' # undo');
+  await expect(editor.locator('.view-lines')).toContainText('# undo');
+  await requestBodyButton.click();
+  await expect(editor).toBeHidden();
+  await requestBodyButton.click();
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('.view-lines')).toContainText('greeting');
+  await queryInput.press('ControlOrMeta+Z');
+  await expect(editor.locator('.view-lines')).not.toContainText('# undo');
+  await expect(editor.locator('.view-lines')).toContainText('greeting');
   await setMonacoValue(editor, '{ }');
   let input = editor.locator('textarea.inputarea');
   await input.press('ArrowLeft');
   await expectMonacoSuggestion(page, editor, 'greeting');
   await input.press('Escape');
 
-  const inline = page.getByRole('main');
+  await setMonacoValue(
+    editor,
+    'query { greeting(name: "Inline draft") { message } }',
+  );
+
   const inlineVariables = inline.locator(
     'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
   );
   await expect(inlineVariables).toBeHidden();
 
   let dialog = await openDebug(page);
+  const dialogEditor = dialog.locator('.monaco-editor');
+  await expect(dialogEditor.locator('.view-lines')).toContainText(
+    'Inline draft',
+  );
+  await setMonacoValue(
+    dialogEditor,
+    'query { greeting(name: "Dialog draft") { message } }',
+  );
   let dialogVariables = dialog.locator(
     'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
   );
@@ -425,6 +473,7 @@ test('uses one GraphQL schema owner for inline and dialog editors', async ({
   }
   await dialogVariables.fill('{"name":"Dialog"}');
   await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(editor.locator('.view-lines')).toContainText('Dialog draft');
   const inlineQueryButton = inline.getByRole('button', {
     name: '# Query',
     exact: true,
@@ -437,8 +486,15 @@ test('uses one GraphQL schema owner for inline and dialog editors', async ({
   await inline.getByRole('button', { name: '# Query Variables' }).click();
   await expect(inlineVariables).toHaveValue('{"name":"Dialog"}');
   await inlineVariables.fill('{"name":"Inline"}');
+  await setMonacoValue(
+    editor,
+    'query { greeting(name: "Next inline draft") { message } }',
+  );
 
   dialog = await openDebug(page);
+  await expect(dialogEditor.locator('.view-lines')).toContainText(
+    'Next inline draft',
+  );
   dialogVariables = dialog.locator(
     'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])',
   );
