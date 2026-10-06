@@ -516,7 +516,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
         }
 
         final RequestHeaders headers = RequestHeaders.builder(
-                                                             HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
+                HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
                                                      .contentType(MediaType.JSON)
                                                      .build();
         return execute(headers, jsonBytes);
@@ -545,7 +545,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
         }
 
         final RequestHeaders headers = RequestHeaders.builder(
-                                                             HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
+                HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
                                                      .contentType(MediaType.JSON)
                                                      .build();
         return execute(headers, jsonBytes);
@@ -574,7 +574,7 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
         }
 
         final RequestHeaders headers = RequestHeaders.builder(
-                                                             HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
+                HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
                                                      .contentType(MediaType.JSON)
                                                      .build();
         return execute(headers, jsonBytes);
