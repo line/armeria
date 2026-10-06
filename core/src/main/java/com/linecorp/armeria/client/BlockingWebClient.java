@@ -21,12 +21,15 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -34,6 +37,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 import io.netty.channel.EventLoop;
 
@@ -488,4 +492,91 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
 
     @Override
     HttpClient unwrap();
+
+    /**
+     * Sends an HTTP POST request with the specified content serialized as JSON.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse postJson(String path, Object content) {
+        return postJson(path, null, content);
+    }
+
+    /**
+     * Sends an HTTP POST request with the specified content serialized as JSON,
+     * appending the given query parameters to the path.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse postJson(String path, @Nullable QueryParams params, Object content) {
+        requireNonNull(content, "content");
+        final byte[] jsonBytes;
+        try {
+            jsonBytes = JacksonUtil.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize content to JSON", e);
+        }
+
+        final RequestHeaders headers = RequestHeaders.builder(
+                                                             HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
+                                                     .contentType(MediaType.JSON)
+                                                     .build();
+        return execute(headers, jsonBytes);
+    }
+
+    /**
+     * Sends an HTTP PUT request with the specified content serialized as JSON.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse putJson(String path, Object content) {
+        return putJson(path, null, content);
+    }
+
+    /**
+     * Sends an HTTP PUT request with the specified content serialized as JSON,
+     * appending the given query parameters to the path.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse putJson(String path, @Nullable QueryParams params, Object content) {
+        requireNonNull(content, "content");
+        final byte[] jsonBytes;
+        try {
+            jsonBytes = JacksonUtil.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize content to JSON", e);
+        }
+
+        final RequestHeaders headers = RequestHeaders.builder(
+                                                             HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
+                                                     .contentType(MediaType.JSON)
+                                                     .build();
+        return execute(headers, jsonBytes);
+    }
+
+    /**
+     * Sends an HTTP PATCH request with the specified content serialized as JSON.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse patchJson(String path, Object content) {
+        return patchJson(path, null, content);
+    }
+
+    /**
+     * Sends an HTTP PATCH request with the specified content serialized as JSON,
+     * appending the given query parameters to the path.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse patchJson(String path, @Nullable QueryParams params, Object content) {
+        requireNonNull(content, "content");
+        final byte[] jsonBytes;
+        try {
+            jsonBytes = JacksonUtil.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize content to JSON", e);
+        }
+
+        final RequestHeaders headers = RequestHeaders.builder(
+                                                             HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
+                                                     .contentType(MediaType.JSON)
+                                                     .build();
+        return execute(headers, jsonBytes);
+    }
 }

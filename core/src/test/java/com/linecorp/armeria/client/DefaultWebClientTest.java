@@ -20,8 +20,8 @@ import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import java.util.concurrent.atomic.AtomicReference;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 

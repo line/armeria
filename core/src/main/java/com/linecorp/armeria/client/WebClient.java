@@ -509,7 +509,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
             throw new IllegalArgumentException("Failed to serialize content to JSON", e);
         }
 
-        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
+        final RequestHeaders headers = RequestHeaders.builder(
+                HttpMethod.POST, WebClientUtil.addQueryParams(path, params))
                 .contentType(MediaType.JSON)
                 .build();
         return execute(headers, jsonBytes);
@@ -616,7 +617,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
             throw new IllegalArgumentException("Failed to serialize content to JSON", e);
         }
 
-        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
+        final RequestHeaders headers = RequestHeaders.builder(
+                HttpMethod.PUT, WebClientUtil.addQueryParams(path, params))
                 .contentType(MediaType.JSON)
                 .build();
         return execute(headers, jsonBytes);
@@ -724,7 +726,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
             throw new IllegalArgumentException("Failed to serialize content to JSON", e);
         }
 
-        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
+        final RequestHeaders headers = RequestHeaders.builder(
+                HttpMethod.PATCH, WebClientUtil.addQueryParams(path, params))
                 .contentType(MediaType.JSON)
                 .build();
         return execute(headers, jsonBytes);
