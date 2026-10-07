@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,11 +75,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerErrorHandler;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServerPortBindException;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
@@ -207,6 +210,21 @@ class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
+    void shouldNotRetryValidationPortBindFailure() {
+        final AtomicInteger attempts = new AtomicInteger();
+        final WebServerException failure = new WebServerException(
+                "validation failed",
+                new ServerPortBindException(new ServerPort(0, SessionProtocol.HTTP),
+                                            new BindException("Address already in use")));
+        assertThatThrownBy(() -> runOnSpecifiedPort(() -> 0, (server, port) -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw failure;
+            }
+        })).isSameAs(failure);
+        assertThat(attempts.get()).isOne();
+    }
+
+    @Test
     void shouldPropagatePortBindFailureAfterLastAttempt() throws IOException {
         try (ServerSocket occupiedPort = new ServerSocket(0, 1, NetUtil.LOCALHOST4)) {
             final AtomicInteger attempts = new AtomicInteger();
@@ -227,14 +245,21 @@ class ArmeriaReactiveWebServerFactoryTest {
             final int port = portSupplier.getAsInt();
             factory.setPort(port);
             factory.setAddress(NetUtil.LOCALHOST4);
+            final WebServer server = factory.getWebServer(EchoHandler.INSTANCE);
             try {
-                runEchoServer(factory, server -> validator.accept(server, port));
-                return;
+                server.start();
             } catch (WebServerException ex) {
                 if (!(ex.getCause() instanceof ServerPortBindException) || i == 2) {
                     throw ex;
                 }
+                continue;
             }
+            try {
+                validator.accept(server, port);
+            } finally {
+                server.stop();
+            }
+            return;
         }
     }
 
