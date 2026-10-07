@@ -19,8 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,6 +48,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.boot.web.server.WebServerException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.HttpHandler;
@@ -73,6 +79,7 @@ import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerErrorHandler;
+import com.linecorp.armeria.server.ServerPortBindException;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
@@ -84,6 +91,7 @@ import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 
 class ArmeriaReactiveWebServerFactoryTest {
@@ -149,20 +157,83 @@ class ArmeriaReactiveWebServerFactoryTest {
 
     @Test
     void shouldRunOnSpecifiedPort() {
-        // There is a race condition on finding an unused port.
-        // The found port seems to be used by another test before using it because of the parallel test option.
-        // So this test case is tried up to 3 times to avoid flakiness.
+        runOnSpecifiedPort(PortUtil::unusedTcpPort, (server, port) -> {
+            assertThat(server.getPort()).isEqualTo(port);
+            validateEchoResponse(sendPostRequest(httpClient(server)));
+        });
+    }
+
+    @Test
+    void shouldStopRetryingAfterSuccessfulStart() {
+        final AtomicInteger attempts = new AtomicInteger();
+        runOnSpecifiedPort(() -> {
+            attempts.incrementAndGet();
+            return 0;
+        }, (server, port) -> validateEchoResponse(sendPostRequest(httpClient(server))));
+        assertThat(attempts.get()).isOne();
+    }
+
+    @Test
+    void shouldRetryAfterPortBindFailure() throws IOException {
+        try (ServerSocket occupiedPort = new ServerSocket(0, 1, NetUtil.LOCALHOST4)) {
+            final AtomicInteger attempts = new AtomicInteger();
+            runOnSpecifiedPort(() -> attempts.getAndIncrement() == 0 ? occupiedPort.getLocalPort() : 0,
+                               (server, port) -> validateEchoResponse(sendPostRequest(httpClient(server))));
+            assertThat(attempts.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void shouldNotRetryAssertionFailure() {
+        final AtomicInteger attempts = new AtomicInteger();
+        final AssertionError failure = new AssertionError("validation failed");
+        assertThatThrownBy(() -> runOnSpecifiedPort(() -> 0, (server, port) -> {
+            attempts.incrementAndGet();
+            throw failure;
+        })).isSameAs(failure);
+        assertThat(attempts.get()).isOne();
+    }
+
+    @Test
+    void shouldNotRetryOtherWebServerFailure() {
+        final AtomicInteger attempts = new AtomicInteger();
+        final WebServerException failure =
+                new WebServerException("validation failed", new IllegalStateException("unexpected failure"));
+        assertThatThrownBy(() -> runOnSpecifiedPort(() -> 0, (server, port) -> {
+            attempts.incrementAndGet();
+            throw failure;
+        })).isSameAs(failure);
+        assertThat(attempts.get()).isOne();
+    }
+
+    @Test
+    void shouldPropagatePortBindFailureAfterLastAttempt() throws IOException {
+        try (ServerSocket occupiedPort = new ServerSocket(0, 1, NetUtil.LOCALHOST4)) {
+            final AtomicInteger attempts = new AtomicInteger();
+            assertThatThrownBy(() -> runOnSpecifiedPort(() -> {
+                attempts.incrementAndGet();
+                return occupiedPort.getLocalPort();
+            }, (server, port) -> fail("Should never reach here")))
+                    .isInstanceOf(WebServerException.class)
+                    .hasCauseInstanceOf(ServerPortBindException.class);
+            assertThat(attempts.get()).isEqualTo(3);
+        }
+    }
+
+    private static void runOnSpecifiedPort(IntSupplier portSupplier, BiConsumer<WebServer, Integer> validator) {
+        // Retry bind failures because the selected port is released before the server starts.
         for (int i = 0; i < 3; i++) {
             final ArmeriaReactiveWebServerFactory factory = factory(new DefaultListableBeanFactory());
-            final int port = PortUtil.unusedTcpPort();
+            final int port = portSupplier.getAsInt();
             factory.setPort(port);
+            factory.setAddress(NetUtil.LOCALHOST4);
             try {
-                runEchoServer(factory, server -> assertThat(server.getPort()).isEqualTo(port));
-            } catch (Throwable ex) {
-                if (i < 2) {
-                    continue;
+                runEchoServer(factory, server -> validator.accept(server, port));
+                return;
+            } catch (WebServerException ex) {
+                if (!(ex.getCause() instanceof ServerPortBindException) || i == 2) {
+                    throw ex;
                 }
-                throw ex;
             }
         }
     }
