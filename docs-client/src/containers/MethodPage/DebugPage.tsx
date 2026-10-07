@@ -212,7 +212,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   serviceType,
   history,
   location,
-  match,
   method,
   useRequestBody,
   debugFormIsOpen,
@@ -299,6 +298,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       synchronizeGraphqlWithRequestBody(initialRequestBody, method.id);
     } else {
       setRequestBody(initialRequestBody);
+      synchronizeGraphqlWithRequestBody('', method.id);
     }
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
@@ -316,7 +316,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
+    const urlParams = new URLSearchParams(debugFormSearch);
 
     if (urlParams.has('sticky_headers')) {
       toggleStickyHeaders(true);
@@ -330,7 +330,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       headers = stickyHeaders ? additionalHeaders : '';
     }
     setAdditionalHeaders(headers);
-  }, [match.params]);
+  }, [method.id, debugFormSearch]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const showSnackbar = useCallback((text: string) => {

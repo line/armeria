@@ -247,6 +247,39 @@ test('resets GraphQL state and schema when switching methods', async ({
   await expect(dialog).toContainText('"farewell": "Goodbye"');
 });
 
+test('collapses empty GraphQL variables after an HTTP round trip', async ({
+  page,
+}) => {
+  let schemaResponse = page.waitForResponse('**/graphql');
+  await gotoMethod(page, 'example.GraphqlService', 'execute', 'POST');
+  await (await schemaResponse).finished();
+  const inline = page.getByRole('main');
+  const variablesSelector =
+    'textarea.MuiInputBase-input[rows="5"]:not([aria-hidden="true"])';
+  await inline.getByRole('button', { name: '# Query Variables' }).click();
+  await inline.locator(variablesSelector).fill('{"name":"Old"}');
+
+  const goTo = page.getByPlaceholder('Go to ...');
+  await goTo.fill('HttpService#put');
+  await goTo.press('Enter');
+  await expect(inline.locator('.monaco-editor .view-lines')).toContainText(
+    'PUT',
+  );
+  schemaResponse = page.waitForResponse('**/graphql');
+  await goTo.fill('GraphqlService#execute');
+  await goTo.press('Enter');
+  await (await schemaResponse).finished();
+  await expect(inline.locator('.monaco-editor .view-lines')).toContainText(
+    'Armeria',
+  );
+  await expect(inline.locator(variablesSelector)).toHaveCount(0);
+
+  const dialog = await openDebug(page);
+  await expect(dialog.locator(variablesSelector)).toHaveCount(0);
+  await dialog.getByRole('button', { name: '# Query Variables' }).click();
+  await expect(dialog.locator(variablesSelector)).toHaveValue('');
+});
+
 test('cancels introspection when switching GraphQL methods', async ({
   page,
 }, testInfo) => {

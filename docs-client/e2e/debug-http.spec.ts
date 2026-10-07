@@ -184,6 +184,28 @@ test('sends path, query, headers, body, and injected headers in a POST', async (
   );
 });
 
+test('keeps unsent HTTP inputs when opening and closing Debug', async ({
+  page,
+}) => {
+  await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
+  const inline = page.getByRole('main');
+  await textInputs(inline).nth(0).fill('/echo/draft');
+  await textInputs(inline).nth(1).fill('draft=1');
+  await headerInput(inline).fill('{"x-draft":"inline"}');
+  await setMonacoValue(inline.locator('.monaco-editor'), '{"name":"Unsent"}');
+
+  const dialog = await openDebug(page);
+  await expect(textInputs(dialog).nth(0)).toHaveValue('/echo/draft');
+  await expect(textInputs(dialog).nth(1)).toHaveValue('draft=1');
+  await expect(dialog.locator('.monaco-editor .view-lines')).toContainText(
+    'Unsent',
+  );
+  await expect(headerInput(dialog)).toHaveValue('{"x-draft":"inline"}');
+  await headerInput(dialog).fill('{"x-draft":"dialog"}');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(headerInput(inline)).toHaveValue('{"x-draft":"dialog"}');
+});
+
 test('validates prefix, regex, and regex-with-prefix endpoint paths', async ({
   page,
 }) => {
