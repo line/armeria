@@ -153,7 +153,7 @@ public final class ArmeriaConfigurationUtil {
         if (internalServiceProperties == null) {
             internalServiceIds = InternalServiceId.defaultServiceIds();
         } else {
-            internalServiceIds = internalServiceProperties.getInclude();
+            internalServiceIds = InternalServiceIdUtil.resolveServiceIds(internalServiceProperties);
         }
 
         configureInternalService(server, InternalServiceId.DOCS, settings.getDocsPath(),
@@ -257,14 +257,13 @@ public final class ArmeriaConfigurationUtil {
                                                  @Nullable String servicePath,
                                                  @Nullable HttpService service,
                                                  List<Port> internalPorts,
-                                                 @Nullable List<InternalServiceId> internalServiceIds,
+                                                 List<InternalServiceId> internalServiceIds,
                                                  boolean usesPrefixPath) {
         if (service == null) {
             return;
         }
         // An internal service should be created only when a servicePath is not null.
         assert servicePath != null;
-        internalServiceIds = firstNonNull(internalServiceIds, ImmutableList.of());
 
         if (internalPorts.isEmpty()) {
             // No internal ports are configured. The default virtual is used to use the service.
@@ -283,18 +282,8 @@ public final class ArmeriaConfigurationUtil {
                                                  HttpService service, @Nullable Port internalPort,
                                                  List<InternalServiceId> internalServiceIds,
                                                  boolean usesPrefixPath) {
-        final boolean needsPortBasedVirtualHost;
-        if (internalPort == null) {
-            needsPortBasedVirtualHost = false;
-        } else {
-            if (internalServiceIds.contains(InternalServiceId.ALL)) {
-                // All internal services use the internal port.
-                needsPortBasedVirtualHost = true;
-            } else {
-                // The service specified in internalServiceIds uses the internal port.
-                needsPortBasedVirtualHost = internalServiceIds.contains(serviceId);
-            }
-        }
+        final boolean needsPortBasedVirtualHost = internalPort != null &&
+                                                  internalServiceIds.contains(serviceId);
 
         if (needsPortBasedVirtualHost) {
             assert internalPort != null;
