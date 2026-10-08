@@ -15,14 +15,16 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
-import org.awaitility.core.ConditionTimeoutException;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -31,6 +33,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -42,25 +45,30 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@TestInstance(Lifecycle.PER_METHOD)
 class HttpServerAbortingInfiniteStreamTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerAbortingInfiniteStreamTest.class);
 
-    private static final AtomicReference<SessionProtocol> expectedProtocol = new AtomicReference<>();
-
-    private static final AtomicBoolean isCompleted = new AtomicBoolean();
+    private final CompletableFuture<HttpResponseWriter> serverResponse = new CompletableFuture<>();
 
     @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
+    final ServerExtension server = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
+        @Override
+        public void after(ExtensionContext context) throws Exception {
+            stop().get(10, TimeUnit.SECONDS);
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/infinity", (ctx, req) -> {
-                // Ensure that the protocol is expected one.
-                assertThat(ctx.sessionProtocol()).isEqualTo(expectedProtocol.get());
-
                 final HttpResponseWriter writer = HttpResponse.streaming();
                 writer.write(ResponseHeaders.of(HttpStatus.OK));
 
@@ -72,19 +80,7 @@ class HttpServerAbortingInfiniteStreamTest {
                         writer.whenConsumed().thenRun(this);
                     }
                 });
-                writer.whenComplete().whenComplete((unused, cause) -> {
-                    // We are not expecting that this stream is successfully finished.
-                    if (cause != null) {
-                        if (ctx.sessionProtocol() == H1C) {
-                            assertThat(cause).isInstanceOf(CancelledSubscriptionException.class);
-                        } else {
-                            assertThat(cause).isInstanceOf(AbortedStreamException.class);
-                        }
-                        if (isCompleted.compareAndSet(false, true)) {
-                            logger.debug("Infinite stream is completed", cause);
-                        }
-                    }
-                });
+                serverResponse.complete(writer);
                 return writer;
             });
         }
@@ -92,49 +88,53 @@ class HttpServerAbortingInfiniteStreamTest {
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) {
-        expectedProtocol.set(protocol);
+    void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) throws Exception {
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            final WebClient client = WebClient.builder(server.uri(protocol)).factory(factory).build();
+            final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
 
-        final WebClient client = WebClient.of(server.uri(protocol));
-        final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
+            final CompletableFuture<Void> cancellationRequested = new CompletableFuture<>();
+            response.subscribe(new Subscriber<HttpObject>() {
+                @Nullable
+                private Subscription subscription;
+                private int count;
 
-        response.subscribe(new Subscriber<HttpObject>() {
-            @Nullable
-            private Subscription subscription;
-            private int count;
-
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(1);
-                subscription = s;
-            }
-
-            @Override
-            public void onNext(HttpObject httpObject) {
-                assertThat(subscription).isNotNull();
-                if (++count == 10) {
-                    logger.debug("Cancel subscription: count={}", count);
-                    subscription.cancel();
+                @Override
+                public void onSubscribe(Subscription s) {
+                    subscription = s;
+                    s.request(1);
                 }
-                subscription.request(1);
-            }
 
-            @Override
-            public void onError(Throwable t) {}
+                @Override
+                public void onNext(HttpObject httpObject) {
+                    assertThat(subscription).isNotNull();
+                    if (++count == 10) {
+                        logger.debug("Cancel subscription: count={}", count);
+                        subscription.cancel();
+                        cancellationRequested.complete(null);
+                        return;
+                    }
+                    subscription.request(1);
+                }
 
-            @Override
-            public void onComplete() {}
-        });
+                @Override
+                public void onError(Throwable t) {
+                    cancellationRequested.completeExceptionally(t);
+                }
 
-        try {
-            await().untilTrue(isCompleted);
-        } catch (ConditionTimeoutException e) {
-            if (System.getenv("CI") != null) {
-                // On CI, it seems that sometimes there is too much time until disconnection.
-                logger.warn("Ignoring test failure.", e);
-                return;
-            }
-            throw e;
+                @Override
+                public void onComplete() {
+                    cancellationRequested.completeExceptionally(
+                            new IllegalStateException("Infinite response completed before cancellation"));
+                }
+            });
+
+            cancellationRequested.get(10, TimeUnit.SECONDS);
+            final HttpResponseWriter writer = serverResponse.get(10, TimeUnit.SECONDS);
+            assertThat(server.requestContextCaptor().take().sessionProtocol()).isEqualTo(protocol);
+            assertThatThrownBy(() -> writer.whenComplete().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(CancelledSubscriptionException.class);
         }
     }
 }
