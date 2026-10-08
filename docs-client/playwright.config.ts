@@ -16,7 +16,7 @@
 
 import { defineConfig } from '@playwright/test';
 
-const mockServerPort = 51234;
+export const mockServerPort = 51234;
 const nodeExecutable = JSON.stringify(process.execPath);
 
 export default defineConfig({
