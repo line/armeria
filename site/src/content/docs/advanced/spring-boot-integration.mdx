@@ -207,6 +207,21 @@ The `armeria.internal-services.port` configuration is not necessary. If the port
 Armeria will automatically bind the internal service to a random unused port.
 It is acceptable to set the port of the internal service to be the same as one of the armeria.ports.
 
+Use `armeria.internal-services.exclude` to opt out of the included services.
+The excluded services are served on all ports.
+
+```yaml title="application.yml"
+armeria:
+  ports:
+    - port: 8080
+      protocols:
+        - HTTP
+  internal-services:
+    include: all
+    exclude: health
+    port: 8090
+```
+
 :::tip
 
 The internal services should be configured using the beans described in the documentation.

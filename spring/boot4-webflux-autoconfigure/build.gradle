@@ -50,6 +50,7 @@ SpringBuildUtil.copyMainSources(project(":spring:boot4-autoconfigure"), project)
     include '**/ArmeriaConfigurationSettingsUtil.java'
     include '**/ArmeriaConfigurationUtil.java'
     include '**/CustomAlias*KeyManager*.java'
+    include '**/InternalServiceIdUtil.java'
     include '**/SpringDependencyInjector.java'
     include '**/ThriftServiceUtils.java'
 

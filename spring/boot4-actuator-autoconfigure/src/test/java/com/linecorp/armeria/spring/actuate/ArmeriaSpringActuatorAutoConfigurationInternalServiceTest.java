@@ -355,6 +355,42 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     }
 
     @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "excludeInternalServices" })
+    @DirtiesContext
+    @EnableTestMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(30)
+    static class ExcludeInternalServicesTest {
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeExcludedInternalServicesToAllPorts() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.ALL);
+            assertThat(settings.getInternalServices().getExclude()).containsExactly(InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int internalServiceStatus = internalServicePort.getPort() == port ? 200 : 404;
+                      assertActuatorStatus(port, 200);
+                      assertStatus(port, settings.getHealthCheckPath(), 200);
+
+                      assertStatus(port, settings.getMetricsPath(), internalServiceStatus);
+                      assertStatus(port, settings.getDocsPath(), internalServiceStatus);
+                  });
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "managementLocalhostTest" })
     @DirtiesContext
     @EnableTestMetrics
