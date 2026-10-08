@@ -18,11 +18,15 @@ package com.linecorp.armeria.xds;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
@@ -58,13 +62,16 @@ public final class XdsExtensionRegistry {
                             SotwConfigSourceSubscriptionFactory.class,
                             ClusterTypeFactory.class);
 
-    private final Map<String, XdsExtensionFactory> byTypeUrl;
+    private final Map<String, XdsExtensionFactory> singleTypeUrl;
+    private final Map<String, Map<String, XdsExtensionFactory>> byTypeUrl;
     private final Map<String, XdsExtensionFactory> byName;
     private final XdsResourceValidator validator;
 
-    private XdsExtensionRegistry(Map<String, XdsExtensionFactory> byTypeUrl,
+    private XdsExtensionRegistry(Map<String, XdsExtensionFactory> singleTypeUrl,
+                                 Map<String, Map<String, XdsExtensionFactory>> byTypeUrl,
                                  Map<String, XdsExtensionFactory> byName,
                                  XdsResourceValidator validator) {
+        this.singleTypeUrl = singleTypeUrl;
         this.byTypeUrl = byTypeUrl;
         this.byName = byName;
         this.validator = validator;
@@ -75,38 +82,87 @@ public final class XdsExtensionRegistry {
                                    MeterRegistry meterRegistry,
                                    MeterIdPrefix meterIdPrefix,
                                    List<XdsExtensionFactory> extensionFactories) {
-        final ImmutableMap.Builder<String, XdsExtensionFactory> byName = ImmutableMap.builder();
-        final ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl = ImmutableMap.builder();
+        final List<XdsExtensionFactory> allFactories = new ArrayList<>();
 
-        // SPI-loaded factories (user-provided extensions)
+        // Level 1: SPI-loaded factories
+        final List<XdsExtensionFactory> spiFactories = new ArrayList<>();
         for (XdsExtensionFactoryProvider provider : ServiceLoader.load(XdsExtensionFactoryProvider.class)) {
-            final XdsExtensionFactory factory = provider.newFactory();
-            validateFactoryType(factory);
-            register(factory, byName, byTypeUrl);
+            spiFactories.add(provider.newFactory());
+        }
+        spiFactories.forEach(XdsExtensionRegistry::validateFactoryType);
+        validateDuplicates(spiFactories);
+        allFactories.addAll(spiFactories);
+
+        // Level 2: Builder-provided factories
+        extensionFactories.forEach(XdsExtensionRegistry::validateFactoryType);
+        validateDuplicates(extensionFactories);
+        allFactories.addAll(extensionFactories);
+
+        // Level 3: Built-in factories (registered last so they cannot be overridden)
+        final List<XdsExtensionFactory> builtInFactories =
+                ImmutableList.<XdsExtensionFactory>builder()
+                        .add(new RouterFilterFactory())
+                        .add(new CredentialInjectorFilterFactory())
+                        .add(new FaultInjectionFilterFactory())
+                        .add(new StaticClusterTypeFactory())
+                        .add(new StrictDnsClusterTypeFactory())
+                        .add(new PathSotwConfigSourceSubscriptionFactory(
+                                watchService, meterRegistry, meterIdPrefix))
+                        .add(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix))
+                        .add(new EdsClusterTypeFactory())
+                        .add(HttpConnectionManagerFactory.INSTANCE)
+                        .add(UpstreamTlsTransportSocketFactory.INSTANCE)
+                        .add(DownstreamTlsTransportSocketFactory.INSTANCE)
+                        .add(RawBufferTransportSocketFactory.INSTANCE)
+                        .build();
+        validateDuplicates(builtInFactories);
+        allFactories.addAll(builtInFactories);
+
+        final Map<String, XdsExtensionFactory> byName = new LinkedHashMap<>();
+        final Map<String, Map<String, XdsExtensionFactory>> byTypeUrl = new LinkedHashMap<>();
+        for (XdsExtensionFactory factory : allFactories) {
+            byName.put(factory.name(), factory);
+            for (String typeUrl : factory.typeUrls()) {
+                byTypeUrl.computeIfAbsent(typeUrl, k -> new LinkedHashMap<>())
+                         .put(factory.name(), factory);
+            }
         }
 
-        // Builder-provided factories
-        for (XdsExtensionFactory factory : extensionFactories) {
-            validateFactoryType(factory);
-            register(factory, byName, byTypeUrl);
+        // Derive singleTypeUrl and freeze all maps
+        final ImmutableMap.Builder<String, XdsExtensionFactory> singleTypeUrlBuilder =
+                ImmutableMap.builder();
+        final ImmutableMap.Builder<String, Map<String, XdsExtensionFactory>> frozenByTypeUrl =
+                ImmutableMap.builder();
+        byTypeUrl.forEach((typeUrl, nameMap) -> {
+            final ImmutableMap<String, XdsExtensionFactory> frozen = ImmutableMap.copyOf(nameMap);
+            frozenByTypeUrl.put(typeUrl, frozen);
+            if (frozen.size() == 1) {
+                singleTypeUrlBuilder.put(typeUrl, frozen.values().iterator().next());
+            }
+        });
+
+        return new XdsExtensionRegistry(singleTypeUrlBuilder.buildOrThrow(),
+                                        frozenByTypeUrl.buildOrThrow(),
+                                        ImmutableMap.copyOf(byName), validator);
+    }
+
+    private static void validateDuplicates(List<? extends XdsExtensionFactory> factories) {
+        final Set<String> levelNames = new HashSet<>();
+        final Set<String> levelTypeUrlNames = new HashSet<>();
+        for (XdsExtensionFactory factory : factories) {
+            if (!levelNames.add(factory.name())) {
+                throw new IllegalArgumentException(
+                        "Duplicate factory name '" + factory.name() +
+                        "' within the same registration level");
+            }
+            for (String typeUrl : factory.typeUrls()) {
+                if (!levelTypeUrlNames.add(typeUrl + '\0' + factory.name())) {
+                    throw new IllegalArgumentException(
+                            "Duplicate (typeUrl, name) '" + typeUrl + "' + '" + factory.name() +
+                            "' within the same registration level");
+                }
+            }
         }
-
-        // Built-in factories (registered last so they cannot be overridden)
-        register(new RouterFilterFactory(), byName, byTypeUrl);
-        register(new CredentialInjectorFilterFactory(), byName, byTypeUrl);
-        register(new FaultInjectionFilterFactory(), byName, byTypeUrl);
-        register(new StaticClusterTypeFactory(), byName, byTypeUrl);
-        register(new StrictDnsClusterTypeFactory(), byName, byTypeUrl);
-        register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),
-                 byName, byTypeUrl);
-        register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
-        register(new EdsClusterTypeFactory(), byName, byTypeUrl);
-        register(HttpConnectionManagerFactory.INSTANCE, byName, byTypeUrl);
-        register(UpstreamTlsTransportSocketFactory.INSTANCE, byName, byTypeUrl);
-        register(DownstreamTlsTransportSocketFactory.INSTANCE, byName, byTypeUrl);
-        register(RawBufferTransportSocketFactory.INSTANCE, byName, byTypeUrl);
-
-        return new XdsExtensionRegistry(byTypeUrl.buildKeepingLast(), byName.buildKeepingLast(), validator);
     }
 
     private static void validateFactoryType(XdsExtensionFactory factory) {
@@ -119,15 +175,6 @@ public final class XdsExtensionRegistry {
         throw new IllegalArgumentException(
                 "Unsupported factory type: " + factory.getClass().getName() +
                 ". Must implement one of: " + SUPPORTED_FACTORY_TYPES);
-    }
-
-    private static void register(XdsExtensionFactory factory,
-                                 ImmutableMap.Builder<String, XdsExtensionFactory> byName,
-                                 ImmutableMap.Builder<String, XdsExtensionFactory> byTypeUrl) {
-        byName.put(factory.name(), factory);
-        for (String typeUrl : factory.typeUrls()) {
-            byTypeUrl.put(typeUrl, factory);
-        }
     }
 
     XdsResourceValidator validator() {
@@ -147,26 +194,6 @@ public final class XdsExtensionRegistry {
      */
     <T extends Message> T unpack(Any any, Class<T> expectedType) {
         return validator.unpack(any, expectedType);
-    }
-
-    /**
-     * Looks up a factory by typeUrl and validates it implements the expected type.
-     * Returns {@code null} if no factory is registered.
-     *
-     * @throws IllegalArgumentException if the factory does not implement the expected interface
-     */
-    @Nullable
-    <T extends XdsExtensionFactory> T queryByTypeUrl(String typeUrl, Class<T> expectedType) {
-        final XdsExtensionFactory factory = byTypeUrl.get(typeUrl);
-        if (factory == null) {
-            return null;
-        }
-        if (!expectedType.isInstance(factory)) {
-            throw new IllegalArgumentException(
-                    "Factory for typeUrl '" + typeUrl + "' is " + factory.getClass().getName() +
-                    ", expected " + expectedType.getName());
-        }
-        return expectedType.cast(factory);
     }
 
     /**
@@ -191,19 +218,43 @@ public final class XdsExtensionRegistry {
 
     /**
      * Resolves a factory by {@link Any}'s typeUrl first, then by name.
+     * If multiple names are registered for the same typeUrl, the name is also considered.
      * Returns {@code null} if no factory is found.
      *
      * @throws IllegalArgumentException if a found factory does not implement the expected interface
      */
     @Nullable
     public <T extends XdsExtensionFactory> T query(Any any, String name, Class<T> expectedType) {
-        final T factory = queryByTypeUrl(any.getTypeUrl(), expectedType);
-        if (factory != null) {
-            return factory;
+        final String typeUrl = any.getTypeUrl();
+
+        final XdsExtensionFactory unambiguous = singleTypeUrl.get(typeUrl);
+        if (unambiguous != null) {
+            return castOrThrow(unambiguous, typeUrl, expectedType);
         }
+
+        final Map<String, XdsExtensionFactory> nameMap = byTypeUrl.get(typeUrl);
+        if (nameMap != null) {
+            final XdsExtensionFactory factory = nameMap.get(name);
+            if (factory != null) {
+                return castOrThrow(factory, typeUrl, expectedType);
+            }
+            return null;
+        }
+
         if (!name.isEmpty()) {
             return queryByName(name, expectedType);
         }
         return null;
+    }
+
+    private static <T extends XdsExtensionFactory> T castOrThrow(XdsExtensionFactory factory,
+                                                                  String typeUrl,
+                                                                  Class<T> expectedType) {
+        if (!expectedType.isInstance(factory)) {
+            throw new IllegalArgumentException(
+                    "Factory for typeUrl '" + typeUrl + "' is " + factory.getClass().getName() +
+                    ", expected " + expectedType.getName());
+        }
+        return expectedType.cast(factory);
     }
 }
