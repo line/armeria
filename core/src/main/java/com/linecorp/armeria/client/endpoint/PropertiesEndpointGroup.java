@@ -27,12 +27,15 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Cancellable;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.file.DirectoryWatchService;
 import com.linecorp.armeria.common.file.PathWatcher;
@@ -189,13 +192,20 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                             Path filePath, String endpointKeyPrefix, int defaultPort) {
+        this(selectionStrategy, filePath, endpointKeyPrefix, defaultPort,
+             MoreExecutors.newSequentialExecutor(CommonPools.blockingTaskExecutor()));
+    }
+
+    @VisibleForTesting
+    PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
+                            Path filePath, String endpointKeyPrefix, int defaultPort, Executor executor) {
         super(selectionStrategy);
         final Path normalizedPath = filePath.toAbsolutePath().normalize();
         final Path watchDir = normalizedPath.getParent();
         checkArgument(watchDir != null, "Cannot watch parent directory for '%s'", filePath);
         watchKey = watchService.register(watchDir, PathWatcher.ofFile(normalizedPath, bytes -> {
             setEndpoints(loadEndpoints(bytes, endpointKeyPrefix, defaultPort));
-        }));
+        }, executor));
     }
 
     private static List<Endpoint> loadEndpoints(byte[] bytes, String endpointKeyPrefix, int defaultPort) {
