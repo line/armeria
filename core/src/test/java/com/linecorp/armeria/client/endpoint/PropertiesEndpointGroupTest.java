@@ -36,11 +36,14 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
 import org.awaitility.Awaitility;
@@ -49,6 +52,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Cancellable;
@@ -203,6 +208,31 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
+    void injectedExecutorIsUsedAsIs() throws Exception {
+        final Path file = folder.resolve("hosts.properties");
+        Files.write(file, "hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
+        final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
+        final List<PathWatcher> watchers = new ArrayList<>();
+        try (PropertiesEndpointGroup group = new PropertiesEndpointGroup(
+                EndpointSelectionStrategy.weightedRoundRobin(), file, "hosts", 0, tasks::add,
+                (path, watcher) -> {
+                    watchers.add(watcher);
+                    return mock(Cancellable.class);
+                })) {
+            final WatchEvent<?> event = mock(WatchEvent.class);
+            doReturn(ENTRY_MODIFY).when(event).kind();
+            assertThat(watchers).hasSize(1);
+            watchers.get(0).onEvent(folder, file, event);
+            watchers.get(0).onEvent(folder, file, event);
+            assertThat(tasks).hasSize(2);
+            assertThat(group.whenReady()).isNotDone();
+            tasks.remove().run();
+            tasks.remove().run();
+            assertThat(group.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 8080));
+        }
+    }
+
+    @Test
     void fileUpdatesDoNotOverlapBlockedListener() throws Exception {
         final Path file = folder.resolve("hosts.properties");
         Files.write(file, ("first.hosts.0=127.0.0.1:8080\n" +
@@ -221,10 +251,10 @@ class PropertiesEndpointGroupTest {
         doReturn(ENTRY_MODIFY).when(event).kind();
         try (PropertiesEndpointGroup first = new PropertiesEndpointGroup(
                      EndpointSelectionStrategy.weightedRoundRobin(), file, "first.hosts", 0,
-                     executor, register);
+                     MoreExecutors.newSequentialExecutor(executor), register);
              PropertiesEndpointGroup second = new PropertiesEndpointGroup(
                      EndpointSelectionStrategy.weightedRoundRobin(), file, "second.hosts", 0,
-                     executor, register)) {
+                     MoreExecutors.newSequentialExecutor(executor), register)) {
             assertThat(watchers).hasSize(2);
             final PathWatcher firstWatcher = watchers.get(0);
             final PathWatcher secondWatcher = watchers.get(1);
@@ -272,21 +302,47 @@ class PropertiesEndpointGroupTest {
         Files.write(file, "hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
         Files.setLastModifiedTime(file, FileTime.fromMillis(1000));
         final PropertiesEndpointGroupBuilder builder = PropertiesEndpointGroup.builder(file, "hosts");
-        final CompletableFuture<List<Endpoint>> secondEndpoints = new CompletableFuture<>();
+        final CompletableFuture<Void> secondReady = new CompletableFuture<>();
+        final CompletableFuture<List<Endpoint>> secondReloaded = new CompletableFuture<>();
+        final CompletableFuture<List<Endpoint>> firstReloaded = new CompletableFuture<>();
+        final CountDownLatch listenerProceed = new CountDownLatch(1);
         try (PropertiesEndpointGroup first = builder.build()) {
             first.whenReady().get(10, TimeUnit.SECONDS);
             first.addListener(endpoints -> {
                 if (endpoints.isEmpty()) {
                     try (PropertiesEndpointGroup second = builder.build()) {
-                        secondEndpoints.complete(second.whenReady().get(10, TimeUnit.SECONDS));
+                        second.addListener(newEndpoints -> {
+                            if (!newEndpoints.isEmpty()) {
+                                secondReloaded.complete(newEndpoints);
+                            }
+                        });
+                        second.whenReady().get(10, TimeUnit.SECONDS);
+                        secondReady.complete(null);
+                        listenerProceed.await(45, TimeUnit.SECONDS);
                     } catch (Exception e) {
-                        secondEndpoints.completeExceptionally(e);
+                        secondReady.completeExceptionally(e);
+                        secondReloaded.completeExceptionally(e);
                     }
+                } else if (endpoints.contains(Endpoint.of("127.0.0.1", 8082))) {
+                    firstReloaded.complete(endpoints);
                 }
             });
             Files.write(file, new byte[0]);
             Files.setLastModifiedTime(file, FileTime.fromMillis(2000));
-            assertThat(secondEndpoints.get(30, TimeUnit.SECONDS)).isEmpty();
+            secondReady.get(30, TimeUnit.SECONDS);
+
+            Files.write(file, "hosts.0=127.0.0.1:8082\n".getBytes(UTF_8));
+            Files.setLastModifiedTime(file, FileTime.fromMillis(3000));
+            assertThat(secondReloaded.get(30, TimeUnit.SECONDS))
+                    .containsExactly(Endpoint.of("127.0.0.1", 8082));
+            assertThatThrownBy(() -> firstReloaded.get(12, TimeUnit.SECONDS))
+                    .isInstanceOf(TimeoutException.class);
+            assertThat(first.endpoints()).isEmpty();
+            listenerProceed.countDown();
+            assertThat(firstReloaded.get(10, TimeUnit.SECONDS))
+                    .containsExactly(Endpoint.of("127.0.0.1", 8082));
+        } finally {
+            listenerProceed.countDown();
         }
     }
 

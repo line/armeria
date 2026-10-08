@@ -194,7 +194,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                             Path filePath, String endpointKeyPrefix, int defaultPort) {
         this(selectionStrategy, filePath, endpointKeyPrefix, defaultPort,
-             CommonPools.blockingTaskExecutor(), watchService::register);
+             MoreExecutors.newSequentialExecutor(CommonPools.blockingTaskExecutor()), watchService::register);
     }
 
     @VisibleForTesting
@@ -205,10 +205,9 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         final Path normalizedPath = filePath.toAbsolutePath().normalize();
         final Path watchDir = normalizedPath.getParent();
         checkArgument(watchDir != null, "Cannot watch parent directory for '%s'", filePath);
-        final Executor sequentialExecutor = MoreExecutors.newSequentialExecutor(executor);
         watchKey = register.apply(watchDir, PathWatcher.ofFile(normalizedPath, bytes -> {
             setEndpoints(loadEndpoints(bytes, endpointKeyPrefix, defaultPort));
-        }, sequentialExecutor));
+        }, executor));
     }
 
     private static List<Endpoint> loadEndpoints(byte[] bytes, String endpointKeyPrefix, int defaultPort) {
