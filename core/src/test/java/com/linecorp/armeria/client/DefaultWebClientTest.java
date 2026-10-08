@@ -150,7 +150,7 @@ class DefaultWebClientTest {
         final String path = "http://127.0.0.1/helloWorld/json";
         final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
         final WebClient client = WebClient.builder(UNDEFINED_URI)
-                .decorator((delegate, ctx, req) -> HttpResponse.from(
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
                         req.aggregate().thenApply(aggregated -> {
                             capturedReq.set(aggregated);
                             return HttpResponse.of(200);
@@ -170,12 +170,9 @@ class DefaultWebClientTest {
     @Test
     void testPostJsonWithQueryParams() {
         final String path = "http://127.0.0.1/helloWorld/json";
-        final QueryParams queryParams = QueryParams.builder()
-                .add("userId", "123")
-                .build();
         final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
         final WebClient client = WebClient.builder(UNDEFINED_URI)
-                .decorator((delegate, ctx, req) -> HttpResponse.from(
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
                         req.aggregate().thenApply(aggregated -> {
                             capturedReq.set(aggregated);
                             return HttpResponse.of(200);
@@ -183,7 +180,7 @@ class DefaultWebClientTest {
                 .build();
         final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
 
-        client.postJson(path, queryParams, payload).aggregate().join();
+        client.postJson(path, payload).aggregate().join();
 
         final AggregatedHttpRequest aggregatedReq = capturedReq.get();
         assertThat(aggregatedReq.path()).isEqualTo("/helloWorld/json?userId=123");
@@ -197,7 +194,7 @@ class DefaultWebClientTest {
         final String path = "http://127.0.0.1/helloWorld/json";
         final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
         final WebClient client = WebClient.builder(UNDEFINED_URI)
-                .decorator((delegate, ctx, req) -> HttpResponse.from(
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
                         req.aggregate().thenApply(aggregated -> {
                             capturedReq.set(aggregated);
                             return HttpResponse.of(200);
@@ -219,7 +216,7 @@ class DefaultWebClientTest {
         final String path = "http://127.0.0.1/helloWorld/json";
         final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
         final WebClient client = WebClient.builder(UNDEFINED_URI)
-                .decorator((delegate, ctx, req) -> HttpResponse.from(
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
                         req.aggregate().thenApply(aggregated -> {
                             capturedReq.set(aggregated);
                             return HttpResponse.of(200);
@@ -241,7 +238,7 @@ class DefaultWebClientTest {
         final String path = "http://127.0.0.1/helloWorld/json";
         final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
         final WebClient client = WebClient.builder(UNDEFINED_URI)
-                .decorator((delegate, ctx, req) -> HttpResponse.from(
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
                         req.aggregate().thenApply(aggregated -> {
                             capturedReq.set(aggregated);
                             return HttpResponse.of(200);
