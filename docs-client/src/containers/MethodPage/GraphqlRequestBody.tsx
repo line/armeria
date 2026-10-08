@@ -14,39 +14,28 @@
  * under the License.
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-} from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 
-import {
-  buildClientSchema,
-  GraphQLSchema,
-  getIntrospectionQuery,
-} from 'graphql';
 import TextField from '@material-ui/core/TextField';
 import Editor, { useMonaco, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-graphql';
 import { jsonPrettify } from '../../lib/json-util';
-import { docServiceDebug } from '../../lib/header-provider';
+import { GraphqlEditorState } from './useGraphqlDebugState';
 
 // Required for graphQL plugin to load properly.
 loader.config({ monaco });
 
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
+const graphqlModelPath = 'inmemory://docs-client/graphql-request';
 
 interface Props {
   requestBodyOpen: boolean;
-  requestBody: string;
   onEditRequestBodyClick: React.Dispatch<unknown>;
-  onDebugFormChange: (value: string) => void;
-  schemaUrlPath: string;
+  methodId: string;
+  editorState: GraphqlEditorState;
 }
 
 const toggle = (prev: boolean, override: unknown) => {
@@ -56,114 +45,67 @@ const toggle = (prev: boolean, override: unknown) => {
   return !prev;
 };
 
-const parseJson = (s: string) => {
-  let parsedJson;
-  try {
-    parsedJson = JSON.parse(s);
-  } catch (e) {
-    // ignored
-  }
-  return parsedJson;
-};
-
 const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   requestBodyOpen,
-  requestBody,
   onEditRequestBodyClick,
-  onDebugFormChange,
-  schemaUrlPath,
+  methodId,
+  editorState,
 }) => {
+  const {
+    schema,
+    query,
+    variablesText,
+    stateMethodId,
+    onQueryChange,
+    onVariablesTextChange,
+  } = editorState;
   const [queryOpen, toggleQueryOpen] = useReducer(toggle, true);
   const [variablesOpen, toggleVariablesOpen] = useReducer(toggle, false);
-
-  const [query, setQuery] = useState('');
-  const [variables, setVariables] = useState({});
-  const [variablesText, setVariablesText] = useState('');
-  const [schema, setSchema] = useState<GraphQLSchema | undefined>();
-
+  const previousStateMethodId = useRef('');
   const monacoEditor = useMonaco();
 
-  useMemo(() => {
+  useEffect(() => {
+    toggleQueryOpen(true);
+    toggleVariablesOpen(false);
+    previousStateMethodId.current = '';
+  }, [methodId]);
+
+  useEffect(() => {
+    if (stateMethodId !== methodId) {
+      return;
+    }
+    if (previousStateMethodId.current !== stateMethodId) {
+      toggleVariablesOpen(variablesText !== '');
+    }
+    previousStateMethodId.current = stateMethodId;
+  }, [methodId, stateMethodId, variablesText]);
+
+  useEffect(() => {
+    if (schema === undefined) {
+      return;
+    }
     // @ts-ignore
-    monacoEditor?.languages?.graphql?.api.setSchemaConfig([
-      {
-        schema,
-        fileMatch: ['*'],
-        uri: '*',
-      },
-    ]);
+    monacoEditor?.languages?.graphql?.api.setSchemaConfig(
+      schema
+        ? [
+            {
+              schema,
+              fileMatch: ['*'],
+              uri: '*',
+            },
+          ]
+        : [],
+    );
   }, [monacoEditor, schema]);
 
   useEffect(() => {
-    (async () => {
-      const headers: any = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      };
-      if (process.env.WEBPACK_DEV === 'true') {
-        headers[docServiceDebug] = 'true';
-      }
-      const httpResponse = await fetch(schemaUrlPath, {
-        method: 'POST',
-        headers,
-
-        body: JSON.stringify({
-          operationName: 'IntrospectionQuery',
-          // See https://github.com/graphql/graphiql/blob/8ac05f8b141b6f5cb4449c62ad67a34115490ac8/packages/graphiql/src/utility/introspectionQueries.ts#L16...L22
-          query: getIntrospectionQuery().replace(
-            'subscriptionType { name }',
-            '',
-          ),
-        }),
-      });
-      const result = await httpResponse.json();
-      if (typeof result !== 'string' && 'data' in result) {
-        setSchema(buildClientSchema(result.data));
-      }
-    })();
-  }, [schemaUrlPath]);
-
-  useEffect(() => {
-    if (query !== '' || variablesText !== '') {
-      return;
-    }
-
-    const parsedJson = parseJson(requestBody);
-    if (parsedJson === undefined) {
-      return;
-    }
-
-    setQuery(parsedJson.query);
-    if (typeof parsedJson.variables === 'object') {
-      setVariablesText(JSON.stringify(parsedJson.variables));
-      toggleVariablesOpen(true);
-    }
-  }, [requestBody, query, variablesText]);
-
-  useEffect(() => {
-    onDebugFormChange(
-      JSON.stringify({
-        query,
-        variables,
-      }),
+    const model = monacoEditor?.editor.getModel(
+      monaco.Uri.parse(graphqlModelPath),
     );
-  }, [onDebugFormChange, query, variables]);
-
-  useEffect(() => {
-    const parsed = parseJson(variablesText);
-    if (parsed === undefined) {
-      return;
+    if (model && model.getValue() !== query) {
+      model.setValue(query);
     }
-    setVariables(parsed);
-  }, [variablesText]);
-
-  const onQueryFromChange = useCallback((value) => {
-    setQuery(value);
-  }, []);
-
-  const onVariablesTextFromChange = useCallback((value) => {
-    setVariablesText(value);
-  }, []);
+  }, [monacoEditor, query]);
 
   return (
     <>
@@ -177,19 +119,22 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
           <Button size="small" color="secondary" onClick={toggleQueryOpen}>
             # Query
           </Button>
-          {queryOpen && (
+          <div style={{ display: queryOpen ? 'block' : 'none' }}>
             <Editor
               height="30vh"
+              keepCurrentModel
               language="graphql"
+              path={graphqlModelPath}
               theme="vs-light"
               value={query}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
+                occurrencesHighlight: 'off',
               }}
-              onChange={(val) => val && onQueryFromChange(val)}
+              onChange={(val) => onQueryChange(val ?? '')}
             />
-          )}
+          </div>
           <Typography variant="body2" paragraph />
           <Button size="small" color="secondary" onClick={toggleVariablesOpen}>
             # Query Variables
@@ -202,7 +147,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
               value={variablesText}
               placeholder={jsonPlaceHolder}
               onChange={(e) => {
-                return onVariablesTextFromChange(e.target.value);
+                return onVariablesTextChange(e.target.value);
               }}
               inputProps={{
                 className: 'code',

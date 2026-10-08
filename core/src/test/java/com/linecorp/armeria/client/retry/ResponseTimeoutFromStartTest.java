@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.within;
 
@@ -24,17 +25,23 @@ import java.time.Duration;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -92,5 +99,18 @@ class ResponseTimeoutFromStartTest {
             assertThat(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - prev))
                     .isCloseTo(TimeUnit.SECONDS.toMillis(timeoutSeconds), within(1000L));
         }
+    }
+
+    @Test
+    void shouldAbortRequestByTimeout() {
+        final BlockingWebClient client = server.webClient(cb -> {
+            cb.decorator(RetryingClient.newDecorator(RetryRule.failsafe()));
+            cb.responseTimeoutMillis(1000);
+            cb.responseTimeoutMode(ResponseTimeoutMode.FROM_START);
+        }).blocking();
+        // slowReq should be aborted after 1000 ms
+        final HttpRequestWriter slowReq = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
+        assertThatThrownBy(() -> client.execute(slowReq))
+                .isInstanceOf(ResponseTimeoutException.class);
     }
 }

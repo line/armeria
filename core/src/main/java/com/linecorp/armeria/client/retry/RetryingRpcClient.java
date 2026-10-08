@@ -158,12 +158,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                     "the response returned to the client has been cancelled"), initialAttempt);
             return;
         }
-        if (!setResponseTimeout(ctx)) {
-            handleException(ctx, future, ResponseTimeoutException.get(), initialAttempt);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
+
+        if (!setResponseTimeout(ctx, derivedCtx)) {
+            handleException(ctx, derivedCtx, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }
-
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
 
         if (!initialAttempt) {
             derivedCtx.mutateAdditionalRequestHeaders(
@@ -174,7 +174,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
         if (!initialAttempt) {
             final boolean shouldRetry = config.retryLimiter().shouldRetry(derivedCtx);
             if (!shouldRetry) {
-                handleException(ctx, future, UnprocessedRequestException.of(RetryLimitedException.of()),
+                handleException(ctx, derivedCtx, future,
+                                UnprocessedRequestException.of(RetryLimitedException.of()),
                                 initialAttempt);
                 return;
             }
@@ -247,5 +248,12 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);
+    }
+
+    private static void handleException(ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                        CompletableFuture<RpcResponse> future, Throwable cause,
+                                        boolean endRequestLog) {
+        derivedCtx.cancel(cause);
+        handleException(ctx, future, cause, endRequestLog);
     }
 }
