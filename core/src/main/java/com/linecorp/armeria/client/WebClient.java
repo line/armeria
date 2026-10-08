@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -30,6 +32,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -38,6 +41,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 import io.netty.channel.EventLoop;
 
@@ -473,6 +477,19 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
+    // --- POST ---
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse postJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.POST, path, content));
+    }
+
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse postJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.POST, path, content, mapper));
+    }
+
     /**
      * Sends an HTTP PUT request with the specified content.
      */
@@ -539,6 +556,19 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     default HttpResponse put(String path, @Nullable QueryParams params, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
+    }
+
+    // --- PUT ---
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse putJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content));
+    }
+
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse putJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content, mapper));
     }
 
     /**
@@ -608,6 +638,19 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     default HttpResponse patch(String path, @Nullable QueryParams params, String content, Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
+    }
+
+    // --- PATCH ---
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse patchJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content));
+    }
+
+    @UnstableApi
+    @CheckReturnValue
+    default HttpResponse patchJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content, mapper));
     }
 
     /**

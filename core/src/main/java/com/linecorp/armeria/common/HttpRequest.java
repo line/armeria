@@ -36,6 +36,9 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
@@ -54,6 +57,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
 import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -356,6 +360,36 @@ public interface HttpRequest extends Request, HttpMessage {
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
         return of(headers, StreamMessage.of(stage, subscriberExecutor));
+    }
+
+    /**
+     * Creates a new HTTP request with the specified JSON content using the default {@link ObjectMapper}.
+     */
+    static HttpRequest ofJson(HttpMethod method, String path, Object content) {
+        return ofJson(method, path, content, JacksonUtil.newDefaultObjectMapper());
+    }
+
+    /**
+     * Creates a new HTTP request with the specified JSON content and custom ObjectMapper.
+     */
+    static HttpRequest ofJson(HttpMethod method, String path, Object content, ObjectMapper mapper) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(content, "content");
+        requireNonNull(mapper, "mapper");
+
+        final byte[] jsonBytes;
+        try {
+            jsonBytes = mapper.writeValueAsBytes(content);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize content to JSON", e);
+        }
+
+        final RequestHeaders headers = RequestHeaders.builder(method, path)
+                                                     .contentType(MediaType.JSON)
+                                                     .build();
+
+        return HttpRequest.of(headers, HttpData.wrap(jsonBytes));
     }
 
     /**

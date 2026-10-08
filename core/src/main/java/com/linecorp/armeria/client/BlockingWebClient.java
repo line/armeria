@@ -21,12 +21,16 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -34,6 +38,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 import io.netty.channel.EventLoop;
 
@@ -488,4 +493,34 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
 
     @Override
     HttpClient unwrap();
+
+    @UnstableApi
+    default AggregatedHttpResponse postJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.POST, path, content));
+    }
+
+    @UnstableApi
+    default AggregatedHttpResponse postJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.POST, path, content, mapper));
+    }
+
+    @UnstableApi
+    default AggregatedHttpResponse putJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content));
+    }
+
+    @UnstableApi
+    default AggregatedHttpResponse putJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content, mapper));
+    }
+
+    @UnstableApi
+    default AggregatedHttpResponse patchJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content));
+    }
+
+    @UnstableApi
+    default AggregatedHttpResponse patchJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content, mapper));
+    }
 }

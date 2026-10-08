@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.TransformingResponsePreparationTest.MyMessage;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseEntity;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -147,5 +149,32 @@ class BlockingWebClientTest {
             }).findFirst();
             assertThat(found).isPresent();
         }
+    }
+
+    @Test
+    void jsonMethods() {
+        final MyMessage content = new MyMessage("hello");
+
+        // 1. Test standard JSON methods
+        AggregatedHttpResponse res = client.postJson("/string", content);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = client.putJson("/string", content);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = client.patchJson("/string", content);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        // 2. Test overloaded methods with custom ObjectMapper
+        final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
+        res = client.postJson("/string", content, mapper);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = client.putJson("/string", content, mapper);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = client.patchJson("/string", content, mapper);
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
 }

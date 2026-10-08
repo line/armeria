@@ -23,12 +23,14 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -141,6 +143,121 @@ class DefaultWebClientTest {
             client.post(path, queryParams, "").aggregate();
             assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
         }
+    }
+
+    @Test
+    void testPostJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
+        final WebClient client = WebClient.builder(UNDEFINED_URI)
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
+                        req.aggregate().thenApply(aggregated -> {
+                            capturedReq.set(aggregated);
+                            return HttpResponse.of(200);
+                        })))
+                .build();
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        client.postJson(path, payload).aggregate().join();
+
+        final AggregatedHttpRequest aggregatedReq = capturedReq.get();
+        assertThat(aggregatedReq.path()).isEqualTo("/helloWorld/json");
+        assertThat(aggregatedReq.method()).isEqualTo(HttpMethod.POST);
+        assertThat(aggregatedReq.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+        assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+    }
+
+    @Test
+    void testPostJsonWithQueryParams() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
+        final WebClient client = WebClient.builder(UNDEFINED_URI)
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
+                        req.aggregate().thenApply(aggregated -> {
+                            capturedReq.set(aggregated);
+                            return HttpResponse.of(200);
+                        })))
+                .build();
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        client.postJson(path, payload).aggregate().join();
+
+        final AggregatedHttpRequest aggregatedReq = capturedReq.get();
+        assertThat(aggregatedReq.path()).isEqualTo("/helloWorld/json?userId=123");
+        assertThat(aggregatedReq.method()).isEqualTo(HttpMethod.POST);
+        assertThat(aggregatedReq.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+        assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+    }
+
+    @Test
+    void testPutJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
+        final WebClient client = WebClient.builder(UNDEFINED_URI)
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
+                        req.aggregate().thenApply(aggregated -> {
+                            capturedReq.set(aggregated);
+                            return HttpResponse.of(200);
+                        })))
+                .build();
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        client.putJson(path, payload).aggregate().join();
+
+        final AggregatedHttpRequest aggregatedReq = capturedReq.get();
+        assertThat(aggregatedReq.path()).isEqualTo("/helloWorld/json");
+        assertThat(aggregatedReq.method()).isEqualTo(HttpMethod.PUT);
+        assertThat(aggregatedReq.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+        assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+    }
+
+    @Test
+    void testPatchJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
+        final WebClient client = WebClient.builder(UNDEFINED_URI)
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
+                        req.aggregate().thenApply(aggregated -> {
+                            capturedReq.set(aggregated);
+                            return HttpResponse.of(200);
+                        })))
+                .build();
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        client.patchJson(path, payload).aggregate().join();
+
+        final AggregatedHttpRequest aggregatedReq = capturedReq.get();
+        assertThat(aggregatedReq.path()).isEqualTo("/helloWorld/json");
+        assertThat(aggregatedReq.method()).isEqualTo(HttpMethod.PATCH);
+        assertThat(aggregatedReq.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+        assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
+    }
+
+    @Test
+    void testPreparedContentJson() {
+        final String path = "http://127.0.0.1/helloWorld/json";
+        final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
+        final WebClient client = WebClient.builder(UNDEFINED_URI)
+                .decorator((delegate, ctx, req) -> HttpResponse.of(
+                        req.aggregate().thenApply(aggregated -> {
+                            capturedReq.set(aggregated);
+                            return HttpResponse.of(200);
+                        })))
+                .build();
+        final java.util.Map<String, String> payload = java.util.Collections.singletonMap("message", "success");
+
+        client.prepare()
+                .post(path)
+                .contentJson(payload)
+                .execute()
+                .aggregate()
+                .join();
+
+        final AggregatedHttpRequest aggregatedReq = capturedReq.get();
+        assertThat(aggregatedReq.path()).isEqualTo("/helloWorld/json");
+        assertThat(aggregatedReq.method()).isEqualTo(HttpMethod.POST);
+        assertThat(aggregatedReq.headers().contentType()).isEqualTo(com.linecorp.armeria.common.MediaType.JSON);
+        assertThat(aggregatedReq.contentUtf8()).isEqualTo("{\"message\":\"success\"}");
     }
 
     @ParameterizedTest
