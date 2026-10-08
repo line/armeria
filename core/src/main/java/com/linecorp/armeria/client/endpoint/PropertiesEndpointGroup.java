@@ -28,7 +28,6 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.function.BiFunction;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -194,18 +193,17 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
                             Path filePath, String endpointKeyPrefix, int defaultPort) {
         this(selectionStrategy, filePath, endpointKeyPrefix, defaultPort,
-             MoreExecutors.newSequentialExecutor(CommonPools.blockingTaskExecutor()), watchService::register);
+             MoreExecutors.newSequentialExecutor(CommonPools.blockingTaskExecutor()));
     }
 
     @VisibleForTesting
     PropertiesEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                            Path filePath, String endpointKeyPrefix, int defaultPort, Executor executor,
-                            BiFunction<Path, PathWatcher, Cancellable> register) {
+                            Path filePath, String endpointKeyPrefix, int defaultPort, Executor executor) {
         super(selectionStrategy);
         final Path normalizedPath = filePath.toAbsolutePath().normalize();
         final Path watchDir = normalizedPath.getParent();
         checkArgument(watchDir != null, "Cannot watch parent directory for '%s'", filePath);
-        watchKey = register.apply(watchDir, PathWatcher.ofFile(normalizedPath, bytes -> {
+        watchKey = watchService.register(watchDir, PathWatcher.ofFile(normalizedPath, bytes -> {
             setEndpoints(loadEndpoints(bytes, endpointKeyPrefix, defaultPort));
         }, executor));
     }

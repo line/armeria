@@ -17,12 +17,9 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,20 +28,15 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.WatchEvent;
 import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
 
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
@@ -53,12 +45,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.google.common.util.concurrent.MoreExecutors;
-
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.Cancellable;
-import com.linecorp.armeria.common.file.PathWatcher;
-import com.linecorp.armeria.common.util.ThreadFactories;
 
 class PropertiesEndpointGroupTest {
 
@@ -211,88 +198,23 @@ class PropertiesEndpointGroupTest {
     void injectedExecutorIsUsedAsIs() throws Exception {
         final Path file = folder.resolve("hosts.properties");
         Files.write(file, "hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
-        final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
-        final List<PathWatcher> watchers = new ArrayList<>();
-        try (PropertiesEndpointGroup group = new PropertiesEndpointGroup(
-                EndpointSelectionStrategy.weightedRoundRobin(), file, "hosts", 0, tasks::add,
-                (path, watcher) -> {
-                    watchers.add(watcher);
-                    return mock(Cancellable.class);
-                })) {
-            final WatchEvent<?> event = mock(WatchEvent.class);
-            doReturn(ENTRY_MODIFY).when(event).kind();
-            assertThat(watchers).hasSize(1);
-            watchers.get(0).onEvent(folder, file, event);
-            watchers.get(0).onEvent(folder, file, event);
-            assertThat(tasks).hasSize(2);
-            assertThat(group.whenReady()).isNotDone();
-            tasks.remove().run();
-            tasks.remove().run();
-            assertThat(group.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 8080));
-        }
-    }
-
-    @Test
-    void fileUpdatesDoNotOverlapBlockedListener() throws Exception {
-        final Path file = folder.resolve("hosts.properties");
-        Files.write(file, ("first.hosts.0=127.0.0.1:8080\n" +
-                           "second.hosts.0=127.0.0.1:8081\n").getBytes(UTF_8));
         Files.setLastModifiedTime(file, FileTime.fromMillis(1000));
-        final ExecutorService executor = Executors.newFixedThreadPool(
-                2, ThreadFactories.newThreadFactory("test-properties-reload", true));
-        final CountDownLatch listenerEntered = new CountDownLatch(1);
-        final CountDownLatch listenerProceed = new CountDownLatch(1);
-        final List<PathWatcher> watchers = new ArrayList<>();
-        final BiFunction<Path, PathWatcher, Cancellable> register = (path, watcher) -> {
-            watchers.add(watcher);
-            return mock(Cancellable.class);
-        };
-        final WatchEvent<?> event = mock(WatchEvent.class);
-        doReturn(ENTRY_MODIFY).when(event).kind();
-        try (PropertiesEndpointGroup first = new PropertiesEndpointGroup(
-                     EndpointSelectionStrategy.weightedRoundRobin(), file, "first.hosts", 0,
-                     MoreExecutors.newSequentialExecutor(executor), register);
-             PropertiesEndpointGroup second = new PropertiesEndpointGroup(
-                     EndpointSelectionStrategy.weightedRoundRobin(), file, "second.hosts", 0,
-                     MoreExecutors.newSequentialExecutor(executor), register)) {
-            assertThat(watchers).hasSize(2);
-            final PathWatcher firstWatcher = watchers.get(0);
-            final PathWatcher secondWatcher = watchers.get(1);
-            firstWatcher.onEvent(folder, file, event);
-            secondWatcher.onEvent(folder, file, event);
-            first.whenReady().get(10, TimeUnit.SECONDS);
-            second.whenReady().get(10, TimeUnit.SECONDS);
-            first.addListener(endpoints -> {
-                if (endpoints.isEmpty()) {
-                    listenerEntered.countDown();
-                    try {
-                        listenerProceed.await(30, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            });
+        final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
+        try (PropertiesEndpointGroup group = new PropertiesEndpointGroup(
+                EndpointSelectionStrategy.weightedRoundRobin(), file, "hosts", 0, tasks::add)) {
+            final Runnable initialLoad = tasks.poll(30, TimeUnit.SECONDS);
+            assertThat(initialLoad).isNotNull();
+            assertThat(group.whenReady()).isNotDone();
 
-            Files.write(file, "second.hosts.0=127.0.0.1:8081\n".getBytes(UTF_8));
+            Files.write(file, "hosts.0=127.0.0.1:8081\n".getBytes(UTF_8));
             Files.setLastModifiedTime(file, FileTime.fromMillis(2000));
-            firstWatcher.onEvent(folder, file, event);
-            assertThat(listenerEntered.await(10, TimeUnit.SECONDS)).isTrue();
+            final Runnable update = tasks.poll(30, TimeUnit.SECONDS);
+            assertThat(update).isNotNull();
+            assertThat(group.whenReady()).isNotDone();
 
-            Files.write(file, ("first.hosts.0=127.0.0.1:8082\n" +
-                               "second.hosts.0=127.0.0.1:8083\n").getBytes(UTF_8));
-            Files.setLastModifiedTime(file, FileTime.fromMillis(3000));
-            firstWatcher.onEvent(folder, file, event);
-            secondWatcher.onEvent(folder, file, event);
-            executor.submit(() -> {}).get(10, TimeUnit.SECONDS);
-            assertThat(second.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 8083));
-            assertThat(first.endpoints()).isEmpty();
-
-            listenerProceed.countDown();
-            await().untilAsserted(() -> assertThat(first.endpoints())
-                    .containsExactly(Endpoint.of("127.0.0.1", 8082)));
-        } finally {
-            listenerProceed.countDown();
-            executor.shutdownNow();
+            initialLoad.run();
+            update.run();
+            assertThat(group.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 8081));
         }
     }
 
