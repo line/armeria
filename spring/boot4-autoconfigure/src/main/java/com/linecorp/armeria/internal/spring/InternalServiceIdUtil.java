@@ -31,9 +31,7 @@ import com.linecorp.armeria.spring.InternalServiceId;
  */
 public final class InternalServiceIdUtil {
 
-    private static final List<InternalServiceId> ALL_SERVICE_IDS =
-            ImmutableList.of(InternalServiceId.DOCS, InternalServiceId.HEALTH,
-                             InternalServiceId.METRICS, InternalServiceId.ACTUATOR);
+    private static final List<InternalServiceId> ALL_SERVICE_IDS = InternalServiceId.defaultServiceIds();
 
     /**
      * Returns {@code include} minus {@code exclude}, with {@link InternalServiceId#ALL} expanded.
