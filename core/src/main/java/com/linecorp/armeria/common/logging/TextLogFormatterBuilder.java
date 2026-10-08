@@ -48,8 +48,10 @@ public final class TextLogFormatterBuilder
      * Returns a newly-created text {@link LogFormatter} based on the properties of this builder.
      */
     public LogFormatter build() {
+        final HeadersSanitizer<String> requestHeadersSanitizer =
+                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofText());
         return new TextLogFormatter(
-                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofText()),
+                maybeWrapRequestHeadersSanitizer(requestHeadersSanitizer),
                 firstNonNull(responseHeadersSanitizer(), HeadersSanitizer.ofText()),
                 firstNonNull(requestTrailersSanitizer(), defaultHeadersSanitizer()),
                 firstNonNull(responseTrailersSanitizer(), defaultHeadersSanitizer()),
