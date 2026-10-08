@@ -16,7 +16,7 @@
 
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import React, { ChangeEvent, useMemo } from 'react';
+import React, { ChangeEvent, useEffect } from 'react';
 
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -29,6 +29,8 @@ import { truncate } from '../../lib/strings';
 import { Method, ServiceType } from '../../lib/specification';
 
 loader.config({ monaco });
+
+const requestBodyModelPath = 'inmemory://docs-client/request-body';
 
 interface Props {
   exampleRequests: string[];
@@ -57,7 +59,7 @@ const RequestBody: React.FunctionComponent<Props> = ({
 
   const supportsJsonSchema =
     serviceType === ServiceType.GRPC || serviceType === ServiceType.THRIFT;
-  useMemo(() => {
+  useEffect(() => {
     if (supportsJsonSchema) {
       // Find the method schema from the JSON Schema structure.
       // Structure: { $defs: { methods: { "method-name": { $id: "service/method/HTTP", ... } } } }
@@ -109,6 +111,15 @@ const RequestBody: React.FunctionComponent<Props> = ({
     }
   }, [monacoEditor, jsonSchemas, method.id, supportsJsonSchema]);
 
+  useEffect(() => {
+    const model = monacoEditor?.editor.getModel(
+      monaco.Uri.parse(requestBodyModelPath),
+    );
+    if (model && model.getValue() !== requestBody) {
+      model.setValue(requestBody);
+    }
+  }, [monacoEditor, requestBody]);
+
   return (
     <>
       <Typography variant="body2" paragraph />
@@ -140,14 +151,17 @@ const RequestBody: React.FunctionComponent<Props> = ({
           <Typography variant="body2" paragraph />
           <Editor
             height="30vh"
-            language={supportsJsonSchema ? 'json' : undefined}
+            keepCurrentModel
+            language={supportsJsonSchema ? 'json' : 'plaintext'}
+            path={requestBodyModelPath}
             theme="vs-light"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
+              occurrencesHighlight: 'off',
             }}
             value={requestBody}
-            onChange={(val) => val && onDebugFormChange(val)}
+            onChange={(val) => onDebugFormChange(val ?? '')}
           />
         </>
       )}
