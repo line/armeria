@@ -122,6 +122,7 @@ class AthenzDockerTest {
                           "services:\n" +
                           "  zms-server:\n" +
                           "    image: alpine:3.22\n" +
+                          "    init: true\n" +
                           "    command: [sh, -c, 'echo $$PROJECT $$HOSTNAME >> /state/attempts; " +
                           "exec sleep infinity']\n" +
                           "    environment:\n" +
@@ -135,6 +136,7 @@ class AthenzDockerTest {
                           "      retries: 1\n" +
                           "  zts-server:\n" +
                           "    image: alpine:3.22\n" +
+                          "    init: true\n" +
                           "    command: [sleep, infinity]\n" +
                           "    depends_on:\n" +
                           "      zms-server:\n" +
