@@ -363,30 +363,21 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     /**
-     * Creates a new HTTP request with the specified JSON content using the default Jackson util.
+     * Creates a new HTTP request with the specified JSON content using the default {@link ObjectMapper}.
      */
     static HttpRequest ofJson(HttpMethod method, String path, Object content) {
-        requireNonNull(content, "content");
-        final byte[] jsonBytes;
-        try {
-            jsonBytes = JacksonUtil.writeValueAsBytes(content);
-        } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to serialize content to JSON", e);
-        }
-
-        final RequestHeaders headers = RequestHeaders.builder(method, path)
-                                                     .contentType(MediaType.JSON)
-                                                     .build();
-
-        return HttpRequest.of(headers, HttpData.wrap(jsonBytes));
+        return ofJson(method, path, content, JacksonUtil.newDefaultObjectMapper());
     }
 
     /**
      * Creates a new HTTP request with the specified JSON content and custom ObjectMapper.
      */
     static HttpRequest ofJson(HttpMethod method, String path, Object content, ObjectMapper mapper) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
         requireNonNull(content, "content");
         requireNonNull(mapper, "mapper");
+
         final byte[] jsonBytes;
         try {
             jsonBytes = mapper.writeValueAsBytes(content);
