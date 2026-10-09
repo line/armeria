@@ -269,6 +269,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.requestAutoAbortDelayMillis(0);
+        virtualHostTemplate.http1ConnectionCloseDelayMillis(Flags.defaultHttp1ConnectionCloseDelayMillis());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.multipartRemovalStrategy(Flags.defaultMultipartRemovalStrategy());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
@@ -1050,6 +1051,29 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
     @UnstableApi
     public ServerBuilder requestAutoAbortDelayMillis(long delayMillis) {
         virtualHostTemplate.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to wait before closing an HTTP/1 connection when the server needs to close
+     * the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state.
+     * Specify {@link Duration#ZERO} to close the connection immediately. If not set,
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder http1ConnectionCloseDelay(Duration delay) {
+        return http1ConnectionCloseDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in milliseconds to wait before closing an HTTP/1 connection when the server
+     * needs to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT
+     * state. Specify {@code 0} to close the connection immediately. If not set,
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder http1ConnectionCloseDelayMillis(long delayMillis) {
+        virtualHostTemplate.http1ConnectionCloseDelayMillis(delayMillis);
         return this;
     }
 

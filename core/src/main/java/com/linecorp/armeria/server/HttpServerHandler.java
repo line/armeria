@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -752,6 +751,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final DecodedHttpRequest req;
         private final boolean isTransientService;
         private final long closeHttp2StreamDelayMillis;
+        private final long http1ConnectionCloseDelayMillis;
 
         RequestAndResponseCompleteHandler(EventLoop eventLoop, ChannelHandlerContext ctx,
                                           ServiceRequestContext reqCtx, DecodedHttpRequest req,
@@ -760,6 +760,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             this.req = req;
             this.isTransientService = isTransientService;
             closeHttp2StreamDelayMillis = reqCtx.config().service().options().closeHttp2StreamDelayMillis();
+            http1ConnectionCloseDelayMillis = reqCtx.config().virtualHost().http1ConnectionCloseDelayMillis();
 
             assert responseEncoder != null;
 
@@ -859,15 +860,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         // Stop receiving new requests.
                         handledLastRequest = true;
                         if (unfinishedRequests.isEmpty()) {
-                            final long closeDelay = Flags.defaultHttp1ConnectionCloseDelayMillis();
-                            if (closeDelay == 0) {
+                            if (http1ConnectionCloseDelayMillis == 0) {
                                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                             } else {
                                 ctx.channel().eventLoop().schedule(() -> {
                                     if (ctx.channel().isActive()) {
                                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                                     }
-                                }, closeDelay, TimeUnit.MILLISECONDS);
+                                }, http1ConnectionCloseDelayMillis, TimeUnit.MILLISECONDS);
                             }
                         }
                     }
