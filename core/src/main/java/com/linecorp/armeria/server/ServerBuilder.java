@@ -1062,7 +1062,9 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      */
     @UnstableApi
     public ServerBuilder http1ConnectionCloseDelay(Duration delay) {
-        return http1ConnectionCloseDelayMillis(requireNonNull(delay, "delay").toMillis());
+        requireNonNull(delay, "delay");
+        checkArgument(!delay.isNegative(), "delay: %s (expected: >= 0)", delay);
+        return http1ConnectionCloseDelayMillis(delay.toMillis());
     }
 
     /**

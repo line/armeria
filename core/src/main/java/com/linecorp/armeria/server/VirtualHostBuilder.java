@@ -1258,18 +1258,22 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * Sets the amount of time to wait before closing an HTTP/1 connection when the server needs to close
      * the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state.
      * Specify {@link Duration#ZERO} to close the connection immediately. If not set,
-     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()} is used.
+     * the value set by {@link ServerBuilder#http1ConnectionCloseDelayMillis(long)} is used, which defaults to
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()}.
      */
     @UnstableApi
     public VirtualHostBuilder http1ConnectionCloseDelay(Duration delay) {
-        return http1ConnectionCloseDelayMillis(requireNonNull(delay, "delay").toMillis());
+        requireNonNull(delay, "delay");
+        checkArgument(!delay.isNegative(), "delay: %s (expected: >= 0)", delay);
+        return http1ConnectionCloseDelayMillis(delay.toMillis());
     }
 
     /**
      * Sets the amount of time in milliseconds to wait before closing an HTTP/1 connection when the server
      * needs to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT
      * state. Specify {@code 0} to close the connection immediately. If not set,
-     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()} is used.
+     * the value set by {@link ServerBuilder#http1ConnectionCloseDelayMillis(long)} is used, which defaults to
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()}.
      */
     @UnstableApi
     public VirtualHostBuilder http1ConnectionCloseDelayMillis(long delayMillis) {

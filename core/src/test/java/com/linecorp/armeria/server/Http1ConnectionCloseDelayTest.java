@@ -69,6 +69,11 @@ class Http1ConnectionCloseDelayTest {
     void negativeDelay() {
         assertThatThrownBy(() -> Server.builder().http1ConnectionCloseDelayMillis(-1))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Server.builder().http1ConnectionCloseDelay(Duration.ofNanos(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Server.builder().virtualHost("foo.com")
+                                       .http1ConnectionCloseDelay(Duration.ofNanos(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static long closeDurationMillis(String host) throws IOException {
