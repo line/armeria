@@ -108,6 +108,7 @@ public final class VirtualHost {
     private final AccessLogWriter accessLogWriter;
     private final BlockingTaskExecutor blockingTaskExecutor;
     private final long requestAutoAbortDelayMillis;
+    private final long http1ConnectionCloseDelayMillis;
     private final SuccessFunction successFunction;
     private final Path multipartUploadsLocation;
     private final MultipartRemovalStrategy multipartRemovalStrategy;
@@ -131,6 +132,7 @@ public final class VirtualHost {
                 AccessLogWriter accessLogWriter,
                 BlockingTaskExecutor blockingTaskExecutor,
                 long requestAutoAbortDelayMillis,
+                long http1ConnectionCloseDelayMillis,
                 SuccessFunction successFunction,
                 Path multipartUploadsLocation,
                 MultipartRemovalStrategy multipartRemovalStrategy,
@@ -159,6 +161,7 @@ public final class VirtualHost {
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
+        this.http1ConnectionCloseDelayMillis = http1ConnectionCloseDelayMillis;
         this.successFunction = successFunction;
         this.multipartUploadsLocation = multipartUploadsLocation;
         this.multipartRemovalStrategy = multipartRemovalStrategy;
@@ -602,6 +605,15 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the amount of time in milliseconds to wait before closing an HTTP/1 connection
+     * when the server needs to close the connection. {@code 0} closes the connection immediately.
+     */
+    @UnstableApi
+    public long http1ConnectionCloseDelayMillis() {
+        return http1ConnectionCloseDelayMillis;
+    }
+
+    /**
      * Returns the {@link Path} that is used to store the files uploaded
      * through a {@code multipart/form-data} request.
      */
@@ -637,7 +649,8 @@ public final class VirtualHost {
                                RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
                                defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
-                               successFunction, multipartUploadsLocation, multipartRemovalStrategy,
+                               http1ConnectionCloseDelayMillis, successFunction, multipartUploadsLocation,
+                               multipartRemovalStrategy,
                                serviceWorkerGroup, shutdownSupports, requestIdGenerator);
     }
 
@@ -676,6 +689,8 @@ public final class VirtualHost {
         buf.append(blockingTaskExecutor());
         buf.append(", requestAutoAbortDelayMillis: ");
         buf.append(requestAutoAbortDelayMillis());
+        buf.append(", http1ConnectionCloseDelayMillis: ");
+        buf.append(http1ConnectionCloseDelayMillis());
         buf.append(", multipartUploadsLocation: ");
         buf.append(multipartUploadsLocation());
         buf.append(')');

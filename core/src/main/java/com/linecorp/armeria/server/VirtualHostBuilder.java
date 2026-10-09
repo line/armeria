@@ -160,6 +160,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private Long requestAutoAbortDelayMillis;
     @Nullable
+    private Long http1ConnectionCloseDelayMillis;
+    @Nullable
     private Path multipartUploadsLocation;
     @Nullable
     private MultipartRemovalStrategy multipartRemovalStrategy;
@@ -1253,6 +1255,34 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Sets the amount of time to wait before closing an HTTP/1 connection when the server needs to close
+     * the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state.
+     * Specify {@link Duration#ZERO} to close the connection immediately. If not set,
+     * the value set by {@link ServerBuilder#http1ConnectionCloseDelayMillis(long)} is used, which defaults to
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()}.
+     */
+    @UnstableApi
+    public VirtualHostBuilder http1ConnectionCloseDelay(Duration delay) {
+        requireNonNull(delay, "delay");
+        checkArgument(!delay.isNegative(), "delay: %s (expected: >= 0)", delay);
+        return http1ConnectionCloseDelayMillis(delay.toMillis());
+    }
+
+    /**
+     * Sets the amount of time in milliseconds to wait before closing an HTTP/1 connection when the server
+     * needs to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT
+     * state. Specify {@code 0} to close the connection immediately. If not set,
+     * the value set by {@link ServerBuilder#http1ConnectionCloseDelayMillis(long)} is used, which defaults to
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()}.
+     */
+    @UnstableApi
+    public VirtualHostBuilder http1ConnectionCloseDelayMillis(long delayMillis) {
+        checkArgument(delayMillis >= 0, "delayMillis: %s (expected: >= 0)", delayMillis);
+        http1ConnectionCloseDelayMillis = delayMillis;
+        return this;
+    }
+
+    /**
      * Sets the {@link Path} for storing the files uploaded from
      * {@code multipart/form-data} requests.
      *
@@ -1418,6 +1448,11 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 this.requestAutoAbortDelayMillis != null ?
                 this.requestAutoAbortDelayMillis : template.requestAutoAbortDelayMillis;
 
+        assert template.http1ConnectionCloseDelayMillis != null;
+        final long http1ConnectionCloseDelayMillis =
+                this.http1ConnectionCloseDelayMillis != null ?
+                this.http1ConnectionCloseDelayMillis : template.http1ConnectionCloseDelayMillis;
+
         assert template.rejectedRouteHandler != null;
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
@@ -1538,7 +1573,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
+                                requestAutoAbortDelayMillis, http1ConnectionCloseDelayMillis,
+                                successFunction, multipartUploadsLocation,
                                 multipartRemovalStrategy, serviceWorkerGroup, builder.build(),
                                 requestIdGenerator);
 
