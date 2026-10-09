@@ -45,7 +45,7 @@ class Http1ConnectionCloseDelayTest {
                                                                   .header(HttpHeaderNames.CONNECTION, "close")
                                                                   .build();
             sb.idleTimeoutMillis(0)
-              .http1ConnectionCloseDelayMillis(0)
+              .http1ConnectionCloseDelay(Duration.ZERO)
               .service("/close", service)
               .virtualHost("foo.com")
               .http1ConnectionCloseDelay(Duration.ofSeconds(2))
@@ -68,6 +68,8 @@ class Http1ConnectionCloseDelayTest {
     @Test
     void negativeDelay() {
         assertThatThrownBy(() -> Server.builder().http1ConnectionCloseDelayMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Server.builder().virtualHost("foo.com").http1ConnectionCloseDelayMillis(-1))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Server.builder().http1ConnectionCloseDelay(Duration.ofNanos(-1)))
                 .isInstanceOf(IllegalArgumentException.class);
