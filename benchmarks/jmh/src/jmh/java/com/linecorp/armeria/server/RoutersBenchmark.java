@@ -64,7 +64,8 @@ public class RoutersBenchmark {
                 null, null, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, FALLBACK_SERVICE.defaultServiceNaming(),
                 FALLBACK_SERVICE.defaultLogName(), 0, 0, false,
-                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0, SuccessFunction.ofDefault(),
+                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0, 0,
+                SuccessFunction.ofDefault(),
                 FALLBACK_SERVICE.multipartUploadsLocation(), MultipartRemovalStrategy.ON_RESPONSE_COMPLETION,
                 CommonPools.workerGroup(), ImmutableList.of(),
                 ctx -> RequestId.random());
