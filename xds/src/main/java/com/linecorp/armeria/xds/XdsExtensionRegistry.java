@@ -97,6 +97,7 @@ public final class XdsExtensionRegistry {
         register(new FaultInjectionFilterFactory(), byName, byTypeUrl);
         register(new StaticClusterTypeFactory(), byName, byTypeUrl);
         register(new StrictDnsClusterTypeFactory(), byName, byTypeUrl);
+        register(new OriginalDstClusterTypeFactory(), byName, byTypeUrl);
         register(new PathSotwConfigSourceSubscriptionFactory(watchService, meterRegistry, meterIdPrefix),
                  byName, byTypeUrl);
         register(new GrpcConfigSourceStreamFactory(meterRegistry, meterIdPrefix), byName, byTypeUrl);
