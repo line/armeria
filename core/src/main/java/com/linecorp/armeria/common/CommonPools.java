@@ -22,6 +22,8 @@ import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
@@ -29,6 +31,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 
+import io.micrometer.core.instrument.binder.netty4.NettyEventExecutorMetrics;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -45,11 +48,7 @@ public final class CommonPools {
             EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(), "armeria-common-worker", true);
 
     static {
-        // Bind EventLoopMetrics for the common worker group.
-        MoreMeterBinders
-                .eventLoopMetrics(WORKER_GROUP, new MeterIdPrefix("armeria.netty.common"))
-                .bindTo(Flags.meterRegistry());
-
+        bindEventLoopMetricsForWorkerGroup(WORKER_GROUP);
         try {
             final Class<?> aClass = Class.forName("reactor.core.scheduler.Schedulers",
                                                   true, CommonPools.class.getClassLoader());
@@ -63,6 +62,18 @@ public final class CommonPools {
             logger.warn("Failed to register the common worker group as non-blocking for Reactor. " +
                         "Please consider upgrading Reactor to 3.7.0 or newer.");
         }
+    }
+
+    @VisibleForTesting
+    static void bindEventLoopMetricsForWorkerGroup(EventLoopGroup evGroup) {
+        // Bind EventLoopMetrics for the common worker group.
+        MoreMeterBinders
+                .eventLoopMetrics(evGroup, new MeterIdPrefix("armeria.netty.common"))
+                .bindTo(Flags.meterRegistry());
+        // Bind the common event loop metrics emitted automatically by micrometer.
+        // These metrics intentionally duplicate those emitted by EventLoopMetrics to preserve
+        // backward compatibility.
+        new NettyEventExecutorMetrics(evGroup).bindTo(Flags.meterRegistry());
     }
 
     /**
