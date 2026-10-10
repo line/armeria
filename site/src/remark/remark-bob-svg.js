@@ -38,7 +38,11 @@ const plugin = (options) => {
         name: 'img',
         attributes: [
           { type: 'mdxJsxAttribute', name: 'className', value: 'bob-svg' },
-          { type: 'mdxJsxAttribute', name: 'alt', value: 'diagram' },
+          {
+            type: 'mdxJsxAttribute',
+            name: 'alt',
+            value: node.meta?.match(/alt="([^"]*)"/)?.[1] ?? 'diagram',
+          },
           {
             type: 'mdxJsxAttribute',
             name: 'src',
