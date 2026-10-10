@@ -18,6 +18,7 @@ dependencies {
     testImplementation libs.kubernetes.server.mock
     testImplementation libs.kubernetes.junit.jupiter
     testImplementation libs.athenz.zms.client
+    testImplementation libs.athenz.zts.client
     testImplementation libs.testcontainers.junit.jupiter
 }
 
