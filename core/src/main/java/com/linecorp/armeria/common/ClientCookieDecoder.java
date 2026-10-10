@@ -148,7 +148,12 @@ final class ClientCookieDecoder {
                 }
             } else {
                 // cookie attribute
-                appendAttribute(builder, header, nameBegin, nameEnd, valueBegin, valueEnd);
+                try {
+                    appendAttribute(builder, header, nameBegin, nameEnd, valueBegin, valueEnd);
+                } catch (IllegalArgumentException ignored) {
+                    // CookieBuilder validates the Domain and Path attributes.
+                    return null;
+                }
             }
         }
 
