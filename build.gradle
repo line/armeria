@@ -418,19 +418,23 @@ class TestsReportTask extends DefaultTask {
 def graalLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(17))
     vendor.set(JvmVendorSpec.GRAAL_VM)
-}.get()
+}
 rootProject.ext.graalLauncher = graalLauncher
 
-def graalHome = graalLauncher.executablePath.asFile.toPath().parent.parent
+// Resolve lazily so that GraalVM is required only when native image tasks are executed.
+def graalHome = graalLauncher.map { it.metadata.installationPath.asFile.toPath() }
 rootProject.ext.graalHome = graalHome
 
 tasks.register("installGraalNativeImage", Exec) {
     onlyIf {
-        !Files.exists(graalHome.resolve("lib/svm/bin/native-image")) ||
-        !Files.exists(graalHome.resolve("lib/svm/bin/native-image-configure")) ||
-        !Files.exists(graalHome.resolve("lib/svm/bin/rebuild-images"))
+        def home = graalHome.get()
+        !Files.exists(home.resolve("lib/svm/bin/native-image")) ||
+        !Files.exists(home.resolve("lib/svm/bin/native-image-configure")) ||
+        !Files.exists(home.resolve("lib/svm/bin/rebuild-images"))
     }
-    commandLine(graalHome.resolve("lib/installer/bin/gu"), "install", "native-image")
+    doFirst {
+        commandLine(graalHome.get().resolve("lib/installer/bin/gu"), "install", "native-image")
+    }
 }
 
 def relocatedProjects = projectsWithFlags('java', 'relocate')
