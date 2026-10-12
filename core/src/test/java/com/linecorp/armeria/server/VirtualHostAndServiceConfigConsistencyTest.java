@@ -47,8 +47,7 @@ class VirtualHostAndServiceConfigConsistencyTest {
                 "port",
                 "hostnamePattern",
                 "findServiceConfig",
-                "serviceConfigs",
-                "http1ConnectionCloseDelayMillis"
+                "serviceConfigs"
         );
         virtualHostMethods.removeAll(ignorableVirtualHostMethods);
 

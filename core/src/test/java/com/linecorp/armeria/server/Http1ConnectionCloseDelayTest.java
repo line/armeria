@@ -39,51 +39,35 @@ class Http1ConnectionCloseDelayTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final HttpService service = (ctx, req) -> HttpResponse.builder()
-                                                                  .ok()
-                                                                  .content("OK\n")
-                                                                  .header(HttpHeaderNames.CONNECTION, "close")
-                                                                  .build();
             sb.idleTimeoutMillis(0)
               .http1ConnectionCloseDelay(Duration.ZERO)
-              .service("/close", service)
-              .virtualHost("foo.com")
-              .http1ConnectionCloseDelay(Duration.ofSeconds(2))
-              .service("/close", service);
+              .service("/close", (ctx, req) -> HttpResponse.builder()
+                                                         .ok()
+                                                         .content("OK\n")
+                                                         .header(HttpHeaderNames.CONNECTION, "close")
+                                                         .build());
         }
     };
 
     @Test
-    void serverLevel() throws IOException {
-        assertThat(server.server().config().defaultVirtualHost().http1ConnectionCloseDelayMillis())
-                .isZero();
-        assertThat(closeDurationMillis("127.0.0.1")).isLessThan(1000);
-    }
-
-    @Test
-    void virtualHostLevel() throws IOException {
-        assertThat(closeDurationMillis("foo.com")).isGreaterThanOrEqualTo(1500);
+    void closeImmediately() throws IOException {
+        assertThat(server.server().config().http1ConnectionCloseDelayMillis()).isZero();
+        assertThat(closeDurationMillis()).isLessThan(1000);
     }
 
     @Test
     void negativeDelay() {
         assertThatThrownBy(() -> Server.builder().http1ConnectionCloseDelayMillis(-1))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Server.builder().virtualHost("foo.com").http1ConnectionCloseDelayMillis(-1))
-                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Server.builder().http1ConnectionCloseDelay(Duration.ofNanos(-1)))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Server.builder().virtualHost("foo.com")
-                                       .http1ConnectionCloseDelay(Duration.ofNanos(-1)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    private static long closeDurationMillis(String host) throws IOException {
+    private static long closeDurationMillis() throws IOException {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(10000);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close HTTP/1.1\r\n");
-            writer.print("Host: " + host + "\r\n");
             writer.print("\r\n");
             writer.flush();
 
