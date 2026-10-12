@@ -45,6 +45,8 @@ test('blog language selection updates the list and survives a reload', async ({
     } else {
       await selector.hover();
     }
+    // The link can appear stable before the popup's animation finishes.
+    await expect(page.locator('.ant-dropdown')).toHaveCSS('transform', 'none');
     await page
       .getByRole('menuitem', { name: language, exact: true })
       .getByRole('link')
