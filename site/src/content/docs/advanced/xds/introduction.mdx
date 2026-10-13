@@ -117,9 +117,22 @@ See [Concepts](/docs/advanced/xds/concepts) for a deeper look at the architectur
   matching, dynamic TLS
 - [Metrics](/docs/advanced/xds/metrics) — control plane, resource, and load balancer
   metrics exposed by the xDS module
-- [Extensions](/docs/advanced/xds/extensions) — adding custom HTTP filter extensions
-  via [HttpFilterFactory](type)
+- [Extensions](/docs/advanced/xds/extensions) — HTTP filter extensions,
+  Kubernetes endpoint discovery, custom cluster types
 - [Supported features](/docs/advanced/xds/supported-features) — which xDS fields
   Armeria recognizes and how unsupported fields are handled
 - [Control planes](/docs/advanced/xds/control-planes) — java-control-plane,
   go-control-plane
+
+## Examples
+
+The `examples/xds-playground` directory contains an interactive demo with a
+three-layer service mesh, a visual dashboard, and Grafana metrics:
+
+```bash
+./gradlew :examples:xds-playground:run
+docker compose -f examples/xds-playground/docker-compose.yml up -d
+```
+
+Open `http://127.0.0.1:8080` for the dashboard and `http://localhost:3000` for
+Grafana.
