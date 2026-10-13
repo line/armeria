@@ -77,7 +77,8 @@ public class AthenzDocker implements SafeCloseable {
     public static final String ADMIN_HEADER_POLICY = "admin-header-policy";
     public static final String ADMIN_JSON_POLICY = "admin-json-policy";
 
-    private final ComposeContainer composeContainer;
+    private final File dockerComposeFile;
+    private ComposeContainer composeContainer;
 
     @Nullable
     private URI ztsUri;
@@ -86,10 +87,14 @@ public class AthenzDocker implements SafeCloseable {
     private boolean initialized;
 
     public AthenzDocker(File dockerComposeFile) {
-        composeContainer =
-                new ComposeContainer(dockerComposeFile)
-                        .withExposedService(ZMS_SERVICE_NAME, ZMS_PORT, Wait.forHealthcheck())
-                        .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
+        this.dockerComposeFile = dockerComposeFile;
+        composeContainer = newComposeContainer();
+    }
+
+    private ComposeContainer newComposeContainer() {
+        return new ComposeContainer(dockerComposeFile)
+                .withExposedService(ZMS_SERVICE_NAME, ZMS_PORT, Wait.forHealthcheck())
+                .withExposedService(ZTS_SERVICE_NAME, ZTS_PORT, Wait.forHealthcheck());
     }
 
     private ZMSClient zmsClient() {
@@ -120,6 +125,14 @@ public class AthenzDocker implements SafeCloseable {
             } catch (Exception e) {
                 logger.warn("Attempt {}/{} to initialize Athenz Docker container failed.",
                             attempt, maxAttempts, e);
+                try {
+                    close();
+                } catch (Exception cleanupCause) {
+                    e.addSuppressed(cleanupCause);
+                    logger.warn("Failed to clean up Athenz Docker container.", e);
+                    return false;
+                }
+                composeContainer = newComposeContainer();
             }
         }
         return false;
@@ -136,7 +149,15 @@ public class AthenzDocker implements SafeCloseable {
 
     @Override
     public void close() {
-        composeContainer.stop();
+        try {
+            if (zmsClient != null) {
+                zmsClient.close();
+            }
+        } finally {
+            zmsClient = null;
+            ztsUri = null;
+            composeContainer.stop();
+        }
     }
 
     private void defaultScaffold() {
