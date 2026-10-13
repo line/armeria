@@ -198,3 +198,13 @@ img[alt='-BG-'] {
 }
 
 /* End of pagination customization */
+/* Diagrams rendered by remark-bob-svg */
+img.bob-svg {
+  display: block;
+  max-width: 100%;
+  margin-bottom: var(--ifm-leading);
+}
+
+[data-theme='dark'] img.bob-svg {
+  filter: invert(1);
+}
