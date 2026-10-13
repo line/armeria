@@ -79,8 +79,7 @@ your use case:
 
 | Method | Used for |
 |---|---|
-| `httpDecorator()` | Client-side filtering (both downstream `http_filters` and upstream `upstream_http_filters`) |
-| `rpcDecorator()` | Client-side RPC filtering (Thrift) |
+| `httpDecorator()` | Client-side filtering (both downstream `http_filters` and upstream `upstream_http_filters`). Also applies to RPC clients (Thrift, gRPC) at the HTTP layer. |
 | `serviceDecorator()` | Server-side filtering |
 
 ```java

@@ -41,11 +41,16 @@ dynamic_resources:       # ← config source definitions
 
 [XdsBootstrap](type) keeps track of xDS resources that users are interested in.
 It takes an Envoy `Bootstrap` protobuf message, which can be loaded using
-[XdsResourceReader](#xdsresourcereader).
+[XdsResourceReader](#xdsresourcereader), or retrieved from a
+[managed bootstrap](#managed-bootstraps) via [XdsBootstrapRegistry](type).
 
 ```java
+// create a bootstrap
 Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.class);
 XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+
+// query a managed bootstrap
+XdsBootstrap bootstrap = XdsBootstrapRegistry.bootstrap("default");
 ```
 
 When a preprocessor or server plugin is created with a listener name, it opens a
@@ -189,3 +194,74 @@ is fetched dynamically through the ADS stream.
 Refer to Envoy's [dynamic control plane configuration guide](https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/configuration-dynamic-control-plane)
 for more details.
 
+## Managed bootstraps
+
+An Envoy bootstrap contains configurations that don't change dynamically. For the
+common case, bootstraps can be registered once via [XdsBootstrapProvider](type) SPI and shared
+for the lifetime of the JVM. This lets clients be created with simple `xds:///` URIs
+(see [Client — Basics](/docs/advanced/xds/client#basics)) without explicit
+lifecycle management.
+
+### Default provider
+
+The built-in [DefaultXdsBootstrapProvider](type) loads a file named
+`xds-bootstrap.yaml` from the classpath and registers it under the name
+`"default"`. When the URI has no authority (`xds:///my-listener`), the
+default bootstrap is used.
+
+`xds-bootstrap.yaml`:
+
+```yaml
+node:
+  locality:
+    region: us-east-1
+    zone: us-east-1a
+dynamic_resources:
+  # ...
+static_resources:
+  # ...
+```
+
+```java
+WebClient.of("xds://default/my-listener"); // bootstrap profile 'default' is used explicitly
+WebClient.of("xds:///my-listener");        // the default profile can be omitted
+```
+
+### Registering Named providers
+
+To register a bootstrap under a custom name, implement [XdsBootstrapProvider](type)
+and register it via `ServiceLoader`:
+
+```java
+public class MyBootstrapProvider implements XdsBootstrapProvider {
+
+    @Override
+    public String name() {
+        return "my-mesh";
+    }
+
+    @Override
+    public String resource() {
+        return "my-mesh-bootstrap.yaml"; // classpath resource
+    }
+}
+```
+
+The default `newBootstrap()` implementation loads and parses the classpath
+resource automatically. Override it only if you need full control over how
+the [XdsBootstrap](type) is created.
+
+Then reference the name as the URI authority:
+
+```java
+WebClient.of("xds://my-mesh/my-listener");
+GrpcClients.newClient("gproto+xds://my-mesh/my-listener", MyServiceBlockingStub.class);
+```
+
+### Querying the registry
+
+Use [XdsBootstrapRegistry](type) to look up a managed bootstrap programmatically:
+
+```java
+XdsBootstrap bootstrap = XdsBootstrapRegistry.bootstrap("default");
+```
