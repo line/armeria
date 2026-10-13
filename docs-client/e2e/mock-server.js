@@ -795,6 +795,7 @@ async function handleApi(request, response, requestUrl) {
 }
 
 const server = http.createServer(async (request, response) => {
+  response.setHeader('connection', 'close');
   try {
     const requestUrl = new URL(request.url, `http://127.0.0.1:${port}`);
     const { pathname } = requestUrl;
