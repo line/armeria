@@ -178,9 +178,137 @@ Downstream filters wrap the entire retry loop and are invoked once per request.
 Upstream filters run inside each retry attempt. Both are executed in the order
 they are declared.
 
-## Other extension points
+## Cluster type extensions
 
-The same [XdsExtensionFactoryProvider](type) mechanism supports other extension types:
+Custom cluster types allow xDS clusters to resolve endpoints from sources other
+than static addresses, DNS, or EDS. Implement [ClusterTypeFactory](type) and
+register it via [XdsExtensionFactoryProvider](type).
 
-- **Config sources** — [SotwConfigSourceSubscriptionFactory](type) for custom config source implementations
-- **Cluster types** — [ClusterTypeFactory](type) for custom cluster discovery logic
+### Kubernetes endpoint discovery
+
+The `armeria-xds-kubernetes` module provides a built-in cluster type that resolves
+endpoints from Kubernetes services. Add the dependency:
+
+```groovy
+dependencies {
+    implementation 'com.linecorp.armeria:armeria-xds-kubernetes'
+}
+```
+
+Then reference it in your cluster configuration:
+
+```yaml
+clusters:
+  - name: my-service
+    cluster_type:
+      name: armeria.cluster.kubernetes
+      typed_config:
+        "@type": type.googleapis.com/armeria.xds.kubernetes.KubernetesClusterConfig
+        service_name: my-service
+        namespace: production
+        port_name: http
+        mode: POD
+```
+
+| Field | Description |
+|---|---|
+| `service_name` | The Kubernetes Service to watch (required) |
+| `namespace` | Kubernetes namespace; defaults to the client's default namespace |
+| `port_name` | Port name to select; uses the first port if empty |
+| `mode` | `POD` (default) for direct pod IPs, or `NODE_PORT` for NodePort/LoadBalancer access |
+| `api_server_url` | Custom Kubernetes API server URL; uses kubeconfig/in-cluster default if unset |
+| `credential` | SDS secret config for bearer token authentication |
+
+## Config source extensions
+
+Custom config sources allow xDS resources to be loaded from sources other than
+ADS or file paths. Implement [SotwConfigSourceSubscriptionFactory](type) and
+register it via [XdsExtensionFactoryProvider](type).
+
+### Spring Boot integration
+
+The `armeria-spring-boot4-xds` module uses Spring properties as a control plane
+for xDS resources. Instead of connecting to an external control plane, listeners
+and clusters are defined as Spring `Environment` properties and served to the
+xDS module via a built-in `custom_config_source`. Add the dependency:
+
+```groovy
+dependencies {
+    implementation 'com.linecorp.armeria:armeria-spring-boot4-xds'
+}
+```
+
+#### Defining resources
+
+Spring properties can act as a config source for any xDS resource type. The
+[SpringConfigSourceFactory](type) reads properties matching a configured prefix
+and parses each value as the corresponding xDS resource. For example, the
+default bootstrap fetches listeners from `armeria.xds.listener.*` and clusters
+from `armeria.xds.cluster.*`:
+
+```yaml
+armeria:
+  xds:
+    listener:
+      my-listener: |
+        name: my-listener
+        api_listener:
+          api_listener:
+            "@type": ...HttpConnectionManager
+            # ...
+    cluster:
+      my-cluster: |
+        name: my-cluster
+        type: STATIC
+        # ...
+```
+
+These are ordinary Spring properties — they can come from `application.yml`,
+environment variables, Spring Cloud Config Server, or any other property source.
+When the Spring environment changes (e.g. via `EnvironmentChangeEvent`),
+resources are automatically refreshed.
+
+#### Customizing the bootstrap
+
+The bootstrap itself is read from the `armeria.xds.bootstrap` property. A
+default bootstrap is provided that configures both LDS and CDS to use
+[SpringConfigSourceFactory](type). Override it to mix config sources — for
+example, defining listeners in Spring properties while fetching clusters and
+endpoints from a remote control plane:
+
+```yaml
+armeria:
+  xds:
+    bootstrap: |
+      dynamic_resources:
+        lds_config:
+          custom_config_source:
+            name: armeria.config_source.spring
+            typed_config:
+              "@type": type.googleapis.com/armeria.xds.spring.SpringConfigSource
+              prefix: "armeria.xds.listener."
+        cds_config:
+          ads: {}
+        ads_config:
+          api_type: GRPC
+          grpc_services:
+            - envoy_grpc:
+                cluster_name: xds-cluster
+      static_resources:
+        clusters:
+          - name: xds-cluster
+            type: STATIC
+            load_assignment:
+              cluster_name: xds-cluster
+              endpoints:
+                - lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: control-plane.example.com
+                            port_value: 15010
+```
+
+In this setup, listeners are managed as Spring properties and can be updated
+via Spring Cloud Config Server, while clusters and endpoints are discovered
+dynamically from the control plane.
