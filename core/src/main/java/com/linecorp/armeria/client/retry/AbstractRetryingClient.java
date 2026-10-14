@@ -84,6 +84,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
         final State state = new State(config, ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
+        // The per-attempt timeout is applied to each derived context in setResponseTimeout().
+        // The original context is left untouched so its configured timeout is preserved
+        // (e.g. for the DEADLINE_EXCEEDED description). Its scheduled timeout is cancelled
+        // automatically when the first derived context is created.
         return doExecute(ctx, req);
     }
 
@@ -171,21 +175,22 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Resets the {@link ClientRequestContext#responseTimeoutMillis()}.
+     * Sets the response timeout of the specified {@code derivedCtx}.
      *
      * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
      */
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
-    protected final boolean setResponseTimeout(ClientRequestContext ctx) {
+    protected final boolean setResponseTimeout(ClientRequestContext ctx, ClientRequestContext derivedCtx) {
         requireNonNull(ctx, "ctx");
+        requireNonNull(derivedCtx, "derivedCtx");
         final long responseTimeoutMillis = state(ctx).responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
             return false;
         } else if (responseTimeoutMillis == 0) {
-            ctx.clearResponseTimeout();
+            derivedCtx.clearResponseTimeout();
             return true;
         } else {
-            ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
+            derivedCtx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
             return true;
         }
     }

@@ -148,7 +148,7 @@ public final class GrpcServiceBuilder {
 
     private boolean unsafeWrapRequestBuffers;
 
-    private boolean useClientTimeoutHeader = true;
+    private GrpcTimeoutPolicy timeoutPolicy = GrpcTimeoutPolicy.useGrpcTimeoutHeader();
 
     private boolean useMethodMarshaller;
 
@@ -836,9 +836,36 @@ public final class GrpcServiceBuilder {
      *
      * <p>It is recommended to disable this when clients are not trusted code, e.g., for gRPC-Web clients that
      * can come from arbitrary browsers.
+     *
+     * @deprecated Use {@link #timeoutPolicy(GrpcTimeoutPolicy)} with
+     *             {@link GrpcTimeoutPolicy#useGrpcTimeoutHeader()} or
+     *             {@link GrpcTimeoutPolicy#useServiceTimeout()}.
      */
+    @Deprecated
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
-        this.useClientTimeoutHeader = useClientTimeoutHeader;
+        return timeoutPolicy(useClientTimeoutHeader ? GrpcTimeoutPolicy.useGrpcTimeoutHeader()
+                                                    : GrpcTimeoutPolicy.useServiceTimeout());
+    }
+
+    /**
+     * Sets the {@link GrpcTimeoutPolicy} that decides the request timeout to use for the timeout a client
+     * requested via the {@code grpc-timeout} header. By default, the timeout a client requested is used as
+     * it is.
+     *
+     * <p>For example, the following server never lets a client ask for a timeout longer than 10 seconds:
+     * <pre>{@code
+     * Server.builder()
+     *       .service(GrpcService.builder()
+     *                           .addService(myService)
+     *                           .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(
+     *                                   Duration.ofSeconds(10)))
+     *                           .build())
+     *       .build();
+     * }</pre>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder timeoutPolicy(GrpcTimeoutPolicy timeoutPolicy) {
+        this.timeoutPolicy = requireNonNull(timeoutPolicy, "timeoutPolicy");
         return this;
     }
 
@@ -1072,7 +1099,7 @@ public final class GrpcServiceBuilder {
                 maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
-                useClientTimeoutHeader,
+                timeoutPolicy,
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService,
                 autoCompression,

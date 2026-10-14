@@ -130,9 +130,9 @@ public final class AthenzService extends SimpleDecoratingHttpService {
     private final String resourceTagValue;
 
     @Nullable
-    private Timer allowedTimer;
+    private volatile Timer allowedTimer;
     @Nullable
-    private Timer deniedTimer;
+    private volatile Timer deniedTimer;
 
     AthenzService(HttpService delegate, AthenzAuthorizer authorizer,
                   AthenzResourceProvider athenzResourceProvider, String athenzAction,
@@ -147,6 +147,12 @@ public final class AthenzService extends SimpleDecoratingHttpService {
         this.meterIdPrefix = meterIdPrefix;
         this.meterRegistry = meterRegistry;
         this.resourceTagValue = resourceTagValue;
+    }
+
+    private static void record(@Nullable Timer timer, long startNanos) {
+        if (timer != null) {
+            timer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        }
     }
 
     @Override
@@ -173,8 +179,7 @@ public final class AthenzService extends SimpleDecoratingHttpService {
 
         final String token = extractToken(req.headers());
         if (token == null) {
-            assert deniedTimer != null;
-            deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+            record(deniedTimer, startNanos);
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT, "Missing token");
         }
 
@@ -188,32 +193,27 @@ public final class AthenzService extends SimpleDecoratingHttpService {
                                 }
                                 final AccessCheckStatus status = authorizer.authorize(token, athenzResource,
                                                                                       athenzAction);
-                                final long elapsedNanos = System.nanoTime() - startNanos;
                                 if (status == AccessCheckStatus.ALLOW) {
-                                    assert allowedTimer != null;
-                                    allowedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                                    record(allowedTimer, startNanos);
                                     try {
                                         return unwrap().serve(ctx, req);
                                     } catch (Exception e) {
                                         return Exceptions.throwUnsafely(e);
                                     }
                                 } else {
-                                    assert deniedTimer != null;
-                                    deniedTimer.record(elapsedNanos, TimeUnit.NANOSECONDS);
+                                    record(deniedTimer, startNanos);
                                     return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.PLAIN_TEXT,
                                                            status.toString());
                                 }
                             },
                             ctx.blockingTaskExecutor())
                     .exceptionally(cause -> {
-                        assert deniedTimer != null;
-                        deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+                        record(deniedTimer, startNanos);
                         return createErrorResponse(cause);
                     });
             return HttpResponse.of(future);
         } catch (Exception e) {
-            assert deniedTimer != null;
-            deniedTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+            record(deniedTimer, startNanos);
             return createErrorResponse(e);
         }
     }
