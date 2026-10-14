@@ -1,5 +1,6 @@
 dependencies {
     api libs.jwt
+    implementation libs.caffeine
     implementation libs.shibboleth.utilities
     api libs.opensaml.core
     api libs.opensaml.saml.api

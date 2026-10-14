@@ -11,3 +11,23 @@ pull_request_rules:
     actions:
       merge:
         method: squash
+
+  - name: Automatically merge Dependabot patch and minor updates
+    conditions:
+      - author=dependabot[bot]
+      - commits[*].author=dependabot[bot]
+      - "#commits=1"
+      - "#commits-unverified=0"
+      - -from-fork
+      - -draft
+      - -conflict
+      - base=main
+      # The back-reference keeps the major version unchanged.
+      - title ~= ^Bump \S+ from (\d+)\.\d+\.\d+ to \1\.\d+\.\d+ in /(?:site|docs-client)\Z
+      - -files ~= ^(?!(?:site|docs-client)/package(?:-lock)?\.json$)
+      - check-success=site
+      - check-success=docs-client-e2e
+      - -check-pending ~= ^build-
+    actions:
+      merge:
+        method: squash

@@ -18,6 +18,7 @@ declare module 'webpack' {
 const armeriaPort = process.env.ARMERIA_PORT || '8080';
 
 const isDev = !!process.env.WEBPACK_DEV;
+const isE2eCoverage = process.env.DOCS_CLIENT_E2E_COVERAGE === 'true';
 const isWindows = process.platform === 'win32';
 
 const config: Configuration = {
@@ -69,6 +70,25 @@ const config: Configuration = {
               reportFiles: ['src/**/*.{ts,tsx}'],
             },
           },
+          ...(isE2eCoverage
+            ? [
+                {
+                  loader: 'babel-loader',
+                  options: {
+                    presets: ['@babel/preset-typescript'],
+                    plugins: [
+                      [
+                        'babel-plugin-istanbul',
+                        {
+                          cwd: process.cwd(),
+                          include: ['src/**/*.ts', 'src/**/*.tsx'],
+                        },
+                      ],
+                    ],
+                  },
+                },
+              ]
+            : []),
         ],
       },
       {

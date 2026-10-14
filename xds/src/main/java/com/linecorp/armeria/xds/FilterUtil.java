@@ -28,7 +28,6 @@ import com.google.protobuf.Any;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -39,7 +38,6 @@ import com.linecorp.armeria.xds.filter.FactoryContext;
 import com.linecorp.armeria.xds.filter.HttpFilterFactory;
 import com.linecorp.armeria.xds.filter.XdsHttpFilter;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
-import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 import com.linecorp.armeria.xds.stream.SnapshotStream;
 
 import io.envoyproxy.envoy.config.route.v3.RetryPolicy;
@@ -95,7 +93,6 @@ final class FilterUtil {
             final ClientDecorationBuilder builder = ClientDecoration.builder();
             for (XdsHttpFilter f : filters) {
                 builder.add(f.httpDecorator());
-                builder.addRpc(f.rpcDecorator());
             }
             return builder.build();
         });
@@ -109,7 +106,6 @@ final class FilterUtil {
         final RetryStateFactory factory = new RetryStateFactory(retryPolicy);
         return ClientDecoration.builder()
                                .add(factory.retryingDecorator())
-                               .addRpc(factory.retryingRpcDecorator())
                                .build();
     }
 
@@ -188,18 +184,6 @@ final class FilterUtil {
             client = retryDecoration.decorate(client);
         }
         return downstreamDecoration.decorate(client);
-    }
-
-    static RpcClient buildRpcClient(@Nullable ClientDecoration retryDecoration,
-                                    ClientDecoration downstreamDecoration,
-                                    ClientDecoration upstreamDecoration) {
-        // Same ordering as HTTP: downstream → retry → cluster → upstream → delegate
-        RpcClient client = ClusterFilterFactory.DECORATION.rpcDecorate(
-                upstreamDecoration.rpcDecorate(DelegatingRpcClient.of()));
-        if (retryDecoration != null) {
-            client = retryDecoration.rpcDecorate(client);
-        }
-        return downstreamDecoration.rpcDecorate(client);
     }
 
     private FilterUtil() {}

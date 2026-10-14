@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
 
 import io.netty.channel.EventLoop;
 
@@ -59,8 +60,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param uri the URI of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *                                  in {@link SessionProtocol#httpValues()},
+     *                                  {@link SessionProtocol#httpsValues()}, or
+     *                                  {@link SchemePreprocessorProvider} SPI.
      */
     static WebClient of(String uri) {
         return builder(uri).build();
@@ -72,8 +74,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param uri the {@link URI} of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *                                  in {@link SessionProtocol#httpValues()},
+     *                                  {@link SessionProtocol#httpsValues()}, or
+     *                                  {@link SchemePreprocessorProvider} SPI.
      */
     static WebClient of(URI uri) {
         return builder(uri).build();
@@ -179,8 +182,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified base {@code uri}.
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *                                  in {@link SessionProtocol#httpValues()},
+     *                                  {@link SessionProtocol#httpsValues()}, or
+     *                                  {@link SchemePreprocessorProvider} SPI.
      */
     static WebClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
@@ -190,10 +194,16 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Returns a new {@link WebClientBuilder} created with the specified base {@link URI}.
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *                                  in {@link SessionProtocol#httpValues()},
+     *                                  {@link SessionProtocol#httpsValues()}, or
+     *                                  {@link SchemePreprocessorProvider} SPI.
      */
     static WebClientBuilder builder(URI uri) {
+        requireNonNull(uri, "uri");
+        final SchemePreprocessorRegistry.Match match = SchemePreprocessorRegistry.find(uri.getScheme());
+        if (match != null) {
+            return new WebClientBuilder(match.provider().preprocessor(uri), null);
+        }
         return new WebClientBuilder(uri);
     }
 

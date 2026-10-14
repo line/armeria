@@ -244,7 +244,7 @@ class DefaultHttpDecodedResponseTest {
         assertThatThrownBy(decoded.aggregate(AggregationOptions.usePooledObjects(ctx.alloc()))::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ContentTooLargeException.class)
-                .hasRootCauseInstanceOf(DecompressionException.class)
+                .hasRootCauseInstanceOf(ContentTooLargeException.class)
                 .satisfies(cause -> {
                     assertThat(((ContentTooLargeException) cause.getCause()).maxContentLength())
                             .isEqualTo(ctx.maxResponseLength());

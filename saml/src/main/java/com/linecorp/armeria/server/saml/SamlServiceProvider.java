@@ -79,6 +79,7 @@ public final class SamlServiceProvider {
     private final SamlSingleSignOnHandler ssoHandler;
     private final SamlSingleLogoutHandler sloHandler;
     private final boolean signatureRequired;
+    private final SamlAssertionIdCache assertionIdCache;
 
     /**
      * A class which helps a {@link Server} have a SAML-based authentication.
@@ -99,7 +100,8 @@ public final class SamlServiceProvider {
                         SamlRequestIdManager requestIdManager,
                         SamlSingleSignOnHandler ssoHandler,
                         SamlSingleLogoutHandler sloHandler,
-                        boolean signatureRequired) {
+                        boolean signatureRequired,
+                        SamlAssertionIdCache assertionIdCache) {
         this.authorizer = requireNonNull(authorizer, "authorizer");
         this.entityId = requireNonNull(entityId, "entityId");
         this.hostname = hostname;
@@ -117,6 +119,7 @@ public final class SamlServiceProvider {
         this.ssoHandler = requireNonNull(ssoHandler, "ssoHandler");
         this.sloHandler = requireNonNull(sloHandler, "sloHandler");
         this.signatureRequired = signatureRequired;
+        this.assertionIdCache = requireNonNull(assertionIdCache, "assertionIdCache");
 
         defaultAcsConfig = acsConfigs.stream().filter(SamlAssertionConsumerConfig::isDefault).findFirst()
                                      .orElseThrow(() -> new IllegalArgumentException(
@@ -252,6 +255,13 @@ public final class SamlServiceProvider {
      */
     boolean isSignatureRequired() {
         return signatureRequired;
+    }
+
+    /**
+     * A {@link SamlAssertionIdCache} which tracks consumed assertion IDs for replay protection.
+     */
+    SamlAssertionIdCache assertionIdCache() {
+        return assertionIdCache;
     }
 
     /**

@@ -340,6 +340,14 @@ public final class MediaTypeNames {
      */
     public static final String KEY_ARCHIVE = "application/pkcs12";
     /**
+     * {@value #PEM}.
+     */
+    public static final String PEM = "application/x-pem-file";
+    /**
+     * {@value #YAML}.
+     */
+    public static final String YAML = "application/yaml";
+    /**
      * {@value #APPLICATION_BINARY}.
      */
     public static final String APPLICATION_BINARY = "application/binary";

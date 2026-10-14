@@ -36,7 +36,10 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` only matches the value ``abc``.
-    option (armeria.xds.supported.oneof_field) = 1;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 1,
+        since: "1.39.0"
+    };
     string exact = 1;
 
     // The input string must have the prefix specified here.
@@ -48,7 +51,10 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` matches the value ``abc.xyz``
-    option (armeria.xds.supported.oneof_field) = 2;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 2,
+        since: "1.39.0"
+    };
     string prefix = 2 [(validate.rules).string = {min_len: 1}];
 
     // The input string must have the suffix specified here.
@@ -60,11 +66,17 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` matches the value ``xyz.abc``
-    option (armeria.xds.supported.oneof_field) = 3;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 3,
+        since: "1.39.0"
+    };
     string suffix = 3 [(validate.rules).string = {min_len: 1}];
 
     // The input string must match the regular expression specified here.
-    option (armeria.xds.supported.oneof_field) = 5;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 5,
+        since: "1.39.0"
+    };
     RegexMatcher safe_regex = 5 [(validate.rules).message = {required: true}];
 
     // The input string must have the substring specified here.
@@ -76,7 +88,10 @@ message StringMatcher {
     // Examples:
     //
     // * ``abc`` matches the value ``xyz.abc.def``
-    option (armeria.xds.supported.oneof_field) = 7;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 7,
+        since: "1.39.0"
+    };
     string contains = 7 [(validate.rules).string = {min_len: 1}];
 
     // Use an extension as the matcher type.
@@ -88,7 +103,10 @@ message StringMatcher {
   // has no effect for the ``safe_regex`` match.
   // For example, the matcher ``data`` will match both input string ``Data`` and ``data`` if this option
   // is set to ``true``.
-  option (armeria.xds.supported.field) = 6;
+  option (armeria.xds.supported.field) = {
+      number: 6,
+      since: "1.39.0"
+  };
   bool ignore_case = 6;
 }
 

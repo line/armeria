@@ -190,8 +190,23 @@ final class RouteStream extends RefCountedStream<RouteSnapshot> {
             final ClientDecoration retryDecoration =
                     FilterUtil.buildRetryDecoration(effectiveRetryPolicy);
 
+            final RequestHeadersMutation rcMutation = RequestHeadersMutation.of(
+                    routeResource.resource().getRequestHeadersToAddList(),
+                    routeResource.resource().getRequestHeadersToRemoveList());
+            final RequestHeadersMutation vhMutation = RequestHeadersMutation.of(
+                    vhostResource.resource().getRequestHeadersToAddList(),
+                    vhostResource.resource().getRequestHeadersToRemoveList());
+            final RequestHeadersMutation rtMutation = RequestHeadersMutation.of(
+                    route.getRequestHeadersToAddList(),
+                    route.getRequestHeadersToRemoveList());
+            final boolean mostSpecificWins =
+                    routeResource.resource().getMostSpecificHeaderMutationsWins();
+            final RequestHeadersMutationChain headerMutationChain =
+                    RequestHeadersMutationChain.of(rcMutation, vhMutation, rtMutation, mostSpecificWins);
+
             final SnapshotStream<RouteClusterResolver> routeResolverStream =
-                    new RouteClusterFactory(context, hcmContext, filterConfigs, retryDecoration)
+                    new RouteClusterFactory(context, hcmContext, filterConfigs, retryDecoration,
+                                            headerMutationChain)
                             .resolve(route);
             final SnapshotStream<HttpService> httpServiceStream = hcmContext.server(filterConfigs);
 

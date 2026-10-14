@@ -135,6 +135,11 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
         }
     }
 
+    @Nullable
+    WebSocketClient webSocketClientOrNull() {
+        return webSocketClient;
+    }
+
     private static WebSocketUpgradeResponse newUpgradeResponse(StandardHttpRequest request,
                                                                ResponseHeaders upgradeHeaders) {
         return new WebSocketUpgradeResponse(request, upgradeHeaders.status().code(), toMap(upgradeHeaders));

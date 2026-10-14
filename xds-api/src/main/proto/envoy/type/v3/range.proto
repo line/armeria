@@ -20,11 +20,17 @@ message Int64Range {
   option (udpa.annotations.versioning).previous_message_type = "envoy.type.Int64Range";
 
   // start of the range (inclusive)
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.39.0"
+  };
   int64 start = 1;
 
   // end of the range (exclusive)
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.39.0"
+  };
   int64 end = 2;
 }
 

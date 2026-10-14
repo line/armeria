@@ -355,6 +355,11 @@ class StreamingServerCallTest {
 
     private StreamingServerCall<SimpleRequest, SimpleResponse> newServerCall(HttpResponseWriter response,
                                                                              boolean unsafeWrapRequestBuffers) {
+        return newServerCall(response, ctx, unsafeWrapRequestBuffers);
+    }
+
+    private static StreamingServerCall<SimpleRequest, SimpleResponse> newServerCall(
+            HttpResponseWriter response, ServiceRequestContext ctx, boolean unsafeWrapRequestBuffers) {
         return new StreamingServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),

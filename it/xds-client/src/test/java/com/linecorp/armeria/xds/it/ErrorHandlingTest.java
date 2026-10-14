@@ -22,6 +22,8 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -820,7 +822,9 @@ class ErrorHandlingTest {
                 assertThat(snapshotRef.get()).isNull();
             });
 
-            Files.writeString(missingFile.toPath(), Files.readString(certificate.certificateFile().toPath()));
+            final Path tempFile = Files.createTempFile(tempDir.toPath(), "cert", ".tmp");
+            Files.writeString(tempFile, Files.readString(certificate.certificateFile().toPath()));
+            Files.move(tempFile, missingFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
 
             await().untilAsserted(() -> {
                 assertThat(snapshotRef.get()).isNotNull();

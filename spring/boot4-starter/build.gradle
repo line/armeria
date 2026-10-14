@@ -2,7 +2,3 @@ dependencies {
     api project(':spring:boot4-autoconfigure')
     api libs.spring.boot4.starter
 }
-
-tasks.withType(Test).configureEach {
-    failOnNoDiscoveredTests = false
-}

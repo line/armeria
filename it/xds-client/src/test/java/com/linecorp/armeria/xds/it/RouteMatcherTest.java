@@ -235,7 +235,27 @@ class RouteMatcherTest {
                                   "exact": "GET"
                                 }
                               }]
-                             """, RequestHeaders.of(HttpMethod.GET, "/"), 8082)
+                             """, RequestHeaders.of(HttpMethod.GET, "/"), 8082),
+                // invert_match
+                Arguments.of("""
+                             [{
+                               "name": "x-canary",
+                               "string_match": {
+                                 "exact": "true"
+                               },
+                               "invert_match": true
+                             }]
+                             """, "[]", RequestHeaders.of(HttpMethod.GET, "/", "x-canary", "false"), 8081),
+                // A missing header does not match even if invert_match is set.
+                Arguments.of("""
+                             [{
+                               "name": "x-canary",
+                               "string_match": {
+                                 "exact": "true"
+                               },
+                               "invert_match": true
+                             }]
+                             """, "[]", RequestHeaders.of(HttpMethod.GET, "/"), 8082)
         );
     }
 

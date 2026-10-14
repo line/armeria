@@ -294,6 +294,16 @@ configure(relocatedProjects) {
                     testClassesDirs = files(tasks.copyShadedTestClasses.destinationDir)
                     classpath = testClassesDirs
 
+                    // A relocated project may not have any tests (e.g. a project that only re-exports
+                    // relocated APIs). In that case 'copyShadedTestClasses' still creates its (empty)
+                    // destination directory, so Gradle treats it as "test sources present" and fails
+                    // this task via 'failOnNoDiscoveredTests' because no tests are discovered. Keep that
+                    // check enabled only when this project compiled its own test classes.
+                    def testClassesOutput = project.sourceSets.test.output.classesDirs
+                    failOnNoDiscoveredTests = project.provider {
+                        !testClassesOutput.asFileTree.matching { include '**/*.class' }.empty
+                    }
+
                     project.ext.relocations.each {
                         exclude "${it['to'].replace('.', '/')}/**"
                     }

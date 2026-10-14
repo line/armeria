@@ -37,6 +37,7 @@ public final class XdsHeaderMatcher {
 
     private final Predicate<HttpHeaders> matcher;
     private final HeaderMatcher headerMatcher;
+    private final boolean missingHeaderNeverMatches;
 
     /**
      * Creates a single {@link XdsHeaderMatcher} from the given proto {@link HeaderMatcher}.
@@ -75,6 +76,11 @@ public final class XdsHeaderMatcher {
         this.headerMatcher = headerMatcher;
 
         final HeaderMatchSpecifierCase matchCase = headerMatcher.getHeaderMatchSpecifierCase();
+        // Unless treat_missing_header_as_empty is set, a missing header never matches
+        // range_match or string_match, even if invert_match is set.
+        missingHeaderNeverMatches = !headerMatcher.getTreatMissingHeaderAsEmpty() &&
+                                    (matchCase == HeaderMatchSpecifierCase.RANGE_MATCH ||
+                                     matchCase == HeaderMatchSpecifierCase.STRING_MATCH);
         switch (matchCase) {
             case EXACT_MATCH:
             case SAFE_REGEX_MATCH:
@@ -110,11 +116,9 @@ public final class XdsHeaderMatcher {
                 matcher = headers -> {
                     final List<String> allHeaders = headers.getAll(headerMatcher.getName());
                     if (allHeaders.isEmpty()) {
-                        if (headerMatcher.getTreatMissingHeaderAsEmpty()) {
-                            return stringMatcher.match("");
-                        } else {
-                            return false;
-                        }
+                        // matches() returns early for a missing header
+                        // unless treat_missing_header_as_empty is set.
+                        return stringMatcher.match("");
                     }
                     if (allHeaders.size() == 1) {
                         return stringMatcher.match(allHeaders.get(0));
@@ -134,6 +138,9 @@ public final class XdsHeaderMatcher {
     public boolean matches(@Nullable HttpHeaders headers) {
         if (headers == null) {
             headers = HttpHeaders.of();
+        }
+        if (missingHeaderNeverMatches && !headers.contains(headerMatcher.getName())) {
+            return false;
         }
         return matcher.test(headers) != headerMatcher.getInvertMatch();
     }
