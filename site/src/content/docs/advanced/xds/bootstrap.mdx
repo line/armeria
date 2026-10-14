@@ -50,7 +50,7 @@ Bootstrap bootstrap = XdsResourceReader.fromFile("bootstrap.yaml", Bootstrap.cla
 XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
 
 // query a managed bootstrap
-XdsBootstrap bootstrap = XdsBootstrapRegistry.bootstrap("default");
+XdsBootstrap xdsBootstrap = XdsBootstrapRegistry.bootstrap("default");
 ```
 
 When a preprocessor or server plugin is created with a listener name, it opens a
@@ -265,3 +265,6 @@ Use [XdsBootstrapRegistry](type) to look up a managed bootstrap programmatically
 ```java
 XdsBootstrap bootstrap = XdsBootstrapRegistry.bootstrap("default");
 ```
+
+Managed bootstraps are closed by the registry during JVM shutdown. Callers do
+not need to close them; `close()` on the returned bootstrap is a no-op.

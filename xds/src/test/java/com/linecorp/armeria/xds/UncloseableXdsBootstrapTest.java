@@ -35,10 +35,12 @@ class UncloseableXdsBootstrapTest {
         final XdsBootstrapImpl delegate = (XdsBootstrapImpl) XdsBootstrap.of(bootstrap);
         final UncloseableXdsBootstrap uncloseable = new UncloseableXdsBootstrap(delegate);
 
-        uncloseable.close();
-        assertThat(delegate.isClosed()).isFalse();
-
-        delegate.close();
+        try {
+            uncloseable.close();
+            assertThat(delegate.isClosed()).isFalse();
+        } finally {
+            delegate.close();
+        }
         assertThat(delegate.isClosed()).isTrue();
     }
 }
