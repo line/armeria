@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -27,8 +28,15 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
@@ -184,6 +192,80 @@ class PropertiesEndpointGroupTest {
                                                         .defaultPort(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("defaultPort");
+    }
+
+    @Test
+    void injectedExecutorIsUsedAsIs() throws Exception {
+        final Path file = folder.resolve("hosts.properties");
+        Files.write(file, "hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
+        Files.setLastModifiedTime(file, FileTime.fromMillis(1000));
+        final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
+        try (PropertiesEndpointGroup group = new PropertiesEndpointGroup(
+                EndpointSelectionStrategy.weightedRoundRobin(), file, "hosts", 0, tasks::add)) {
+            final Runnable initialLoad = tasks.poll(30, TimeUnit.SECONDS);
+            assertThat(initialLoad).isNotNull();
+            assertThat(group.whenReady()).isNotDone();
+
+            Files.write(file, "hosts.0=127.0.0.1:8081\n".getBytes(UTF_8));
+            Files.setLastModifiedTime(file, FileTime.fromMillis(2000));
+            final Runnable update = tasks.poll(30, TimeUnit.SECONDS);
+            assertThat(update).isNotNull();
+            assertThat(group.whenReady()).isNotDone();
+
+            initialLoad.run();
+            update.run();
+            assertThat(group.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 8081));
+        }
+    }
+
+    @Test
+    void listenerCanInitializeAnotherGroup() throws Exception {
+        final Path file = folder.resolve("hosts.properties");
+        Files.write(file, "hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
+        Files.setLastModifiedTime(file, FileTime.fromMillis(1000));
+        final PropertiesEndpointGroupBuilder builder = PropertiesEndpointGroup.builder(file, "hosts");
+        final CompletableFuture<Void> secondReady = new CompletableFuture<>();
+        final CompletableFuture<List<Endpoint>> secondReloaded = new CompletableFuture<>();
+        final CompletableFuture<List<Endpoint>> firstReloaded = new CompletableFuture<>();
+        final CountDownLatch listenerProceed = new CountDownLatch(1);
+        try (PropertiesEndpointGroup first = builder.build()) {
+            first.whenReady().get(10, TimeUnit.SECONDS);
+            first.addListener(endpoints -> {
+                if (endpoints.isEmpty()) {
+                    try (PropertiesEndpointGroup second = builder.build()) {
+                        second.addListener(newEndpoints -> {
+                            if (!newEndpoints.isEmpty()) {
+                                secondReloaded.complete(newEndpoints);
+                            }
+                        });
+                        second.whenReady().get(10, TimeUnit.SECONDS);
+                        secondReady.complete(null);
+                        listenerProceed.await(45, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        secondReady.completeExceptionally(e);
+                        secondReloaded.completeExceptionally(e);
+                    }
+                } else if (endpoints.contains(Endpoint.of("127.0.0.1", 8082))) {
+                    firstReloaded.complete(endpoints);
+                }
+            });
+            Files.write(file, new byte[0]);
+            Files.setLastModifiedTime(file, FileTime.fromMillis(2000));
+            secondReady.get(30, TimeUnit.SECONDS);
+
+            Files.write(file, "hosts.0=127.0.0.1:8082\n".getBytes(UTF_8));
+            Files.setLastModifiedTime(file, FileTime.fromMillis(3000));
+            assertThat(secondReloaded.get(30, TimeUnit.SECONDS))
+                    .containsExactly(Endpoint.of("127.0.0.1", 8082));
+            assertThatThrownBy(() -> firstReloaded.get(12, TimeUnit.SECONDS))
+                    .isInstanceOf(TimeoutException.class);
+            assertThat(first.endpoints()).isEmpty();
+            listenerProceed.countDown();
+            assertThat(firstReloaded.get(10, TimeUnit.SECONDS))
+                    .containsExactly(Endpoint.of("127.0.0.1", 8082));
+        } finally {
+            listenerProceed.countDown();
+        }
     }
 
     @Test

@@ -1,0 +1,44 @@
+armeria:
+  xds:
+    bootstrap: |
+      dynamic_resources:
+        cds_config:
+          custom_config_source:
+            name: armeria.config_source.spring
+            typed_config:
+              "@type": type.googleapis.com/armeria.xds.spring.SpringConfigSource
+              prefix: "armeria.xds.cluster."
+    cluster:
+      test-cluster: |
+        name: wrong-cluster-name
+        type: STATIC
+        load_assignment:
+          cluster_name: wrong-cluster-name
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 8080
+      test-eds-cluster: |
+        name: wrong-eds-cluster-name
+        type: EDS
+        eds_cluster_config:
+          service_name: test-endpoint
+          eds_config:
+            custom_config_source:
+              name: armeria.config_source.spring
+              typed_config:
+                "@type": type.googleapis.com/armeria.xds.spring.SpringConfigSource
+                prefix: "armeria.xds.endpoint."
+    endpoint:
+      test-endpoint: |
+        cluster_name: wrong-endpoint-name
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 7777

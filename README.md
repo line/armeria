@@ -9,7 +9,7 @@ Visit [the official web site](https://armeria.dev/) for more information.
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/line/armeria.svg?label=commits)](https://github.com/line/armeria/pulse)
 [![Maven Central](https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?label=version)](https://search.maven.org/search?q=g:com.linecorp.armeria%20AND%20a:armeria)
 [![GitHub release date](https://img.shields.io/github/release-date/line/armeria.svg?label=release)](https://github.com/line/armeria/commits)
-[![Revved up by Develocity](https://img.shields.io/badge/Revved%20up%20by-Develocity-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.armeria.dev/scans)
+[![Revved up by Develocity](https://img.shields.io/badge/Revved%20up%20by-Develocity-06A0CE?logo=Gradle&labelColor=02303A)](https://community.develocity.cloud/scans?search.rootProjectNames=armeria)
 
 
 > Build a reactive microservice **at your pace**, not theirs.

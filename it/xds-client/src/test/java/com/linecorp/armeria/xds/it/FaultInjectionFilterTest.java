@@ -215,6 +215,34 @@ class FaultInjectionFilterTest {
     }
 
     @Test
+    void invertedHeaderMatchAbort() {
+        final Bootstrap bootstrap = clientBootstrap(
+                "abort: {http_status: 503, percentage: {numerator: 100, denominator: HUNDRED}}, " +
+                "headers: [{name: x-fault-inject, string_match: {exact: skip}, invert_match: true}]");
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             XdsHttpPreprocessor preprocessor =
+                     XdsHttpPreprocessor.ofListener("test-listener", xdsBootstrap)) {
+            // Request with a header value that does not match the inverted matcher gets aborted
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final AggregatedHttpResponse response =
+                        WebClient.of(preprocessor).blocking()
+                                 .prepare().get("/").header("x-fault-inject", "other").execute();
+                assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                await().untilAsserted(() -> assertThat(captor.get().log().isComplete()).isTrue());
+            }
+            // Request without the header passes through because a missing header does not match
+            // even if invert_match is set
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final AggregatedHttpResponse response =
+                        WebClient.of(preprocessor).blocking().get("/");
+                assertThat(response.status()).isEqualTo(HttpStatus.OK);
+                assertThat(response.contentUtf8()).isEqualTo("OK");
+                await().untilAsserted(() -> assertThat(captor.get().log().isComplete()).isTrue());
+            }
+        }
+    }
+
+    @Test
     void serverSideAbort() {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse response =

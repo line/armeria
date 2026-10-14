@@ -1,0 +1,9 @@
+dependencies {
+    api project(':xds')
+    api libs.spring.boot4.autoconfigure
+    api libs.spring.cloud.context
+
+    annotationProcessor libs.spring.boot4.configuration.processor
+
+    testImplementation libs.spring.boot4.starter.test
+}

@@ -18,7 +18,7 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
-    id 'com.gradle.develocity' version '4.5.0'
+    id 'com.gradle.develocity' version '4.6.0'
     // adds additional metadata to build scans
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.8.0'
 }
@@ -28,7 +28,8 @@ import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 def isCi = System.getenv("CI") != null
 
 develocity {
-    server = "https://ge.armeria.dev"
+    server = "https://community.develocity.cloud"
+    projectId = "armeria"
     buildScan {
         publishing.onlyIf { it.authenticated }
         uploadInBackground = !isCi
@@ -111,7 +112,7 @@ project(':brave6').projectDir = file('brave/brave6')
 includeWithFlags ':core',                                'java', 'publish', 'shade', 'trim', 'native'
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
-includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
+includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'kotlin2.2', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
 // GraphQL-Java requires Java 11+.
 includeWithFlags ':graphql',                             'java11', 'publish', 'relocate', 'native'
@@ -128,7 +129,7 @@ includeWithFlags ':junit4',                              'java', 'publish', 'rel
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':jsonrpc',                             'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
-includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
+includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'kotlin2.2', 'native'
 includeWithFlags ':kubernetes',                          'java11', 'publish', 'relocate', 'native'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
 project(':logback').projectDir = file('logback/logback')
@@ -189,6 +190,7 @@ includeWithFlags ':spring:boot4-autoconfigure',          'java17', 'publish', 'r
 includeWithFlags ':spring:boot4-starter',                'java17', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot4-webflux-autoconfigure',  'java17', 'publish', 'relocate'
 includeWithFlags ':spring:boot4-webflux-starter',        'java17', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot4-xds',                    'java17', 'publish', 'relocate'
 includeWithFlags ':spring:spring7',                      'java17', 'publish', 'relocate'
 
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
@@ -216,11 +218,14 @@ includeWithFlags ':thrift0.22',                          'java11', 'publish', 'r
 project(':thrift0.22').projectDir = file('thrift/thrift0.22')
 includeWithFlags ':thrift0.23',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.23').projectDir = file('thrift/thrift0.23')
+includeWithFlags ':thrift0.24',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.24').projectDir = file('thrift/thrift0.24')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
 includeWithFlags ':xds-athenz',                          'java11', 'publish', 'relocate'
+includeWithFlags ':xds-kubernetes',                      'java11', 'publish', 'relocate'
 includeWithFlags ':xds-api',                             'java', 'publish', 'relocate', 'javapgv', 'no_aggregation'
 includeWithFlags ':xds-validator',                       'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':xds-pgv-shaded',                      'java', 'publish', 'relocate', 'no_aggregation'
@@ -254,9 +259,11 @@ includeWithFlags ':it:grpc:protobuf4',                         'java', 'relocate
 includeWithFlags ':it:internal-logging',                       'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
+includeWithFlags ':it:kotlin-compat',                          'java'
 includeWithFlags ':it:kubernetes-chaos-tests',                 'java11', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
 includeWithFlags ':it:logback1.5',                             'java11', 'relocate', 'no_aggregation'
+includeWithFlags ':it:logback1.6',                             'java11', 'relocate', 'no_aggregation'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
 includeWithFlags ':it:no-unsafe',                              'java', 'relocate'
@@ -332,6 +339,7 @@ includeWithFlags ':examples:spring-boot-minimal',                  'java17'
 includeWithFlags ':examples:spring-boot-minimal-kotlin',           'java17', 'kotlin'
 includeWithFlags ':examples:spring-boot-tomcat',                   'java17'
 includeWithFlags ':examples:spring-boot-webflux',                  'java17'
+includeWithFlags ':examples:spring-cloud-config-xds',              'java17'
 includeWithFlags ':examples:static-files',                         'java11'
 includeWithFlags ':examples:thrift',                               'java11'
 includeWithFlags ':examples:tutorials:grpc-tutorial',              'java11'

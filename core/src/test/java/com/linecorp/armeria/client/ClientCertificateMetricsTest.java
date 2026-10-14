@@ -30,6 +30,7 @@ import java.util.Map;
 import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -41,6 +42,9 @@ import com.linecorp.armeria.server.ServerTlsCertificateMetricsTest;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -84,6 +88,43 @@ class ClientCertificateMetricsTest {
                         .isEqualTo(1);
             });
             assertThat(res.aggregate().join().status().code()).isEqualTo(200);
+        }
+    }
+
+    @Test
+    void shouldRegisterCertificateMetricsOncePerClientFactory() {
+        // See https://github.com/line/armeria/issues/6734
+        // A ClientFactory internally creates several SslContexts that differ only in their ALPN
+        // protocols but share the same certificate metrics. The metrics must be registered only once,
+        // otherwise Micrometer logs a "Gauge has been already registered" warning and the shared
+        // gauges are unregistered as soon as the first context is released.
+        final Logger micrometerLogger =
+                (Logger) LoggerFactory.getLogger("io.micrometer.core.instrument.MeterRegistry");
+        final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
+        logAppender.start();
+        micrometerLogger.addAppender(logAppender);
+        try {
+            final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+            try (ClientFactory factory = ClientFactory.builder()
+                                                      .tls(certificate.tlsKeyPair())
+                                                      .meterRegistry(meterRegistry)
+                                                      .build()) {
+                assertThat(meterRegistry.find("armeria.client.tls.certificate.validity").gauges())
+                        .hasSize(1);
+                assertThat(meterRegistry.find("armeria.client.tls.certificate.validity.days").gauges())
+                        .hasSize(1);
+            }
+            assertThat(logAppender.list)
+                    .withFailMessage("Certificate metrics were registered more than once: %s",
+                                     logAppender.list)
+                    .noneMatch(event -> {
+                        final String message = event.getFormattedMessage();
+                        return message.contains("already registered") &&
+                               message.contains("armeria.client.tls.certificate.validity");
+                    });
+        } finally {
+            micrometerLogger.detachAppender(logAppender);
+            logAppender.stop();
         }
     }
 

@@ -22,7 +22,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.PreClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -114,12 +113,4 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
     void httpClientCustomizer(Function<HttpClient, HttpClient> customizer);
 
     Function<HttpClient, HttpClient> httpClientCustomizer();
-
-    /**
-     * Customizes the delegate {@link RpcClient} before invocation in the {@link TailPreClient}.
-     * This may be useful if {@link PreClient}s would like to manipulate the decorator chain.
-     */
-    void rpcClientCustomizer(Function<RpcClient, RpcClient> rpcClient);
-
-    Function<RpcClient, RpcClient> rpcClientCustomizer();
 }

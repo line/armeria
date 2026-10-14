@@ -165,16 +165,15 @@ class WeightedClusterTest {
 
     @Test
     void missingWeightIsRejected() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfigNoWeights("route_0", "cluster-a", "cluster-b"));
+        controlPlane.set(listener("listener_0", "route_0"));
+
         try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
-
-            // Push resources with missing weight after the watcher is attached
-            controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
-            controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
-                             endpoint("cluster-b", "127.0.0.1", 5678));
-            controlPlane.set(weightedRouteConfigNoWeights("route_0", "cluster-a", "cluster-b"));
-            controlPlane.set(listener("listener_0", "route_0"));
 
             // Missing weight defaults to 0 and should be rejected like Envoy
             await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -267,16 +266,15 @@ class WeightedClusterTest {
 
     @Test
     void zeroWeightIsRejected() {
+        controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
+        controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
+                         endpoint("cluster-b", "127.0.0.1", 5678));
+        controlPlane.set(weightedRouteConfigWithZeroWeight("route_0", "cluster-a", "cluster-b"));
+        controlPlane.set(listener("listener_0", "route_0"));
+
         try (ListenerRoot listenerRoot = controlPlane.bootstrap().listenerRoot("listener_0")) {
             final RecordingWatcher watcher = new RecordingWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
-
-            // Push invalid resources after the watcher is attached
-            controlPlane.set(cluster("cluster-a"), cluster("cluster-b"));
-            controlPlane.set(endpoint("cluster-a", "127.0.0.1", 1234),
-                             endpoint("cluster-b", "127.0.0.1", 5678));
-            controlPlane.set(weightedRouteConfigWithZeroWeight("route_0", "cluster-a", "cluster-b"));
-            controlPlane.set(listener("listener_0", "route_0"));
 
             // The zero-weight should cause an error during route stream processing
             await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {

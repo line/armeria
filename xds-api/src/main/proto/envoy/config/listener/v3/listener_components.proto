@@ -35,11 +35,17 @@ message Filter {
   reserved "config";
 
   // The name of the filter configuration.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.41.0"
+  };
   string name = 1 [(validate.rules).string = {min_len: 1}];
 
   oneof config_type {
-    option (armeria.xds.supported.oneof_field) = 4;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 4,
+        since: "1.41.0"
+    };
     // Filter specific configuration which depends on the filter being
     // instantiated. See the supported filters for further documentation.
     // [#extension-category: envoy.filters.network]
@@ -115,7 +121,10 @@ message FilterChainMatch {
 
   // Optional destination port to consider when use_original_dst is set on the
   // listener in determining a filter chain match.
-  option (armeria.xds.supported.field) = 8;
+  option (armeria.xds.supported.field) = {
+      number: 8,
+      since: "1.41.0"
+  };
   google.protobuf.UInt32Value destination_port = 8 [(validate.rules).uint32 = {lte: 65535 gte: 1}];
 
   // If non-empty, an IP address and prefix length to match addresses when the
@@ -164,7 +173,10 @@ message FilterChainMatch {
   //
   //   See the :ref:`FAQ entry <faq_how_to_setup_sni>` on how to configure SNI for more
   //   information.
-  option (armeria.xds.supported.field) = 11;
+  option (armeria.xds.supported.field) = {
+      number: 11,
+      since: "1.41.0"
+  };
   repeated string server_names = 11;
 
   // If non-empty, a transport protocol to consider when determining a filter chain match.
@@ -176,7 +188,10 @@ message FilterChainMatch {
   // * ``raw_buffer`` - default, used when no transport protocol is detected,
   // * ``tls`` - set by :ref:`envoy.filters.listener.tls_inspector <config_listener_filters_tls_inspector>`
   //   when TLS protocol is detected.
-  option (armeria.xds.supported.field) = 9;
+  option (armeria.xds.supported.field) = {
+      number: 9,
+      since: "1.41.0"
+  };
   string transport_protocol = 9;
 
   // If non-empty, a list of application protocols (e.g. ALPN for TLS protocol) to consider when
@@ -198,7 +213,10 @@ message FilterChainMatch {
   //   However, the use of ALPN is pretty much limited to the HTTP/2 traffic on the Internet,
   //   and matching on values other than ``h2`` is going to lead to a lot of false negatives,
   //   unless all connecting clients are known to use ALPN.
-  option (armeria.xds.supported.field) = 10;
+  option (armeria.xds.supported.field) = {
+      number: 10,
+      since: "1.41.0"
+  };
   repeated string application_protocols = 10;
 }
 
@@ -213,7 +231,10 @@ message FilterChain {
   reserved "tls_context", "on_demand_configuration";
 
   // The criteria to use when matching a connection to this filter chain.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.41.0"
+  };
   FilterChainMatch filter_chain_match = 1;
 
   // A list of individual network filters that make up the filter chain for
@@ -226,7 +247,10 @@ message FilterChain {
   // to TCP, the onData() method will never be called. Therefore, network filters
   // for QUIC listeners should only expect to do work at the start of a new connection
   // (i.e. in onNewConnection()). HCM must be the last (or only) filter in the chain.
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+      number: 3,
+      since: "1.41.0"
+  };
   repeated Filter filters = 3;
 
   // Whether the listener should expect a PROXY protocol V1 header on new
@@ -251,7 +275,10 @@ message FilterChain {
   // If no transport socket configuration is specified, new connections
   // will be set up with plaintext.
   // [#extension-category: envoy.transport_sockets.downstream]
-  option (armeria.xds.supported.field) = 6;
+  option (armeria.xds.supported.field) = {
+      number: 6,
+      since: "1.41.0"
+  };
   core.v3.TransportSocket transport_socket = 6;
 
   // If present and nonzero, the amount of time to allow incoming connections to complete any

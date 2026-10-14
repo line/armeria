@@ -39,10 +39,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
 import com.linecorp.armeria.spring.InternalServices;
+import com.linecorp.armeria.spring.RetryableArmeriaServerGracefulShutdownLifecycle;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
 
 import jakarta.inject.Inject;
@@ -362,12 +364,19 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(30)
     static class ManagementLocalhostTest {
+        @Inject
+        private ArmeriaServerSmartLifecycle lifecycle;
         @LocalManagementPort
         private Integer actuatorPort;
         @Inject
         private ArmeriaSettings settings;
         @Inject
         private InternalServices internalServices;
+
+        @Test
+        void usesRetryableServerLifecycle() {
+            assertThat(lifecycle).isInstanceOf(RetryableArmeriaServerGracefulShutdownLifecycle.class);
+        }
 
         @Test
         void bindToLocalhost() throws Exception {

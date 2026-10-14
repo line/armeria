@@ -66,6 +66,7 @@ const sidebars: SidebarsConfig = {
         'client/timeouts',
         'client/retry',
         'client/circuit-breaker',
+        'client/oauth2',
         'client/service-discovery',
       ],
     },

@@ -558,6 +558,60 @@ class SamlServiceProviderTest {
     }
 
     @Test
+    void shouldRejectReplayedAssertion_HttpPost() throws Exception {
+        final Response response =
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
+
+        // First request should succeed.
+        final AggregatedHttpResponse firstRes = sendViaHttpPostBindingProtocol("/saml/acs/post",
+                                                                               SAML_RESPONSE, response,
+                                                                               idpCredential);
+        assertThat(firstRes.status()).isEqualTo(HttpStatus.FOUND);
+
+        // Replaying the same response should be rejected.
+        final AggregatedHttpResponse replayRes = sendViaHttpPostBindingProtocol("/saml/acs/post",
+                                                                                SAML_RESPONSE, response,
+                                                                                idpCredential);
+        assertThat(replayRes.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldRejectReplayedAssertion_HttpRedirect() throws Exception {
+        final Response response =
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/redirect");
+
+        // First request should succeed.
+        final AggregatedHttpResponse firstRes = sendViaHttpRedirectBindingProtocol("/saml/acs/redirect",
+                                                                                   SAML_RESPONSE, response,
+                                                                                   idpCredential);
+        assertThat(firstRes.status()).isEqualTo(HttpStatus.FOUND);
+
+        // Replaying the same response should be rejected.
+        final AggregatedHttpResponse replayRes = sendViaHttpRedirectBindingProtocol("/saml/acs/redirect",
+                                                                                    SAML_RESPONSE, response,
+                                                                                    idpCredential);
+        assertThat(replayRes.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldAcceptDifferentAssertions() throws Exception {
+        // Two different responses with different assertion IDs should both succeed.
+        final Response response1 =
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
+        final AggregatedHttpResponse res1 = sendViaHttpPostBindingProtocol("/saml/acs/post",
+                                                                           SAML_RESPONSE, response1,
+                                                                           idpCredential);
+        assertThat(res1.status()).isEqualTo(HttpStatus.FOUND);
+
+        final Response response2 =
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
+        final AggregatedHttpResponse res2 = sendViaHttpPostBindingProtocol("/saml/acs/post",
+                                                                           SAML_RESPONSE, response2,
+                                                                           idpCredential);
+        assertThat(res2.status()).isEqualTo(HttpStatus.FOUND);
+    }
+
+    @Test
     void shouldConsumeLogoutRequest_HttpPost() throws Exception {
         final LogoutRequest logoutRequest =
                 getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post",

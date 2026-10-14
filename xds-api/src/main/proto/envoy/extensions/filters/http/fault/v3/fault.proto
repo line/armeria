@@ -44,7 +44,10 @@ message FaultAbort {
     option (validate.required) = true;
 
     // HTTP status code to use to abort the HTTP request.
-    option (armeria.xds.supported.oneof_field) = 2;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 2,
+        since: "1.41.0"
+    };
     uint32 http_status = 2 [(validate.rules).uint32 = {lt: 600 gte: 200}];
 
     // gRPC status code to use to abort the gRPC request.
@@ -56,7 +59,10 @@ message FaultAbort {
 
   // The percentage of requests/operations/connections that will be aborted with the error code
   // provided.
-  option (armeria.xds.supported.field) = 3;
+  option (armeria.xds.supported.field) = {
+      number: 3,
+      since: "1.41.0"
+  };
   type.v3.FractionalPercent percentage = 3;
 }
 
@@ -67,12 +73,18 @@ message HTTPFault {
 
   // If specified, the filter will inject delays based on the values in the
   // object.
-  option (armeria.xds.supported.field) = 1;
+  option (armeria.xds.supported.field) = {
+      number: 1,
+      since: "1.41.0"
+  };
   common.fault.v3.FaultDelay delay = 1;
 
   // If specified, the filter will abort requests based on the values in
   // the object. At least ``abort`` or ``delay`` must be specified.
-  option (armeria.xds.supported.field) = 2;
+  option (armeria.xds.supported.field) = {
+      number: 2,
+      since: "1.41.0"
+  };
   FaultAbort abort = 2;
 
   // Specifies the name of the (destination) upstream cluster that the
@@ -89,7 +101,10 @@ message HTTPFault {
   // headers in the filter config. A match will happen if all the headers in the
   // config are present in the request with the same values (or based on
   // presence if the ``value`` field is not in the config).
-  option (armeria.xds.supported.field) = 4;
+  option (armeria.xds.supported.field) = {
+      number: 4,
+      since: "1.41.0"
+  };
   repeated config.route.v3.HeaderMatcher headers = 4;
 
   // Faults are injected for the specified list of downstream hosts. If this

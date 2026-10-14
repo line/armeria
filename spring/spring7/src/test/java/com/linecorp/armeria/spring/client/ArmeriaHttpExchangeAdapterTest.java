@@ -32,9 +32,7 @@
 package com.linecorp.armeria.spring.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
 import java.time.Duration;
@@ -51,6 +49,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringValueResolver;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -199,19 +198,11 @@ class ArmeriaHttpExchangeAdapterTest {
 
     @Test
     void greetingWithAbsoluteUri() {
-        // A pre-defined port should be used for testing the absolute URI.
-        final int serverPort = 65493;
         final Server server = Server.builder()
-                                    .http(serverPort)
+                                    .http(0)
                                     .service("/greeting", (ctx, req) -> HttpResponse.of("Hello Spring!"))
                                     .build();
-
-        // Try to start the server and wait until it is ready to avoid port conflicts.
-        await().untilAsserted(() -> {
-            assertThatCode(() -> server.start().join())
-                    .doesNotThrowAnyException();
-        });
-
+        server.start().join();
         try (ClientFactory factory =
                      ClientFactory.builder()
                                   .addressResolverGroupFactory(eventLoopGroup -> {
@@ -221,12 +212,16 @@ class ArmeriaHttpExchangeAdapterTest {
                     WebClient.builder()
                              .factory(factory)
                              .build();
-            StepVerifier.create(initService(nonBaseUriClient).getGreetingAbsoluteUri())
+            final String port = String.valueOf(server.activeLocalPort());
+            final Service service = initService(nonBaseUriClient, value ->
+                    value.replace("${absoluteUri.port}", port));
+            StepVerifier.create(service.getGreetingAbsoluteUri())
                         .expectNext("Hello Spring!")
                         .expectComplete()
                         .verify(Duration.ofSeconds(5));
+        } finally {
+            server.close();
         }
-        server.closeAsync();
     }
 
     // gh-29624
@@ -411,8 +406,17 @@ class ArmeriaHttpExchangeAdapterTest {
     }
 
     private static Service initService(WebClient webClient) {
-        final ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
-        return HttpServiceProxyFactory.builderFor(adapter).build().createClient(Service.class);
+        return initService(webClient, null);
+    }
+
+    private static Service initService(WebClient webClient,
+                                       @Nullable StringValueResolver resolver) {
+        final HttpServiceProxyFactory.Builder factoryBuilder =
+                HttpServiceProxyFactory.builderFor(ArmeriaHttpExchangeAdapter.of(webClient));
+        if (resolver != null) {
+            factoryBuilder.embeddedValueResolver(resolver);
+        }
+        return factoryBuilder.build().createClient(Service.class);
     }
 
     private interface Service {
@@ -423,8 +427,7 @@ class ArmeriaHttpExchangeAdapterTest {
         @GetExchange("/greeting")
         Mono<String> getGreeting();
 
-        // A pre-defined port should be used for testing the absolute URI.
-        @GetExchange("http://foo.com:65493/greeting")
+        @GetExchange("http://foo.com:${absoluteUri.port}/greeting")
         Mono<String> getGreetingAbsoluteUri();
 
         @GetExchange("/greeting")

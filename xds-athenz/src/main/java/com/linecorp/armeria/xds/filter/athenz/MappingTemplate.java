@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import jp.co.lycorp.ftd.athenz.v1.AthenzAccessToken.MappingString;
+import jp.co.lycorp.ftd.athenz.v1.MappingString;
 
 /**
  * Pre-parsed template from a {@link MappingString}.

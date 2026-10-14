@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.xds.RouteCluster;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsBootstrapRegistry;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 
 /**
@@ -46,7 +47,23 @@ public final class XdsRpcPreprocessor extends XdsPreprocessor<RpcRequest, RpcRes
         implements RpcPreprocessor {
 
     /**
-     * Creates a {@link XdsRpcPreprocessor}.
+     * Returns an {@link RpcPreprocessor} for the specified listener name using the default
+     * {@link XdsBootstrap} registered via {@link XdsBootstrapRegistry}.
+     */
+    public static RpcPreprocessor ofListener(String listenerName) {
+        return XdsBootstrapRegistry.rpcPreprocessor(XdsBootstrapRegistry.defaultName(), listenerName);
+    }
+
+    /**
+     * Returns an {@link RpcPreprocessor} for the specified bootstrap and listener name
+     * from the {@link XdsBootstrapRegistry}.
+     */
+    public static RpcPreprocessor ofListener(String bootstrapName, String listenerName) {
+        return XdsBootstrapRegistry.rpcPreprocessor(bootstrapName, listenerName);
+    }
+
+    /**
+     * Creates a {@link XdsRpcPreprocessor} with an explicit {@link XdsBootstrap}.
      */
     public static XdsRpcPreprocessor ofListener(String listenerName, XdsBootstrap xdsBootstrap) {
         requireNonNull(listenerName, "listenerName");

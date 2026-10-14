@@ -1,0 +1,25 @@
+armeria:
+  xds:
+    bootstrap: |
+      dynamic_resources:
+        cds_config:
+          custom_config_source:
+            name: armeria.config_source.spring
+            typed_config:
+              "@type": type.googleapis.com/armeria.xds.spring.SpringConfigSource
+              prefix: "custom.prefix."
+
+custom:
+  prefix:
+    custom-cluster: |
+      name: custom-cluster
+      type: STATIC
+      load_assignment:
+        cluster_name: custom-cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 9090

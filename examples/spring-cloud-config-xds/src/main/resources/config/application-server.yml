@@ -1,0 +1,9 @@
+server:
+  port: 8888
+
+spring:
+  cloud:
+    config:
+      server:
+        native:
+          searchLocations: classpath:/config-repo/

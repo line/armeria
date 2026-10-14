@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.joda.time.DateTime;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -70,13 +72,15 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
     private final SamlRequestIdManager requestIdManager;
     private final SamlSingleSignOnHandler ssoHandler;
     private final boolean signatureRequired;
+    private final SamlAssertionIdCache assertionIdCache;
 
     SamlAssertionConsumerFunction(SamlAssertionConsumerConfig cfg, String entityId,
                                   Map<String, SamlIdentityProviderConfig> idpConfigs,
                                   @Nullable SamlIdentityProviderConfig defaultIdpConfig,
                                   SamlRequestIdManager requestIdManager,
                                   SamlSingleSignOnHandler ssoHandler,
-                                  boolean signatureRequired) {
+                                  boolean signatureRequired,
+                                  SamlAssertionIdCache assertionIdCache) {
         this.cfg = cfg;
         this.entityId = entityId;
         this.idpConfigs = idpConfigs;
@@ -84,6 +88,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         this.requestIdManager = requestIdManager;
         this.ssoHandler = ssoHandler;
         this.signatureRequired = signatureRequired;
+        this.assertionIdCache = assertionIdCache;
     }
 
     @Override
@@ -108,16 +113,40 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
             final Assertion assertion = getValidatedAssertion(bindingProtocol, response, endpointUri);
 
-            // Find a session index which is sent by an identity provider.
-            final String sessionIndex = assertion.getAuthnStatements().stream()
-                                                 .map(AuthnStatement::getSessionIndex)
-                                                 .filter(Objects::nonNull)
-                                                 .findFirst().orElse(null);
+            // Enforce one-time use of bearer assertions per SAML 2.0 Web SSO Profile
+            // (section 4.1.4.5). Track consumed assertion IDs and reject replays.
+            final String assertionId = assertion.getID();
+            final Issuer issuer = assertion.getIssuer();
+            assert issuer != null;
+            final String replayKey = issuer.getValue() + ':' + assertionId;
+            final CompletableFuture<Boolean> replayCheckFuture = assertionIdCache.tryConsume(replayKey);
 
-            final SAMLBindingContext bindingContext = messageContext.getSubcontext(SAMLBindingContext.class);
-            final String relayState = bindingContext != null ? bindingContext.getRelayState() : null;
+            final MessageContext<Response> finalMessageContext = messageContext;
+            return HttpResponse.of(replayCheckFuture.thenApply(consumed -> {
+                if (!consumed) {
+                    throw new InvalidSamlRequestException(
+                            "assertion replay detected: " + assertionId);
+                }
 
-            return ssoHandler.loginSucceeded(ctx, req, messageContext, sessionIndex, relayState);
+                // Find a session index which is sent by an identity provider.
+                final String sessionIndex = assertion.getAuthnStatements().stream()
+                                                     .map(AuthnStatement::getSessionIndex)
+                                                     .filter(Objects::nonNull)
+                                                     .findFirst().orElse(null);
+
+                final SAMLBindingContext bindingContext =
+                        finalMessageContext.getSubcontext(SAMLBindingContext.class);
+                final String relayState = bindingContext != null ? bindingContext.getRelayState() : null;
+
+                return ssoHandler.loginSucceeded(ctx, req, finalMessageContext, sessionIndex, relayState);
+            }).exceptionally(cause -> {
+                final Throwable peeled = Exceptions.peel(cause);
+                if (peeled instanceof SamlException) {
+                    return ssoHandler.loginFailed(ctx, req, finalMessageContext, peeled);
+                }
+                return ssoHandler.loginFailed(ctx, req, finalMessageContext,
+                                              new SamlException("assertion replay check failed", peeled));
+            }));
         } catch (SamlException e) {
             return ssoHandler.loginFailed(ctx, req, messageContext, e);
         }
@@ -278,6 +307,12 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                                   .findAny();
                 if (!audience.isPresent()) {
                     throw new InvalidSamlRequestException("no audience found from the assertion");
+                }
+
+                final String assertionId = assertion.getID();
+                if (assertionId == null || assertionId.isEmpty()) {
+                    throw new InvalidSamlRequestException(
+                            "assertion does not have a valid ID");
                 }
 
                 return assertion;
