@@ -118,7 +118,9 @@ public final class SpringBuildUtil {
                 project.getExtensions().findByType(SourceSetContainer.class);
         assert sourceSets != null : "Couldn't find source set for " + project.getName();
         final SourceSet sourceSet = sourceSets.getByName(sourceSetType.sourceName);
-        return sourceSet.getResources().getSrcDirs();
+        final Set<File> resourceDirs = new HashSet<>(sourceSet.getResources().getSrcDirs());
+        resourceDirs.add(new File(project.getProjectDir(), "gen-src/" + sourceSetType.sourceName + "/resources"));
+        return resourceDirs;
     }
 
     public static TaskProvider<Copy> copyTestSources(
