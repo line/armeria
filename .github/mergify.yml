@@ -32,7 +32,7 @@ pull_request_rules:
       merge:
         method: squash
 
-  - name: Automatically merge other Dependabot patch updates
+  - name: Automatically merge other Dependabot patch and minor updates
     conditions:
       - author=dependabot[bot]
       - commits[*].author=dependabot[bot]
@@ -42,8 +42,8 @@ pull_request_rules:
       - -draft
       - -conflict
       - base=main
-      # The back-reference keeps both the major and minor versions unchanged.
-      - 'title ~= ^Bump \S+ from (\d+\.\d+)\.\d+ to \1\.\d+(?: in /\S+)?\Z'
+      # The back-reference keeps the major version unchanged.
+      - 'title ~= ^Bump \S+ from (\d+)\.\d+\.\d+ to \1\.\d+\.\d+(?: in /\S+)?\Z'
       - -files ~= ^(?:site|docs-client)/
       - check-success=build-ubicloud-standard-16-jdk-25
       - check-success=build-ubicloud-standard-16-jdk-8
