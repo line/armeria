@@ -45,7 +45,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 @TestInstance(Lifecycle.PER_METHOD)
@@ -131,7 +133,14 @@ class HttpServerAbortingInfiniteStreamTest {
 
             cancellationRequested.get(10, TimeUnit.SECONDS);
             final HttpResponseWriter writer = serverResponse.get(10, TimeUnit.SECONDS);
-            assertThat(server.requestContextCaptor().take().sessionProtocol()).isEqualTo(protocol);
+            final ServiceRequestContext ctx = server.requestContextCaptor().take();
+            assertThat(ctx.sessionProtocol()).isEqualTo(protocol);
+            if (protocol.isMultiplex()) {
+                final RequestLog log = ctx.log().whenComplete().get(10, TimeUnit.SECONDS);
+                assertThat(log.responseCause())
+                        .isInstanceOf(ClosedStreamException.class)
+                        .hasMessageContaining("received a RST_STREAM frame: CANCEL");
+            }
             assertThatThrownBy(() -> writer.whenComplete().get(10, TimeUnit.SECONDS))
                     .isInstanceOf(ExecutionException.class)
                     .hasCauseInstanceOf(CancelledSubscriptionException.class);
