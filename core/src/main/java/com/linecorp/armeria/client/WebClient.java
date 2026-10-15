@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.CheckReturnValue;
 
@@ -32,7 +31,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -41,7 +39,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
-import com.linecorp.armeria.internal.common.JacksonUtil;
 
 import io.netty.channel.EventLoop;
 
@@ -477,13 +474,20 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
-    // --- POST ---
+    /**
+     * Sends an HTTP POST request with the specified content serialized as JSON using the default
+     * {@link ObjectMapper}.
+     */
     @UnstableApi
     @CheckReturnValue
     default HttpResponse postJson(String path, Object content) {
         return execute(HttpRequest.ofJson(HttpMethod.POST, path, content));
     }
 
+    /**
+     * Sends an HTTP POST request with the specified content serialized as JSON using the specified
+     * {@link ObjectMapper}.
+     */
     @UnstableApi
     @CheckReturnValue
     default HttpResponse postJson(String path, Object content, ObjectMapper mapper) {
@@ -558,13 +562,20 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
-    // --- PUT ---
+    /**
+     * Sends an HTTP PUT request with the specified content serialized as JSON using the default
+     * {@link ObjectMapper}.
+     */
     @UnstableApi
     @CheckReturnValue
     default HttpResponse putJson(String path, Object content) {
         return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content));
     }
 
+    /**
+     * Sends an HTTP PUT request with the specified content serialized as JSON using the specified
+     * {@link ObjectMapper}.
+     */
     @UnstableApi
     @CheckReturnValue
     default HttpResponse putJson(String path, Object content, ObjectMapper mapper) {
@@ -640,13 +651,20 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
-    // --- PATCH ---
+    /**
+     * Sends an HTTP PATCH request with the specified content serialized as JSON using the default
+     * {@link ObjectMapper}.
+     */
     @UnstableApi
     @CheckReturnValue
     default HttpResponse patchJson(String path, Object content) {
         return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content));
     }
 
+    /**
+     * Sends an HTTP PATCH request with the specified content serialized as JSON using the specified
+     * {@link ObjectMapper}.
+     */
     @UnstableApi
     @CheckReturnValue
     default HttpResponse patchJson(String path, Object content, ObjectMapper mapper) {
