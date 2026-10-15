@@ -21,6 +21,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -49,6 +50,7 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
         return (MetricCollectingServiceBuilder) super.distributionStatisticConfig(distributionStatisticConfig);
     }
 
+    @UnstableApi
     @Override
     public MetricCollectingServiceBuilder maxCardinality(int maxCardinality) {
         return (MetricCollectingServiceBuilder) super.maxCardinality(maxCardinality);

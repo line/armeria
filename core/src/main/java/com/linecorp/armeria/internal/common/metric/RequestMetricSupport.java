@@ -142,7 +142,8 @@ public final class RequestMetricSupport {
         final ClientRequestMetrics metrics = MicrometerUtil.register(
                 registry, idPrefix,
                 ClientRequestMetrics.class,
-                (reg, idp) -> new DefaultClientRequestMetrics(reg, idp, distributionStatisticConfig));
+                (reg, idp) -> new DefaultClientRequestMetrics(reg, idp, distributionStatisticConfig,
+                                                              metricLimiter));
         updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
@@ -211,9 +212,13 @@ public final class RequestMetricSupport {
         final int failedAttempts = isSuccess ? childrenSize - 1 : childrenSize;
         for (int i = 0; i < failedAttempts; i++) {
             final RequestLogAccess child = log.children().get(i);
-            child.whenComplete().thenAccept(
-                    childLog -> metrics.actualRequestsCause(childLog.responseCause(),
-                                                            childLog.responseStatus()).increment());
+            child.whenComplete().thenAccept(childLog -> {
+                final Counter counter = metrics.actualRequestsCause(childLog.responseCause(),
+                                                                    childLog.responseStatus());
+                if (counter != null) {
+                    counter.increment();
+                }
+            });
         }
     }
 
@@ -257,6 +262,7 @@ public final class RequestMetricSupport {
 
         DistributionSummary failureAttempts();
 
+        @Nullable
         Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status);
     }
 
@@ -340,6 +346,8 @@ public final class RequestMetricSupport {
             extends AbstractRequestMetrics implements ClientRequestMetrics {
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
+        @Nullable
+        private final RequestMetricLimiter metricLimiter;
 
         private final Timer connectionAcquisitionDuration;
         private final Timer dnsResolutionDuration;
@@ -360,10 +368,12 @@ public final class RequestMetricSupport {
         private DistributionSummary failureAttempts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
-                                    DistributionStatisticConfig distributionStatisticConfig) {
+                                    DistributionStatisticConfig distributionStatisticConfig,
+                                    @Nullable RequestMetricLimiter metricLimiter) {
             super(parent, idPrefix, distributionStatisticConfig);
             this.parent = parent;
             this.idPrefix = idPrefix;
+            this.metricLimiter = metricLimiter;
 
             connectionAcquisitionDuration = newTimer(
                     parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags(),
@@ -451,12 +461,17 @@ public final class RequestMetricSupport {
                                                             distributionStatisticConfig());
         }
 
+        @Nullable
         @Override
         public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
             final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
-            return parent.counter(
+            final MeterIdPrefix childPrefix = new MeterIdPrefix(
                     idPrefix.name("actual.requests.failure"),
                     idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
+            if (metricLimiter != null && !metricLimiter.acceptComplete(childPrefix)) {
+                return null;
+            }
+            return parent.counter(childPrefix.name(), childPrefix.tags());
         }
     }
 

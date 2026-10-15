@@ -65,18 +65,17 @@ public final class RequestMetricLimiter {
         if (seenActivePrefixes.contains(prefix)) {
             return true;
         }
-        if (seenActivePrefixes.size() >= maxCardinality) {
-            warnActive(prefix);
-            return false;
-        }
-        if (seenActivePrefixes.add(prefix)) {
-            if (seenActivePrefixes.size() > maxCardinality) {
-                seenActivePrefixes.remove(prefix);
+        synchronized (seenActivePrefixes) {
+            if (seenActivePrefixes.contains(prefix)) {
+                return true;
+            }
+            if (seenActivePrefixes.size() >= maxCardinality) {
                 warnActive(prefix);
                 return false;
             }
+            seenActivePrefixes.add(prefix);
+            return true;
         }
-        return true;
     }
 
     /**
@@ -86,18 +85,17 @@ public final class RequestMetricLimiter {
         if (seenCompletePrefixes.contains(prefix)) {
             return true;
         }
-        if (seenCompletePrefixes.size() >= maxCardinality) {
-            warnComplete(prefix);
-            return false;
-        }
-        if (seenCompletePrefixes.add(prefix)) {
-            if (seenCompletePrefixes.size() > maxCardinality) {
-                seenCompletePrefixes.remove(prefix);
+        synchronized (seenCompletePrefixes) {
+            if (seenCompletePrefixes.contains(prefix)) {
+                return true;
+            }
+            if (seenCompletePrefixes.size() >= maxCardinality) {
                 warnComplete(prefix);
                 return false;
             }
+            seenCompletePrefixes.add(prefix);
+            return true;
         }
-        return true;
     }
 
     private void warnActive(MeterIdPrefix prefix) {

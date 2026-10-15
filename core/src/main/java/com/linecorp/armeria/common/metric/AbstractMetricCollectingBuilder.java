@@ -24,6 +24,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -114,6 +115,7 @@ public abstract class AbstractMetricCollectingBuilder {
      *
      * @param maxCardinality the maximum cardinality. Must be greater than {@code 0}.
      */
+    @UnstableApi
     public AbstractMetricCollectingBuilder maxCardinality(int maxCardinality) {
         checkArgument(maxCardinality > 0, "maxCardinality: %s (expected: > 0)", maxCardinality);
         this.maxCardinality = maxCardinality;

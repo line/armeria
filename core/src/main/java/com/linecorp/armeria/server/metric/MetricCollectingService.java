@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricLimiter;
@@ -79,6 +80,7 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
      * Returns a new {@link HttpService} decorator that tracks request stats using {@link MeterRegistry}
      * with the specified {@code maxCardinality}.
      */
+    @UnstableApi
     public static Function<? super HttpService, MetricCollectingService> newDecorator(
             MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality) {
 

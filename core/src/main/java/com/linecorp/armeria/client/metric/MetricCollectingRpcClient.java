@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
@@ -61,6 +62,7 @@ public final class MetricCollectingRpcClient extends AbstractMetricCollectingCli
      * Returns an {@link RpcClient} decorator that tracks request stats using {@link MeterRegistry}
      * with the specified {@code maxCardinality}.
      */
+    @UnstableApi
     public static Function<? super RpcClient, MetricCollectingRpcClient> newDecorator(
             MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality) {
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");

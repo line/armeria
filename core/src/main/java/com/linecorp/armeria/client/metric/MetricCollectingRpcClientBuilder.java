@@ -22,6 +22,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -50,6 +51,7 @@ public final class MetricCollectingRpcClientBuilder extends AbstractMetricCollec
                 super.distributionStatisticConfig(distributionStatisticConfig);
     }
 
+    @UnstableApi
     @Override
     public MetricCollectingRpcClientBuilder maxCardinality(int maxCardinality) {
         return (MetricCollectingRpcClientBuilder) super.maxCardinality(maxCardinality);
