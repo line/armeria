@@ -17,7 +17,7 @@ package com.linecorp.armeria.client.grpc.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -40,6 +40,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.HealthGrpcServerExtension;
@@ -115,8 +116,11 @@ class GrpcHealthCheckerTest {
 
         healthChecker.check();
 
+        // The request log may already contain dummy headers when the check fails.
         verify(context, timeout(1000)).updateHealth(eq(GrpcHealthChecker.UNHEALTHY),
-                any(ClientRequestContext.class), isNull(), throwableArgumentCaptor.capture());
+                any(ClientRequestContext.class),
+                argThat(headers -> headers == null || headers.status().equals(HttpStatus.UNKNOWN)),
+                throwableArgumentCaptor.capture());
 
         verify(executor, timeout(1000))
                 .schedule(any(Runnable.class), eq(NEXT_DELAY_MILLIS), eq(TimeUnit.MILLISECONDS));
