@@ -136,7 +136,7 @@ jobs:
 
       - name: Upload Gradle build scan
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
           path: ~/.gradle/build-scan-data
@@ -213,7 +213,7 @@ jobs:
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: reports-${{ env.JOB_NAME }}
           path: reports-${{ env.JOB_NAME }}.tar
@@ -277,7 +277,7 @@ jobs:
 
       - name: Upload site E2E artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site-e2e
           path: site/build/playwright/
@@ -286,7 +286,7 @@ jobs:
 
       - name: Upload npm logs
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: npm-debug-logs
           path: /home/runner/.npm/_logs/
@@ -313,7 +313,7 @@ jobs:
 
       - name: Upload E2E artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-client-e2e
           path: |
@@ -379,7 +379,7 @@ jobs:
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: reports-flaky-tests
           path: reports-flaky-tests.tar
