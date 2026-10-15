@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -46,7 +47,6 @@ import io.netty.channel.EventLoop;
 public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractKeepAliveHandler.class);
-
     @Nullable
     private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
@@ -54,7 +54,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private final Channel channel;
     private final String name;
-    private final boolean isServer;
     private final Timer keepAliveTimer;
 
     private final long maxNumRequestsPerConnection;
@@ -76,6 +75,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     @Nullable
     private ScheduledFuture<?> maxConnectionAgeFuture;
     private final long maxConnectionAgeNanos;
+    private final double maxConnectionAgeJitterRate;
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
@@ -90,12 +90,13 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
-                                       boolean keepAliveOnPing, ConnectionEventListener listener) {
+                                       long maxConnectionAgeMillis, double maxConnectionAgeJitterRate,
+                                       long maxNumRequestsPerConnection, boolean keepAliveOnPing,
+                                       ConnectionEventListener listener) {
         this.channel = channel;
         this.name = name;
-        isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
+        this.maxConnectionAgeJitterRate = maxConnectionAgeJitterRate;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
         this.listener = listener;
@@ -128,13 +129,22 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         }
         isInitialized = true;
 
-        final long connectionStartTimeNanos = System.nanoTime();
+        final long initializationTimeNanos = System.nanoTime();
+        final KeepAliveHandlerUtil.ConnectionLifespan connectionLifespan =
+                KeepAliveHandlerUtil.connectionLifespan(channel);
+        final long connectionStartTimeNanos;
+        if (connectionLifespan != null) {
+            connectionLifespan.protocolDetected();
+            connectionStartTimeNanos = connectionLifespan.connectionStartTimeNanos();
+        } else {
+            connectionStartTimeNanos = initializationTimeNanos;
+        }
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
             destroy();
         });
 
-        lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
+        lastConnectionIdleTime = lastPingIdleTime = initializationTimeNanos;
         if (connectionIdleTimeNanos > 0) {
             connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
                                                         connectionIdleTimeNanos, TimeUnit.NANOSECONDS);
@@ -144,8 +154,26 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (maxConnectionAgeNanos > 0) {
-            maxConnectionAgeFuture = executor().schedule(new MaxConnectionAgeExceededTask(ctx),
-                                                         maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
+            final long effectiveMaxConnectionAgeNanos;
+            final long maxConnectionAgeDelayNanos;
+            if (connectionLifespan != null) {
+                effectiveMaxConnectionAgeNanos = connectionLifespan.effectiveMaxConnectionAgeNanos();
+                final long connectionAgeNanos = initializationTimeNanos - connectionStartTimeNanos;
+                maxConnectionAgeDelayNanos = Math.max(0, effectiveMaxConnectionAgeNanos - connectionAgeNanos);
+            } else {
+                final double randomValue;
+                if (maxConnectionAgeJitterRate == 0) {
+                    randomValue = 0;
+                } else {
+                    randomValue = ThreadLocalRandom.current().nextDouble();
+                }
+                effectiveMaxConnectionAgeNanos = KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
+                        maxConnectionAgeNanos, maxConnectionAgeJitterRate, randomValue);
+                maxConnectionAgeDelayNanos = effectiveMaxConnectionAgeNanos;
+            }
+            maxConnectionAgeFuture = executor().schedule(
+                    new MaxConnectionAgeExceededTask(ctx, effectiveMaxConnectionAgeNanos),
+                    maxConnectionAgeDelayNanos, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -241,6 +269,13 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     protected abstract boolean pingResetsPreviousPing();
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
+
+    /**
+     * Closes an idle connection whose effective maximum connection age has elapsed.
+     */
+    protected ChannelFuture closeIdleConnectionOnMaxAge(ChannelHandlerContext ctx) {
+        return ctx.channel().close();
+    }
 
     @Nullable
     protected final Future<?> shutdownFuture() {
@@ -443,8 +478,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private final class MaxConnectionAgeExceededTask extends AbstractKeepAliveTask {
 
-        MaxConnectionAgeExceededTask(ChannelHandlerContext ctx) {
+        private final long effectiveMaxConnectionAgeNanos;
+
+        MaxConnectionAgeExceededTask(ChannelHandlerContext ctx, long effectiveMaxConnectionAgeNanos) {
             super(ctx);
+            this.effectiveMaxConnectionAgeNanos = effectiveMaxConnectionAgeNanos;
         }
 
         @Override
@@ -453,8 +491,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 isMaxConnectionAgeExceeded = true;
 
                 // A connection exceeding the max age will be closed with:
-                // - HTTP/2 server: Sending GOAWAY frame after writing headers
-                // - HTTP/1 server: Sending 'Connection: close' header when writing headers
+                // - HTTP/2 server
+                //   - Sending GOAWAY frame after writing headers
+                //   - Or closed by this task if the connection is idle
+                // - HTTP/1 server
+                //   - Sending 'Connection: close' header when writing headers
+                //   - Or closed by this task if the connection is idle
                 // - HTTP/2 client
                 //   - Sending GOAWAY frame after receiving the end of a stream
                 //   - Or closed by this task if the connection is idle
@@ -462,11 +504,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 //   - Close the connection after fully receiving a response
                 //   - Or closed by this task if the connection is idle
 
-                if (!isServer && !hasRequestsInProgress(ctx)) {
+                logger.debug("{} A {} connection exceeded the max age: {}ns",
+                             ctx.channel(), name, effectiveMaxConnectionAgeNanos);
+
+                if (!hasRequestsInProgress(ctx)) {
                     logger.debug("{} Closing a {} connection exceeding the max age: {}ns",
-                                 ctx.channel(), name, maxConnectionAgeNanos);
+                                 ctx.channel(), name, effectiveMaxConnectionAgeNanos);
                     listener.closeHint(CloseHint.MAX_CONNECTION_AGE);
-                    ctx.channel().close();
+                    closeIdleConnectionOnMaxAge(ctx);
                 }
             } catch (Exception e) {
                 logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);

@@ -22,10 +22,12 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,7 +56,9 @@ import io.netty.util.AttributeMap;
 
 class ServerMaxConnectionAgeTest {
 
-    private static final long MAX_CONNECTION_AGE = 1000;
+    private static final long MAX_CONNECTION_AGE = 1500;
+    private static final long MIN_CONNECTION_AGE = 1000;
+    private static final long CONNECTION_AGE_TOLERANCE = 1000;
     private static MeterRegistry meterRegistry;
 
     @RegisterExtension
@@ -66,8 +70,9 @@ class ServerMaxConnectionAgeTest {
             sb.tlsSelfSigned();
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
-            sb.connectionDrainDuration(Duration.ofMillis(10));
+            sb.connectionDrainDuration(Duration.ofSeconds(3));
             sb.maxConnectionAgeMillis(MAX_CONNECTION_AGE);
+            sb.maxConnectionAgeJitterRate(1.0);
             meterRegistry = new SimpleMeterRegistry();
             sb.meterRegistry(meterRegistry);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
@@ -160,12 +165,12 @@ class ServerMaxConnectionAgeTest {
                                           .responseTimeoutMillis(0)
                                           .build();
 
-        while (closed.get() < maxClosedConnection) {
+        for (int i = 0; i < maxClosedConnection; i++) {
             final HttpResponse response = client.get("/");
             assertThat(response.aggregate().join().status()).isEqualTo(OK);
             response.whenComplete().join();
-            final int closed = this.closed.get();
-            assertThat(opened).hasValueBetween(closed, closed + 1);
+            await().untilAtomic(opened, Matchers.is(i + 1));
+            await().untilAtomic(closed, Matchers.is(i + 1));
         }
 
         await().untilAsserted(() -> {
@@ -175,14 +180,19 @@ class ServerMaxConnectionAgeTest {
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                        .isBetween(MIN_CONNECTION_AGE - 200.0,
+                                                   (double) (MAX_CONNECTION_AGE +
+                                                             CONNECTION_AGE_TOLERANCE))
+                                        .isLessThan((double) MAX_CONNECTION_AGE);
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan.percentile#value{phi=1,protocol=" +
                             protocol.uriText() + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                        .isBetween(MIN_CONNECTION_AGE - 200.0,
+                                                   (double) (MAX_CONNECTION_AGE +
+                                                             CONNECTION_AGE_TOLERANCE));
                             })
                     .hasEntrySatisfying(
                             "armeria.server.connections.lifespan#count{protocol=" + protocol.uriText() + '}',
@@ -263,6 +273,55 @@ class ServerMaxConnectionAgeTest {
         }
     }
 
+    @CsvSource({ "H2C", "H2" })
+    @ParameterizedTest
+    void activeHttp2RequestCompletesAfterMaxConnectionAge(SessionProtocol protocol) {
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, server.uri(protocol));
+
+            assertThat(client.get("/slow").aggregate().join().contentUtf8()).isEqualTo("Disconnect");
+            await().untilAtomic(closed, Matchers.is(1));
+        }
+    }
+
+    @Test
+    void directH2cRecordsOnlyH2cConnectionLifespan() {
+        try (ClientFactory factory = newClientFactory(false)) {
+            final WebClient client = newWebClient(factory, server.uri(SessionProtocol.H2C));
+            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+        }
+
+        await().untilAsserted(() ->
+                assertThat(MoreMeters.measureAll(meterRegistry))
+                        .containsEntry("armeria.server.connections.lifespan#count{protocol=h2c}", 1.0)
+                        .containsEntry("armeria.server.connections.lifespan#count{protocol=h1c}", 0.0));
+    }
+
+    @Test
+    void maxConnectionAgeIncludesProtocolDetection() throws Exception {
+        final long startNanos = System.nanoTime();
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
+            socket.setSoTimeout((int) (MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE));
+            final OutputStream out = socket.getOutputStream();
+            final byte[] fragmentedMethod = { 'G', 'E', 'T' };
+            for (int i = 0; i < fragmentedMethod.length; i++) {
+                out.write(fragmentedMethod[i]);
+                out.flush();
+                if (i < fragmentedMethod.length - 1) {
+                    Thread.sleep(450);
+                }
+            }
+            out.write(" / HTTP/1.1\r\nHost: localhost\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            out.flush();
+
+            while (socket.getInputStream().read() != -1) {
+                // Drain the response until the max-age deadline closes the connection.
+            }
+        }
+        assertThat(Duration.ofNanos(System.nanoTime() - startNanos).toMillis())
+                .isLessThan(MAX_CONNECTION_AGE + 300);
+    }
+
     @CsvSource({ "H1C", "H2C" })
     @ParameterizedTest
     void shouldNotDisconnect(SessionProtocol protocol) throws InterruptedException {
@@ -284,9 +343,14 @@ class ServerMaxConnectionAgeTest {
         try (ClientFactory factory = newClientFactory(false)) {
             final WebClient client = newWebClient(factory, server.uri(protocol));
 
+            final long startNanos = System.nanoTime();
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             await().untilAtomic(opened, Matchers.is(1));
-            await().untilAtomic(closed, Matchers.is(1));
+            await().atMost(Duration.ofMillis(MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE))
+                   .untilAtomic(closed, Matchers.is(1));
+            assertThat(Duration.ofNanos(System.nanoTime() - startNanos).toMillis())
+                    .isBetween(MIN_CONNECTION_AGE - 200,
+                               MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE);
         }
     }
 
