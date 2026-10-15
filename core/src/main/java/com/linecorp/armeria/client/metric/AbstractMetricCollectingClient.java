@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.common.metric.RequestMetricLimiter;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,16 +49,31 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
     @Nullable
     private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
     private final DistributionStatisticConfig distributionStatisticConfig;
+    @Nullable
+    private final RequestMetricLimiter metricLimiter;
 
     AbstractMetricCollectingClient(
             Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
             DistributionStatisticConfig distributionStatisticConfig) {
+        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, -1);
+    }
+
+    AbstractMetricCollectingClient(
+            Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+            DistributionStatisticConfig distributionStatisticConfig,
+            int maxCardinality) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
         this.distributionStatisticConfig =
                 requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
+        if (maxCardinality > 0) {
+            metricLimiter = new RequestMetricLimiter(maxCardinality);
+        } else {
+            metricLimiter = null;
+        }
     }
 
     @Override
@@ -65,7 +81,12 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
                                    successFunction != null ? successFunction::test
                                                            : ctx.options().successFunction(),
-                                   distributionStatisticConfig);
+                                   distributionStatisticConfig, metricLimiter);
         return unwrap().execute(ctx, req);
+    }
+
+    @Nullable
+    final RequestMetricLimiter metricLimiter() {
+        return metricLimiter;
     }
 }

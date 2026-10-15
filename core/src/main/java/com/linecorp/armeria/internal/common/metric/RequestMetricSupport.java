@@ -55,6 +55,18 @@ public final class RequestMetricSupport {
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
             SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+        setup(ctx, requestMetricsSetKey, meterIdPrefixFunction, server, successFunction,
+              distributionStatisticConfig, null);
+    }
+
+    /**
+     * Sets up request metrics with the specified {@link RequestMetricLimiter}.
+     */
+    public static void setup(
+            RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
+            MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -68,35 +80,51 @@ public final class RequestMetricSupport {
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction,
-                                        distributionStatisticConfig));
+                                        distributionStatisticConfig, metricLimiter));
     }
 
     private static void onRequest(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
                 meterIdPrefixFunction.activeRequestPrefix(registry, log).append("active.requests");
 
-        final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
-                registry, activeRequestsId, ActiveRequestMetrics.class,
-                (reg, prefix) ->
-                        reg.gauge(prefix.name(), prefix.tags(),
-                                  new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
-        activeRequestMetrics.increment();
+        final ActiveRequestMetrics activeRequestMetrics;
+        if (metricLimiter == null || metricLimiter.acceptActive(activeRequestsId)) {
+            activeRequestMetrics = MicrometerUtil.register(
+                    registry, activeRequestsId, ActiveRequestMetrics.class,
+                    (reg, prefix) ->
+                            reg.gauge(prefix.name(), prefix.tags(),
+                                      new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
+            activeRequestMetrics.increment();
+        } else {
+            activeRequestMetrics = null;
+        }
+
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction, distributionStatisticConfig);
-            activeRequestMetrics.decrement();
+            onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
+                       distributionStatisticConfig, metricLimiter);
+            if (activeRequestMetrics != null) {
+                activeRequestMetrics.decrement();
+            }
         });
     }
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+
+        if (metricLimiter != null && !metricLimiter.acceptComplete(idPrefix)) {
+            return;
+        }
+
         final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         if (server) {

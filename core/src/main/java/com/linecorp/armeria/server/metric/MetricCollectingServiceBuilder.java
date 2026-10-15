@@ -49,6 +49,11 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
         return (MetricCollectingServiceBuilder) super.distributionStatisticConfig(distributionStatisticConfig);
     }
 
+    @Override
+    public MetricCollectingServiceBuilder maxCardinality(int maxCardinality) {
+        return (MetricCollectingServiceBuilder) super.maxCardinality(maxCardinality);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
      * on the properties of this builder.
@@ -56,7 +61,7 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
     public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction(),
-                                           distributionStatisticConfig());
+                                           distributionStatisticConfig(), maxCardinality());
     }
 
     /**

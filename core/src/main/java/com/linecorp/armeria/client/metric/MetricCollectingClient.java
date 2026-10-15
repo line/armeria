@@ -59,6 +59,16 @@ public final class MetricCollectingClient extends AbstractMetricCollectingClient
     }
 
     /**
+     * Returns an {@link HttpClient} decorator that tracks request stats using {@link MeterRegistry}
+     * with the specified {@code maxCardinality}.
+     */
+    public static Function<? super HttpClient, MetricCollectingClient> newDecorator(
+            MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality) {
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        return builder(meterIdPrefixFunction).maxCardinality(maxCardinality).newDecorator();
+    }
+
+    /**
      * Returns a new {@link MetricCollectingClientBuilder} instance.
      */
     public static MetricCollectingClientBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
@@ -68,6 +78,13 @@ public final class MetricCollectingClient extends AbstractMetricCollectingClient
     MetricCollectingClient(HttpClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
                            DistributionStatisticConfig distributionStatisticConfig) {
-        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig);
+        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, -1);
+    }
+
+    MetricCollectingClient(HttpClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+                           @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+                           DistributionStatisticConfig distributionStatisticConfig,
+                           int maxCardinality) {
+        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, maxCardinality);
     }
 }

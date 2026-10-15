@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.metric;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiPredicate;
@@ -39,6 +40,8 @@ public abstract class AbstractMetricCollectingBuilder {
     private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
 
     private DistributionStatisticConfig distributionStatisticConfig = MoreMeters.distributionStatisticConfig();
+
+    private int maxCardinality = -1;
 
     /**
      * Creates a new instance with the specified {@link MeterIdPrefixFunction}.
@@ -103,5 +106,24 @@ public abstract class AbstractMetricCollectingBuilder {
         this.distributionStatisticConfig = requireNonNull(distributionStatisticConfig,
                                                           "distributionStatisticConfig");
         return this;
+    }
+
+    /**
+     * Sets the maximum number of distinct metric tag combinations allowed for request metrics.
+     * When this threshold is reached, metrics for new tag combinations will not be recorded.
+     *
+     * @param maxCardinality the maximum cardinality. Must be greater than {@code 0}.
+     */
+    public AbstractMetricCollectingBuilder maxCardinality(int maxCardinality) {
+        checkArgument(maxCardinality > 0, "maxCardinality: %s (expected: > 0)", maxCardinality);
+        this.maxCardinality = maxCardinality;
+        return this;
+    }
+
+    /**
+     * Returns the maximum cardinality, or {@code -1} if no limit is set.
+     */
+    protected final int maxCardinality() {
+        return maxCardinality;
     }
 }

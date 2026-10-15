@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -46,4 +47,33 @@ class AbstractMetricCollectingBuilderTest {
         assertThat(abstractMetricCollectingBuilder.distributionStatisticConfig())
                 .isEqualTo(distConfig);
     }
+
+    @Test
+    void testDefaultMaxCardinality() {
+        final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
+                new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
+
+        assertThat(abstractMetricCollectingBuilder.maxCardinality()).isEqualTo(-1);
+    }
+
+    @Test
+    void testMaxCardinalitySetter() {
+        final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
+                new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
+
+        abstractMetricCollectingBuilder.maxCardinality(100);
+        assertThat(abstractMetricCollectingBuilder.maxCardinality()).isEqualTo(100);
+    }
+
+    @Test
+    void testInvalidMaxCardinality() {
+        final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
+                new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
+
+        assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
+
