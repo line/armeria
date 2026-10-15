@@ -242,6 +242,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
     private long unloggedExceptionsReportIntervalMillis =
             Flags.defaultUnloggedExceptionsReportIntervalMillis();
+    private long http1ConnectionCloseDelayMillis = Flags.defaultHttp1ConnectionCloseDelayMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
     private int http2MaxResetFramesWindowSeconds = 60;
@@ -979,6 +980,32 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      */
     public ServerBuilder http1MaxChunkSize(int http1MaxChunkSize) {
         this.http1MaxChunkSize = validateNonNegative(http1MaxChunkSize, "http1MaxChunkSize");
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to wait before closing an HTTP/1 connection when the server needs to close
+     * the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state.
+     * Specify {@link Duration#ZERO} to close the connection immediately. If not set,
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder http1ConnectionCloseDelay(Duration delay) {
+        requireNonNull(delay, "delay");
+        checkArgument(!delay.isNegative(), "delay: %s (expected: >= 0)", delay);
+        return http1ConnectionCloseDelayMillis(delay.toMillis());
+    }
+
+    /**
+     * Sets the amount of time in milliseconds to wait before closing an HTTP/1 connection when the server
+     * needs to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT
+     * state. Specify {@code 0} to close the connection immediately. If not set,
+     * {@link Flags#defaultHttp1ConnectionCloseDelayMillis()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder http1ConnectionCloseDelayMillis(long delayMillis) {
+        checkArgument(delayMillis >= 0, "delayMillis: %s (expected: >= 0)", delayMillis);
+        http1ConnectionCloseDelayMillis = delayMillis;
         return this;
     }
 
@@ -2654,7 +2681,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
                 http1MaxInitialLineLength, http1MaxHeaderSize,
-                http1MaxChunkSize, gracefulShutdown,
+                http1MaxChunkSize, http1ConnectionCloseDelayMillis, gracefulShutdown,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 childChannelPipelineCustomizer,
