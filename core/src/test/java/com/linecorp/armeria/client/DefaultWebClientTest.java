@@ -169,7 +169,7 @@ class DefaultWebClientTest {
 
     @Test
     void testPostJsonWithQueryParams() {
-        final String path = "http://127.0.0.1/helloWorld/json";
+        final String path = "http://127.0.0.1/helloWorld/json?userId=123";
         final AtomicReference<AggregatedHttpRequest> capturedReq = new AtomicReference<>();
         final WebClient client = WebClient.builder(UNDEFINED_URI)
                 .decorator((delegate, ctx, req) -> HttpResponse.of(
