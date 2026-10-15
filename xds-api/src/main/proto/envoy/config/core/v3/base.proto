@@ -189,6 +189,10 @@ message Node {
 
   // Opaque metadata extending the node identifier. Envoy will pass this
   // directly to the management server.
+  option (armeria.xds.supported.field) = {
+      number: 3,
+      since: "1.42.0"
+  };
   google.protobuf.Struct metadata = 3;
 
   // Map from xDS resource type URL to dynamic context parameters. These may vary at runtime (unlike
