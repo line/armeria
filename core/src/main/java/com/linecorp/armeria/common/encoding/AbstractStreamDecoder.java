@@ -90,10 +90,32 @@ class AbstractStreamDecoder implements StreamDecoder {
             if (decoded == null) {
                 decoded = buf;
             } else {
-                try {
-                    decoded.writeBytes(buf);
-                } finally {
-                    buf.release();
+                if (decoded.maxWritableBytes() < buf.readableBytes()) {
+                    final ByteBuf expanded;
+                    try {
+                        expanded = decoder.alloc().buffer(decoded.readableBytes() + buf.readableBytes());
+                    } catch (Throwable t) {
+                        decoded.release();
+                        buf.release();
+                        throw t;
+                    }
+                    try {
+                        expanded.writeBytes(decoded);
+                        expanded.writeBytes(buf);
+                    } catch (Throwable t) {
+                        expanded.release();
+                        throw t;
+                    } finally {
+                        decoded.release();
+                        buf.release();
+                    }
+                    decoded = expanded;
+                } else {
+                    try {
+                        decoded.writeBytes(buf);
+                    } finally {
+                        buf.release();
+                    }
                 }
             }
         }
@@ -123,3 +145,4 @@ class AbstractStreamDecoder implements StreamDecoder {
         }
     }
 }
+
