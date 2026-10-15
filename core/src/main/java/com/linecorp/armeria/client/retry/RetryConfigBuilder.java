@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class RetryConfigBuilder<T extends Response> {
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
-    private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
+    private long responseTimeoutMillisForEachAttempt;
     private int maxContentLength;
 
     @Nullable
@@ -87,7 +87,11 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Sets the specified {@code responseTimeoutMillisForEachAttempt}.
+     * Sets the specified {@code responseTimeoutMillisForEachAttempt}. {@code 0} disables the timeout
+     * for each attempt, so that a request is only bound by the response timeout of the whole retry.
+     *
+     * <p>If this method is not called, {@code 0} is used, meaning each attempt is not capped by an
+     * additional per-attempt timeout and instead defers to the response timeout of the whole retry.
      */
     public RetryConfigBuilder<T> responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
         checkArgument(
