@@ -121,6 +121,7 @@ class EurekaUpdatingListenerTest {
 
     @BeforeEach
     void beforeEach() {
+        registerContentCaptor.set(null);
         heartBeatHeadersCaptor = new CompletableFuture<>();
     }
 

@@ -14,7 +14,7 @@ armeria:
 
 management:
   server:
-    port: 9112
+    port: 0
   endpoints:
     web:
       exposure:
