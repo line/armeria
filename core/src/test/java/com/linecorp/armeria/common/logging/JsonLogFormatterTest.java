@@ -107,6 +107,25 @@ class JsonLogFormatterTest {
     }
 
     @Test
+    void maskQueryParams() {
+        final LogFormatter logFormatter = LogFormatter.builderForJson()
+                                                      .maskQueryParams("token", "ssn")
+                                                      .build();
+        final HttpRequest req = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.GET, "/v1/users?token=abcdef&page=1&ssn=1234",
+                                  HttpHeaderNames.COOKIE, "Armeria=awesome"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        final String requestLog = logFormatter.formatRequest(log);
+        assertThat(requestLog)
+                .contains("\":path\":\"/v1/users?token=****&page=1&ssn=****\"")
+                .contains("\"cookie\":\"****\"")
+                .doesNotContain("abcdef", "1234");
+    }
+
+    @Test
     void defaultSensitiveHeadersShouldBeOverridable() {
         final LogFormatter logFormatter = LogFormatter.builderForJson()
                                                       .responseHeadersSanitizer(
