@@ -42,4 +42,12 @@ class JacksonUtilTest {
         final LocalDateTime instant = LocalDateTime.parse(jrhee17BirthDay);
         assertThat(objectMapper.writeValueAsString(instant)).isEqualTo("[1991,9,26,0,0]");
     }
+
+    @Test
+    void shouldReturnSameDefaultObjectMapper() {
+        final ObjectMapper mapper1 = JacksonUtil.getDefaultObjectMapper();
+        final ObjectMapper mapper2 = JacksonUtil.getDefaultObjectMapper();
+        assertThat(mapper1).isNotNull();
+        assertThat(mapper1).isSameAs(mapper2);
+    }
 }
