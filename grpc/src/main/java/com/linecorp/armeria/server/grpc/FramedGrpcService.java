@@ -618,4 +618,3 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private static class EmptyListener<T> extends ServerCall.Listener<T> {}
 }
-
