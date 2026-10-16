@@ -31,17 +31,16 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 /**
- * Limits the cardinality of request metrics by capping the number of distinct {@link MeterIdPrefix}es.
+ * Limits the cardinality of request metrics by capping the number of distinct active request
+ * {@link MeterIdPrefix}es.
  */
 public final class RequestMetricLimiter {
 
     private static final Logger logger = LoggerFactory.getLogger(RequestMetricLimiter.class);
 
-    private final Set<MeterIdPrefix> seenActivePrefixes = ConcurrentHashMap.newKeySet();
-    private final Set<MeterIdPrefix> seenCompletePrefixes = ConcurrentHashMap.newKeySet();
+    private final Set<MeterIdPrefix> seenPrefixes = ConcurrentHashMap.newKeySet();
     private final int maxCardinality;
-    private final AtomicBoolean warnedActive = new AtomicBoolean();
-    private final AtomicBoolean warnedComplete = new AtomicBoolean();
+    private final AtomicBoolean warned = new AtomicBoolean();
 
     /**
      * Creates a new instance with the specified {@code maxCardinality}.
@@ -59,74 +58,33 @@ public final class RequestMetricLimiter {
     }
 
     /**
-     * Returns {@code true} if the active request metric for the specified {@code prefix} is accepted.
+     * Returns {@code true} if the request metric for the specified {@code prefix} is accepted.
      */
-    public boolean acceptActive(MeterIdPrefix prefix) {
-        if (seenActivePrefixes.contains(prefix)) {
+    public boolean accept(MeterIdPrefix prefix) {
+        if (seenPrefixes.contains(prefix)) {
             return true;
         }
-        synchronized (seenActivePrefixes) {
-            if (seenActivePrefixes.contains(prefix)) {
-                return true;
-            }
-            if (seenActivePrefixes.size() >= maxCardinality) {
-                warnActive(prefix);
-                return false;
-            }
-            seenActivePrefixes.add(prefix);
-            return true;
+        if (seenPrefixes.size() >= maxCardinality) {
+            warn(prefix);
+            return false;
         }
+        seenPrefixes.add(prefix);
+        return true;
     }
 
-    /**
-     * Returns {@code true} if the completed request metric for the specified {@code prefix} is accepted.
-     */
-    public boolean acceptComplete(MeterIdPrefix prefix) {
-        if (seenCompletePrefixes.contains(prefix)) {
-            return true;
-        }
-        synchronized (seenCompletePrefixes) {
-            if (seenCompletePrefixes.contains(prefix)) {
-                return true;
-            }
-            if (seenCompletePrefixes.size() >= maxCardinality) {
-                warnComplete(prefix);
-                return false;
-            }
-            seenCompletePrefixes.add(prefix);
-            return true;
-        }
-    }
-
-    private void warnActive(MeterIdPrefix prefix) {
-        if (warnedActive.compareAndSet(false, true)) {
+    private void warn(MeterIdPrefix prefix) {
+        if (warned.compareAndSet(false, true)) {
             logger.warn("The number of distinct active request metrics for '{}' has exceeded " +
-                        "the maximum cardinality ({}). Refusing to record active request metrics " +
-                        "for new tag combinations.", prefix.name(), maxCardinality);
-        }
-    }
-
-    private void warnComplete(MeterIdPrefix prefix) {
-        if (warnedComplete.compareAndSet(false, true)) {
-            logger.warn("The number of distinct request metrics for '{}' has exceeded " +
                         "the maximum cardinality ({}). Refusing to record request metrics " +
                         "for new tag combinations.", prefix.name(), maxCardinality);
         }
     }
 
     /**
-     * Returns the set of seen active prefixes.
+     * Returns the set of seen prefixes.
      */
     @VisibleForTesting
-    public Set<MeterIdPrefix> seenActivePrefixes() {
-        return Collections.unmodifiableSet(seenActivePrefixes);
-    }
-
-    /**
-     * Returns the set of seen complete prefixes.
-     */
-    @VisibleForTesting
-    public Set<MeterIdPrefix> seenCompletePrefixes() {
-        return Collections.unmodifiableSet(seenCompletePrefixes);
+    public Set<MeterIdPrefix> seenPrefixes() {
+        return Collections.unmodifiableSet(seenPrefixes);
     }
 }

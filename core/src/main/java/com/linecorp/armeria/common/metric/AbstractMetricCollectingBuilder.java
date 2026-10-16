@@ -110,7 +110,7 @@ public abstract class AbstractMetricCollectingBuilder {
     }
 
     /**
-     * Sets the maximum number of distinct metric tag combinations allowed for request metrics.
+     * Sets the maximum number of distinct active request metric tag combinations allowed for request metrics.
      * When this threshold is reached, metrics for new tag combinations will not be recorded.
      *
      * @param maxCardinality the maximum cardinality. Must be greater than {@code 0}.

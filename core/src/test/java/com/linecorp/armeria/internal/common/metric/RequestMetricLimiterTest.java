@@ -57,24 +57,24 @@ class RequestMetricLimiterTest {
     }
 
     @Test
-    void acceptActiveLimitAndWarning() {
+    void acceptLimitAndWarning() {
         final RequestMetricLimiter limiter = new RequestMetricLimiter(2);
         final MeterIdPrefix prefix1 = new MeterIdPrefix("test.active", "route", "1");
         final MeterIdPrefix prefix2 = new MeterIdPrefix("test.active", "route", "2");
         final MeterIdPrefix prefix3 = new MeterIdPrefix("test.active", "route", "3");
 
-        assertThat(limiter.acceptActive(prefix1)).isTrue();
-        assertThat(limiter.acceptActive(prefix2)).isTrue();
-        assertThat(limiter.seenActivePrefixes()).containsExactlyInAnyOrder(prefix1, prefix2);
+        assertThat(limiter.accept(prefix1)).isTrue();
+        assertThat(limiter.accept(prefix2)).isTrue();
+        assertThat(limiter.seenPrefixes()).containsExactlyInAnyOrder(prefix1, prefix2);
         assertThat(logAppender.list).isEmpty();
 
         // Previously seen prefixes are accepted even after reaching the limit
-        assertThat(limiter.acceptActive(prefix1)).isTrue();
-        assertThat(limiter.acceptActive(prefix2)).isTrue();
+        assertThat(limiter.accept(prefix1)).isTrue();
+        assertThat(limiter.accept(prefix2)).isTrue();
         assertThat(logAppender.list).isEmpty();
 
         // New prefix is rejected and warning is emitted
-        assertThat(limiter.acceptActive(prefix3)).isFalse();
+        assertThat(limiter.accept(prefix3)).isFalse();
         assertThat(logAppender.list).hasSize(1);
         assertThat(logAppender.list.get(0).getLevel()).isEqualTo(Level.WARN);
         assertThat(logAppender.list.get(0).getFormattedMessage())
@@ -82,42 +82,10 @@ class RequestMetricLimiterTest {
                 .contains("maximum cardinality (2)");
 
         // Subsequent rejections do not log duplicate warnings
-        assertThat(limiter.acceptActive(new MeterIdPrefix("test.active", "route", "4"))).isFalse();
+        assertThat(limiter.accept(new MeterIdPrefix("test.active", "route", "4"))).isFalse();
         assertThat(logAppender.list).hasSize(1);
 
         // Seen prefixes still accepted
-        assertThat(limiter.acceptActive(prefix1)).isTrue();
-    }
-
-    @Test
-    void acceptCompleteLimitAndWarning() {
-        final RequestMetricLimiter limiter = new RequestMetricLimiter(2);
-        final MeterIdPrefix prefix1 = new MeterIdPrefix("test.complete", "route", "1");
-        final MeterIdPrefix prefix2 = new MeterIdPrefix("test.complete", "route", "2");
-        final MeterIdPrefix prefix3 = new MeterIdPrefix("test.complete", "route", "3");
-
-        assertThat(limiter.acceptComplete(prefix1)).isTrue();
-        assertThat(limiter.acceptComplete(prefix2)).isTrue();
-        assertThat(limiter.seenCompletePrefixes()).containsExactlyInAnyOrder(prefix1, prefix2);
-        assertThat(logAppender.list).isEmpty();
-
-        // Previously seen prefixes are accepted
-        assertThat(limiter.acceptComplete(prefix1)).isTrue();
-        assertThat(logAppender.list).isEmpty();
-
-        // New prefix is rejected and warning is emitted
-        assertThat(limiter.acceptComplete(prefix3)).isFalse();
-        assertThat(logAppender.list).hasSize(1);
-        assertThat(logAppender.list.get(0).getLevel()).isEqualTo(Level.WARN);
-        assertThat(logAppender.list.get(0).getFormattedMessage())
-                .contains("The number of distinct request metrics for 'test.complete' has exceeded")
-                .contains("maximum cardinality (2)");
-
-        // Subsequent rejections do not log duplicate warnings
-        assertThat(limiter.acceptComplete(new MeterIdPrefix("test.complete", "route", "4"))).isFalse();
-        assertThat(logAppender.list).hasSize(1);
-
-        // Seen prefixes still accepted
-        assertThat(limiter.acceptComplete(prefix2)).isTrue();
+        assertThat(limiter.accept(prefix1)).isTrue();
     }
 }

@@ -800,8 +800,8 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Returns the maximum number of distinct metric tag combinations allowed for request metrics,
-     * or {@code null} if no limit is enforced.
+     * Returns the maximum number of distinct active request metric tag combinations allowed for
+     * request metrics, or {@code null} if no limit is enforced.
      */
     @UnstableApi
     @Nullable
@@ -810,7 +810,7 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Sets the maximum number of distinct metric tag combinations allowed for request metrics.
+     * Sets the maximum number of distinct active request metric tag combinations allowed for request metrics.
      * When this threshold is reached, metrics for new tag combinations will not be recorded.
      */
     @UnstableApi

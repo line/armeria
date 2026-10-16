@@ -92,8 +92,9 @@ public final class RequestMetricSupport {
         final MeterIdPrefix activeRequestsId =
                 meterIdPrefixFunction.activeRequestPrefix(registry, log).append("active.requests");
 
+        final boolean accepted = metricLimiter == null || metricLimiter.accept(activeRequestsId);
         final ActiveRequestMetrics activeRequestMetrics;
-        if (metricLimiter == null || metricLimiter.acceptActive(activeRequestsId)) {
+        if (accepted) {
             activeRequestMetrics = MicrometerUtil.register(
                     registry, activeRequestsId, ActiveRequestMetrics.class,
                     (reg, prefix) ->
@@ -105,8 +106,10 @@ public final class RequestMetricSupport {
         }
 
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
-                       distributionStatisticConfig, metricLimiter);
+            if (accepted) {
+                onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
+                           distributionStatisticConfig);
+            }
             if (activeRequestMetrics != null) {
                 activeRequestMetrics.decrement();
             }
@@ -115,15 +118,10 @@ public final class RequestMetricSupport {
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
-            @Nullable RequestMetricLimiter metricLimiter) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
-
-        if (metricLimiter != null && !metricLimiter.acceptComplete(idPrefix)) {
-            return;
-        }
 
         final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
@@ -142,8 +140,7 @@ public final class RequestMetricSupport {
         final ClientRequestMetrics metrics = MicrometerUtil.register(
                 registry, idPrefix,
                 ClientRequestMetrics.class,
-                (reg, idp) -> new DefaultClientRequestMetrics(reg, idp, distributionStatisticConfig,
-                                                              metricLimiter));
+                (reg, idp) -> new DefaultClientRequestMetrics(reg, idp, distributionStatisticConfig));
         updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
@@ -212,13 +209,9 @@ public final class RequestMetricSupport {
         final int failedAttempts = isSuccess ? childrenSize - 1 : childrenSize;
         for (int i = 0; i < failedAttempts; i++) {
             final RequestLogAccess child = log.children().get(i);
-            child.whenComplete().thenAccept(childLog -> {
-                final Counter counter = metrics.actualRequestsCause(childLog.responseCause(),
-                                                                    childLog.responseStatus());
-                if (counter != null) {
-                    counter.increment();
-                }
-            });
+            child.whenComplete().thenAccept(
+                    childLog -> metrics.actualRequestsCause(childLog.responseCause(),
+                                                            childLog.responseStatus()).increment());
         }
     }
 
@@ -262,7 +255,6 @@ public final class RequestMetricSupport {
 
         DistributionSummary failureAttempts();
 
-        @Nullable
         Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status);
     }
 
@@ -346,8 +338,6 @@ public final class RequestMetricSupport {
             extends AbstractRequestMetrics implements ClientRequestMetrics {
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
-        @Nullable
-        private final RequestMetricLimiter metricLimiter;
 
         private final Timer connectionAcquisitionDuration;
         private final Timer dnsResolutionDuration;
@@ -368,12 +358,10 @@ public final class RequestMetricSupport {
         private DistributionSummary failureAttempts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
-                                    DistributionStatisticConfig distributionStatisticConfig,
-                                    @Nullable RequestMetricLimiter metricLimiter) {
+                                    DistributionStatisticConfig distributionStatisticConfig) {
             super(parent, idPrefix, distributionStatisticConfig);
             this.parent = parent;
             this.idPrefix = idPrefix;
-            this.metricLimiter = metricLimiter;
 
             connectionAcquisitionDuration = newTimer(
                     parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags(),
@@ -461,17 +449,11 @@ public final class RequestMetricSupport {
                                                             distributionStatisticConfig());
         }
 
-        @Nullable
         @Override
         public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
             final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
-            final MeterIdPrefix childPrefix = new MeterIdPrefix(
-                    idPrefix.name("actual.requests.failure"),
-                    idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
-            if (metricLimiter != null && !metricLimiter.acceptComplete(childPrefix)) {
-                return null;
-            }
-            return parent.counter(childPrefix.name(), childPrefix.tags());
+            return parent.counter(idPrefix.name("actual.requests.failure"),
+                                  idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
         }
     }
 
