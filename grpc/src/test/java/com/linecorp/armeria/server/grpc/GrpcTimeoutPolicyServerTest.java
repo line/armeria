@@ -20,13 +20,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -43,6 +48,9 @@ class GrpcTimeoutPolicyServerTest {
 
     private static final long SERVICE_TIMEOUT_MILLIS = 2000;
     private static final Duration MAX = Duration.ofSeconds(10);
+    private static final AtomicLong delayedRequestTimeoutMillis = new AtomicLong(-1);
+    private static final AtomicReference<CompletableFuture<Throwable>> delayedRequestCancellation =
+            new AtomicReference<>();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -111,8 +119,15 @@ class GrpcTimeoutPolicyServerTest {
                                   .addService(new DelayedResponseService())
                                   .build());
             sb.decorator((delegate, ctx, req) -> {
-                Thread.sleep(400);
-                return delegate.serve(ctx, req);
+                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                ctx.eventLoop().schedule(() -> {
+                    try {
+                        responseFuture.complete(delegate.serve(ctx, req));
+                    } catch (Throwable cause) {
+                        responseFuture.completeExceptionally(cause);
+                    }
+                }, 400, TimeUnit.MILLISECONDS);
+                return HttpResponse.of(responseFuture);
             });
         }
     };
@@ -134,13 +149,19 @@ class GrpcTimeoutPolicyServerTest {
     }
 
     @Test
-    void clientTimeoutStartsWhenRequestArrives() {
+    void clientTimeoutStartsWhenRequestArrives() throws Exception {
+        delayedRequestTimeoutMillis.set(-1);
+        delayedRequestCancellation.set(null);
         final TestServiceBlockingStub client = GrpcClients.builder(delayedServer.httpUri())
                                                           .responseTimeoutMillis(0)
                                                           .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "700m")
                                                           .build(TestServiceBlockingStub.class);
         assertThatThrownBy(() -> requestTimeoutMillis(client))
                 .isInstanceOf(StatusRuntimeException.class);
+        assertThat(delayedRequestTimeoutMillis.get()).isEqualTo(700);
+        final CompletableFuture<Throwable> cancellation = delayedRequestCancellation.get();
+        assertThat(cancellation).isNotNull();
+        assertThat(cancellation.get(1, TimeUnit.SECONDS)).isInstanceOf(RequestTimeoutException.class);
     }
 
     @Test
@@ -252,9 +273,11 @@ class GrpcTimeoutPolicyServerTest {
     private static class DelayedResponseService extends TestServiceImplBase {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current().eventLoop().schedule(
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
+            delayedRequestTimeoutMillis.set(ctx.requestTimeoutMillis());
+            delayedRequestCancellation.set(ctx.whenRequestCancelling());
+            ctx.eventLoop().schedule(
                     () -> TimeoutReportingService.reportTimeout(responseObserver), 500, TimeUnit.MILLISECONDS);
         }
     }
 }
-
