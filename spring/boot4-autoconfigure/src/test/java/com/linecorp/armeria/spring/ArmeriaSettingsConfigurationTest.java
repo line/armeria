@@ -91,9 +91,15 @@ class ArmeriaSettingsConfigurationTest {
     @Nullable
     private Server server;
 
+    @Inject
+    @Nullable
+    private ArmeriaSettings settings;
+
     @Test
     void buildServerBasedOnProperties() {
         assertThat(server).isNotNull();
+        assertThat(settings).isNotNull();
+        assertThat(settings.getMetricsMaxCardinality()).isEqualTo(100);
         final ServerConfig config = server.config();
 
         assertThat(config.maxNumConnections()).isEqualTo(8);

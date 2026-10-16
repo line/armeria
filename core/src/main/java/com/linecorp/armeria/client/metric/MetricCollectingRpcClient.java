@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
@@ -58,6 +59,17 @@ public final class MetricCollectingRpcClient extends AbstractMetricCollectingCli
     }
 
     /**
+     * Returns an {@link RpcClient} decorator that tracks request stats using {@link MeterRegistry}
+     * with the specified {@code maxCardinality}.
+     */
+    @UnstableApi
+    public static Function<? super RpcClient, MetricCollectingRpcClient> newDecorator(
+            MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality) {
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        return builder(meterIdPrefixFunction).maxCardinality(maxCardinality).newDecorator();
+    }
+
+    /**
      * Returns a new {@link MetricCollectingRpcClientBuilder} instance.
      */
     public static MetricCollectingRpcClientBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
@@ -68,6 +80,14 @@ public final class MetricCollectingRpcClient extends AbstractMetricCollectingCli
             RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
             DistributionStatisticConfig distributionStatisticConfig) {
-        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig);
+        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, -1);
+    }
+
+    MetricCollectingRpcClient(
+            RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+            DistributionStatisticConfig distributionStatisticConfig,
+            int maxCardinality) {
+        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, maxCardinality);
     }
 }
