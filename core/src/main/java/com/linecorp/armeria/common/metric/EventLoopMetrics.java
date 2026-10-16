@@ -98,6 +98,7 @@ public final class EventLoopMetrics extends AbstractCloseableMeterBinder {
             return result;
         }
 
+        @Deprecated // use the same metric with micrometer namespace instead
         double pendingTasks() {
             int result = 0;
             for (EventLoopGroup group : registry) {
