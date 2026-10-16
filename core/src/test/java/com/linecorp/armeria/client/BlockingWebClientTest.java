@@ -39,6 +39,7 @@ import com.linecorp.armeria.client.TransformingResponsePreparationTest.MyMessage
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -52,6 +53,10 @@ class BlockingWebClientTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/string", (ctx, req) -> HttpResponse.of("OK"));
+            sb.service("/echo", (ctx, req) -> HttpResponse.of(
+                    req.aggregate().thenApply(agg -> HttpResponse.of(HttpStatus.OK,
+                                                                     agg.contentType(),
+                                                                     agg.content()))));
             sb.service("/500", (ctx, req) -> {
                 throw HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR);
             });
@@ -156,25 +161,37 @@ class BlockingWebClientTest {
         final MyMessage content = new MyMessage("hello");
 
         // 1. Test standard JSON methods
-        AggregatedHttpResponse res = client.postJson("/string", content);
+        AggregatedHttpResponse res = client.postJson("/echo", content);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("{\"message\":\"hello\"}");
 
-        res = client.putJson("/string", content);
+        res = client.putJson("/echo", content);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("{\"message\":\"hello\"}");
 
-        res = client.patchJson("/string", content);
+        res = client.patchJson("/echo", content);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("{\"message\":\"hello\"}");
 
         // 2. Test overloaded methods with custom ObjectMapper
         final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-        res = client.postJson("/string", content, mapper);
+        res = client.postJson("/echo", content, mapper);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("{\"message\":\"hello\"}");
 
-        res = client.putJson("/string", content, mapper);
+        res = client.putJson("/echo", content, mapper);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("{\"message\":\"hello\"}");
 
-        res = client.patchJson("/string", content, mapper);
+        res = client.patchJson("/echo", content, mapper);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("{\"message\":\"hello\"}");
     }
 }
