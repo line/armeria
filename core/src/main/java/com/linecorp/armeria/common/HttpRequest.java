@@ -365,7 +365,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * Creates a new HTTP request with the specified JSON content using the default {@link ObjectMapper}.
      */
     static HttpRequest ofJson(HttpMethod method, String path, Object content) {
-        return ofJson(method, path, content, JacksonUtil.newDefaultObjectMapper());
+        return ofJson(method, path, content, JacksonUtil.getDefaultObjectMapper());
     }
 
     /**
