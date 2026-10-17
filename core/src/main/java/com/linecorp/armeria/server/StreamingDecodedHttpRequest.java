@@ -29,10 +29,12 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
 final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequestWriter {
 
@@ -51,6 +53,9 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Nullable
     private ServiceRequestContext ctx;
+    @Nullable
+    private Runnable continueTask;
+    private boolean continueSuppressed;
     private long transferredBytes;
 
     @Nullable
@@ -245,6 +250,66 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
+    }
+
+    @Override
+    public void setContinueTask(Runnable continueTask) {
+        this.continueTask = continueTask;
+    }
+
+    @Override
+    protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
+        // 'continueTask' may be read outside the event loop. It is fine because it is set before
+        // the request is passed to a service and 'maybeSendContinue()' checks it again in the event loop.
+        if (continueTask == null) {
+            return;
+        }
+        if (eventLoop.inEventLoop()) {
+            maybeSendContinue();
+        } else {
+            eventLoop.execute(this::maybeSendContinue);
+        }
+    }
+
+    private void maybeSendContinue() {
+        final Runnable continueTask = this.continueTask;
+        if (continueTask == null) {
+            return;
+        }
+        this.continueTask = null;
+        // No need to send '100 Continue' if the content has been fully received or the request was aborted.
+        if (isOpen()) {
+            continueTask.run();
+        }
+    }
+
+    @Override
+    public void sendContinue() {
+        assert eventLoop.inEventLoop();
+        maybeSendContinue();
+    }
+
+    @Override
+    public void onContinueSent() {
+        assert eventLoop.inEventLoop();
+        continueTask = null;
+    }
+
+    @Override
+    public boolean suppressContinue() {
+        assert eventLoop.inEventLoop();
+        if (continueTask == null) {
+            return false;
+        }
+        continueTask = null;
+        // The client has nothing more to send if the content has been fully received.
+        continueSuppressed = !isNormallyClosed;
+        return continueSuppressed;
+    }
+
+    @Override
+    public boolean isContinueSuppressed() {
+        return continueSuppressed;
     }
 
     @VisibleForTesting

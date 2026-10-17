@@ -64,6 +64,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
+    private boolean expectsContinue;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
@@ -192,6 +193,19 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public void setContinueTask(Runnable continueTask) {
+        // The content is never consumed, so '100 Continue' is never sent.
+        expectsContinue = true;
+    }
+
+    @Override
+    public boolean suppressContinue() {
+        final boolean expectsContinue = this.expectsContinue;
+        this.expectsContinue = false;
+        return expectsContinue;
     }
 
     @Override

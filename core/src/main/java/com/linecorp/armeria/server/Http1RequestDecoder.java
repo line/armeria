@@ -163,11 +163,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
-                    // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
-                    // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
-                    // This is because removing a header from RequestHeaders is more expensive due to its
-                    // immutability.
-                    final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
+                    // Check `expect: 100-continue`, but defer sending '100 Continue' until the request
+                    // content is subscribed to, so that a decorator or a service can reject the request
+                    // before the client sends the content.
+                    final int expectResult = checkExpectContinue(nettyReq);
+                    final boolean hasInvalidExpectHeader = expectResult < 0;
+                    final boolean expectsContinue = expectResult > 0;
 
                     final String path = HttpHeaderUtil
                             .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
@@ -276,7 +277,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx);
+                                                           keepAlive, inboundTrafficController, routingCtx,
+                                                           expectsContinue);
+                    if (expectsContinue && !endOfStream) {
+                        req.setContinueTask(() -> {
+                            encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false, method);
+                            ctx.flush();
+                        });
+                    }
                     final long maxRequestLength = req.maxRequestLength();
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                         abortLargeRequest(id, req, true);
@@ -353,6 +361,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     }
 
     private void abortLargeRequest(int id, DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
+        // The client must not send the content that will be rejected.
+        decodedReq.suppressContinue();
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
                                         .maxContentLength(decodedReq.maxRequestLength())
@@ -377,30 +387,30 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private boolean handle100Continue(int id, HttpRequest nettyReq) {
-        final HttpHeaders nettyHeaders = nettyReq.headers();
+    /**
+     * Checks the {@code Expect} header and removes it if its value is {@code 100-continue}.
+     *
+     * @return {@code 0} if no {@code Expect} header or HTTP/1.0,
+     *         {@code 1} if valid {@code Expect: 100-continue},
+     *         {@code -1} if unsupported {@code Expect} value.
+     */
+    private static int checkExpectContinue(HttpRequest nettyReq) {
         if (nettyReq.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
-            // Ignore HTTP/1.0 requests.
-            return true;
+            return 0;
         }
 
-        final String expectValue = nettyHeaders.get(HttpHeaderNames.EXPECT);
+        final String expectValue = nettyReq.headers().get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
-            // No 'expect' header.
-            return true;
+            return 0;
         }
 
-        // '100-continue' is the only allowed expectation.
         if (!Ascii.equalsIgnoreCase("100-continue", expectValue)) {
-            return false;
+            return -1;
         }
-
-        // Send a '100 Continue' response.
-        encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false, HttpMethod.valueOf(nettyReq.method().name()));
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
-        nettyHeaders.remove(HttpHeaderNames.EXPECT);
-        return true;
+        nettyReq.headers().remove(HttpHeaderNames.EXPECT);
+        return 1;
     }
 
     private void failWithInvalidRequestPath(int id, @Nullable RequestHeaders headers) {

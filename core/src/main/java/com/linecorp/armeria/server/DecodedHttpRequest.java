@@ -34,7 +34,7 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx) {
+                                 RoutingContext routingCtx, boolean expectsContinue) {
         final long requestStartTimeNanos = System.nanoTime();
         final long requestStartTimeMicros = SystemInfo.currentTimeMicros();
         if (!routingCtx.hasResult()) {
@@ -50,7 +50,7 @@ interface DecodedHttpRequest extends HttpRequest {
                         eventLoop, id, streamId, headers, keepAlive, routingCtx, exchangeType,
                         requestStartTimeNanos, requestStartTimeMicros);
             } else {
-                if (exchangeType.isRequestStreaming()) {
+                if (exchangeType.isRequestStreaming() || expectsContinue) {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
@@ -142,6 +142,45 @@ interface DecodedHttpRequest extends HttpRequest {
      * when the request started.
      */
     long requestStartTimeMicros();
+
+    /**
+     * Sets the task that writes a {@code 100 Continue} response. The task is run on the event loop at most
+     * once, when the request content is subscribed to for the first time or {@link #sendContinue()} is
+     * called. This allows a decorator or a service to reject a request with
+     * an {@code Expect: 100-continue} header before the client sends the request content.
+     */
+    default void setContinueTask(Runnable continueTask) {}
+
+    /**
+     * Prevents a pending {@code 100 Continue} response from being written. Must be called from the event
+     * loop when final response headers that do not allow the client to send the content are about to be
+     * written.
+     *
+     * @return {@code true} if the client expected a {@code 100 Continue} response which has not been sent,
+     *         which means the client may never send the request content.
+     */
+    default boolean suppressContinue() {
+        return false;
+    }
+
+    /**
+     * Writes a pending {@code 100 Continue} response immediately. Must be called from the event loop.
+     */
+    default void sendContinue() {}
+
+    /**
+     * Discards a pending {@code 100 Continue} response because a service wrote it by itself.
+     * Must be called from the event loop.
+     */
+    default void onContinueSent() {}
+
+    /**
+     * Returns whether a {@code 100 Continue} response expected by the client was suppressed before
+     * the request content was fully received.
+     */
+    default boolean isContinueSuppressed() {
+        return false;
+    }
 
     /**
      * Returns the maximum allowed length of the content of the request.

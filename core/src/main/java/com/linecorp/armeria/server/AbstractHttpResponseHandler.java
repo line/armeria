@@ -78,6 +78,17 @@ abstract class AbstractHttpResponseHandler {
         responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
+    /**
+     * Prevents a pending {@code 100 Continue} response from being sent because a final response is about to
+     * be written. If the client has not sent the request content, the connection is closed after
+     * the response for HTTP/1, because the client may or may not send the content.
+     */
+    final void maybeDisconnectOnSuppressedContinue() {
+        if (req.suppressContinue() && !reqCtx.sessionProtocol().isMultiplex()) {
+            disconnectWhenFinished();
+        }
+    }
+
     final boolean tryComplete(@Nullable Throwable cause) {
         if (isComplete) {
             return false;
@@ -133,6 +144,15 @@ abstract class AbstractHttpResponseHandler {
      * Note that the caller has to flush the written data when needed.
      */
     final ChannelFuture writeAggregatedHttpResponse(AggregatedHttpResponse res) {
+        for (ResponseHeaders informational : res.informationals()) {
+            if (informational.status() == HttpStatus.CONTINUE) {
+                // A service sent '100 Continue' by itself.
+                req.onContinueSent();
+                break;
+            }
+        }
+        maybeDisconnectOnSuppressedContinue();
+
         final int id = req.id();
         final int streamId = req.streamId();
 
