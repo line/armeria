@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.DecompressionException;
@@ -33,12 +34,14 @@ import io.netty.handler.codec.compression.DecompressionException;
 class AbstractStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
+    private final ByteBufAllocator alloc;
     private final int maxLength;
     private int decodedLength;
 
     protected AbstractStreamDecoder(ChannelHandler handler, ByteBufAllocator alloc, int maxLength) {
         decoder = new EmbeddedChannel(false, handler);
         decoder.config().setAllocator(alloc);
+        this.alloc = alloc;
         this.maxLength = maxLength;
     }
 
@@ -77,6 +80,7 @@ class AbstractStreamDecoder implements StreamDecoder {
     // Mostly copied from netty's HttpContentDecoder.
     protected HttpData fetchDecoderOutput() {
         ByteBuf decoded = null;
+        CompositeByteBuf composite = null;
         for (;;) {
             final ByteBuf buf = decoder.readInbound();
             if (buf == null) {
@@ -89,12 +93,23 @@ class AbstractStreamDecoder implements StreamDecoder {
             maybeCheckOverflow(decoded, buf);
             if (decoded == null) {
                 decoded = buf;
-            } else {
+            } else if (composite != null) {
                 try {
-                    decoded.writeBytes(buf);
-                } finally {
+                    composite.addComponent(true, buf);
+                } catch (Throwable t) {
                     buf.release();
+                    throw t;
                 }
+            } else {
+                composite = alloc.compositeBuffer(Integer.MAX_VALUE);
+                try {
+                    composite.addComponents(true, decoded, buf);
+                } catch (Throwable t) {
+                    composite.release();
+                    buf.release();
+                    throw t;
+                }
+                decoded = composite;
             }
         }
 
