@@ -49,7 +49,9 @@ class AbstractStreamDecoder implements StreamDecoder {
     public HttpData decode(HttpData obj) {
         try {
             decoder.writeInbound(obj.byteBuf());
+            return fetchDecoderOutput();
         } catch (DecompressionException ex) {
+            decoder.releaseInbound();
             final String message = ex.getMessage();
             if (message != null && message.startsWith("Decompression buffer has reached maximum size:")) {
                 throw ContentTooLargeException.builder()
@@ -59,16 +61,23 @@ class AbstractStreamDecoder implements StreamDecoder {
             } else {
                 throw ex;
             }
+        } catch (Throwable t) {
+            decoder.releaseInbound();
+            throw t;
         }
-        return fetchDecoderOutput();
     }
 
     @Override
     public HttpData finish() {
-        if (decoder.finish()) {
-            return fetchDecoderOutput();
-        } else {
-            return HttpData.empty();
+        try {
+            if (decoder.finish()) {
+                return fetchDecoderOutput();
+            } else {
+                return HttpData.empty();
+            }
+        } catch (Throwable t) {
+            decoder.releaseInbound();
+            throw t;
         }
     }
 
@@ -81,35 +90,47 @@ class AbstractStreamDecoder implements StreamDecoder {
     protected HttpData fetchDecoderOutput() {
         ByteBuf decoded = null;
         CompositeByteBuf composite = null;
-        for (;;) {
-            final ByteBuf buf = decoder.readInbound();
-            if (buf == null) {
-                break;
-            }
-            if (!buf.isReadable()) {
-                buf.release();
-                continue;
-            }
-            maybeCheckOverflow(decoded, buf);
-            if (decoded == null) {
-                decoded = buf;
-            } else if (composite != null) {
-                try {
-                    composite.addComponent(true, buf);
-                } catch (Throwable t) {
-                    composite.release();
-                    throw t;
+        try {
+            for (;;) {
+                final ByteBuf buf = decoder.readInbound();
+                if (buf == null) {
+                    break;
                 }
-            } else {
-                composite = alloc.compositeBuffer();
-                try {
-                    composite.addComponents(true, decoded, buf);
-                } catch (Throwable t) {
-                    composite.release();
-                    throw t;
+                if (!buf.isReadable()) {
+                    buf.release();
+                    continue;
                 }
-                decoded = composite;
+                maybeCheckOverflow(decoded, buf);
+                if (decoded == null) {
+                    decoded = buf;
+                } else if (composite != null) {
+                    try {
+                        composite.addComponent(true, buf);
+                    } catch (Throwable t) {
+                        composite.release();
+                        decoded = null;
+                        throw t;
+                    }
+                } else {
+                    try {
+                        composite = alloc.compositeBuffer();
+                        composite.addComponents(true, decoded, buf);
+                    } catch (Throwable t) {
+                        if (composite != null) {
+                            composite.release();
+                        } else {
+                            decoded.release();
+                            buf.release();
+                        }
+                        decoded = null;
+                        throw t;
+                    }
+                    decoded = composite;
+                }
             }
+        } catch (Throwable t) {
+            decoder.releaseInbound();
+            throw t;
         }
 
         if (decoded == null) {
