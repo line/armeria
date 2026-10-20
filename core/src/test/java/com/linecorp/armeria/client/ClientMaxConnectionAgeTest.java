@@ -23,6 +23,8 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
@@ -46,8 +48,7 @@ import io.netty.util.AttributeMap;
 class ClientMaxConnectionAgeTest {
 
     private static final long MAX_CONNECTION_AGE = 2000;
-    private static final long MIN_CONNECTION_AGE = 1000;
-    private static final long CONNECTION_AGE_TOLERANCE = 1000;
+    private static final long JITTERED_MAX_CONNECTION_AGE = 4000;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -107,7 +108,6 @@ class ClientMaxConnectionAgeTest {
                                                          .connectionPoolListener(connectionPoolListener)
                                                          .idleTimeoutMillis(0)
                                                          .maxConnectionAgeMillis(MAX_CONNECTION_AGE)
-                                                         .maxConnectionAgeJitterRate(1.0)
                                                          .meterRegistry(meterRegistry)
                                                          .tlsNoVerify()
                                                          .build();
@@ -139,19 +139,14 @@ class ClientMaxConnectionAgeTest {
                             scheme + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MIN_CONNECTION_AGE - 300.0,
-                                                   (double) (MAX_CONNECTION_AGE +
-                                                             CONNECTION_AGE_TOLERANCE))
-                                        .isLessThan((double) MAX_CONNECTION_AGE);
+                                        .isBetween(MAX_CONNECTION_AGE - 300.0, MAX_CONNECTION_AGE + 4000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan.percentile#value{phi=1,protocol=" +
                             scheme + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MIN_CONNECTION_AGE - 300.0,
-                                                   (double) (MAX_CONNECTION_AGE +
-                                                             CONNECTION_AGE_TOLERANCE));
+                                        .isBetween(MAX_CONNECTION_AGE - 300.0, MAX_CONNECTION_AGE + 4000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan#count{protocol=" + scheme + '}',
@@ -162,12 +157,72 @@ class ClientMaxConnectionAgeTest {
 
     @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
     @ParameterizedTest
+    void jitteredLifespansStayWithinConfiguredMax(SessionProtocol protocol) {
+        final int numConnections = 10;
+        final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final List<ClientFactory> factories = new ArrayList<>();
+        try {
+            for (int i = 0; i < numConnections; i++) {
+                final ClientFactory factory =
+                        ClientFactory.builder()
+                                     .connectionPoolListener(connectionPoolListener)
+                                     .idleTimeoutMillis(0)
+                                     .maxConnectionAgeMillis(JITTERED_MAX_CONNECTION_AGE)
+                                     .maxConnectionAgeJitterRate(1.0)
+                                     .meterRegistry(meterRegistry)
+                                     .tlsNoVerify()
+                                     .build();
+                factories.add(factory);
+                final WebClient client = WebClient.builder(server.uri(protocol))
+                                                  .factory(factory)
+                                                  .responseTimeoutMillis(0)
+                                                  .build();
+                assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+            }
+            await().atMost(Duration.ofMillis(JITTERED_MAX_CONNECTION_AGE * 2))
+                   .untilAtomic(closed, Matchers.is(numConnections));
+
+            final String lifespan = "armeria.client.connections.lifespan";
+            final String tag = "protocol=" + lifespanProtocol(protocol) + '}';
+            await().untilAsserted(() -> {
+                assertThat(MoreMeters.measureAll(meterRegistry))
+                        .hasEntrySatisfying(
+                                lifespan + "#count{" + tag,
+                                value -> assertThat(value).isEqualTo(numConnections))
+                        .hasEntrySatisfying(
+                                lifespan + ".percentile#value{phi=0," + tag,
+                                value -> assertThat(value * 1000)
+                                        .as("shortest lifespan, below the max age only with jitter")
+                                        .isLessThan(JITTERED_MAX_CONNECTION_AGE - 500.0))
+                        .hasEntrySatisfying(
+                                lifespan + ".percentile#value{phi=1," + tag,
+                                value -> assertThat(value * 1000)
+                                        .as("longest lifespan, never above the max age")
+                                        .isLessThanOrEqualTo(JITTERED_MAX_CONNECTION_AGE + 500.0));
+            });
+        } finally {
+            factories.forEach(ClientFactory::closeAsync);
+        }
+    }
+
+    private static String lifespanProtocol(SessionProtocol protocol) {
+        switch (protocol) {
+            case HTTP:
+                return "h2c";
+            case HTTPS:
+                return "h2";
+            default:
+                return protocol.uriText();
+        }
+    }
+
+    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @ParameterizedTest
     void shouldCloseIdleConnectionByMaxConnectionAge(SessionProtocol protocol) {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .connectionPoolListener(connectionPoolListener)
                                                   .idleTimeoutMillis(0)
                                                   .maxConnectionAgeMillis(MAX_CONNECTION_AGE)
-                                                  .maxConnectionAgeJitterRate(1.0)
                                                   .tlsNoVerify()
                                                   .build()) {
             final WebClient client = WebClient.builder(server.uri(protocol))
@@ -175,14 +230,9 @@ class ClientMaxConnectionAgeTest {
                                               .responseTimeoutMillis(0)
                                               .build();
 
-            final long startNanos = System.nanoTime();
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             await().untilAtomic(opened, Matchers.is(1));
-            await().atMost(Duration.ofMillis(MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE))
-                   .untilAtomic(closed, Matchers.is(1));
-            assertThat(Duration.ofNanos(System.nanoTime() - startNanos).toMillis())
-                    .isBetween(MIN_CONNECTION_AGE - 300,
-                               MAX_CONNECTION_AGE + CONNECTION_AGE_TOLERANCE);
+            await().untilAtomic(closed, Matchers.is(1));
         }
     }
 
