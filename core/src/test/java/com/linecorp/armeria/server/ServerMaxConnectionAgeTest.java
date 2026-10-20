@@ -332,8 +332,7 @@ class ServerMaxConnectionAgeTest {
                 connectionClosed.add(closed);
             }
 
-            // Keep each connection busy until the server closes it, so that every server connection
-            // ends shortly after its effective max age instead of at the idle timeout.
+            // A server closes an expired connection only when it sends the next response.
             await().atMost(Duration.ofMillis(JITTERED_MAX_CONNECTION_AGE * 2))
                    .pollInterval(Duration.ofMillis(50))
                    .until(() -> {
