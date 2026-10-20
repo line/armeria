@@ -100,6 +100,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
+import com.linecorp.armeria.internal.common.KeepAliveHandlerUtil;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -213,6 +214,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
     private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private double maxConnectionAgeJitterRate;
     private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
@@ -788,6 +790,28 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the jitter rate applied to the maximum connection age, so that connections established at the
+     * same time do not reach their maximum age at the same time. If the rate is greater than {@code 0.0},
+     * the effective max connection age of each connection is chosen uniformly at random from
+     * {@code [max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate)), maxConnectionAge)},
+     * so it never exceeds {@code maxConnectionAge}. A {@code maxConnectionAge} of 1 second is not jittered.
+     * A connection that reaches its effective max connection age is handled in the same way as a connection
+     * that reaches {@code maxConnectionAge} without jitter.
+     * The default is {@code 0.0}, which disables jitter. This option has no effect when the max connection
+     * age is disabled.
+     *
+     * @param maxConnectionAgeJitterRate the jitter rate between {@code 0.0} and {@code 1.0}, inclusive
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeJitterRate} is less than
+     *                                  {@code 0.0} or greater than {@code 1.0}
+     */
+    @UnstableApi
+    public ServerBuilder maxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
+        this.maxConnectionAgeJitterRate =
+                KeepAliveHandlerUtil.validateMaxConnectionAgeJitterRate(maxConnectionAgeJitterRate);
+        return this;
     }
 
     /**
@@ -2648,6 +2672,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
                 ports, defaultVirtualHost,
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
+                maxConnectionAgeJitterRate,
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2StreamWindowUpdateRatio, http2MaxStreamsPerConnection,
