@@ -30,8 +30,9 @@ import io.netty.channel.EventLoop;
  *   <li>the request content is subscribed to for the first time, or</li>
  *   <li>final response headers that allow the client to send the content are written.</li>
  * </ul>
- * It is suppressed if other final response headers are written first, and it is not written by this handler
- * if a service writes {@code 100 Continue} by itself.
+ * It is suppressed if other final response headers are written first or the request is aborted before
+ * the content is fully received, and it is not written by this handler if a service writes
+ * {@code 100 Continue} by itself.
  *
  * <p>All methods except {@link #onSubscribe()} must be called from the event loop.
  */
@@ -44,6 +45,7 @@ final class ExpectContinueHandler {
 
     // 'true' until '100 Continue' is written, skipped or suppressed.
     private boolean pending = true;
+    // 'true' if '100 Continue' was not written although the request content was not fully received.
     private boolean suppressed;
 
     /**
@@ -81,10 +83,15 @@ final class ExpectContinueHandler {
     /**
      * Writes a pending {@code 100 Continue} response immediately, because final response headers that allow
      * the client to send the content are about to be written.
+     *
+     * @return {@code true} if {@code 100 Continue} was not written before the request content was fully
+     *         received, e.g. because the request was aborted, which means the client may never send
+     *         the content.
      */
-    void send() {
+    boolean send() {
         assert eventLoop.inEventLoop();
         send0();
+        return suppressed;
     }
 
     private void send0() {
@@ -94,6 +101,9 @@ final class ExpectContinueHandler {
         pending = false;
         if (requestOpen.getAsBoolean()) {
             writeContinue.run();
+        } else {
+            // The content has been fully received or the request was aborted.
+            suppressed = !contentReceived.getAsBoolean();
         }
     }
 
@@ -109,22 +119,20 @@ final class ExpectContinueHandler {
      * Prevents a pending {@code 100 Continue} response from being written because final response headers
      * that do not allow the client to send the content are about to be written.
      *
-     * @return {@code true} if a pending {@code 100 Continue} response was suppressed before the request
-     *         content was fully received, which means the client may never send the content.
+     * @return {@code true} if {@code 100 Continue} was not written before the request content was fully
+     *         received, which means the client may never send the content.
      */
     boolean suppress() {
         assert eventLoop.inEventLoop();
-        if (!pending) {
-            return false;
+        if (pending) {
+            pending = false;
+            suppressed = !contentReceived.getAsBoolean();
         }
-        pending = false;
-        suppressed = !contentReceived.getAsBoolean();
         return suppressed;
     }
 
     /**
-     * Returns whether a {@code 100 Continue} response was suppressed before the request content was fully
-     * received.
+     * Returns whether {@code 100 Continue} was not written before the request content was fully received.
      */
     boolean isSuppressed() {
         return suppressed;

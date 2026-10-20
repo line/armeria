@@ -93,12 +93,14 @@ abstract class AbstractHttpResponseHandler {
 
     /**
      * Writes a pending {@code 100 Continue} response because final response headers that allow the client
-     * to send the content are about to be written.
+     * to send the content are about to be written. If it cannot be written because the request was aborted,
+     * the connection is closed after the response for HTTP/1, because the client may never send the content.
      */
     final void sendContinue() {
         final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
-        if (expectContinueHandler != null) {
-            expectContinueHandler.send();
+        if (expectContinueHandler != null && expectContinueHandler.send() &&
+            !reqCtx.sessionProtocol().isMultiplex()) {
+            disconnectWhenFinished();
         }
     }
 

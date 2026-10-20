@@ -61,6 +61,11 @@ final class DeferredExpect100ContinueTest {
         protected void configure(ServerBuilder sb) {
             sb.service("/reject", (ctx, req) -> HttpResponse.of(HttpStatus.UNAUTHORIZED));
             sb.service("/no-content", (ctx, req) -> HttpResponse.of(HttpStatus.NO_CONTENT));
+            sb.service("/abort-then-ok", (ctx, req) -> {
+                // A service that does not need the content.
+                req.abort();
+                return HttpResponse.of("ok");
+            });
             sb.service("/delayed-reject", (ctx, req) -> HttpResponse.delayed(
                     HttpResponse.of(HttpStatus.UNAUTHORIZED), Duration.ofMillis(100)));
             sb.route()
@@ -236,7 +241,7 @@ final class DeferredExpect100ContinueTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "/reject", "/no-content", "/auto-abort-delay" })
+    @ValueSource(strings = { "/reject", "/no-content", "/auto-abort-delay", "/abort-then-ok" })
     void closeHttp1ConnectionWhenContinueIsNotSent(String path) throws Exception {
         try (Socket s = new Socket(NetUtil.LOCALHOST, server.httpPort())) {
             // Shorter than the request auto abort delay of '/auto-abort-delay'.
@@ -252,8 +257,14 @@ final class DeferredExpect100ContinueTest {
             // The server should close the connection because the client may not send the content.
             final String response = new String(ByteStreams.toByteArray(s.getInputStream()),
                                                StandardCharsets.US_ASCII);
-            final String statusLine = "/no-content".equals(path) ? "HTTP/1.1 204 No Content\r\n"
-                                                                 : "HTTP/1.1 401 Unauthorized\r\n";
+            final String statusLine;
+            if ("/no-content".equals(path)) {
+                statusLine = "HTTP/1.1 204 No Content\r\n";
+            } else if ("/abort-then-ok".equals(path)) {
+                statusLine = "HTTP/1.1 200 OK\r\n";
+            } else {
+                statusLine = "HTTP/1.1 401 Unauthorized\r\n";
+            }
             assertThat(response).startsWith(statusLine)
                                 .contains("connection: close\r\n")
                                 .doesNotContain("100 Continue");
