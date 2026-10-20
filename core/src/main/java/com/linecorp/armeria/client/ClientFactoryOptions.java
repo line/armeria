@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.KeepAliveHandlerUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -245,15 +246,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
     /**
-     * The jitter rate applied to the client-side max connection age. The effective max connection age is
-     * chosen uniformly at random for each connection between
-     * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
-     * {@code maxConnectionAge}. This option is disabled by default.
+     * The jitter rate applied to the client-side max connection age. This option is disabled by default.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAgeJitterRate(double)
      */
     @UnstableApi
     public static final ClientFactoryOption<Double> MAX_CONNECTION_AGE_JITTER_RATE =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_JITTER_RATE", 0.0,
-                                       ClientFactoryOptions::validateMaxConnectionAgeJitterRate,
+                                       KeepAliveHandlerUtil::validateMaxConnectionAgeJitterRate,
                                        (oldValue, newValue) -> newValue);
 
     /**
@@ -271,13 +271,6 @@ public final class ClientFactoryOptions
             return MIN_MAX_CONNECTION_AGE_MILLIS;
         }
         return connectionAgeMillis;
-    }
-
-    private static double validateMaxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
-        checkArgument(maxConnectionAgeJitterRate >= 0.0 && maxConnectionAgeJitterRate <= 1.0,
-                      "maxConnectionAgeJitterRate: %s (expected: >= 0.0 and <= 1.0)",
-                      maxConnectionAgeJitterRate);
-        return maxConnectionAgeJitterRate;
     }
 
     /**
@@ -627,10 +620,9 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the jitter rate applied to the client-side max connection age. The effective max connection age
-     * is chosen uniformly at random for each connection between
-     * {@code max(1 second, maxConnectionAge * (1 - maxConnectionAgeJitterRate))} and
-     * {@code maxConnectionAge}.
+     * Returns the jitter rate applied to the client-side max connection age.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAgeJitterRate(double)
      */
     @UnstableApi
     public double maxConnectionAgeJitterRate() {

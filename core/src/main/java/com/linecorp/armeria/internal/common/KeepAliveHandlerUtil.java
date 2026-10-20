@@ -16,13 +16,15 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.util.concurrent.TimeUnit;
+import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 public final class KeepAliveHandlerUtil {
 
-    private static final long MIN_MAX_CONNECTION_AGE_NANOS = TimeUnit.SECONDS.toNanos(1);
+    // Keeps a high jitter rate from expiring a connection right after it is opened.
+    private static final long MIN_JITTERED_MAX_CONNECTION_AGE_NANOS = TimeUnit.SECONDS.toNanos(1);
 
     public static boolean needsKeepAliveHandler(long idleTimeoutMillis, long pingIntervalMillis,
                                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
@@ -30,17 +32,39 @@ public final class KeepAliveHandlerUtil {
                maxConnectionAgeMillis > 0 || maxNumRequestsPerConnection > 0;
     }
 
-    @VisibleForTesting
-    static long jitteredMaxConnectionAgeNanos(long maxConnectionAgeNanos,
-                                              double jitterRate, double randomValue) {
+    /**
+     * Returns the specified {@code maxConnectionAgeJitterRate} if it is between {@code 0.0} and {@code 1.0},
+     * inclusive.
+     *
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeJitterRate} is out of range
+     *                                  or {@link Double#NaN}
+     */
+    public static double validateMaxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
+        checkArgument(maxConnectionAgeJitterRate >= 0.0 && maxConnectionAgeJitterRate <= 1.0,
+                      "maxConnectionAgeJitterRate: %s (expected: >= 0.0 and <= 1.0)",
+                      maxConnectionAgeJitterRate);
+        return maxConnectionAgeJitterRate;
+    }
+
+    /**
+     * Returns a max connection age chosen uniformly at random from
+     * {@code [max(1 second, maxConnectionAgeNanos * (1 - jitterRate)), maxConnectionAgeNanos)}.
+     * Returns {@code maxConnectionAgeNanos} as is if it is not positive, if {@code jitterRate} is {@code 0}
+     * or if the lower bound is not less than {@code maxConnectionAgeNanos}.
+     */
+    static long jitteredMaxConnectionAgeNanos(long maxConnectionAgeNanos, double jitterRate) {
         if (maxConnectionAgeNanos <= 0 || jitterRate == 0) {
             return maxConnectionAgeNanos;
         }
 
         final long jitteredLowerBound = (long) (maxConnectionAgeNanos * (1 - jitterRate));
-        final long lowerBound = Math.min(maxConnectionAgeNanos,
-                                         Math.max(MIN_MAX_CONNECTION_AGE_NANOS, jitteredLowerBound));
-        return lowerBound + (long) ((maxConnectionAgeNanos - lowerBound) * randomValue);
+        final long lowerBound = Math.max(MIN_JITTERED_MAX_CONNECTION_AGE_NANOS, jitteredLowerBound);
+        if (lowerBound >= maxConnectionAgeNanos) {
+            return maxConnectionAgeNanos;
+        }
+        // The exclusive upper bound keeps the result below the configured age and cannot overflow
+        // when maxConnectionAgeNanos is Long.MAX_VALUE.
+        return ThreadLocalRandom.current().nextLong(lowerBound, maxConnectionAgeNanos);
     }
 
     private KeepAliveHandlerUtil() {}

@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -77,7 +76,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     @Nullable
     private ScheduledFuture<?> maxConnectionAgeFuture;
     private final long maxConnectionAgeNanos;
-    private final double maxConnectionAgeJitterRate;
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
@@ -99,7 +97,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
-        this.maxConnectionAgeJitterRate = maxConnectionAgeJitterRate;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
         this.listener = listener;
@@ -119,7 +116,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         if (maxConnectionAgeMillis <= 0) {
             maxConnectionAgeNanos = 0;
         } else {
-            maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
+            maxConnectionAgeNanos = KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
+                    TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis), maxConnectionAgeJitterRate);
         }
     }
 
@@ -148,16 +146,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (maxConnectionAgeNanos > 0) {
-            final double randomValue;
-            if (maxConnectionAgeJitterRate == 0) {
-                randomValue = 0;
-            } else {
-                randomValue = ThreadLocalRandom.current().nextDouble();
-            }
-            final long effectiveMaxConnectionAgeNanos = KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
-                    maxConnectionAgeNanos, maxConnectionAgeJitterRate, randomValue);
             maxConnectionAgeFuture = executor().schedule(new MaxConnectionAgeExceededTask(ctx),
-                                                         effectiveMaxConnectionAgeNanos, TimeUnit.NANOSECONDS);
+                                                         maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
         }
     }
 
