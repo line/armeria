@@ -38,9 +38,9 @@ val relocatedProjects: Iterable<Project> =
     projectsWithFlags.call("java", "relocate", "native")
     //listOf(project(":core")) // Uncomment this for quick testing
 
-val graalLauncher = rootProject.ext["graalLauncher"] as JavaLauncher
-val graalHome = rootProject.ext["graalHome"] as Path
-val nativeImageConfigToolPath = "${graalHome.resolve("lib/svm/bin/native-image-configure")}"
+@Suppress("UNCHECKED_CAST")
+val graalHome = rootProject.ext["graalHome"] as Provider<Path>
+val nativeImageConfigToolPath = graalHome.map { "${it.resolve("lib/svm/bin/native-image-configure")}" }
 
 val thisProject = project
 val callerFilterFile = projectDir.resolve("src/trace-filters/caller-filter.json")
@@ -66,7 +66,7 @@ tasks.register("processNativeImageTraces", Exec::class).configure {
 
     doFirst {
         val newCommandLine = mutableListOf<String>()
-        newCommandLine += nativeImageConfigToolPath
+        newCommandLine += nativeImageConfigToolPath.get()
         newCommandLine += "generate"
         nativeImageTraceFiles.forEach {
             if (Files.exists(it)) {
@@ -163,20 +163,19 @@ tasks.register("nativeImageConfig", Exec::class).configure {
     inputs.property("shouldGenerateFromScratch", shouldGenerateFromScratch)
     outputs.dir(nativeImageConfigOutputDir)
 
-    val args = mutableListOf<String>()
-    args += nativeImageConfigToolPath
-    args += "generate"
-    args += "--output-dir=$nativeImageConfigOutputDir"
-    args += "--input-dir=$baseConfigDir"
-    args += "--input-dir=$simplifyNativeImageConfigOutputDir"
-    // Do not feed the previously generated config when `-Pscratch` option is specified.
-    if (!shouldGenerateFromScratch) {
-        args += "--input-dir=$previousConfigDir"
-    }
-
-    commandLine(args)
-
     doFirst {
+        val args = mutableListOf<String>()
+        args += nativeImageConfigToolPath.get()
+        args += "generate"
+        args += "--output-dir=$nativeImageConfigOutputDir"
+        args += "--input-dir=$baseConfigDir"
+        args += "--input-dir=$simplifyNativeImageConfigOutputDir"
+        // Do not feed the previously generated config when `-Pscratch` option is specified.
+        if (!shouldGenerateFromScratch) {
+            args += "--input-dir=$previousConfigDir"
+        }
+        commandLine(args)
+
         // Delete the output directory because otherwise the tool doesn't overwrite the files.
         delete(nativeImageConfigOutputDir)
     }
