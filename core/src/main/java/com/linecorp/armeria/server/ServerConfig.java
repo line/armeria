@@ -197,6 +197,13 @@ public interface ServerConfig {
     int http1MaxChunkSize();
 
     /**
+     * Returns the amount of time in milliseconds to wait before closing an HTTP/1 connection
+     * when the server needs to close the connection. {@code 0} closes the connection immediately.
+     */
+    @UnstableApi
+    long http1ConnectionCloseDelayMillis();
+
+    /**
      * Returns the initial connection-level HTTP/2 flow control window size.
      */
     int http2InitialConnectionWindowSize();
