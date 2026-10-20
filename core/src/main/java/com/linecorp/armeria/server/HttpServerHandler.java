@@ -588,8 +588,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
                          ResponseHeadersBuilder resHeaders, HttpData resContent,
                          @Nullable Throwable cause) {
-        final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
-        if (req.suppressContinue() && !protocol.isMultiplex()) {
+        final ExpectContinueHandler expectContinueHandler =
+                ((DecodedHttpRequest) reqCtx.request()).expectContinueHandler();
+        if (expectContinueHandler != null && expectContinueHandler.suppress() && !protocol.isMultiplex()) {
             // The client may or may not send the request content.
             handledLastRequest = true;
         }
@@ -780,8 +781,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseCompleteHandler = (unused, cause) -> {
                 assert eventLoop.inEventLoop();
                 final long requestAutoAbortDelayMillis = reqCtx.requestAutoAbortDelayMillis();
+                final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
                 if (cause != null || !req.isOpen() || requestAutoAbortDelayMillis == 0 ||
-                    req.isContinueSuppressed()) {
+                    (expectContinueHandler != null && expectContinueHandler.isSuppressed())) {
                     // No need to wait for the request content if the client was not allowed to send it.
                     handleResponseComplete(cause);
                     return null;

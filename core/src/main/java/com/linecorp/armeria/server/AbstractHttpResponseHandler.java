@@ -84,8 +84,31 @@ abstract class AbstractHttpResponseHandler {
      * the response for HTTP/1, because the client may or may not send the content.
      */
     final void maybeDisconnectOnSuppressedContinue() {
-        if (req.suppressContinue() && !reqCtx.sessionProtocol().isMultiplex()) {
+        final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+        if (expectContinueHandler != null && expectContinueHandler.suppress() &&
+            !reqCtx.sessionProtocol().isMultiplex()) {
             disconnectWhenFinished();
+        }
+    }
+
+    /**
+     * Writes a pending {@code 100 Continue} response because final response headers that allow the client
+     * to send the content are about to be written.
+     */
+    final void sendContinue() {
+        final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+        if (expectContinueHandler != null) {
+            expectContinueHandler.send();
+        }
+    }
+
+    /**
+     * Invoked when a service wrote a {@code 100 Continue} response by itself.
+     */
+    final void onContinueSent() {
+        final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+        if (expectContinueHandler != null) {
+            expectContinueHandler.onContinueSent();
         }
     }
 
@@ -146,8 +169,7 @@ abstract class AbstractHttpResponseHandler {
     final ChannelFuture writeAggregatedHttpResponse(AggregatedHttpResponse res) {
         for (ResponseHeaders informational : res.informationals()) {
             if (informational.status() == HttpStatus.CONTINUE) {
-                // A service sent '100 Continue' by itself.
-                req.onContinueSent();
+                onContinueSent();
                 break;
             }
         }

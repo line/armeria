@@ -211,15 +211,19 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Derive the request ID from the stream ID.
             final int id = streamIdToId(streamId);
             final EventLoop eventLoop = ctx.channel().eventLoop();
-            req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
-                                        inboundTrafficController, routingCtx, expectsContinue);
+            final Runnable writeContinue;
             if (expectsContinue && !endOfStream) {
+                // No need to send '100 Continue' if there's no content.
                 final ServerHttp2ObjectEncoder encoder = this.encoder;
-                req.setContinueTask(() -> {
+                writeContinue = () -> {
                     encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
                     ctx.flush();
-                });
+                };
+            } else {
+                writeContinue = null;
             }
+            req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
+                                        inboundTrafficController, routingCtx, writeContinue);
             final long maxRequestLength = req.maxRequestLength();
             if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                 abortLargeRequest(req, true);
@@ -379,7 +383,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
         // The client must not send the content that will be rejected.
-        decodedReq.suppressContinue();
+        final ExpectContinueHandler expectContinueHandler = decodedReq.expectContinueHandler();
+        if (expectContinueHandler != null) {
+            expectContinueHandler.suppress();
+        }
         assert encoder != null;
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()

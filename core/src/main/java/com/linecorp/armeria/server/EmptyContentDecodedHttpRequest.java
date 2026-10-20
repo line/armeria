@@ -64,12 +64,13 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
-    private boolean expectsContinue;
+    @Nullable
+    private final ExpectContinueHandler expectContinueHandler;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
                                    ExchangeType exchangeType, long requestStartTimeNanos,
-                                   long requestStartTimeMicros) {
+                                   long requestStartTimeMicros, boolean expectsContinue) {
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
@@ -79,6 +80,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
+        // The content is never consumed, so '100 Continue' is never written. The client may never send
+        // the content if '100 Continue' is suppressed.
+        expectContinueHandler = expectsContinue ? new ExpectContinueHandler(
+                eventLoop, () -> {}, () -> false, () -> false) : null;
     }
 
     @Override
@@ -195,17 +200,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         return headers;
     }
 
+    @Nullable
     @Override
-    public void setContinueTask(Runnable continueTask) {
-        // The content is never consumed, so '100 Continue' is never sent.
-        expectsContinue = true;
-    }
-
-    @Override
-    public boolean suppressContinue() {
-        final boolean expectsContinue = this.expectsContinue;
-        this.expectsContinue = false;
-        return expectsContinue;
+    public ExpectContinueHandler expectContinueHandler() {
+        return expectContinueHandler;
     }
 
     @Override

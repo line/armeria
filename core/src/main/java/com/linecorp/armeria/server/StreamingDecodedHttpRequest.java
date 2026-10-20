@@ -54,8 +54,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Nullable
     private ServiceRequestContext ctx;
     @Nullable
-    private Runnable continueTask;
-    private boolean continueSuppressed;
+    private final ExpectContinueHandler expectContinueHandler;
     private long transferredBytes;
 
     @Nullable
@@ -69,7 +68,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket) {
+                                boolean http1WebSocket, @Nullable Runnable writeContinue) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -84,6 +83,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
+        expectContinueHandler = writeContinue != null ? new ExpectContinueHandler(
+                eventLoop, writeContinue, this::isOpen, this::isClosedSuccessfully) : null;
     }
 
     @Override
@@ -252,64 +253,17 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         return http1WebSocket;
     }
 
+    @Nullable
     @Override
-    public void setContinueTask(Runnable continueTask) {
-        this.continueTask = continueTask;
+    public ExpectContinueHandler expectContinueHandler() {
+        return expectContinueHandler;
     }
 
     @Override
     protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
-        // 'continueTask' may be read outside the event loop. It is fine because it is set before
-        // the request is passed to a service and 'maybeSendContinue()' checks it again in the event loop.
-        if (continueTask == null) {
-            return;
+        if (expectContinueHandler != null) {
+            expectContinueHandler.onSubscribe();
         }
-        if (eventLoop.inEventLoop()) {
-            maybeSendContinue();
-        } else {
-            eventLoop.execute(this::maybeSendContinue);
-        }
-    }
-
-    private void maybeSendContinue() {
-        final Runnable continueTask = this.continueTask;
-        if (continueTask == null) {
-            return;
-        }
-        this.continueTask = null;
-        // No need to send '100 Continue' if the content has been fully received or the request was aborted.
-        if (isOpen()) {
-            continueTask.run();
-        }
-    }
-
-    @Override
-    public void sendContinue() {
-        assert eventLoop.inEventLoop();
-        maybeSendContinue();
-    }
-
-    @Override
-    public void onContinueSent() {
-        assert eventLoop.inEventLoop();
-        continueTask = null;
-    }
-
-    @Override
-    public boolean suppressContinue() {
-        assert eventLoop.inEventLoop();
-        if (continueTask == null) {
-            return false;
-        }
-        continueTask = null;
-        // The client has nothing more to send if the content has been fully received.
-        continueSuppressed = !isNormallyClosed;
-        return continueSuppressed;
-    }
-
-    @Override
-    public boolean isContinueSuppressed() {
-        return continueSuppressed;
     }
 
     @VisibleForTesting

@@ -50,8 +50,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
                 return;
             }
             if (status == HttpStatus.CONTINUE) {
-                // A service sent '100 Continue' by itself.
-                req.onContinueSent();
+                onContinueSent();
             }
             merged = headers;
         } else {
@@ -72,7 +71,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
             }
             if (!endOfStream && status.isSuccess() && !status.isContentAlwaysEmpty()) {
                 // The service may read the request content after sending the response headers.
-                req.sendContinue();
+                sendContinue();
             } else {
                 maybeDisconnectOnSuppressedContinue();
             }

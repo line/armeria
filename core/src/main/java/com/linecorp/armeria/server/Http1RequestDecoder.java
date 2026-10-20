@@ -260,7 +260,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                             eventLoop, id, 1, headers, false, inboundTrafficController,
                                             serviceConfig.maxRequestLength(), routingCtx,
                                             ExchangeType.BIDI_STREAMING,
-                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true,
+                                            null);
                             assert encoder instanceof ServerHttp1ObjectEncoder;
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
@@ -276,15 +277,19 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
-                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx,
-                                                           expectsContinue);
+                    final Runnable writeContinue;
                     if (expectsContinue && !endOfStream) {
-                        req.setContinueTask(() -> {
+                        // No need to send '100 Continue' if there's no content.
+                        writeContinue = () -> {
                             encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false, method);
                             ctx.flush();
-                        });
+                        };
+                    } else {
+                        writeContinue = null;
                     }
+                    this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
+                                                           keepAlive, inboundTrafficController, routingCtx,
+                                                           writeContinue);
                     final long maxRequestLength = req.maxRequestLength();
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                         abortLargeRequest(id, req, true);
@@ -362,7 +367,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private void abortLargeRequest(int id, DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
         // The client must not send the content that will be rejected.
-        decodedReq.suppressContinue();
+        final ExpectContinueHandler expectContinueHandler = decodedReq.expectContinueHandler();
+        if (expectContinueHandler != null) {
+            expectContinueHandler.suppress();
+        }
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()
                                         .maxContentLength(decodedReq.maxRequestLength())

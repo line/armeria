@@ -34,27 +34,30 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx, boolean expectsContinue) {
+                                 RoutingContext routingCtx, @Nullable Runnable writeContinue) {
         final long requestStartTimeNanos = System.nanoTime();
         final long requestStartTimeMicros = SystemInfo.currentTimeMicros();
         if (!routingCtx.hasResult()) {
             return new EmptyContentDecodedHttpRequest(
                     eventLoop, id, streamId, headers, keepAlive, routingCtx, ExchangeType.RESPONSE_STREAMING,
-                    requestStartTimeNanos, requestStartTimeMicros);
+                    requestStartTimeNanos, requestStartTimeMicros, writeContinue != null);
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
             final ExchangeType exchangeType = service.exchangeType(routingCtx);
             if (endOfStream) {
+                assert writeContinue == null;
                 return new EmptyContentDecodedHttpRequest(
                         eventLoop, id, streamId, headers, keepAlive, routingCtx, exchangeType,
-                        requestStartTimeNanos, requestStartTimeMicros);
+                        requestStartTimeNanos, requestStartTimeMicros, false);
             } else {
-                if (exchangeType.isRequestStreaming() || expectsContinue) {
+                // A request that expects '100 Continue' is not aggregated. Otherwise, the service would never
+                // be invoked because the client waits for '100 Continue' before sending the content.
+                if (exchangeType.isRequestStreaming() || writeContinue != null) {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros, false);
+                            requestStartTimeNanos, requestStartTimeMicros, false, writeContinue);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
@@ -144,42 +147,12 @@ interface DecodedHttpRequest extends HttpRequest {
     long requestStartTimeMicros();
 
     /**
-     * Sets the task that writes a {@code 100 Continue} response. The task is run on the event loop at most
-     * once, when the request content is subscribed to for the first time or {@link #sendContinue()} is
-     * called. This allows a decorator or a service to reject a request with
-     * an {@code Expect: 100-continue} header before the client sends the request content.
+     * Returns the {@link ExpectContinueHandler} if the client sent an {@code Expect: 100-continue} header
+     * with the request content, or {@code null} otherwise.
      */
-    default void setContinueTask(Runnable continueTask) {}
-
-    /**
-     * Prevents a pending {@code 100 Continue} response from being written. Must be called from the event
-     * loop when final response headers that do not allow the client to send the content are about to be
-     * written.
-     *
-     * @return {@code true} if the client expected a {@code 100 Continue} response which has not been sent,
-     *         which means the client may never send the request content.
-     */
-    default boolean suppressContinue() {
-        return false;
-    }
-
-    /**
-     * Writes a pending {@code 100 Continue} response immediately. Must be called from the event loop.
-     */
-    default void sendContinue() {}
-
-    /**
-     * Discards a pending {@code 100 Continue} response because a service wrote it by itself.
-     * Must be called from the event loop.
-     */
-    default void onContinueSent() {}
-
-    /**
-     * Returns whether a {@code 100 Continue} response expected by the client was suppressed before
-     * the request content was fully received.
-     */
-    default boolean isContinueSuppressed() {
-        return false;
+    @Nullable
+    default ExpectContinueHandler expectContinueHandler() {
+        return null;
     }
 
     /**
