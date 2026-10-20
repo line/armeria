@@ -55,13 +55,6 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
     AbstractMetricCollectingClient(
             Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
-            DistributionStatisticConfig distributionStatisticConfig) {
-        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, -1);
-    }
-
-    AbstractMetricCollectingClient(
-            Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
-            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
             DistributionStatisticConfig distributionStatisticConfig,
             int maxCardinality) {
         super(delegate);

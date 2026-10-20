@@ -53,7 +53,7 @@ class AbstractMetricCollectingBuilderTest {
         final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
                 new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
 
-        assertThat(abstractMetricCollectingBuilder.maxCardinality()).isEqualTo(-1);
+        assertThat(abstractMetricCollectingBuilder.maxCardinality()).isEqualTo(0);
     }
 
     @Test

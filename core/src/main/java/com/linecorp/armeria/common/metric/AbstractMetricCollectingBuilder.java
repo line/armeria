@@ -42,7 +42,7 @@ public abstract class AbstractMetricCollectingBuilder {
 
     private DistributionStatisticConfig distributionStatisticConfig = MoreMeters.distributionStatisticConfig();
 
-    private int maxCardinality = -1;
+    private int maxCardinality;
 
     /**
      * Creates a new instance with the specified {@link MeterIdPrefixFunction}.
@@ -123,7 +123,7 @@ public abstract class AbstractMetricCollectingBuilder {
     }
 
     /**
-     * Returns the maximum cardinality, or {@code -1} if no limit is set.
+     * Returns the maximum cardinality, or {@code 0} if no limit is set.
      */
     protected final int maxCardinality() {
         return maxCardinality;

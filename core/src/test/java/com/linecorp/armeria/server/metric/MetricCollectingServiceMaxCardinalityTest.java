@@ -57,11 +57,11 @@ class MetricCollectingServiceMaxCardinalityTest {
 
     @Test
     void maxCardinalityExceeded() throws InterruptedException {
-        server.webClient().blocking().get("/route1");
-        server.webClient().blocking().get("/route2");
-        server.webClient().blocking().get("/route1");
-        server.webClient().blocking().get("/route3");
-        server.webClient().blocking().get("/route2");
+        assertThat(server.webClient().blocking().get("/route1").status().code()).isEqualTo(200);
+        assertThat(server.webClient().blocking().get("/route2").status().code()).isEqualTo(200);
+        assertThat(server.webClient().blocking().get("/route1").status().code()).isEqualTo(200);
+        assertThat(server.webClient().blocking().get("/route3").status().code()).isEqualTo(200);
+        assertThat(server.webClient().blocking().get("/route2").status().code()).isEqualTo(200);
 
         await().untilAsserted(() -> {
             final Map<String, Double> measurements = measureAll(registry);

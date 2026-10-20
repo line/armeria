@@ -79,12 +79,6 @@ public final class MetricCollectingClient extends AbstractMetricCollectingClient
 
     MetricCollectingClient(HttpClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
-                           DistributionStatisticConfig distributionStatisticConfig) {
-        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, -1);
-    }
-
-    MetricCollectingClient(HttpClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
-                           @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
                            DistributionStatisticConfig distributionStatisticConfig,
                            int maxCardinality) {
         super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, maxCardinality);

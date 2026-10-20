@@ -51,34 +51,35 @@ class MetricCollectingClientMaxCardinalityTest {
     @Test
     void maxCardinalityExceeded() {
         final PrometheusMeterRegistry registry = PrometheusMeterRegistries.defaultRegistry();
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .meterRegistry(registry)
-                                                   .build();
-        final WebClient client =
-                WebClient.builder(server.httpUri())
-                         .factory(factory)
-                         .decorator(MetricCollectingClient.builder(
-                                 MeterIdPrefixFunction.of(
-                                         (reg, log) -> new MeterIdPrefix("client", "path",
-                                                                         log.requestHeaders().path())))
-                                 .maxCardinality(2)
-                                 .newDecorator())
-                         .build();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .meterRegistry(registry)
+                                                  .build()) {
+            final WebClient client =
+                    WebClient.builder(server.httpUri())
+                             .factory(factory)
+                             .decorator(MetricCollectingClient.builder(
+                                     MeterIdPrefixFunction.of(
+                                             (reg, log) -> new MeterIdPrefix("client", "path",
+                                                                             log.requestHeaders().path())))
+                                     .maxCardinality(2)
+                                     .newDecorator())
+                             .build();
 
-        client.blocking().get("/1");
-        client.blocking().get("/2");
-        client.blocking().get("/1");
-        client.blocking().get("/3");
-        client.blocking().get("/2");
+            assertThat(client.blocking().get("/1").status().code()).isEqualTo(200);
+            assertThat(client.blocking().get("/2").status().code()).isEqualTo(200);
+            assertThat(client.blocking().get("/1").status().code()).isEqualTo(200);
+            assertThat(client.blocking().get("/3").status().code()).isEqualTo(200);
+            assertThat(client.blocking().get("/2").status().code()).isEqualTo(200);
 
-        await().untilAsserted(() -> {
-            final Map<String, Double> measurements = measureAll(registry);
-            assertThat(measurements)
-                    .containsEntry("client.requests#count{path=/1,result=success}", 2.0)
-                    .containsEntry("client.requests#count{path=/2,result=success}", 2.0);
+            await().untilAsserted(() -> {
+                final Map<String, Double> measurements = measureAll(registry);
+                assertThat(measurements)
+                        .containsEntry("client.requests#count{path=/1,result=success}", 2.0)
+                        .containsEntry("client.requests#count{path=/2,result=success}", 2.0);
 
-            // path=/3 was the 3rd distinct tag combination and exceeds maxCardinality(2)
-            assertThat(measurements.keySet().stream().anyMatch(k -> k.contains("path=/3"))).isFalse();
-        });
+                // path=/3 was the 3rd distinct tag combination and exceeds maxCardinality(2)
+                assertThat(measurements.keySet().stream().anyMatch(k -> k.contains("path=/3"))).isFalse();
+            });
+        }
     }
 }

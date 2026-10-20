@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +39,7 @@ public final class RequestMetricLimiter {
 
     private final Set<MeterIdPrefix> seenPrefixes = ConcurrentHashMap.newKeySet();
     private final int maxCardinality;
-    private final AtomicBoolean warned = new AtomicBoolean();
+    private boolean warned;
 
     /**
      * Creates a new instance with the specified {@code maxCardinality}.
@@ -73,7 +72,8 @@ public final class RequestMetricLimiter {
     }
 
     private void warn(MeterIdPrefix prefix) {
-        if (warned.compareAndSet(false, true)) {
+        if (!warned) {
+            warned = true;
             logger.warn("The number of distinct active request metrics for '{}' has exceeded " +
                         "the maximum cardinality ({}). Refusing to record request metrics " +
                         "for new tag combinations.", prefix.name(), maxCardinality);

@@ -22,6 +22,8 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpStatus;
@@ -51,6 +53,7 @@ public final class RequestMetricSupport {
     /**
      * Sets up request metrics.
      */
+    @VisibleForTesting
     public static void setup(
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
@@ -92,27 +95,21 @@ public final class RequestMetricSupport {
         final MeterIdPrefix activeRequestsId =
                 meterIdPrefixFunction.activeRequestPrefix(registry, log).append("active.requests");
 
-        final boolean accepted = metricLimiter == null || metricLimiter.accept(activeRequestsId);
-        final ActiveRequestMetrics activeRequestMetrics;
-        if (accepted) {
-            activeRequestMetrics = MicrometerUtil.register(
-                    registry, activeRequestsId, ActiveRequestMetrics.class,
-                    (reg, prefix) ->
-                            reg.gauge(prefix.name(), prefix.tags(),
-                                      new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
-            activeRequestMetrics.increment();
-        } else {
-            activeRequestMetrics = null;
+        if (metricLimiter != null && !metricLimiter.accept(activeRequestsId)) {
+            return;
         }
 
+        final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
+                registry, activeRequestsId, ActiveRequestMetrics.class,
+                (reg, prefix) ->
+                        reg.gauge(prefix.name(), prefix.tags(),
+                                  new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
+        activeRequestMetrics.increment();
+
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            if (accepted) {
-                onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
-                           distributionStatisticConfig);
-            }
-            if (activeRequestMetrics != null) {
-                activeRequestMetrics.decrement();
-            }
+            onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
+                       distributionStatisticConfig);
+            activeRequestMetrics.decrement();
         });
     }
 
