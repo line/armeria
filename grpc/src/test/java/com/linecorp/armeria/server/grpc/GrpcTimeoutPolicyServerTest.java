@@ -20,13 +20,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -43,6 +48,9 @@ class GrpcTimeoutPolicyServerTest {
 
     private static final long SERVICE_TIMEOUT_MILLIS = 2000;
     private static final Duration MAX = Duration.ofSeconds(10);
+    private static final AtomicLong delayedRequestTimeoutMillis = new AtomicLong(-1);
+    private static final AtomicReference<CompletableFuture<Throwable>> delayedRequestCancellation =
+            new AtomicReference<>();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -101,6 +109,29 @@ class GrpcTimeoutPolicyServerTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension delayedServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(5000);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(MAX))
+                                  .addService(new DelayedResponseService())
+                                  .build());
+            sb.decorator((delegate, ctx, req) -> {
+                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                ctx.eventLoop().schedule(() -> {
+                    try {
+                        responseFuture.complete(delegate.serve(ctx, req));
+                    } catch (Throwable cause) {
+                        responseFuture.completeExceptionally(cause);
+                    }
+                }, 400, TimeUnit.MILLISECONDS);
+                return HttpResponse.of(responseFuture);
+            });
+        }
+    };
+
     @Test
     void longClientTimeoutIsCapped() {
         final TestServiceBlockingStub client =
@@ -115,6 +146,22 @@ class GrpcTimeoutPolicyServerTest {
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
         assertTimeoutIsAbout(requestTimeoutMillis(client.withDeadlineAfter(500, TimeUnit.MILLISECONDS)),
                              500);
+    }
+
+    @Test
+    void clientTimeoutStartsWhenRequestArrives() throws Exception {
+        delayedRequestTimeoutMillis.set(-1);
+        delayedRequestCancellation.set(null);
+        final TestServiceBlockingStub client = GrpcClients.builder(delayedServer.httpUri())
+                                                          .responseTimeoutMillis(0)
+                                                          .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "700m")
+                                                          .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOf(StatusRuntimeException.class);
+        assertThat(delayedRequestTimeoutMillis.get()).isEqualTo(700);
+        final CompletableFuture<Throwable> cancellation = delayedRequestCancellation.get();
+        assertThat(cancellation).isNotNull();
+        assertThat(cancellation.get(1, TimeUnit.SECONDS)).isInstanceOf(RequestTimeoutException.class);
     }
 
     @Test
@@ -196,9 +243,8 @@ class GrpcTimeoutPolicyServerTest {
     /**
      * Asserts that the specified {@code actualMillis} is the {@code expectedMillis} the policy decided, give or
      * take a second, because a timeout does not survive a round trip to the millisecond. A client subtracts
-     * what its deadline already spent before writing the {@code grpc-timeout} header, and a server sets the
-     * timeout from the moment the service is reached while
-     * {@link ServiceRequestContext#requestTimeoutMillis()} reports it relative to the start of the request.
+     * what its deadline already spent before writing the {@code grpc-timeout} header, and the server sets the
+     * timeout relative to the start of the request.
      */
     private static void assertTimeoutIsAbout(long actualMillis, long expectedMillis) {
         assertThat(actualMillis).isBetween(expectedMillis - 1000, expectedMillis + 1000);
@@ -221,6 +267,17 @@ class GrpcTimeoutPolicyServerTest {
                                                   .setUsername(String.valueOf(timeoutMillis))
                                                   .build());
             responseObserver.onCompleted();
+        }
+    }
+
+    private static class DelayedResponseService extends TestServiceImplBase {
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
+            delayedRequestTimeoutMillis.set(ctx.requestTimeoutMillis());
+            delayedRequestCancellation.set(ctx.whenRequestCancelling());
+            ctx.eventLoop().schedule(
+                    () -> TimeoutReportingService.reportTimeout(responseObserver), 500, TimeUnit.MILLISECONDS);
         }
     }
 }

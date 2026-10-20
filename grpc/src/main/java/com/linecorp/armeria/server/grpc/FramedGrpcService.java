@@ -297,7 +297,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (timeout.isZero()) {
             return false;
         }
-        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, timeout);
+        ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, timeout);
         return true;
     }
 
