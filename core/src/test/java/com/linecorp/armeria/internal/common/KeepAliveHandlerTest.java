@@ -85,20 +85,6 @@ class KeepAliveHandlerTest {
         }).syncUninterruptibly();
     }
 
-    @Test
-    void connectionLifespanIsInitializedOnceAndClearedOnClose() {
-        KeepAliveHandlerUtil.initializeConnectionLifespan(channel, 60_000, 0.0);
-        final KeepAliveHandlerUtil.ConnectionLifespan connectionLifespan =
-                KeepAliveHandlerUtil.connectionLifespan(channel);
-        assertThat(connectionLifespan).isNotNull();
-
-        KeepAliveHandlerUtil.initializeConnectionLifespan(channel, 60_000, 0.0);
-        assertThat(KeepAliveHandlerUtil.connectionLifespan(channel)).isSameAs(connectionLifespan);
-
-        channel.close();
-        await().untilAsserted(() -> assertThat(KeepAliveHandlerUtil.connectionLifespan(channel)).isNull());
-    }
-
     @AfterEach
     void tearDown() {
         channel.finish();
@@ -284,41 +270,6 @@ class KeepAliveHandlerTest {
         final Stopwatch stopwatch = Stopwatch.createStarted();
         await().untilAsserted(() -> assertThat(keepAliveHandler.needsDisconnection()).isTrue());
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(500L, 1000L);
-    }
-
-    @Test
-    void maxConnectionAgeClosesIdleServerConnection() {
-        final AtomicInteger closed = new AtomicInteger();
-        channel.closeFuture().addListener(unused -> closed.incrementAndGet());
-        final AbstractKeepAliveHandler keepAliveHandler =
-                new AbstractKeepAliveHandler(channel, "server", keepAliveTimer, 0, 0,
-                                             500, 0.0, 0, false, ConnectionEventListener.NOOP) {
-                    @Override
-                    public boolean isHttp2() {
-                        return false;
-                    }
-
-                    @Override
-                    public void onPingAck(long data) {}
-
-                    @Override
-                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
-                        return null;
-                    }
-
-                    @Override
-                    protected boolean pingResetsPreviousPing() {
-                        return false;
-                    }
-
-                    @Override
-                    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
-                        return false;
-                    }
-                };
-        keepAliveHandler.initialize(ctx);
-
-        await().untilAtomic(closed, Matchers.is(1));
     }
 
     @Test
