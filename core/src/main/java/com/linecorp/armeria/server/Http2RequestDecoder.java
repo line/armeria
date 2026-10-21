@@ -136,11 +136,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
-            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
-            // This is because removing a header from RequestHeaders is more expensive due to its
-            // immutability.
-            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders, method);
+            // Check `expect: 100-continue`, but defer sending '100 Continue' until the request content
+            // is subscribed to, so that a decorator or a service can reject the request before the client
+            // sends the content.
+            final int expectResult = checkExpectContinue(nettyHeaders);
+            final boolean hasInvalidExpectHeader = expectResult < 0;
+            final boolean expectsContinue = expectResult > 0;
 
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
@@ -210,8 +211,19 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Derive the request ID from the stream ID.
             final int id = streamIdToId(streamId);
             final EventLoop eventLoop = ctx.channel().eventLoop();
+            final Runnable writeContinue;
+            if (expectsContinue && !endOfStream) {
+                // No need to send '100 Continue' if there's no content.
+                final ServerHttp2ObjectEncoder encoder = this.encoder;
+                writeContinue = () -> {
+                    encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
+                    ctx.flush();
+                };
+            } else {
+                writeContinue = null;
+            }
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
-                                        inboundTrafficController, routingCtx);
+                                        inboundTrafficController, routingCtx, writeContinue);
             final long maxRequestLength = req.maxRequestLength();
             if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                 abortLargeRequest(req, true);
@@ -252,25 +264,26 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         return (streamId - 1) >>> 1;
     }
 
-    private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
+    /**
+     * Checks the {@code Expect} header and removes it if its value is {@code 100-continue}.
+     *
+     * @return {@code 0} if no {@code Expect} header,
+     *         {@code 1} if valid {@code Expect: 100-continue},
+     *         {@code -1} if unsupported {@code Expect} value.
+     */
+    private static int checkExpectContinue(Http2Headers headers) {
         final CharSequence expectValue = headers.get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
-            // No 'expect' header.
-            return true;
+            return 0;
         }
 
-        // '100-continue' is the only allowed expectation.
         if (!AsciiString.contentEqualsIgnoreCase(HttpHeaderValues.CONTINUE, expectValue)) {
-            return false;
+            return -1;
         }
-
-        // Send a '100 Continue' response.
-        assert encoder != null;
-        encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         headers.remove(HttpHeaderNames.EXPECT);
-        return true;
+        return 1;
     }
 
     @Override
@@ -369,6 +382,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     }
 
     private void abortLargeRequest(DecodedHttpRequest decodedReq, boolean isEarlyRejection) {
+        // The client must not send the content that will be rejected.
+        final ExpectContinueHandler expectContinueHandler = decodedReq.expectContinueHandler();
+        if (expectContinueHandler != null) {
+            expectContinueHandler.suppress();
+        }
         assert encoder != null;
         final ContentTooLargeException cause =
                 ContentTooLargeException.builder()

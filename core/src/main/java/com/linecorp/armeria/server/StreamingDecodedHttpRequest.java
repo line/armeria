@@ -29,10 +29,12 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
 final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequestWriter {
 
@@ -51,6 +53,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Nullable
     private ServiceRequestContext ctx;
+    @Nullable
+    private final ExpectContinueHandler expectContinueHandler;
     private long transferredBytes;
 
     @Nullable
@@ -64,7 +68,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket) {
+                                boolean http1WebSocket, @Nullable Runnable writeContinue) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -79,6 +83,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
+        expectContinueHandler = writeContinue != null ? new ExpectContinueHandler(
+                eventLoop, writeContinue, this::isOpen, this::isClosedSuccessfully) : null;
     }
 
     @Override
@@ -245,6 +251,19 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
+    }
+
+    @Nullable
+    @Override
+    public ExpectContinueHandler expectContinueHandler() {
+        return expectContinueHandler;
+    }
+
+    @Override
+    protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
+        if (expectContinueHandler != null) {
+            expectContinueHandler.onSubscribe();
+        }
     }
 
     @VisibleForTesting
