@@ -541,15 +541,19 @@ const App: React.FunctionComponent<Props> = (props) => {
       }
 
       try {
-        const settingsData: DocServiceSettings = await fetch(
-          'settings.json',
-        ).then((r) => r.json());
+        const settingsResponse = await fetch('settings.json');
+        if (!settingsResponse.ok) {
+          throw new Error(
+            `Failed to load settings: ${settingsResponse.status}`,
+          );
+        }
+        const settingsData: DocServiceSettings = await settingsResponse.json();
         setDocServiceSettings({
-          sensitiveHeaders: settingsData.sensitiveHeaders ?? [],
+          sensitiveHeaders: settingsData.sensitiveHeaders ?? ['authorization'],
         });
       } catch (e) {
-        // Ignore the error and continue
-        setDocServiceSettings({ sensitiveHeaders: [] });
+        // Ignore the error and default to redacting the authorization header.
+        setDocServiceSettings({ sensitiveHeaders: ['authorization'] });
       }
 
       setSpecLoadingStatus(SpecLoadingStatus.SUCCESS);

@@ -385,7 +385,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
                     return toFile(content, MediaType.JSON_UTF_8);
                 } catch (JsonProcessingException e) {
-                    logger.warn("Failed to parse settings:", e);
+                    logger.warn("Failed to serialize settings:", e);
                     return toFile("{}".getBytes(), MediaType.JSON_UTF_8);
                 }
             }, executor));

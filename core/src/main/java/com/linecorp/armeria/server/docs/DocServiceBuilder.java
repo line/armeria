@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -350,15 +349,15 @@ public final class DocServiceBuilder {
     }
 
     /**
-     * Sets the sensitive header names whose values are masked in the documentation service.
+     * Sets the sensitive header names whose values are redacted in the debug-page URL in the documentation service.
      *
      * <p>This replaces the previously configured header names, including the default
-     * {@link HttpHeaderNames#AUTHORIZATION}. Specifying {@code null} or an empty iterable disables masking.
+     * {@link HttpHeaderNames#AUTHORIZATION}. Specifying {@code null} or an empty iterable disables redaction.
      */
     public DocServiceBuilder sensitiveHeaders(
             @Nullable Iterable<? extends CharSequence> sensitiveHeaders) {
         if (sensitiveHeaders == null) {
-            this.sensitiveHeaders = new HashSet<>();
+            this.sensitiveHeaders = ImmutableSet.of();
             return this;
         }
         final ImmutableSet.Builder<String> builder = ImmutableSet.builder();
