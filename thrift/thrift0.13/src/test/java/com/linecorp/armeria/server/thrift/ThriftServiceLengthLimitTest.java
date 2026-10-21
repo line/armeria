@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,6 +57,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import testing.thrift.main.HelloService;
 import testing.thrift.main.Name;
 import testing.thrift.main.NameSortService;
@@ -117,6 +119,72 @@ class ThriftServiceLengthLimitTest {
                       .prepare()
                       .post("/default-limit")
                       .content(serializationFormat.mediaType(), HttpData.wrap(buf))
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+        assertThat(response.contentUtf8()).contains("Length exceeded max allowed: " + (MAX_REQUEST_LENGTH + 1));
+    }
+
+    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @ParameterizedTest
+    void truncatedMessageName(SerializationFormat serializationFormat) {
+        // The declared length is within the string limit, but the payload is shorter.
+        // Decoding should fail with truncation error (HTTP 400).
+        final ByteBuf buf = newMessage(serializationFormat, MAX_REQUEST_LENGTH, "Hello".getBytes());
+        final AggregatedHttpResponse response =
+                server.blockingWebClient()
+                      .prepare()
+                      .post("/default-limit")
+                      .content(serializationFormat.mediaType(), HttpData.wrap(buf))
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.contentUtf8()).contains("unexpected end of frame");
+    }
+
+    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @ParameterizedTest
+    void truncatedMessageName_customLimit(SerializationFormat serializationFormat) {
+        // The declared length exceeds the string limit.
+        // The size limit error (HTTP 413) takes precedence over the truncation error.
+        final ByteBuf buf = newMessage(serializationFormat, MAX_STRING_LENGTH + 1, "Hello".getBytes());
+        final AggregatedHttpResponse response =
+                server.blockingWebClient()
+                      .prepare()
+                      .post("/string-limit")
+                      .content(serializationFormat.mediaType(), HttpData.wrap(buf))
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+        assertThat(response.contentUtf8()).contains("Length exceeded max allowed: " + (MAX_STRING_LENGTH + 1));
+    }
+
+    @Test
+    void truncatedVersionedName_atLimit() {
+        // The declared length is within the string limit, but the payload is shorter.
+        // Decoding should fail with truncation error (HTTP 400).
+        final ByteBuf buf = Unpooled.buffer();
+        buf.writeInt(0x80010001); // Binary protocol V1, CALL.
+        buf.writeInt(MAX_REQUEST_LENGTH);
+        final AggregatedHttpResponse response =
+                server.blockingWebClient()
+                      .prepare()
+                      .post("/default-limit")
+                      .content(ThriftSerializationFormats.BINARY.mediaType(), HttpData.wrap(buf))
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.contentUtf8()).contains("unexpected end of frame");
+    }
+
+    @Test
+    void truncatedVersionedName_exceedsLimit() {
+        // The declared length exceeds the string limit.
+        // The size limit error (HTTP 413) takes precedence over the truncation error.
+        final ByteBuf buf = Unpooled.buffer();
+        buf.writeInt(0x80010001); // Binary protocol V1, CALL.
+        buf.writeInt(MAX_REQUEST_LENGTH + 1);
+        final AggregatedHttpResponse response =
+                server.blockingWebClient()
+                      .prepare()
+                      .post("/default-limit")
+                      .content(ThriftSerializationFormats.BINARY.mediaType(), HttpData.wrap(buf))
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(response.contentUtf8()).contains("Length exceeded max allowed: " + (MAX_REQUEST_LENGTH + 1));
