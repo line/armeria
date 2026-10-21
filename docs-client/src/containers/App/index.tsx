@@ -61,6 +61,7 @@ import {
   Version,
   Versions,
 } from '../../lib/versions';
+import { DocServiceSettings } from '../../lib/settings';
 import { SpecLoadingStatus } from '../../lib/types';
 import LoadingContainer from '../../components/LoadingContainer';
 
@@ -484,6 +485,9 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [specLoadingStatus, setSpecLoadingStatus] = useState<SpecLoadingStatus>(
     SpecLoadingStatus.INITIALIZED,
   );
+  const [, setDocServiceSettings] = useState<DocServiceSettings>({
+    sensitiveHeaders: [],
+  });
   const [versions, setVersions] = useState<Versions | undefined>();
   const [openServices, toggleOpenService] = useReducer(
     (current: OpenServices, serviceName: string) => ({
@@ -530,6 +534,16 @@ const App: React.FunctionComponent<Props> = (props) => {
       } catch (e) {
         // Ignore the error and continue
         setJsonSchemas({});
+      }
+
+      try {
+        const settingsData: DocServiceSettings = await fetch(
+          'settings.json',
+        ).then((r) => r.json());
+        setDocServiceSettings(settingsData);
+      } catch (e) {
+        // Ignore the error and continue
+        setDocServiceSettings({ sensitiveHeaders: [] });
       }
 
       setSpecLoadingStatus(SpecLoadingStatus.SUCCESS);

@@ -134,7 +134,8 @@ public final class DocService extends SimpleDecoratingHttpService {
         this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
                 /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
                 /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES,
-                                  null, new HashMap<>());
+                                  null, new HashMap<>(),
+                                  ImmutableSet.of(HttpHeaderNames.AUTHORIZATION.toString()));
     }
 
     /**
@@ -146,20 +147,22 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                DocServiceFilter filter, @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider,
-               Map<String, String> docServiceExtraInfo) {
+               Map<String, String> docServiceExtraInfo, Set<String> sensitiveHeaders) {
         this(new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
                                 immutableCopyOf(exampleRequests, "exampleRequests"),
                                 immutableCopyOf(examplePaths, "examplePaths"),
                                 immutableCopyOf(exampleQueries, "exampleQueries")),
-             injectedScriptSuppliers, filter, descriptiveTypeInfoProvider, docServiceExtraInfo);
+             injectedScriptSuppliers, filter, descriptiveTypeInfoProvider, docServiceExtraInfo,
+             sensitiveHeaders);
     }
 
     private DocService(ExampleSupport exampleSupport,
                        List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
                        DocServiceFilter filter,
                        @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider,
-                       Map<String, String> docServiceExtraInfo) {
-        this(new SpecificationLoader(exampleSupport, filter, descriptiveTypeInfoProvider, docServiceExtraInfo),
+                       Map<String, String> docServiceExtraInfo, Set<String> sensitiveHeaders) {
+        this(new SpecificationLoader(exampleSupport, filter, descriptiveTypeInfoProvider, docServiceExtraInfo,
+                                     sensitiveHeaders),
              injectedScriptSuppliers);
     }
 
@@ -247,8 +250,9 @@ public final class DocService extends SimpleDecoratingHttpService {
         private static final String VERSIONS_PATH = "/versions.json";
         private static final String SPECIFICATION_PATH = "/specification.json";
         private static final String SCHEMAS_PATH = "/schemas.json";
+        private static final String SETTINGS_PATH = "/settings.json";
         private static final Set<String> TARGET_PATHS = ImmutableSet.of(VERSIONS_PATH, SPECIFICATION_PATH,
-                                                                        SCHEMAS_PATH);
+                                                                        SCHEMAS_PATH, SETTINGS_PATH);
         private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture =
                 UnmodifiableFuture.exceptionallyCompletedFuture(
                         new IllegalStateException("File load not triggered"));
@@ -259,16 +263,20 @@ public final class DocService extends SimpleDecoratingHttpService {
         private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
         private List<ServiceConfig> services = Collections.emptyList();
         private final Map<String, String> docServiceExtraInfo;
+        private final Set<String> sensitiveHeaders;
 
         SpecificationLoader(
                 ExampleSupport exampleSupport,
                 DocServiceFilter filter,
                 @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider,
-                Map<String, String> docServiceExtraInfo) {
+                Map<String, String> docServiceExtraInfo,
+                Set<String> sensitiveHeaders) {
             this.exampleSupport = exampleSupport;
             this.filter = filter;
             this.descriptiveTypeInfoProvider = composeDescriptiveTypeInfoProvider(descriptiveTypeInfoProvider);
             this.docServiceExtraInfo = requireNonNull(docServiceExtraInfo, "docServiceExtraInfo");
+            this.sensitiveHeaders = ImmutableSet.copyOf(
+                    requireNonNull(sensitiveHeaders, "sensitiveHeaders"));
         }
 
         boolean contains(String path) {
@@ -304,6 +312,8 @@ public final class DocService extends SimpleDecoratingHttpService {
                 return loadSpecifications(serviceSpecificationFuture);
             } else if (SCHEMAS_PATH.equals(path)) {
                 return loadSchemas(serviceSpecificationFuture);
+            } else if (SETTINGS_PATH.equals(path)) {
+                return loadSettings(executor);
             } else {
                 throw new Error(); // Should never reach here.
             }
@@ -362,6 +372,23 @@ public final class DocService extends SimpleDecoratingHttpService {
                     return toFile("{}".getBytes(), MediaType.JSON_UTF_8);
                 }
             }));
+        }
+
+        private CompletableFuture<AggregatedHttpFile> loadSettings(Executor executor) {
+            return files.computeIfAbsent(SETTINGS_PATH, key -> CompletableFuture.supplyAsync(() -> {
+                try {
+                    final Map<String, Set<String>> settingsMap =
+                            ImmutableMap.of("sensitiveHeaders", sensitiveHeaders);
+
+                    final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
+                                                     .writeValueAsBytes(settingsMap);
+
+                    return toFile(content, MediaType.JSON_UTF_8);
+                } catch (JsonProcessingException e) {
+                    logger.warn("Failed to parse settings:", e);
+                    return toFile("{}".getBytes(), MediaType.JSON_UTF_8);
+                }
+            }, executor));
         }
 
         private static AggregatedHttpFile toFile(byte[] content, MediaType mediaType) {
