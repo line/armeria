@@ -17,3 +17,22 @@
 export interface DocServiceSettings {
   sensitiveHeaders: string[];
 }
+
+export const REDACTED_HEADER_VALUE = 'REDACTED';
+
+export function redactSensitiveHeaders(
+  headers: { [name: string]: string },
+  sensitiveHeaders: string[],
+): { [name: string]: string } {
+  const sensitiveHeaderNames = new Set(
+    sensitiveHeaders.map((headerName) => headerName.toLowerCase()),
+  );
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [
+      name,
+      sensitiveHeaderNames.has(name.toLowerCase())
+        ? REDACTED_HEADER_VALUE
+        : value,
+    ]),
+  );
+}

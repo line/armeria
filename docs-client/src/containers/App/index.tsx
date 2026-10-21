@@ -421,12 +421,14 @@ interface RouterServicesProps {
   versions: Versions | undefined;
   specification: Specification;
   jsonSchemas: any;
+  docServiceSettings: DocServiceSettings;
 }
 
 const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
   versions,
   specification,
   jsonSchemas,
+  docServiceSettings,
 }) => {
   return (
     <div>
@@ -450,6 +452,7 @@ const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
             {...p}
             specification={specification}
             jsonSchemas={jsonSchemas}
+            docServiceSettings={docServiceSettings}
           />
         )}
       />
@@ -485,9 +488,10 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [specLoadingStatus, setSpecLoadingStatus] = useState<SpecLoadingStatus>(
     SpecLoadingStatus.INITIALIZED,
   );
-  const [, setDocServiceSettings] = useState<DocServiceSettings>({
-    sensitiveHeaders: [],
-  });
+  const [docServiceSettings, setDocServiceSettings] =
+    useState<DocServiceSettings>({
+      sensitiveHeaders: [],
+    });
   const [versions, setVersions] = useState<Versions | undefined>();
   const [openServices, toggleOpenService] = useReducer(
     (current: OpenServices, serviceName: string) => ({
@@ -540,7 +544,9 @@ const App: React.FunctionComponent<Props> = (props) => {
         const settingsData: DocServiceSettings = await fetch(
           'settings.json',
         ).then((r) => r.json());
-        setDocServiceSettings(settingsData);
+        setDocServiceSettings({
+          sensitiveHeaders: settingsData.sensitiveHeaders ?? [],
+        });
       } catch (e) {
         // Ignore the error and continue
         setDocServiceSettings({ sensitiveHeaders: [] });
@@ -721,6 +727,7 @@ const App: React.FunctionComponent<Props> = (props) => {
             versions={versions}
             specification={specification}
             jsonSchemas={jsonSchemas}
+            docServiceSettings={docServiceSettings}
           />
         </LoadingContainer>
       </main>

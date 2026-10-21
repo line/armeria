@@ -206,6 +206,36 @@ test('keeps unsent HTTP inputs when opening and closing Debug', async ({
   await expect(headerInput(inline)).toHaveValue('{"x-draft":"dialog"}');
 });
 
+test('redacts sensitive headers in URL state and after refresh', async ({
+  page,
+}) => {
+  await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
+  const dialog = await openDebug(page);
+  await headerInput(dialog).fill(
+    '{"Authorization":"Bearer super-secret","x-custom":"visible"}',
+  );
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === '/echo',
+  );
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+
+  const request = await requestPromise;
+  expect(request.headers().authorization).toBe('Bearer super-secret');
+  expect(request.headers()['x-custom']).toBe('visible');
+  await expect(page).toHaveURL(/REDACTED/);
+  expect(page.url()).not.toContain('super-secret');
+  await expect(headerInput(dialog)).toHaveValue(
+    '{"Authorization":"Bearer super-secret","x-custom":"visible"}',
+  );
+
+  await page.reload();
+  await expect(headerInput(page.getByRole('dialog'))).toHaveValue(
+    /"Authorization": "REDACTED"[\s\S]*"x-custom": "visible"/,
+  );
+});
+
 test('validates prefix, regex, and regex-with-prefix endpoint paths', async ({
   page,
 }) => {
