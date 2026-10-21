@@ -21,6 +21,8 @@ import java.util.stream.Stream;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.server.annotation.ProducesEventStream;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 
@@ -74,6 +76,36 @@ public interface ServerSentEvent {
      */
     static ServerSentEvent ofData(String data) {
         return builder().data(data).build();
+    }
+
+    /**
+     * Parses a single event block in the specified string. Leading blank lines are ignored.
+     * Parsing stops at the first blank line after a non-empty line. A terminating blank line is optional.
+     * Unknown fields, IDs containing a null character, and retry values other than non-negative
+     * {@code long} milliseconds written as ASCII digits are ignored.
+     * A single leading UTF-8 byte order mark is ignored.
+     *
+     * <p>The returned event contains only fields present in this block, including comments and fields
+     * in blocks without data. No default event name or inherited last event ID is applied.
+     */
+    @UnstableApi
+    static ServerSentEvent parse(String rawEvent) {
+        return new ServerSentEventParser(rawEvent).parse();
+    }
+
+    /**
+     * Returns a new decoder for a UTF-8 event stream, including comment-only and metadata-only blocks.
+     * Each block is parsed according to {@link #parse(String)} without default event names or inherited IDs.
+     * Blocks with no recognized fields are skipped. Unterminated blocks at EOF are discarded.
+     *
+     * <p>Use a new decoder for each stream:
+     * <pre>{@code
+     * StreamMessage<ServerSentEvent> events = response.decode(ServerSentEvent.newDecoder());
+     * }</pre>
+     */
+    @UnstableApi
+    static HttpDecoder<ServerSentEvent> newDecoder() {
+        return new ServerSentEventDecoder();
     }
 
     /**
