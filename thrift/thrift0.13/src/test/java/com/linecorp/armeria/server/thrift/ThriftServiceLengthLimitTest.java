@@ -137,7 +137,7 @@ class ThriftServiceLengthLimitTest {
                       .content(serializationFormat.mediaType(), HttpData.wrap(buf))
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).contains("unexpected end of frame");
+        assertThat(response.contentUtf8()).contains("Failed to decode a " + serializationFormat + " header");
     }
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
@@ -170,7 +170,8 @@ class ThriftServiceLengthLimitTest {
                       .content(ThriftSerializationFormats.BINARY.mediaType(), HttpData.wrap(buf))
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).contains("unexpected end of frame");
+        assertThat(response.contentUtf8())
+                .contains("Failed to decode a " + ThriftSerializationFormats.BINARY + " header");
     }
 
     @Test
