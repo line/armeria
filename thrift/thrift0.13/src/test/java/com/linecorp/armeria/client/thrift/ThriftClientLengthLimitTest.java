@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftMessageTestUtil.newMessage;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -33,12 +34,14 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.protocol.TType;
 import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -140,6 +143,24 @@ class ThriftClientLengthLimitTest {
           .hasMessageContaining("Length exceeded max allowed: %s", maxStringLength + 1);
     }
 
+    @MethodSource("truncatedMessageNames")
+    @ParameterizedTest
+    void truncatedMessageName(SerializationFormat serializationFormat, int maxStringLength) {
+        final HelloService.Iface client =
+                ThriftClients.builder(server.httpUri(serializationFormat).resolve("/thrift"))
+                             .maxResponseStringLength(maxStringLength)
+                             .decorator((delegate, ctx, req) -> {
+                                 final ByteBuf buf = newMessage(serializationFormat, 100,
+                                                                "Hello".getBytes(UTF_8));
+                                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.wrap(buf));
+                             })
+                             .build(HelloService.Iface.class);
+
+        assertThatThrownBy(() -> client.hello("Hello"))
+                .isInstanceOf(TTransportException.class)
+                .hasMessageContaining("unexpected end of frame");
+    }
+
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
     void defaultContainerLimit(SerializationFormat serializationFormat) throws TException {
@@ -189,6 +210,14 @@ class ThriftClientLengthLimitTest {
             client.sort(names);
         }).isInstanceOf(TProtocolException.class)
           .hasMessageContaining("Length exceeded max allowed: " + (maxContainerLength + 1));
+    }
+
+    private static Stream<Arguments> truncatedMessageNames() {
+        return Stream.of(
+                Arguments.of(ThriftSerializationFormats.BINARY, 0),
+                Arguments.of(ThriftSerializationFormats.BINARY, 100),
+                Arguments.of(ThriftSerializationFormats.COMPACT, 0),
+                Arguments.of(ThriftSerializationFormats.COMPACT, 100));
     }
 
     private static class ThriftSerializationFormatProvider implements ArgumentsProvider {
