@@ -42,6 +42,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private ServerHttp2ObjectEncoder responseEncoder;
 
     private final Http2GracefulConnectionShutdownHandler gracefulConnectionShutdownHandler;
+    private boolean drainEnded;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
@@ -91,7 +92,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulShutdownSupport.isShuttingDown() ||
+        return gracefulShutdownSupport.isTerminating() ||
                requestDecoder.goAwayHandler().receivedErrorGoAway() || keepAliveHandler().isClosing();
     }
 
@@ -153,6 +154,13 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (drainEnded && gracefulShutdownSupport.isTerminating()) {
+            // The final GOAWAY has been sent and the connection is waiting for its active streams,
+            // but the graceful shutdown of the server is over.
+            closeActiveStreams();
+            super.close(ctx, promise);
+            return;
+        }
         if (keepAliveHandler().needsDisconnection()) {
             // Connection timed out or exceeded maximum number of requests.
             setGoAwayDebugMessage("max-age");
@@ -180,6 +188,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
          */
         @Override
         public void onDrainEnd(ChannelHandlerContext ctx) throws Exception {
+            drainEnded = true;
             Http2ServerConnectionHandler.super.close(ctx, ctx.newPromise());
             // Cancel scheduled tasks after the call to the super class above to avoid triggering
             // needsImmediateDisconnection.
