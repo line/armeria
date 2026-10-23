@@ -827,6 +827,12 @@ const server = http.createServer(async (request, response) => {
       }
       return;
     }
+    if (pathname.endsWith('/settings.json')) {
+      sendJson(response, {
+        sensitiveHeaders: ['authorization', 'test-header'],
+      });
+      return;
+    }
     if (pathname.endsWith('/injected.js')) {
       sendRaw(
         response,
