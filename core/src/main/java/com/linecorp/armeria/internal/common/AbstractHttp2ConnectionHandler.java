@@ -103,6 +103,13 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return closing;
     }
 
+    /**
+     * Closes all active streams without waiting for them to complete.
+     */
+    protected final void closeActiveStreams() throws Http2Exception {
+        connection().forEachActiveStream(closeAllStreams);
+    }
+
     @Override
     protected final void onConnectionError(ChannelHandlerContext ctx, boolean outbound,
                                            Throwable cause, Http2Exception http2Ex) {
@@ -205,7 +212,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
             closing = true;
 
             if (needsImmediateDisconnection()) {
-                connection().forEachActiveStream(closeAllStreams);
+                closeActiveStreams();
             }
         }
 
