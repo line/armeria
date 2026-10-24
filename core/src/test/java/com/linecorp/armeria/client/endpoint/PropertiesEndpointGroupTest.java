@@ -219,6 +219,22 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
+    void initiallyEmptyFileIsNotReadyUntilLoaded() throws Exception {
+        final Path file = Files.createFile(folder.resolve("hosts.properties"));
+        final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>();
+        try (PropertiesEndpointGroup group = new PropertiesEndpointGroup(
+                EndpointSelectionStrategy.weightedRoundRobin(), file, "hosts", 0, tasks::add)) {
+            final Runnable initialLoad = tasks.poll(10, TimeUnit.SECONDS);
+            assertThat(initialLoad).isNotNull();
+            assertThat(group.endpoints()).isEmpty();
+            assertThat(group.whenReady()).isNotDone();
+
+            initialLoad.run();
+            assertThat(group.whenReady().get(10, TimeUnit.SECONDS)).isEmpty();
+        }
+    }
+
+    @Test
     void listenerCanInitializeAnotherGroup() throws Exception {
         final Path file = folder.resolve("hosts.properties");
         Files.write(file, "hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
@@ -310,31 +326,26 @@ class PropertiesEndpointGroupTest {
     @Test
     void propertiesFileRestart() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
+        Files.write(file, "serverA.hosts.0=127.0.0.1:8080\n".getBytes(UTF_8));
+        Files.setLastModifiedTime(file, FileTime.fromMillis(1000));
 
-        PrintWriter printWriter = new PrintWriter(file.toFile());
-        Properties props = new Properties();
-        props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
-        props.store(printWriter, "");
-        printWriter.close();
+        try (PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(file, "serverA.hosts")) {
+            assertThat(endpointGroupA.whenReady().get(10, TimeUnit.SECONDS))
+                    .containsExactly(Endpoint.of("127.0.0.1", 8080));
+        }
 
-        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                file, "serverA.hosts");
-        await().untilAsserted(() -> assertThat(endpointGroupA.endpoints()).hasSize(1));
-        endpointGroupA.close();
+        try (PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(file, "serverB.hosts")) {
+            // An empty endpoint list alone does not mean the initial file load has completed.
+            assertThat(endpointGroupB.whenReady().get(10, TimeUnit.SECONDS)).isEmpty();
 
-        final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
-                file, "serverB.hosts");
-        await().untilAsserted(() -> assertThat(endpointGroupB.endpoints()).isEmpty());
+            Files.write(file, ("serverB.hosts.0=127.0.0.1:8080\n" +
+                               "serverB.hosts.1=127.0.0.1:8081\n").getBytes(UTF_8));
+            // FileWatcher caches the modification time, so make the completed update distinguishable.
+            Files.setLastModifiedTime(file, FileTime.fromMillis(2000));
 
-        printWriter = new PrintWriter(file.toFile());
-        props = new Properties();
-        props.setProperty("serverB.hosts.0", "127.0.0.1:8080");
-        props.setProperty("serverB.hosts.1", "127.0.0.1:8081");
-        props.store(printWriter, "");
-        printWriter.close();
-
-        await().untilAsserted(() -> assertThat(endpointGroupB.endpoints()).hasSize(2));
-        endpointGroupB.close();
+            await().untilAsserted(() -> assertThat(endpointGroupB.endpoints()).containsExactly(
+                    Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081)));
+        }
     }
 
     @Test
