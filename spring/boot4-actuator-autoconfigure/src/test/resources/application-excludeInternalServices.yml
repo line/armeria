@@ -1,0 +1,16 @@
+armeria:
+  ports:
+    - port: 0
+  internal-services:
+    include: all
+    exclude: health, actuator
+    port: 0
+    protocols: http
+  # Set graceful shutdown timeout to 0 to stop the server immediately.
+  graceful-shutdown-quiet-period-millis: 0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, loggers, prometheus
