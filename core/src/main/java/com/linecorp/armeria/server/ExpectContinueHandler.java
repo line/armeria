@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.function.BooleanSupplier;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.netty.channel.EventLoop;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * Handles the {@code 100 Continue} response for a request with an {@code Expect: 100-continue} header and
@@ -38,30 +40,67 @@ import io.netty.channel.EventLoop;
  */
 final class ExpectContinueHandler {
 
-    private final EventLoop eventLoop;
-    private final Runnable writeContinue;
-    private final BooleanSupplier requestOpen;
-    private final BooleanSupplier contentReceived;
+    private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
+    // Shared by all connections. Never modified because 'pending' is always 'false'.
+    private static final ExpectContinueHandler UNSENDABLE = new ExpectContinueHandler(false);
+    private static final ExpectContinueHandler UNSENDABLE_MULTIPLEX = new ExpectContinueHandler(true);
+
+    /**
+     * Returns an {@link ExpectContinueHandler} for a request with an {@code Expect: 100-continue} header
+     * and content.
+     *
+     * @param multiplex whether the connection is multiplexed. If {@code false}, the connection has to be
+     *                  closed after the response when {@code 100 Continue} is suppressed.
+     */
+    static ExpectContinueHandler of(RoutingContext routingCtx, ChannelHandlerContext ctx,
+                                    ServerHttpObjectEncoder encoder, boolean multiplex) {
+        if (!routingCtx.hasResult()) {
+            // The content of a request that matched no route is never consumed, so '100 Continue' is never
+            // written. Use a shared instance which regards it as suppressed.
+            return multiplex ? UNSENDABLE_MULTIPLEX : UNSENDABLE;
+        }
+        return new ExpectContinueHandler(ctx, encoder, multiplex);
+    }
+
+    @Nullable
+    private final ChannelHandlerContext ctx;
+    @Nullable
+    private final ServerHttpObjectEncoder encoder;
+    private final boolean multiplex;
+
+    @Nullable
+    private DecodedHttpRequest req;
     // 'true' until '100 Continue' is written, skipped or suppressed.
-    private boolean pending = true;
+    private boolean pending;
     // 'true' if '100 Continue' was not written although the request content was not fully received.
     private boolean suppressed;
 
+    private ExpectContinueHandler(ChannelHandlerContext ctx, ServerHttpObjectEncoder encoder,
+                                  boolean multiplex) {
+        this.ctx = ctx;
+        this.encoder = encoder;
+        this.multiplex = multiplex;
+        pending = true;
+    }
+
+    private ExpectContinueHandler(boolean multiplex) {
+        ctx = null;
+        encoder = null;
+        this.multiplex = multiplex;
+        suppressed = true;
+    }
+
     /**
-     * Creates a new instance.
-     *
-     * @param writeContinue the task that writes a {@code 100 Continue} response
-     * @param requestOpen whether the request is still open. {@code 100 Continue} is not written if
-     *                    the content has been fully received or the request was aborted.
-     * @param contentReceived whether the request content has been fully received
+     * Sets the request whose {@code 100 Continue} response is handled by this handler. Must be called
+     * before the request is passed to a service. No-op for the shared instance.
      */
-    ExpectContinueHandler(EventLoop eventLoop, Runnable writeContinue, BooleanSupplier requestOpen,
-                          BooleanSupplier contentReceived) {
-        this.eventLoop = eventLoop;
-        this.writeContinue = writeContinue;
-        this.requestOpen = requestOpen;
-        this.contentReceived = contentReceived;
+    void init(DecodedHttpRequest req) {
+        if (!pending) {
+            return;
+        }
+        assert this.req == null;
+        this.req = req;
     }
 
     /**
@@ -73,10 +112,11 @@ final class ExpectContinueHandler {
         if (!pending) {
             return;
         }
-        if (eventLoop.inEventLoop()) {
+        assert encoder != null;
+        if (encoder.eventLoop().inEventLoop()) {
             send0();
         } else {
-            eventLoop.execute(this::send0);
+            encoder.eventLoop().execute(this::send0);
         }
     }
 
@@ -84,14 +124,14 @@ final class ExpectContinueHandler {
      * Writes a pending {@code 100 Continue} response immediately, because final response headers that allow
      * the client to send the content are about to be written.
      *
-     * @return {@code true} if {@code 100 Continue} was not written before the request content was fully
-     *         received, e.g. because the request was aborted, which means the client may never send
-     *         the content.
+     * @return {@code true} if the connection has to be closed after the response, because
+     *         {@code 100 Continue} was not written before the request content was fully received, e.g.
+     *         the request was aborted, and the client may never send the content.
      */
     boolean send() {
-        assert eventLoop.inEventLoop();
+        assert inEventLoop();
         send0();
-        return suppressed;
+        return shouldCloseConnection();
     }
 
     private void send0() {
@@ -99,11 +139,15 @@ final class ExpectContinueHandler {
             return;
         }
         pending = false;
-        if (requestOpen.getAsBoolean()) {
-            writeContinue.run();
+        final DecodedHttpRequest req = this.req;
+        assert req != null;
+        if (req.isOpen()) {
+            assert ctx != null && encoder != null;
+            encoder.writeHeaders(req.id(), req.streamId(), CONTINUE_RESPONSE, false, req.method());
+            ctx.flush();
         } else {
             // The content has been fully received or the request was aborted.
-            suppressed = !contentReceived.getAsBoolean();
+            suppressed = !req.isClosedSuccessfully();
         }
     }
 
@@ -111,7 +155,10 @@ final class ExpectContinueHandler {
      * Discards a pending {@code 100 Continue} response because a service wrote it by itself.
      */
     void onContinueSent() {
-        assert eventLoop.inEventLoop();
+        assert inEventLoop();
+        if (!pending) {
+            return;
+        }
         pending = false;
     }
 
@@ -119,16 +166,19 @@ final class ExpectContinueHandler {
      * Prevents a pending {@code 100 Continue} response from being written because final response headers
      * that do not allow the client to send the content are about to be written.
      *
-     * @return {@code true} if {@code 100 Continue} was not written before the request content was fully
-     *         received, which means the client may never send the content.
+     * @return {@code true} if the connection has to be closed after the response, because
+     *         {@code 100 Continue} was not written before the request content was fully received and
+     *         the client may never send the content.
      */
     boolean suppress() {
-        assert eventLoop.inEventLoop();
+        assert inEventLoop();
         if (pending) {
             pending = false;
-            suppressed = !contentReceived.getAsBoolean();
+            final DecodedHttpRequest req = this.req;
+            assert req != null;
+            suppressed = !req.isClosedSuccessfully();
         }
-        return suppressed;
+        return shouldCloseConnection();
     }
 
     /**
@@ -136,5 +186,13 @@ final class ExpectContinueHandler {
      */
     boolean isSuppressed() {
         return suppressed;
+    }
+
+    private boolean shouldCloseConnection() {
+        return suppressed && !multiplex;
+    }
+
+    private boolean inEventLoop() {
+        return encoder == null || encoder.eventLoop().inEventLoop();
     }
 }

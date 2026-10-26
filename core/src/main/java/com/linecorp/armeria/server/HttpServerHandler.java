@@ -590,7 +590,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                          @Nullable Throwable cause) {
         final ExpectContinueHandler expectContinueHandler =
                 ((DecodedHttpRequest) reqCtx.request()).expectContinueHandler();
-        if (expectContinueHandler != null && expectContinueHandler.suppress() && !protocol.isMultiplex()) {
+        if (expectContinueHandler != null && expectContinueHandler.suppress()) {
             // The client may or may not send the request content.
             handledLastRequest = true;
         }

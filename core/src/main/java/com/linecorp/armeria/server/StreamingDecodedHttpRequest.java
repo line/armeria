@@ -68,7 +68,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket, @Nullable Runnable writeContinue) {
+                                boolean http1WebSocket,
+                                @Nullable ExpectContinueHandler expectContinueHandler) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -83,8 +84,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
-        expectContinueHandler = writeContinue != null ? new ExpectContinueHandler(
-                eventLoop, writeContinue, this::isOpen, this::isClosedSuccessfully) : null;
+        this.expectContinueHandler = expectContinueHandler;
+        if (expectContinueHandler != null) {
+            expectContinueHandler.init(this);
+        }
     }
 
     @Override

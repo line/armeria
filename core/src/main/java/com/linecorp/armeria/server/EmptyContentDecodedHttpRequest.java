@@ -70,7 +70,8 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
                                    ExchangeType exchangeType, long requestStartTimeNanos,
-                                   long requestStartTimeMicros, boolean expectsContinue) {
+                                   long requestStartTimeMicros,
+                                   @Nullable ExpectContinueHandler expectContinueHandler) {
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
@@ -80,10 +81,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
-        // The content is never consumed, so '100 Continue' is never written. The client may never send
-        // the content if '100 Continue' is suppressed.
-        expectContinueHandler = expectsContinue ? new ExpectContinueHandler(
-                eventLoop, () -> {}, () -> false, () -> false) : null;
+        this.expectContinueHandler = expectContinueHandler;
     }
 
     @Override

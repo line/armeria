@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -62,8 +61,6 @@ import io.netty.util.collection.IntObjectMap;
 final class Http2RequestDecoder extends Http2EventAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2RequestDecoder.class);
-
-    private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
     private final ServerConfig cfg;
     private final Channel channel;
@@ -211,19 +208,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Derive the request ID from the stream ID.
             final int id = streamIdToId(streamId);
             final EventLoop eventLoop = ctx.channel().eventLoop();
-            final Runnable writeContinue;
-            if (expectsContinue && !endOfStream) {
-                // No need to send '100 Continue' if there's no content.
-                final ServerHttp2ObjectEncoder encoder = this.encoder;
-                writeContinue = () -> {
-                    encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
-                    ctx.flush();
-                };
-            } else {
-                writeContinue = null;
-            }
+            // No need to send '100 Continue' if there's no content.
+            final ExpectContinueHandler expectContinueHandler =
+                    expectsContinue && !endOfStream ? ExpectContinueHandler.of(routingCtx, ctx, encoder, true)
+                                                    : null;
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
-                                        inboundTrafficController, routingCtx, writeContinue);
+                                        inboundTrafficController, routingCtx, expectContinueHandler);
             final long maxRequestLength = req.maxRequestLength();
             if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                 abortLargeRequest(req, true);

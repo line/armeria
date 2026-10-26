@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -79,7 +78,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private static final Logger logger = LoggerFactory.getLogger(Http1RequestDecoder.class);
 
     private static final Http2Settings DEFAULT_HTTP2_SETTINGS = new Http2Settings();
-    private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
     private final ServerConfig cfg;
     private final ServerPortMetric serverPortMetric;
@@ -277,19 +275,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
-                    final Runnable writeContinue;
-                    if (expectsContinue && !endOfStream) {
-                        // No need to send '100 Continue' if there's no content.
-                        writeContinue = () -> {
-                            encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false, method);
-                            ctx.flush();
-                        };
-                    } else {
-                        writeContinue = null;
-                    }
+                    // No need to send '100 Continue' if there's no content.
+                    final ExpectContinueHandler expectContinueHandler =
+                            expectsContinue && !endOfStream ?
+                            ExpectContinueHandler.of(routingCtx, ctx, encoder, sessionProtocol.isMultiplex())
+                                                           : null;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx,
-                                                           writeContinue);
+                                                           expectContinueHandler);
                     final long maxRequestLength = req.maxRequestLength();
                     if (maxRequestLength > 0 && contentLength > maxRequestLength) {
                         abortLargeRequest(id, req, true);

@@ -34,30 +34,32 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx, @Nullable Runnable writeContinue) {
+                                 RoutingContext routingCtx,
+                                 @Nullable ExpectContinueHandler expectContinueHandler) {
         final long requestStartTimeNanos = System.nanoTime();
         final long requestStartTimeMicros = SystemInfo.currentTimeMicros();
         if (!routingCtx.hasResult()) {
             return new EmptyContentDecodedHttpRequest(
                     eventLoop, id, streamId, headers, keepAlive, routingCtx, ExchangeType.RESPONSE_STREAMING,
-                    requestStartTimeNanos, requestStartTimeMicros, writeContinue != null);
+                    requestStartTimeNanos, requestStartTimeMicros, expectContinueHandler);
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
             final ExchangeType exchangeType = service.exchangeType(routingCtx);
             if (endOfStream) {
-                assert writeContinue == null;
+                assert expectContinueHandler == null;
                 return new EmptyContentDecodedHttpRequest(
                         eventLoop, id, streamId, headers, keepAlive, routingCtx, exchangeType,
-                        requestStartTimeNanos, requestStartTimeMicros, false);
+                        requestStartTimeNanos, requestStartTimeMicros, null);
             } else {
                 // A request that expects '100 Continue' is not aggregated. Otherwise, the service would never
                 // be invoked because the client waits for '100 Continue' before sending the content.
-                if (exchangeType.isRequestStreaming() || writeContinue != null) {
+                if (exchangeType.isRequestStreaming() || expectContinueHandler != null) {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros, false, writeContinue);
+                            requestStartTimeNanos, requestStartTimeMicros, false,
+                            expectContinueHandler);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,

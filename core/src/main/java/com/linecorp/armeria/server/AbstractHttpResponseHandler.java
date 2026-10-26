@@ -85,8 +85,7 @@ abstract class AbstractHttpResponseHandler {
      */
     final void maybeDisconnectOnSuppressedContinue() {
         final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
-        if (expectContinueHandler != null && expectContinueHandler.suppress() &&
-            !reqCtx.sessionProtocol().isMultiplex()) {
+        if (expectContinueHandler != null && expectContinueHandler.suppress()) {
             disconnectWhenFinished();
         }
     }
@@ -98,8 +97,7 @@ abstract class AbstractHttpResponseHandler {
      */
     final void sendContinue() {
         final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
-        if (expectContinueHandler != null && expectContinueHandler.send() &&
-            !reqCtx.sessionProtocol().isMultiplex()) {
+        if (expectContinueHandler != null && expectContinueHandler.send()) {
             disconnectWhenFinished();
         }
     }
