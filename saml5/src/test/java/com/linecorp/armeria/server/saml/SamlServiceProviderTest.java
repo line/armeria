@@ -33,12 +33,13 @@ import static com.linecorp.armeria.server.saml.SamlMessageUtil.serialize;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.sign;
 import static com.linecorp.armeria.server.saml.SamlMetadataServiceFunction.CONTENT_TYPE_SAML_METADATA;
 import static java.util.Objects.requireNonNull;
-import static net.shibboleth.utilities.java.support.xml.SerializeSupport.nodeToString;
+import static net.shibboleth.shared.xml.SerializeSupport.nodeToString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
-import org.joda.time.DateTime;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -65,7 +65,6 @@ import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml2.core.Assertion;
 import org.opensaml.saml.saml2.core.Audience;
 import org.opensaml.saml.saml2.core.AudienceRestriction;
-import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.saml.saml2.core.AuthnStatement;
 import org.opensaml.saml.saml2.core.Conditions;
 import org.opensaml.saml.saml2.core.Issuer;
@@ -87,7 +86,7 @@ import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.security.credential.impl.KeyStoreCredentialResolver;
 import org.opensaml.xmlsec.signature.support.SignatureConstants;
 
-import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.shared.resolver.CriteriaSet;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -108,17 +107,15 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
-import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-@GenerateNativeImageTrace
 class SamlServiceProviderTest {
 
-    private static final AtomicReference<MessageContext<Response>> messageContextHolder =
+    private static final AtomicReference<MessageContext> messageContextHolder =
             new AtomicReference<>();
 
     private static final String signatureAlgorithm = SignatureConstants.ALGO_ID_SIGNATURE_RSA;
@@ -275,7 +272,7 @@ class SamlServiceProviderTest {
 
         @Override
         public CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
-                                                         MessageContext<AuthnRequest> message,
+                                                         MessageContext message,
                                                          SamlIdentityProviderConfig idpConfig) {
             final SAMLBindingContext subcontext = message.getSubcontext(SAMLBindingContext.class, true);
             assert subcontext != null;
@@ -287,7 +284,7 @@ class SamlServiceProviderTest {
 
         @Override
         public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                           MessageContext<Response> message, @Nullable String sessionIndex,
+                                           MessageContext message, @Nullable String sessionIndex,
                                            @Nullable String relayState) {
             return HttpResponse.of(headersWithLocation(firstNonNull(relayState, "/"))
                                            .toBuilder()
@@ -297,7 +294,7 @@ class SamlServiceProviderTest {
 
         @Override
         public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                        @Nullable MessageContext<Response> message, Throwable cause) {
+                                        @Nullable MessageContext message, Throwable cause) {
             messageContextHolder.set(message);
             // Handle as an error so that a test client can detect the failure.
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
@@ -466,8 +463,8 @@ class SamlServiceProviderTest {
     @Test
     void shouldNotConsumeAssertionWithoutSignature_HttpPost() throws Exception {
         shouldNotConsumeAssertion_HttpPost(null);
-        final MessageContext<Response> messageContext = messageContextHolder.get();
-        assertThat(messageContext.getMessage().getSignature()).isNull();
+        final MessageContext messageContext = messageContextHolder.get();
+        assertThat(messageContext.ensureMessage(Response.class).getSignature()).isNull();
     }
 
     @Test
@@ -508,7 +505,7 @@ class SamlServiceProviderTest {
         final SubjectConfirmationData data = build(SubjectConfirmationData.DEFAULT_ELEMENT_NAME);
 
         data.setInResponseTo(requestIdManager.newId());
-        data.setNotOnOrAfter(DateTime.now().plusMinutes(1));
+        data.setNotOnOrAfter(Instant.now().plusSeconds(60));
         data.setRecipient(recipient);
 
         subjectConfirmation.setSubjectConfirmationData(data);
@@ -519,7 +516,7 @@ class SamlServiceProviderTest {
         assertion.setSubject(subject);
 
         assertion.setIssuer(XMLObjectSupport.cloneXMLObject(issuer));
-        assertion.setIssueInstant(DateTime.now());
+        assertion.setIssueInstant(Instant.now());
         assertion.setID(requestIdManager.newId());
 
         final AuthnStatement authnStatement = build(AuthnStatement.DEFAULT_ELEMENT_NAME);
@@ -527,13 +524,13 @@ class SamlServiceProviderTest {
         assertion.getAuthnStatements().add(authnStatement);
 
         final Conditions conditions = build(Conditions.DEFAULT_ELEMENT_NAME);
-        conditions.setNotBefore(DateTime.now().minusMinutes(1));
-        conditions.setNotOnOrAfter(DateTime.now().plusMinutes(1));
+        conditions.setNotBefore(Instant.now().minusSeconds(60));
+        conditions.setNotOnOrAfter(Instant.now().plusSeconds(60));
 
         final AudienceRestriction audienceRestriction = build(AudienceRestriction.DEFAULT_ELEMENT_NAME);
         final Audience audience = build(Audience.DEFAULT_ELEMENT_NAME);
         // Set SP entity ID as an audience.
-        audience.setAudienceURI(spEntityId);
+        audience.setURI(spEntityId);
         audienceRestriction.getAudiences().add(audience);
         conditions.getAudienceRestrictions().add(audienceRestriction);
 
@@ -546,7 +543,7 @@ class SamlServiceProviderTest {
 
         response.setID(requestIdManager.newId());
         response.setIssuer(issuer);
-        response.setIssueInstant(DateTime.now());
+        response.setIssueInstant(Instant.now());
 
         final Status status = build(Status.DEFAULT_ELEMENT_NAME);
         final StatusCode statusCode = build(StatusCode.DEFAULT_ELEMENT_NAME);
@@ -726,7 +723,7 @@ class SamlServiceProviderTest {
         final Issuer issuer = build(Issuer.DEFAULT_ELEMENT_NAME);
         issuer.setValue(issuerId);
         logoutRequest.setIssuer(issuer);
-        logoutRequest.setIssueInstant(DateTime.now());
+        logoutRequest.setIssueInstant(Instant.now());
 
         final NameID nameID = build(NameID.DEFAULT_ELEMENT_NAME);
         nameID.setFormat(SamlNameIdFormat.EMAIL.urn());

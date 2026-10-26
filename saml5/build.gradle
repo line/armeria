@@ -1,13 +1,15 @@
 dependencies {
     api libs.jwt
     implementation libs.caffeine
-    implementation libs.shibboleth.utilities
-    api libs.opensaml.core
-    api libs.opensaml.saml.api
-    implementation libs.opensaml.saml.impl
-    api libs.opensaml.messaging.api
-    implementation libs.opensaml.messaging.impl
-    api libs.opensaml.soap.api
-    implementation libs.opensaml.soap.impl
+    api libs.opensaml5.core.api
+    implementation libs.opensaml5.core.impl
+    api libs.opensaml5.saml.api
+    implementation libs.opensaml5.saml.impl
+    api libs.opensaml5.messaging.api
+    implementation libs.opensaml5.messaging.impl
+    api libs.opensaml5.security.api
+    api libs.opensaml5.soap.api
+    implementation libs.opensaml5.soap.impl
+    api libs.opensaml5.xmlsec.api
     testImplementation libs.jsoup
 }

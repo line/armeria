@@ -39,9 +39,6 @@ import java.util.function.Function;
 import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.messaging.context.SAMLBindingContext;
-import org.opensaml.saml.saml2.core.AuthnRequest;
-import org.opensaml.saml.saml2.core.LogoutRequest;
-import org.opensaml.saml.saml2.core.Response;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.security.credential.CredentialResolver;
 import org.opensaml.xmlsec.algorithm.AlgorithmSupport;
@@ -49,7 +46,7 @@ import org.opensaml.xmlsec.signature.support.SignatureConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.shared.resolver.CriteriaSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -119,7 +116,7 @@ public final class SamlServiceProviderBuilder {
     private SamlSingleLogoutHandler sloHandler = new SamlSingleLogoutHandler() {
         @Override
         public CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                                     MessageContext<LogoutRequest> message) {
+                                                     MessageContext message) {
             return UnmodifiableFuture.completedFuture(null);
         }
 
@@ -523,7 +520,7 @@ public final class SamlServiceProviderBuilder {
         return new SamlSingleSignOnHandler() {
             @Override
             public CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
-                                                             MessageContext<AuthnRequest> message,
+                                                             MessageContext message,
                                                              SamlIdentityProviderConfig idpConfig) {
                 final String requestedPath = req.path();
                 if (requestedPath.length() <= relayStateMaxLength) {
@@ -540,7 +537,7 @@ public final class SamlServiceProviderBuilder {
 
             @Override
             public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                               MessageContext<Response> message, @Nullable String sessionIndex,
+                                               MessageContext message, @Nullable String sessionIndex,
                                                @Nullable String relayState) {
                 // 'relayState' is attacker-controlled opaque data round-tripped by the IdP, so it must not
                 // be used as a redirect target without validation. Otherwise the default handler can be
@@ -554,7 +551,7 @@ public final class SamlServiceProviderBuilder {
 
             @Override
             public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                            @Nullable MessageContext<Response> message, Throwable cause) {
+                                            @Nullable MessageContext message, Throwable cause) {
                 logger.warn("{} SAML SSO failed", ctx, cause);
                 return responseWithLocation("/error");
             }

@@ -20,7 +20,7 @@ import static com.linecorp.armeria.server.saml.SamlMessageUtil.deserialize;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.serialize;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.sign;
 import static java.util.Objects.requireNonNull;
-import static net.shibboleth.utilities.java.support.xml.SerializeSupport.nodeToString;
+import static net.shibboleth.shared.xml.SerializeSupport.nodeToString;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -102,7 +102,7 @@ final class HttpPostBindingUtil {
      * Converts an {@link AggregatedHttpRequest} which is received from the remote entity to
      * a {@link SAMLObject}.
      */
-    static <T extends SAMLObject> MessageContext<T> toSamlObject(AggregatedHttpRequest req, String name) {
+    static <T extends SAMLObject> MessageContext toSamlObject(AggregatedHttpRequest req, String name) {
         final SamlParameters parameters = new SamlParameters(req);
         final byte[] decoded;
         try {
@@ -115,7 +115,7 @@ final class HttpPostBindingUtil {
         @SuppressWarnings("unchecked")
         final T message = (T) deserialize(decoded);
 
-        final MessageContext<T> messageContext = new MessageContext<>();
+        final MessageContext messageContext = new MessageContext();
         messageContext.setMessage(message);
 
         final String relayState = parameters.getFirstValueOrNull(RELAY_STATE);

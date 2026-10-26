@@ -38,7 +38,7 @@ public interface SamlSingleLogoutHandler {
      * @param message the {@link MessageContext} of the {@link LogoutRequest} received from the identity
      */
     CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                          MessageContext<LogoutRequest> message);
+                                          MessageContext message);
 
     /**
      * Invoked when the single logout request is failed.

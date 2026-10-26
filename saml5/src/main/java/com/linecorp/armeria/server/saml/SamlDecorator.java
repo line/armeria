@@ -24,9 +24,9 @@ import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SAML_REQUE
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.build;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Instant;
 import java.util.concurrent.CompletionStage;
 
-import org.joda.time.DateTime;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.messaging.context.SAMLBindingContext;
 import org.opensaml.saml.saml2.core.AuthnContext;
@@ -131,7 +131,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                 final String defaultHostname =
                         firstNonNull(sp.hostname(), ctx.config().virtualHost().defaultHostname());
                 final AuthnRequest request = createAuthRequest(idp, defaultHostname);
-                final MessageContext<AuthnRequest> messageContext = new MessageContext<>();
+                final MessageContext messageContext = new MessageContext();
                 messageContext.setMessage(request);
                 return new MessageContextAndIdpConfig(messageContext, idp);
             }).thenCompose(arg -> {
@@ -148,14 +148,14 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                 try {
                     if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
                         return responseWithLocation(toRedirectionUrl(
-                                arg.messageContext.getMessage(),
+                                arg.messageContext.ensureMessage(AuthnRequest.class),
                                 endpoint.toUriString(), SAML_REQUEST,
                                 signingCredential, sp.signatureAlgorithm(),
                                 relayState));
                     } else {
                         // signing can incur a blocking call
                         final String value = toSignedBase64(
-                                arg.messageContext.getMessage(),
+                                arg.messageContext.ensureMessage(AuthnRequest.class),
                                 signingCredential,
                                 sp.signatureAlgorithm());
                         final HttpData body = getSsoForm(endpoint.toUriString(),
@@ -191,7 +191,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
         issuer.setValue(myEntityId);
         authnRequest.setIssuer(issuer);
 
-        authnRequest.setIssueInstant(DateTime.now());
+        authnRequest.setIssueInstant(Instant.now());
         authnRequest.setDestination(idp.ssoEndpoint().toUriString());
         authnRequest.setID(requestIdManager.newId());
 
@@ -213,7 +213,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
         authnRequest.setNameIDPolicy(nameIdPolicy);
 
         final AuthnContextClassRef passwordAuthnCtxRef = build(AuthnContextClassRef.DEFAULT_ELEMENT_NAME);
-        passwordAuthnCtxRef.setAuthnContextClassRef(AuthnContext.PASSWORD_AUTHN_CTX);
+        passwordAuthnCtxRef.setURI(AuthnContext.PASSWORD_AUTHN_CTX);
 
         final RequestedAuthnContext requestedAuthnContext = build(RequestedAuthnContext.DEFAULT_ELEMENT_NAME);
         requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.EXACT);
@@ -228,10 +228,10 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
      * An immutable object holder for {@link MessageContext} and {@link SamlIdentityProviderConfig}.
      */
     private static final class MessageContextAndIdpConfig {
-        private final MessageContext<AuthnRequest> messageContext;
+        private final MessageContext messageContext;
         private final SamlIdentityProviderConfig idpConfig;
 
-        private MessageContextAndIdpConfig(MessageContext<AuthnRequest> messageContext,
+        private MessageContextAndIdpConfig(MessageContext messageContext,
                                            SamlIdentityProviderConfig idpConfig) {
             this.messageContext = messageContext;
             this.idpConfig = idpConfig;

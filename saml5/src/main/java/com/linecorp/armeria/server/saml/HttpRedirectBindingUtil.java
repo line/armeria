@@ -19,7 +19,7 @@ import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.RELAY_STAT
 import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SIGNATURE;
 import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SIGNATURE_ALGORITHM;
 import static java.util.Objects.requireNonNull;
-import static net.shibboleth.utilities.java.support.xml.SerializeSupport.nodeToString;
+import static net.shibboleth.shared.xml.SerializeSupport.nodeToString;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -235,7 +235,7 @@ final class HttpRedirectBindingUtil {
      * a {@link SAMLObject}.
      */
     @SuppressWarnings("unchecked")
-    static <T extends SAMLObject> MessageContext<T> toSamlObject(
+    static <T extends SAMLObject> MessageContext toSamlObject(
             AggregatedHttpRequest req, String name,
             Map<String, SamlIdentityProviderConfig> idpConfigs,
             @Nullable SamlIdentityProviderConfig defaultIdpConfig,
@@ -247,7 +247,7 @@ final class HttpRedirectBindingUtil {
         final SamlParameters parameters = new SamlParameters(req);
         final T message = (T) fromDeflatedBase64(parameters.getFirstValue(name));
 
-        final MessageContext<T> messageContext = new MessageContext<>();
+        final MessageContext messageContext = new MessageContext();
         messageContext.setMessage(message);
 
         final Issuer issuer;

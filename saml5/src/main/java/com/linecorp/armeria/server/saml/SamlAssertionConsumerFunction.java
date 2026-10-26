@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.saml;
 import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SAML_RESPONSE;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.validateSignature;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,7 +26,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.joda.time.DateTime;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.messaging.context.SAMLBindingContext;
 import org.opensaml.saml.saml2.core.Assertion;
@@ -94,7 +94,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
-        MessageContext<Response> messageContext = null;
+        MessageContext messageContext = null;
 
         try {
             final SamlBindingProtocol bindingProtocol = cfg.endpoint().bindingProtocol();
@@ -108,8 +108,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
             final String endpointUri = cfg.endpoint().toUriString(portConfig.scheme().uriText(),
                                                                   defaultHostname, portConfig.port());
-            final Response response = messageContext.getMessage();
-            assert response != null;
+            final Response response = messageContext.ensureMessage(Response.class);
 
             final Assertion assertion = getValidatedAssertion(bindingProtocol, response, endpointUri);
 
@@ -121,7 +120,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             final String replayKey = issuer.getValue() + ':' + assertionId;
             final CompletableFuture<Boolean> replayCheckFuture = assertionIdCache.tryConsume(replayKey);
 
-            final MessageContext<Response> finalMessageContext = messageContext;
+            final MessageContext finalMessageContext = messageContext;
             return HttpResponse.of(replayCheckFuture.thenApply(consumed -> {
                 if (!consumed) {
                     throw new InvalidSamlRequestException(
@@ -173,12 +172,12 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                                                   " (expected: " + StatusCode.SUCCESS + ')');
         }
 
-        final DateTime now = new DateTime();
-        final DateTime issueInstant = response.getIssueInstant();
+        final Instant now = Instant.now();
+        final Instant issueInstant = response.getIssueInstant();
         if (issueInstant == null) {
             throw new InvalidSamlRequestException("failed to get IssueInstant attribute");
         }
-        if (Math.abs(now.getMillis() - issueInstant.getMillis()) > MILLIS_IN_MINUTE) {
+        if (Math.abs(now.toEpochMilli() - issueInstant.toEpochMilli()) > MILLIS_IN_MINUTE) {
             // Allow if 'issueInstant' is in [now - 60s, now + 60s] because there might be the
             // time difference between SP's timer and IdP's timer.
             throw new InvalidSamlRequestException("invalid IssueInstant: " + issueInstant +
@@ -303,7 +302,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                         conditions.getAudienceRestrictions().stream()
                                   .flatMap(r -> r.getAudiences().stream())
                                   .filter(audience0 -> entityId
-                                          .equals(audience0.getAudienceURI()))
+                                          .equals(audience0.getURI()))
                                   .findAny();
                 if (!audience.isPresent()) {
                     throw new InvalidSamlRequestException("no audience found from the assertion");

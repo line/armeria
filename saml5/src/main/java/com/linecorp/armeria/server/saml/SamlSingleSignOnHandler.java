@@ -47,7 +47,7 @@ public interface SamlSingleSignOnHandler {
      * @param idpConfig the configuration of the identity provider that the request is sending to
      */
     default CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
-                                                      MessageContext<AuthnRequest> message,
+                                                      MessageContext message,
                                                       SamlIdentityProviderConfig idpConfig) {
         return UnmodifiableFuture.completedFuture(null);
     }
@@ -65,7 +65,7 @@ public interface SamlSingleSignOnHandler {
      */
     @CheckReturnValue
     HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                                MessageContext<Response> message,
+                                MessageContext message,
                                 @Nullable String sessionIndex,
                                 @Nullable String relayState);
 
@@ -83,6 +83,6 @@ public interface SamlSingleSignOnHandler {
      */
     @CheckReturnValue
     HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
-                             @Nullable MessageContext<Response> message,
+                             @Nullable MessageContext message,
                              Throwable cause);
 }

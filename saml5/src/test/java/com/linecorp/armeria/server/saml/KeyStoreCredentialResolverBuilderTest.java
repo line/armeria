@@ -21,23 +21,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyStore;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
-import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
-import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
-
-@GenerateNativeImageTrace
 public class KeyStoreCredentialResolverBuilderTest {
 
-    @RegisterExtension
-    static final TemporaryFolderExtension folder = new TemporaryFolderExtension();
+    @TempDir
+    Path folder;
 
     @Test
     void expectSuccessWithFile() throws Exception {
-        final File file = folder.newFile().toFile();
+        final File file = Files.createTempFile(folder, "keystore", ".jks").toFile();
 
         assertThat(file.length()).isZero();
 

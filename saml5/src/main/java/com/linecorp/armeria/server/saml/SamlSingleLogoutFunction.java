@@ -24,9 +24,9 @@ import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SAML_RESPO
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.build;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.validateSignature;
 
+import java.time.Instant;
 import java.util.Map;
 
-import org.joda.time.DateTime;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.Issuer;
 import org.opensaml.saml.saml2.core.LogoutRequest;
@@ -88,7 +88,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
     public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
         try {
-            final MessageContext<LogoutRequest> messageContext;
+            final MessageContext messageContext;
             if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
                 messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_REQUEST,
                                                                       idpConfigs, defaultIdpConfig,
@@ -99,7 +99,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
 
             final String endpointUri = endpoint.toUriString(portConfig.scheme().uriText(),
                                                             defaultHostname, portConfig.port());
-            final LogoutRequest logoutRequest = messageContext.getMessage();
+            final LogoutRequest logoutRequest = messageContext.ensureMessage(LogoutRequest.class);
             final SamlIdentityProviderConfig idp = validateAndGetIdPConfig(logoutRequest, endpointUri);
 
             if (endpoint.bindingProtocol() != SamlBindingProtocol.HTTP_REDIRECT) {
@@ -215,7 +215,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
         final LogoutResponse logoutResponse = build(LogoutResponse.DEFAULT_ELEMENT_NAME);
         logoutResponse.setIssuer(me);
         logoutResponse.setID(requestIdManager.newId());
-        logoutResponse.setIssueInstant(DateTime.now());
+        logoutResponse.setIssueInstant(Instant.now());
         logoutResponse.setStatus(status);
         logoutResponse.setInResponseTo(logoutRequest.getID());
 

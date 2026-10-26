@@ -45,8 +45,8 @@ import org.opensaml.xmlsec.signature.support.SignatureValidator;
 import org.opensaml.xmlsec.signature.support.Signer;
 import org.w3c.dom.Element;
 
-import net.shibboleth.utilities.java.support.xml.ParserPool;
-import net.shibboleth.utilities.java.support.xml.XMLParserException;
+import net.shibboleth.shared.xml.ParserPool;
+import net.shibboleth.shared.xml.XMLParserException;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 

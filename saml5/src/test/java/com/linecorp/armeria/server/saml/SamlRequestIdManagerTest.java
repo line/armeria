@@ -28,9 +28,6 @@ import java.util.regex.Pattern;
 import org.awaitility.Durations;
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
-
-@GenerateNativeImageTrace
 class SamlRequestIdManagerTest {
 
     @Test

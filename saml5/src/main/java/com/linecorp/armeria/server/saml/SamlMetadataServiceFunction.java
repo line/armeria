@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.saml;
 
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.build;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.builder;
-import static net.shibboleth.utilities.java.support.xml.SerializeSupport.nodeToString;
+import static net.shibboleth.shared.xml.SerializeSupport.nodeToString;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -193,7 +193,7 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
         final Collection<NameIDFormat> formats = new ArrayList<>();
         for (final String value : nameIds) {
             final NameIDFormat nameIdFormat = builder.buildObject();
-            nameIdFormat.setFormat(value);
+            nameIdFormat.setURI(value);
             formats.add(nameIdFormat);
         }
         return formats;
