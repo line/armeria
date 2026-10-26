@@ -144,7 +144,7 @@ final class JsonSchemaGenerator {
     private ObjectNode doGenerate() {
         final ObjectNode root = mapper.createObjectNode();
         if (serviceSpecification.services().isEmpty()) {
-            throw new IllegalArgumentException("serviceSpecification must contain at least one service.");
+            return root;
         }
         final ServiceInfo representativeService = serviceSpecification.services().iterator().next();
         // Use a representative service name for the title and ID for now.
