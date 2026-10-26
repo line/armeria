@@ -143,7 +143,11 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
 
         res.whenConsumed().whenComplete((unused, cause) -> {
             if (cause != null) {
-                close(in);
+                try {
+                    fileReadExecutor.execute(() -> close(in));
+                } catch (Exception e) {
+                    close(in);
+                }
                 return;
             }
             try {
