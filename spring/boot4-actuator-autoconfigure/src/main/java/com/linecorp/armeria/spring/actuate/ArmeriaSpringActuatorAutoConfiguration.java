@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.spring.InternalServiceIdUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -300,16 +301,11 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             return null;
         }
         final InternalServiceProperties internalServiceProperties = armeriaSettings.getInternalServices();
-        boolean actuatorEnabled = false;
-        if (internalServiceProperties != null && internalServiceProperties.getInclude() != null) {
-            actuatorEnabled = internalServiceProperties.getInclude().contains(InternalServiceId.ACTUATOR) ||
-                              internalServiceProperties.getInclude().contains(InternalServiceId.ALL);
-        }
-        if (!actuatorEnabled) {
+        if (internalServiceProperties == null ||
+            !InternalServiceIdUtil.resolveServiceIds(internalServiceProperties)
+                                  .contains(InternalServiceId.ACTUATOR)) {
             return null;
         }
-
-        assert internalServiceProperties != null;
         return internalServiceProperties.getPort();
     }
 

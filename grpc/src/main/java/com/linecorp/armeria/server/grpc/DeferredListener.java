@@ -120,15 +120,16 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             return;
         }
 
-        if (!shouldBePending()) {
-            task.accept(delegate);
-            return;
-        }
-
         if (eventLoop != null && eventLoop.inEventLoop()) {
-            addPendingTask(task);
+            if (!shouldBePending()) {
+                task.accept(delegate);
+            } else {
+                addPendingTask(task);
+            }
         } else {
-            // It is unavoidable to reschedule the task to ensure the execution order.
+            // Always go through the sequential executor to preserve ordering.
+            // A direct fast-path call when delegate is set can race with
+            // previously submitted tasks that haven't executed yet.
             sequentialExecutor().execute(() -> {
                 if (callClosed) {
                     return;

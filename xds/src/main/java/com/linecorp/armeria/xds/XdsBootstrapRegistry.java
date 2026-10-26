@@ -71,7 +71,7 @@ public final class XdsBootstrapRegistry {
                 logger.debug("Creating XdsBootstrap '{}' from {}", name, provider.getClass().getName());
                 final XdsBootstrap bootstrap = provider.newBootstrap();
                 ShutdownHooks.addClosingTask(bootstrap);
-                return bootstrap;
+                return new UncloseableXdsBootstrap(bootstrap);
             }));
         }
         final Map<String, Supplier<XdsBootstrap>> loaded = spiEntries.buildOrThrow();

@@ -53,13 +53,14 @@ class ZooKeeperEndpointGroupTest {
 
     @Test
     void legacyDiscoverySpec() throws Throwable {
-        final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
+        final List<Endpoint> endpoints = ZooKeeperTestUtil.sampleEndpoints(5);
+        final List<Endpoint> sampleEndpoints = endpoints.subList(0, 3);
         setLegacySpecNodeChildren(sampleEndpoints);
         final ZooKeeperEndpointGroup endpointGroup = endpointGroup(ZooKeeperDiscoverySpec.legacy());
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
 
         // Add two more nodes.
-        final List<Endpoint> extraEndpoints = ZooKeeperTestUtil.sampleEndpoints(2);
+        final List<Endpoint> extraEndpoints = endpoints.subList(3, 5);
         setLegacySpecNodeChildren(extraEndpoints);
 
         // Construct the final expected node list.

@@ -34,6 +34,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterAll;
@@ -41,6 +42,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 
 import com.google.common.collect.ImmutableList;
@@ -58,6 +62,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogWriter;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -69,6 +74,7 @@ class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
     private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
+    private static final AtomicInteger customUpdateCount = new AtomicInteger();
     private static final HealthChecker unfinishedHealthChecker = HealthChecker.of(CompletableFuture::new,
                                                                                   Duration.ofDays(1));
     private static final Logger logger = mock(Logger.class);
@@ -121,6 +127,15 @@ class HealthCheckServiceTest {
                                                          throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
                                                  }
                                              });
+                                         })
+                                         .build());
+            sb.service("/hc_custom_without_method_check",
+                       HealthCheckService.builder()
+                                         .updatable((ctx, req) -> {
+                                             // Does not check the request method.
+                                             customUpdateCount.incrementAndGet();
+                                             return UnmodifiableFuture.completedFuture(
+                                                     HealthCheckUpdateResult.UNHEALTHY);
                                          })
                                          .build());
             sb.decorator(LoggingService.builder()
@@ -321,11 +336,12 @@ class HealthCheckServiceTest {
                 HttpHeaders.of()));
     }
 
-    @Test
-    void waitWithWrongMethod() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = HttpMethod.class, names = { "POST", "QUERY" })
+    void waitWithWrongMethod(HttpMethod method) throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
         final CompletableFuture<AggregatedHttpResponse> f = client.execute(
-                RequestHeaders.of(HttpMethod.POST, "/hc_custom",
+                RequestHeaders.of(method, "/hc_custom",
                                   HttpHeaderNames.PREFER, "wait=60",
                                   HttpHeaderNames.IF_NONE_MATCH, "\"healthy\"")).aggregate();
         assertThat(f.get().status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
@@ -496,6 +512,19 @@ class HealthCheckServiceTest {
         final AggregatedHttpResponse res2 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
                                                            "BAD");
         assertThat(res2.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/hc", "/hc_updatable", "/hc_custom_without_method_check" })
+    void queryIsNotAllowed(String path) {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.QUERY, path),
+                                                          "{\"healthy\":false}");
+        assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+
+        // QUERY is a safe method, so it must not update the healthiness.
+        assertThat(customUpdateCount).hasValue(0);
+        assertThat(client.get(path).status()).isEqualTo(HttpStatus.OK);
     }
 
     private static void verifyDebugEnabled(Logger logger) {

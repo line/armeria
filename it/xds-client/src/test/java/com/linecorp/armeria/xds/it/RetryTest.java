@@ -235,7 +235,22 @@ class RetryTest {
                                retry_on: "retriable-4xx",
                                num_retries: 2
                              }
-                             """, ResponseHeaders.of(400), 0)
+                             """, ResponseHeaders.of(400), 0),
+                // A missing header does not match even if invert_match is set.
+                //language=YAML
+                Arguments.of("""
+                             {
+                               retry_on: "retriable-headers",
+                               retriable_headers: [
+                                 {
+                                   name: "x-should-retry",
+                                   string_match: { exact: "false" },
+                                   invert_match: true
+                                 }
+                               ],
+                               num_retries: 2
+                             }
+                             """, ResponseHeaders.of(200), 0)
         );
     }
 
@@ -762,6 +777,24 @@ class RetryTest {
                                  {
                                    name: "x-can-retry",
                                    string_match: { exact: "true" }
+                                 }
+                               ]
+                             }
+                             """, ResponseHeaders.of(500),
+                             RequestHeaders.builder(HttpMethod.GET, "/")
+                                           .add("x-envoy-retry-on", "5xx")
+                                           .add("x-envoy-max-retries", "2").build(), 0),
+                // Test inverted retriable_request_headers missing header
+                // (should not retry because a missing header does not match even if invert_match is set)
+                //language=YAML
+                Arguments.of("""
+                             {
+                               num_retries: 2,
+                               retriable_request_headers: [
+                                 {
+                                   name: "x-can-retry",
+                                   string_match: { exact: "false" },
+                                   invert_match: true
                                  }
                                ]
                              }

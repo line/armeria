@@ -331,6 +331,124 @@ class RouteEntryMatcherTest {
                         RequestHeaders.of(HttpMethod.GET, "/", "header-a", "value-a"),
                         false
                 ),
+                // PRESENT_MATCH with invertMatch=true matches a missing header
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setPresentMatch(true)
+                                     .setInvertMatch(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        true
+                ),
+                // The examples of treat_missing_header_as_empty in the xDS API documentation:
+                // "header1": RANGE_MATCH with invertMatch=true and treatMissingHeaderAsEmpty=true
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setRangeMatch(Int64Range.newBuilder()
+                                                              .setStart(0)
+                                                              .setEnd(10)
+                                                              .build())
+                                     .setInvertMatch(true)
+                                     .setTreatMissingHeaderAsEmpty(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        true
+                ),
+                // "header2": RANGE_MATCH with invertMatch=true does not match a missing header
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setRangeMatch(Int64Range.newBuilder()
+                                                              .setStart(0)
+                                                              .setEnd(10)
+                                                              .build())
+                                     .setInvertMatch(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        false
+                ),
+                // "header3": StringMatch with regex ^$ and treatMissingHeaderAsEmpty=true
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setStringMatch(
+                                             StringMatcher.newBuilder()
+                                                          .setSafeRegex(RegexMatcher.newBuilder()
+                                                                                    .setRegex("^$")
+                                                                                    .build())
+                                                          .build())
+                                     .setTreatMissingHeaderAsEmpty(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        true
+                ),
+                // "header4": StringMatch with regex ^$ does not match a missing header
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setStringMatch(
+                                             StringMatcher.newBuilder()
+                                                          .setSafeRegex(RegexMatcher.newBuilder()
+                                                                                    .setRegex("^$")
+                                                                                    .build())
+                                                          .build())
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        false
+                ),
+                // StringMatch with invertMatch=true does not match a missing header
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setStringMatch(StringMatcher.newBuilder()
+                                                                  .setExact("value-a")
+                                                                  .build())
+                                     .setInvertMatch(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        false
+                ),
+                // StringMatch with invertMatch=true and treatMissingHeaderAsEmpty=true matches a missing header
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setStringMatch(StringMatcher.newBuilder()
+                                                                  .setExact("value-a")
+                                                                  .build())
+                                     .setInvertMatch(true)
+                                     .setTreatMissingHeaderAsEmpty(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/"),
+                        true
+                ),
+                // RANGE_MATCH with invertMatch=true matches a value outside the range
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setRangeMatch(Int64Range.newBuilder()
+                                                              .setStart(0)
+                                                              .setEnd(10)
+                                                              .build())
+                                     .setInvertMatch(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/", "header-a", "10"),
+                        true
+                ),
+                // RANGE_MATCH with invertMatch=true matches a non-numeric value
+                Arguments.of(
+                        HeaderMatcher.newBuilder()
+                                     .setName("header-a")
+                                     .setRangeMatch(Int64Range.newBuilder()
+                                                              .setStart(0)
+                                                              .setEnd(10)
+                                                              .build())
+                                     .setInvertMatch(true)
+                                     .build(),
+                        RequestHeaders.of(HttpMethod.GET, "/", "header-a", "somestring"),
+                        true
+                ),
                 // StringMatch with ignoreCase=true (case insensitive comparison)
                 Arguments.of(
                         HeaderMatcher.newBuilder()

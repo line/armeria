@@ -178,13 +178,38 @@ virtual_hosts:
                 weight:
                 metadata_match: Metadata
                 typed_per_filter_config: {<name>: Any}
+                request_headers_to_add:
+                  - header:
+                      key:
+                      value:
+                    append_action:
+                request_headers_to_remove: [...]
           metadata_match: Metadata
           timeout:
           retry_policy: RetryPolicy
         non_forwarding_action: {}
         typed_per_filter_config: {<name>: Any}
+        request_headers_to_add:
+          - header:
+              key:
+              value:
+            append_action:
+        request_headers_to_remove: [...]
     typed_per_filter_config: {<name>: Any}
     retry_policy: RetryPolicy
+    request_headers_to_add:
+      - header:
+          key:
+          value:
+        append_action:
+    request_headers_to_remove: [...]
+request_headers_to_add:
+  - header:
+      key:
+      value:
+    append_action:
+request_headers_to_remove: [...]
+most_specific_header_mutations_wins:
 ignore_port_in_host_matching:
 ```
 
@@ -196,6 +221,7 @@ num_retries:
 retry_back_off:
   base_interval:
   max_interval:
+  exponential_backoff_factor:
 retriable_status_codes: [...]
 retriable_headers:
   - name:
@@ -233,6 +259,10 @@ health_checks:
       host:
       path:
       method:
+      expected_statuses:
+        - start:
+          end:
+    transport_socket_match_criteria: Struct
 lb_subset_config:
   fallback_policy: NO_FALLBACK | ANY_ENDPOINT | DEFAULT_SUBSET
   subset_selectors:
