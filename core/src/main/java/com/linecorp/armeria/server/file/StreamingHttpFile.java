@@ -150,7 +150,8 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             try {
                 fileReadExecutor.execute(() -> doRead(res, in, nextOffset, end, fileReadExecutor, alloc));
             } catch (Exception e) {
-                close(res, in, e);
+                res.close(e);
+                closeAsync(in, fileReadExecutor);
             }
         });
     }
