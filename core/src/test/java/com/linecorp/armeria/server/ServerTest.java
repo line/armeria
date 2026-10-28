@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -412,6 +411,11 @@ class ServerTest {
     @Test
     void defaultStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
+        assertStartStopExecutorThreads(newStartStopServerBuilder(threads), threads, "startstop-support");
+    }
+
+    private static void assertStartStopExecutorThreads(ServerBuilder serverBuilder, Queue<Thread> threads,
+                                                      String threadNamePrefix) {
         final CountDownLatch startCallbackAttached = new CountDownLatch(1);
         final CountDownLatch stopCallbackAttached = new CountDownLatch(1);
         final ServerListener completionGate = new ServerListenerAdapter() {
@@ -429,9 +433,7 @@ class ServerTest {
                         .isTrue();
             }
         };
-        final Server server = newStartStopServerBuilder(threads)
-                .serverListener(completionGate)
-                .build();
+        final Server server = serverBuilder.serverListener(completionGate).build();
         try {
             final CompletableFuture<Thread> startFuture =
                     server.start().thenApply(unused -> Thread.currentThread());
@@ -444,7 +446,7 @@ class ServerTest {
             threads.add(stopFuture.join());
 
             assertThat(threads).hasSize(6);
-            threads.forEach(t -> assertThat(t.getName()).startsWith("startstop-support"));
+            threads.forEach(t -> assertThat(t.getName()).startsWith(threadNamePrefix));
         } finally {
             startCallbackAttached.countDown();
             stopCallbackAttached.countDown();
@@ -456,27 +458,14 @@ class ServerTest {
     void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-
-        final AtomicBoolean serverStarted = new AtomicBoolean();
-        final ThreadFactory factory = ThreadFactories.builder(prefix).taskFunction(task -> () -> {
-            await().untilFalse(serverStarted);
-            task.run();
-        }).build();
-
+        final ThreadFactory factory = ThreadFactories.builder(prefix).build();
         final ExecutorService executor = Executors.newSingleThreadExecutor(factory);
-        final Server server = newStartStopServerBuilder(threads)
-                .startStopExecutor(executor)
-                .build();
-
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
-        serverStarted.set(true);
-
-        final CompletableFuture<Thread> stopFuture = server.stop().thenApply(
-                unused -> Thread.currentThread());
-        serverStarted.set(false);
-        threads.add(stopFuture.join());
-
-        threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
+        try {
+            final ServerBuilder sb = newStartStopServerBuilder(threads).startStopExecutor(executor);
+            assertStartStopExecutorThreads(sb, threads, prefix);
+        } finally {
+            assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
+        }
     }
 
     private static ServerBuilder newStartStopServerBuilder(Queue<Thread> threads) {
