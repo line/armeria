@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -859,7 +858,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         // Stop receiving new requests.
                         handledLastRequest = true;
                         if (unfinishedRequests.isEmpty()) {
-                            final long closeDelay = Flags.defaultHttp1ConnectionCloseDelayMillis();
+                            final long closeDelay = config.http1ConnectionCloseDelayMillis();
                             if (closeDelay == 0) {
                                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                             } else {
