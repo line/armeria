@@ -605,6 +605,10 @@ message WeightedCluster {
     oneof host_rewrite_specifier {
       // Indicates that during forwarding, the host header will be swapped with
       // this value.
+      option (armeria.xds.supported.oneof_field) = {
+          number: 11,
+          since: "1.43.0"
+      };
       string host_rewrite_literal = 11
           [(validate.rules).string = {well_known_regex: HTTP_HEADER_VALUE strict: false}];
     }
@@ -1424,6 +1428,10 @@ message RouteAction {
   oneof host_rewrite_specifier {
     // Indicates that during forwarding, the host header will be swapped with
     // this value.
+    option (armeria.xds.supported.oneof_field) = {
+        number: 6,
+        since: "1.43.0"
+    };
     string host_rewrite_literal = 6
         [(validate.rules).string = {well_known_regex: HTTP_HEADER_VALUE strict: false}];
 
