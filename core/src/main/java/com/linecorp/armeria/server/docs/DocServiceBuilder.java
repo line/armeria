@@ -354,6 +354,7 @@ public final class DocServiceBuilder {
      * <p>This replaces the previously configured header names, including the default
      * {@link HttpHeaderNames#AUTHORIZATION}. Specifying {@code null} or an empty iterable disables redaction.
      */
+    @UnstableApi
     public DocServiceBuilder sensitiveHeaders(
             @Nullable Iterable<? extends CharSequence> sensitiveHeaders) {
         if (sensitiveHeaders == null) {
