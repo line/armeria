@@ -89,11 +89,11 @@ class ThriftProtocolUtilTest {
             buf.writeInt(0x80010001); // Binary V1, CALL.
             buf.writeInt(NAME.length());
             buf.writerIndex(availableBytes);
-            final TProtocol protocol = newProtocol(buf, ThriftSerializationFormats.BINARY, 1);
+            final TProtocol protocol = newProtocol(buf, BINARY, 1);
 
             // A truncated primitive is not an oversized name, even if its size exceeds the limit.
             assertThatThrownBy(() -> readMessageBegin(
-                    protocol, ThriftSerializationFormats.BINARY, buf, 1))
+                    protocol, BINARY, buf, 1))
                     .isInstanceOf(TTransportException.class)
                     .hasMessage("unexpected end of frame");
         } finally {
@@ -107,10 +107,10 @@ class ThriftProtocolUtilTest {
 
         try {
             buf.writeInt(0x80020001);
-            final TProtocol protocol = newProtocol(buf, ThriftSerializationFormats.BINARY, 1);
+            final TProtocol protocol = newProtocol(buf, BINARY, 1);
 
             assertThatThrownBy(() -> readMessageBegin(
-                    protocol, ThriftSerializationFormats.BINARY, buf, 1))
+                    protocol, BINARY, buf, 1))
                     .isInstanceOf(TProtocolException.class)
                     .satisfies(cause -> assertThat(((TProtocolException) cause).getType())
                             .isEqualTo(TProtocolException.BAD_VERSION));
@@ -127,11 +127,11 @@ class ThriftProtocolUtilTest {
         try {
             buf.writeZero(readerIndex);
             buf.skipBytes(readerIndex);
-            final TProtocol protocol = newProtocol(buf, ThriftSerializationFormats.BINARY, NAME.length() - 1);
+            final TProtocol protocol = newProtocol(buf, BINARY, NAME.length() - 1);
             writeUnversionedBinaryHeader(protocol);
 
             assertThatThrownBy(() -> readMessageBegin(
-                    protocol, ThriftSerializationFormats.BINARY, buf, NAME.length() - 1))
+                    protocol, BINARY, buf, NAME.length() - 1))
                     .isInstanceOf(TProtocolException.class)
                     .hasMessage("Length exceeded max allowed: " + NAME.length())
                     .satisfies(cause -> assertThat(((TProtocolException) cause).getType())
