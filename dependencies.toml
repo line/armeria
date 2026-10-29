@@ -123,8 +123,9 @@ nullaway-gradle-plugin = "3.2.0"
 okhttp2 = "2.7.5" # For testing
 okhttp3 = { strictly = "3.14.9" } # Not just for testing. Used in the Retrofit mudule.
 okhttp5 = "5.5.0" # For testing
-# Don"t upgrade OpenSAML to 4.x that requires Java 11.
+# Don't upgrade OpenSAML to 4.x that requires Java 11.
 opensaml = "3.4.6"
+opensaml5 = "5.2.3"
 osdetector = "1.7.3"
 # Used for kubernetes-chaos-tests
 picocli = "4.7.7"
@@ -1148,6 +1149,37 @@ version.ref = "opensaml"
 [libraries.opensaml-soap-impl]
 module = "org.opensaml:opensaml-soap-impl"
 version.ref = "opensaml"
+
+[libraries.opensaml5-core-api]
+module = "org.opensaml:opensaml-core-api"
+version.ref = "opensaml5"
+[libraries.opensaml5-core-impl]
+module = "org.opensaml:opensaml-core-impl"
+version.ref = "opensaml5"
+[libraries.opensaml5-messaging-api]
+module = "org.opensaml:opensaml-messaging-api"
+version.ref = "opensaml5"
+[libraries.opensaml5-messaging-impl]
+module = "org.opensaml:opensaml-messaging-impl"
+version.ref = "opensaml5"
+[libraries.opensaml5-saml-api]
+module = "org.opensaml:opensaml-saml-api"
+version.ref = "opensaml5"
+[libraries.opensaml5-saml-impl]
+module = "org.opensaml:opensaml-saml-impl"
+version.ref = "opensaml5"
+[libraries.opensaml5-security-api]
+module = "org.opensaml:opensaml-security-api"
+version.ref = "opensaml5"
+[libraries.opensaml5-soap-api]
+module = "org.opensaml:opensaml-soap-api"
+version.ref = "opensaml5"
+[libraries.opensaml5-soap-impl]
+module = "org.opensaml:opensaml-soap-impl"
+version.ref = "opensaml5"
+[libraries.opensaml5-xmlsec-api]
+module = "org.opensaml:opensaml-xmlsec-api"
+version.ref = "opensaml5"
 
 [libraries.okhttp2]
 module = "com.squareup.okhttp:okhttp"
