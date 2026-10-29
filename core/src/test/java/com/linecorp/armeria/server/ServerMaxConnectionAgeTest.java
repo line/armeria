@@ -27,7 +27,10 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
@@ -55,7 +58,9 @@ import io.netty.util.AttributeMap;
 class ServerMaxConnectionAgeTest {
 
     private static final long MAX_CONNECTION_AGE = 1000;
+    private static final long JITTERED_MAX_CONNECTION_AGE = 4000;
     private static MeterRegistry meterRegistry;
+    private static MeterRegistry jitteredMeterRegistry;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -106,6 +111,23 @@ class ServerMaxConnectionAgeTest {
             sb.connectionDrainDuration(Duration.ofMillis(10));
             sb.service("/", (ctx, req) ->
                     HttpResponse.delayed(HttpResponse.of(OK), Duration.ofMillis(100)));
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension jitteredServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
+            sb.requestTimeoutMillis(0);
+            sb.connectionDrainDuration(Duration.ofMillis(10));
+            sb.maxConnectionAgeMillis(JITTERED_MAX_CONNECTION_AGE);
+            sb.maxConnectionAgeJitterRate(1.0);
+            jitteredMeterRegistry = new SimpleMeterRegistry();
+            sb.meterRegistry(jitteredMeterRegistry);
+            sb.service("/", (ctx, req) -> HttpResponse.of(OK));
         }
     };
 
@@ -288,6 +310,77 @@ class ServerMaxConnectionAgeTest {
             await().untilAtomic(opened, Matchers.is(1));
             await().untilAtomic(closed, Matchers.is(1));
         }
+    }
+
+    @CsvSource({ "H1C", "H2" })
+    @ParameterizedTest
+    void jitteredLifespansStayWithinConfiguredMax(SessionProtocol protocol) {
+        final int numConnections = 10;
+        final List<ClientFactory> factories = new ArrayList<>();
+        final List<WebClient> clients = new ArrayList<>();
+        final List<AtomicBoolean> connectionClosed = new ArrayList<>();
+        try {
+            for (int i = 0; i < numConnections; i++) {
+                final AtomicBoolean closed = new AtomicBoolean();
+                final ClientFactory factory = ClientFactory.builder()
+                                                           .connectionPoolListener(newClosedListener(closed))
+                                                           .idleTimeoutMillis(0)
+                                                           .tlsNoVerify()
+                                                           .build();
+                factories.add(factory);
+                clients.add(newWebClient(factory, jitteredServer.uri(protocol)));
+                connectionClosed.add(closed);
+            }
+
+            // A server closes an expired connection only when it sends the next response.
+            await().atMost(Duration.ofMillis(JITTERED_MAX_CONNECTION_AGE * 2))
+                   .pollInterval(Duration.ofMillis(50))
+                   .until(() -> {
+                       boolean allClosed = true;
+                       for (int i = 0; i < numConnections; i++) {
+                           if (!connectionClosed.get(i).get()) {
+                               allClosed = false;
+                               assertThat(clients.get(i).get("/").aggregate().join().status()).isEqualTo(OK);
+                           }
+                       }
+                       return allClosed;
+                   });
+
+            final String lifespan = "armeria.server.connections.lifespan";
+            final String tag = "protocol=" + protocol.uriText() + '}';
+            await().untilAsserted(() -> {
+                assertThat(MoreMeters.measureAll(jitteredMeterRegistry))
+                        .hasEntrySatisfying(
+                                lifespan + "#count{" + tag,
+                                value -> assertThat(value).isEqualTo(numConnections))
+                        .hasEntrySatisfying(
+                                lifespan + ".percentile#value{phi=0," + tag,
+                                value -> assertThat(value * 1000)
+                                        .as("shortest lifespan, below the max age only with jitter")
+                                        .isLessThan(JITTERED_MAX_CONNECTION_AGE - 500.0))
+                        .hasEntrySatisfying(
+                                lifespan + ".percentile#value{phi=1," + tag,
+                                value -> assertThat(value * 1000)
+                                        .as("longest lifespan, never above the max age")
+                                        .isLessThanOrEqualTo(JITTERED_MAX_CONNECTION_AGE + 500.0));
+            });
+        } finally {
+            factories.forEach(ClientFactory::closeAsync);
+        }
+    }
+
+    private static ConnectionPoolListener newClosedListener(AtomicBoolean closed) {
+        return new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {}
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closed.set(true);
+            }
+        };
     }
 
     private ClientFactory newClientFactory(boolean useHttp1PipeLine) {

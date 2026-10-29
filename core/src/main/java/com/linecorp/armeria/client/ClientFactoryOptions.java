@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.KeepAliveHandlerUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -243,6 +244,17 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
+
+    /**
+     * The jitter rate applied to the client-side max connection age. This option is disabled by default.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAgeJitterRate(double)
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Double> MAX_CONNECTION_AGE_JITTER_RATE =
+            ClientFactoryOption.define("MAX_CONNECTION_AGE_JITTER_RATE", 0.0,
+                                       KeepAliveHandlerUtil::validateMaxConnectionAgeJitterRate,
+                                       (oldValue, newValue) -> newValue);
 
     /**
      * The {@link OutlierDetection} which is used to detect unhealthy connections.
@@ -605,6 +617,16 @@ public final class ClientFactoryOptions
      */
     public long maxConnectionAgeMillis() {
         return get(MAX_CONNECTION_AGE_MILLIS);
+    }
+
+    /**
+     * Returns the jitter rate applied to the client-side max connection age.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAgeJitterRate(double)
+     */
+    @UnstableApi
+    public double maxConnectionAgeJitterRate() {
+        return get(MAX_CONNECTION_AGE_JITTER_RATE);
     }
 
     /**
