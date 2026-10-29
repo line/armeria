@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
@@ -120,6 +121,37 @@ class ProtobufRequestAnnotatedServiceTest {
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("OK");
+    }
+
+    @Test
+    void invalidProtobufRequest() {
+        // A truncated varint tag.
+        final byte[] invalidProtobuf = { (byte) 0xFF, (byte) 0xFF };
+        AggregatedHttpResponse response =
+                client.post("/default-content-type", invalidProtobuf).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        final HttpRequest request = HttpRequest.of(HttpMethod.POST, "/protobuf",
+                                                   MediaType.PROTOBUF, invalidProtobuf);
+        response = client.execute(request).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @CsvSource(delimiter = '|', value = {
+            "/json         | \"payload\":\"Armeria\"}",
+            "/json         | {\"payload\": {}}",
+            "/json+array   | [{",
+            "/json+array   | [{\"size\": \"one\"}]",
+            "/json+array2  | [{\"size\": \"one\"}]",
+            "/json+object  | {\"json1\":",
+            "/json+object  | {\"json1\": {\"size\": \"one\"}}"
+    })
+    @ParameterizedTest
+    void invalidJsonRequest(String path, String invalidJson) {
+        final HttpRequest request = HttpRequest.of(HttpMethod.POST, path, MediaType.JSON, invalidJson);
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     private static class GreetingService {
