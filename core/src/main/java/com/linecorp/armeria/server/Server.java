@@ -109,6 +109,7 @@ public final class Server implements ListenableAsyncCloseable {
     private final UpdatableServerConfig config;
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
+    private final Set<EventLoopGroup> bossGroups = new NonBlockingHashSet<>();
     private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
@@ -520,6 +521,7 @@ public final class Server implements ListenableAsyncCloseable {
 
             final String bossThreadName = bossThreadName(port);
             final EventLoopGroup bossGroup = config.bossGroupFactory().apply(bossThreadName);
+            bossGroups.add(bossGroup);
 
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
@@ -658,10 +660,7 @@ public final class Server implements ListenableAsyncCloseable {
                         }
 
                         workerShutdownFuture.addListener(unused7 -> {
-                            final Set<EventLoopGroup> bossGroups =
-                                    Server.this.serverChannels.stream()
-                                                              .map(ch -> ch.eventLoop().parent())
-                                                              .collect(toImmutableSet());
+                            final Set<EventLoopGroup> bossGroups = ImmutableSet.copyOf(Server.this.bossGroups);
 
                             // If started to shutdown before initializing a boss group,
                             // complete the future immediately.
@@ -721,6 +720,7 @@ public final class Server implements ListenableAsyncCloseable {
 
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
+            bossGroups.clear();
 
             final Builder<ShutdownSupport> builder = ImmutableList.builder();
             for (ServerPlugin plugin : plugins) {
