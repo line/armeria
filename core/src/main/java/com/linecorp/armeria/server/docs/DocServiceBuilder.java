@@ -349,7 +349,8 @@ public final class DocServiceBuilder {
     }
 
     /**
-     * Sets the sensitive header names whose values are redacted in the debug-page URL in the documentation service.
+     * Sets the sensitive header names whose values are redacted in the debug-page URL
+     * in the documentation service.
      *
      * <p>This replaces the previously configured header names, including the default
      * {@link HttpHeaderNames#AUTHORIZATION}. Specifying {@code null} or an empty iterable disables redaction.
