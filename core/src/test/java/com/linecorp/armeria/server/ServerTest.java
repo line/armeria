@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,6 +34,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
@@ -410,43 +410,68 @@ class ServerTest {
 
     @Test
     void defaultStartStopExecutor() {
-        final Server server = ServerTest.server.server();
         final Queue<Thread> threads = new LinkedTransferQueue<>();
-        server.addListener(new ThreadRecordingServerListener(threads));
+        assertStartStopExecutorThreads(newStartStopServerBuilder(threads), threads, "startstop-support");
+    }
 
-        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+    private static void assertStartStopExecutorThreads(ServerBuilder serverBuilder, Queue<Thread> threads,
+                                                      String threadNamePrefix) {
+        final CountDownLatch startCallbackAttached = new CountDownLatch(1);
+        final CountDownLatch stopCallbackAttached = new CountDownLatch(1);
+        final ServerListener completionGate = new ServerListenerAdapter() {
+            @Override
+            public void serverStarted(Server server) throws InterruptedException {
+                assertThat(startCallbackAttached.await(10, TimeUnit.SECONDS))
+                        .as("start callback registered")
+                        .isTrue();
+            }
 
-        threads.forEach(t -> assertThat(t.getName()).startsWith("startstop-support"));
+            @Override
+            public void serverStopped(Server server) throws InterruptedException {
+                assertThat(stopCallbackAttached.await(10, TimeUnit.SECONDS))
+                        .as("stop callback registered")
+                        .isTrue();
+            }
+        };
+        final Server server = serverBuilder.serverListener(completionGate).build();
+        try {
+            final CompletableFuture<Thread> startFuture =
+                    server.start().thenApply(unused -> Thread.currentThread());
+            startCallbackAttached.countDown();
+            threads.add(startFuture.join());
+
+            final CompletableFuture<Thread> stopFuture =
+                    server.stop().thenApply(unused -> Thread.currentThread());
+            stopCallbackAttached.countDown();
+            threads.add(stopFuture.join());
+
+            assertThat(threads).hasSize(6);
+            threads.forEach(t -> assertThat(t.getName()).startsWith(threadNamePrefix));
+        } finally {
+            startCallbackAttached.countDown();
+            stopCallbackAttached.countDown();
+            server.close();
+        }
     }
 
     @Test
     void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-
-        final AtomicBoolean serverStarted = new AtomicBoolean();
-        final ThreadFactory factory = ThreadFactories.builder(prefix).taskFunction(task -> () -> {
-            await().untilFalse(serverStarted);
-            task.run();
-        }).build();
-
+        final ThreadFactory factory = ThreadFactories.builder(prefix).build();
         final ExecutorService executor = Executors.newSingleThreadExecutor(factory);
-        final Server server = Server.builder()
-                                    .startStopExecutor(executor)
-                                    .service("/", (ctx, req) -> HttpResponse.of(200))
-                                    .serverListener(new ThreadRecordingServerListener(threads))
-                                    .build();
+        try {
+            final ServerBuilder sb = newStartStopServerBuilder(threads).startStopExecutor(executor);
+            assertStartStopExecutorThreads(sb, threads, prefix);
+        } finally {
+            assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
+        }
+    }
 
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
-        serverStarted.set(true);
-
-        final CompletableFuture<Thread> stopFuture = server.stop().thenApply(
-                unused -> Thread.currentThread());
-        serverStarted.set(false);
-        threads.add(stopFuture.join());
-
-        threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
+    private static ServerBuilder newStartStopServerBuilder(Queue<Thread> threads) {
+        return Server.builder()
+                     .service("/", (ctx, req) -> HttpResponse.of(200))
+                     .serverListener(new ThreadRecordingServerListener(threads));
     }
 
     @Test
