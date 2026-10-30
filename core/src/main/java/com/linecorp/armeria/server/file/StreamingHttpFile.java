@@ -29,6 +29,7 @@ import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -141,11 +142,16 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             return;
         }
 
-        res.whenConsumed().thenRun(() -> {
+        res.whenConsumed().whenComplete((unused, cause) -> {
+            if (cause != null) {
+                closeAsync(in, fileReadExecutor);
+                return;
+            }
             try {
                 fileReadExecutor.execute(() -> doRead(res, in, nextOffset, end, fileReadExecutor, alloc));
             } catch (Exception e) {
-                close(res, in, e);
+                res.close(e);
+                closeAsync(in, fileReadExecutor);
             }
         });
     }
@@ -292,6 +298,18 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
             in.close();
         } catch (Exception e) {
             logger.warn("Failed to close a stream for: {}", this, e);
+        }
+    }
+
+    private void closeAsync(Closeable in, Executor fileReadExecutor) {
+        try {
+            fileReadExecutor.execute(() -> close(in));
+        } catch (Exception e) {
+            try {
+                CommonPools.blockingTaskExecutor().execute(() -> close(in));
+            } catch (Exception e2) {
+                logger.warn("Failed to schedule closing a stream for: {}", this, e2);
+            }
         }
     }
 }
