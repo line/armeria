@@ -22,6 +22,8 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpStatus;
@@ -51,10 +53,23 @@ public final class RequestMetricSupport {
     /**
      * Sets up request metrics.
      */
+    @VisibleForTesting
     public static void setup(
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
             SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+        setup(ctx, requestMetricsSetKey, meterIdPrefixFunction, server, successFunction,
+              distributionStatisticConfig, null);
+    }
+
+    /**
+     * Sets up request metrics with the specified {@link RequestMetricLimiter}.
+     */
+    public static void setup(
+            RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
+            MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -68,16 +83,21 @@ public final class RequestMetricSupport {
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction,
-                                        distributionStatisticConfig));
+                                        distributionStatisticConfig, metricLimiter));
     }
 
     private static void onRequest(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
                 meterIdPrefixFunction.activeRequestPrefix(registry, log).append("active.requests");
+
+        if (metricLimiter != null && !metricLimiter.accept(activeRequestsId)) {
+            return;
+        }
 
         final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
                 registry, activeRequestsId, ActiveRequestMetrics.class,
@@ -85,8 +105,10 @@ public final class RequestMetricSupport {
                         reg.gauge(prefix.name(), prefix.tags(),
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
+
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction, distributionStatisticConfig);
+            onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
+                       distributionStatisticConfig);
             activeRequestMetrics.decrement();
         });
     }
@@ -97,6 +119,7 @@ public final class RequestMetricSupport {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+
         final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         if (server) {
@@ -426,9 +449,8 @@ public final class RequestMetricSupport {
         @Override
         public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
             final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
-            return parent.counter(
-                    idPrefix.name("actual.requests.failure"),
-                    idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
+            return parent.counter(idPrefix.name("actual.requests.failure"),
+                                  idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
         }
     }
 

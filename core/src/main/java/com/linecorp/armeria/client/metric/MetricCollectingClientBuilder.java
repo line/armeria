@@ -22,6 +22,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -49,6 +50,12 @@ public final class MetricCollectingClientBuilder extends AbstractMetricCollectin
         return (MetricCollectingClientBuilder) super.distributionStatisticConfig(distributionStatisticConfig);
     }
 
+    @UnstableApi
+    @Override
+    public MetricCollectingClientBuilder maxCardinality(int maxCardinality) {
+        return (MetricCollectingClientBuilder) super.maxCardinality(maxCardinality);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingClient} decorating {@link HttpClient} based
      * on the properties of this builder.
@@ -56,7 +63,7 @@ public final class MetricCollectingClientBuilder extends AbstractMetricCollectin
     public MetricCollectingClient build(HttpClient delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingClient(delegate, meterIdPrefixFunction(), successFunction(),
-                                          distributionStatisticConfig());
+                                          distributionStatisticConfig(), maxCardinality());
     }
 
     /**
