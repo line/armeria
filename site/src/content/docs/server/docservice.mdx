@@ -95,6 +95,36 @@ text area which allows you to specify the HTTP headers you want to add:
 
 </MaxWidth>
 
+By default, the `authorization` header is redacted from the URL when using [DocService](type).
+You can replace the sensitive header names using [DocServiceBuilder.sensitiveHeaders()](type).
+
+```java
+import java.util.Arrays;
+import java.util.Collections;
+
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.server.docs.DocService;
+
+// Passing null disables redaction, including the default authorization header.
+DocService.builder()
+          .sensitiveHeaders(null)
+          .build();
+
+// Passing an empty list also disables redaction.
+DocService.builder()
+          .sensitiveHeaders(Collections.emptyList())
+          .build();
+
+// Replace the default with these two sensitive headers.
+DocService.builder()
+          .sensitiveHeaders(Arrays.asList(HttpHeaderNames.AUTHORIZATION,
+                                          "custom-header"))
+          .build();
+```
+
+The original header values are sent with the request but are replaced with `REDACTED` in the URL.
+After the page is refreshed, the debug form also displays `REDACTED` instead of the original values.
+
 ## Including and excluding service methods
 
 You can include or exclude service methods using [DocServiceFilter](type) when building a [DocService](type)
