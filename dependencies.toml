@@ -145,8 +145,7 @@ reactive-grpc = "1.2.4"
 reactive-streams = "1.0.4"
 reactor = "3.8.7"
 reactor-kotlin = "1.3.2"
-# Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
-reflections = "0.9.11"
+reflections = "0.9.12"
 resilience4j = "2.4.0"
 resteasy = "5.0.10.Final"
 # "provided" dependency required by RESTEasy "resteasy-core-spi"
@@ -196,6 +195,7 @@ thrift021 = { strictly = "0.21.0" }
 thrift022 = { strictly = "0.22.0" }
 thrift023 = { strictly = "0.23.0" }
 thrift024 = { strictly = "0.24.0" }
+thrift025 = { strictly = "0.25.0" }
 tomcat8 = "8.5.100"
 tomcat9 = "9.0.120"
 tomcat10 = "10.1.57"
@@ -1558,6 +1558,14 @@ exclusions = [
 module = "org.apache.thrift:libthrift"
 version.ref = "thrift024"
 javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.24.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift025]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift025"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.25.0/"
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
