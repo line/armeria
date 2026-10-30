@@ -324,6 +324,12 @@ public class ArmeriaSettings {
         private List<InternalServiceId> include = InternalServiceId.defaultServiceIds();
 
         /**
+         * The {@code exclude} properties to opt out of the {@linkplain #include included} internal services.
+         */
+        @Nullable
+        private List<InternalServiceId> exclude = ImmutableList.of();
+
+        /**
          * Returns the {@code include} property to secure the HTTP endpoints from normal
          * {@linkplain #getPorts() ports}.
          */
@@ -368,6 +374,25 @@ public class ArmeriaSettings {
          */
         public void setInclude(List<InternalServiceId> include) {
             this.include = include;
+        }
+
+        /**
+         * Returns the {@code exclude} property to opt out of the {@linkplain #getInclude() included}
+         * internal services.
+         */
+        @Nullable
+        public List<InternalServiceId> getExclude() {
+            return exclude;
+        }
+
+        /**
+         * Sets the IDs of the {@link HttpService}s to exclude from the {@linkplain #getInclude() included}
+         * internal services. The excluded services are served on all ports.
+         *
+         * @see InternalServiceId
+         */
+        public void setExclude(List<InternalServiceId> exclude) {
+            this.exclude = exclude;
         }
     }
 
