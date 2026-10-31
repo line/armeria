@@ -64,6 +64,8 @@ javax-annotation = "1.3.2"
 javax-inject = "1"
 javax-jsr311 = "1.1.1"
 javax-validation = "2.0.1.Final"
+# Keep in sync with the Jazzer version used by OSS-Fuzz's base-builder-jvm image.
+jazzer = "0.26.0"
 jctools = "4.0.7"
 # Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/jetty-server/
 jetty10 = "10.0.26"
@@ -667,6 +669,10 @@ version.ref = "javax-validation"
 [libraries.javassist]
 module = "org.javassist:javassist"
 version.ref = "javassist"
+
+[libraries.jazzer-api]
+module = "com.code-intelligence:jazzer-api"
+version.ref = "jazzer"
 
 [libraries.jctools]
 module = "org.jctools:jctools-core"
