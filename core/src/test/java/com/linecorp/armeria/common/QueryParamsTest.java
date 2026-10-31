@@ -163,6 +163,26 @@ class QueryParamsTest {
     }
 
     @Test
+    @SuppressWarnings("checkstyle:AvoidEscapedUnicodeCharacters")
+    void testFourByteUtf8Decoding() {
+        // Valid boundaries
+        assertThat(decodeComponent("%F0%90%80%80")).isEqualTo(new String(Character.toChars(0x10000)));
+        assertThat(decodeComponent("%F0%9F%98%80")).isEqualTo(new String(Character.toChars(0x1F600)));
+        assertThat(decodeComponent("%F4%8F%BF%BF")).isEqualTo(new String(Character.toChars(0x10FFFF)));
+
+        // Beyond U+10FFFF
+        assertThat(decodeComponent("%F4%90%80%80")).isEqualTo("�");
+        assertThat(decodeComponent("%F5%80%80%80")).isEqualTo("�");
+        assertThat(decodeComponent("%F7%BF%BF%BF")).isEqualTo("�");
+        // Overlong
+        assertThat(decodeComponent("%F0%80%80%80")).isEqualTo("�");
+        assertThat(decodeComponent("%F0%8F%BF%BF")).isEqualTo("�");
+
+        assertThat(QueryParams.fromQueryString("%F4%90%80%80=v"))
+                .containsExactly(Maps.immutableEntry("�", "v"));
+    }
+
+    @Test
     void testSemicolonDecoding() {
         assertQueryString("/foo?a=1;2", "/foo?a=1;2", true);
         // ";" should be treated as a normal character, see #8855
