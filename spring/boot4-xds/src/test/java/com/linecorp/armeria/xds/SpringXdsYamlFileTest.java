@@ -14,22 +14,19 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.xds;
+package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-
-import com.linecorp.armeria.xds.ClusterSnapshot;
-import com.linecorp.armeria.xds.ListenerSnapshot;
-import com.linecorp.armeria.xds.XdsBootstrap;
 
 @SpringBootTest(classes = SpringXdsYamlFileTest.TestApp.class)
 @ActiveProfiles("xds-file-test")
@@ -37,6 +34,11 @@ class SpringXdsYamlFileTest {
 
     @SpringBootApplication
     static class TestApp {
+    }
+
+    @AfterAll
+    static void tearDown() {
+        XdsBootstrapRegistry.deregister("spring");
     }
 
     @Autowired
