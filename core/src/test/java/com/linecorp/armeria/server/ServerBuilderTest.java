@@ -862,6 +862,9 @@ class ServerBuilderTest {
             server.start().join();
             assertThat(factoryCalled.get()).isTrue();
             assertThat(capturedThreadName.get()).startsWith("armeria-boss-");
+            final long startTime = System.nanoTime();
+            server.stop().join();
+            assertThat(Duration.ofNanos(System.nanoTime() - startTime)).isLessThan(Duration.ofSeconds(1));
         }
     }
 
