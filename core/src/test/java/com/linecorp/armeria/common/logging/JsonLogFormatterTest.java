@@ -106,6 +106,44 @@ class JsonLogFormatterTest {
         assertThat(matcher1.group(1)).isEqualTo("****");
     }
 
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void headersMaskingFunctionReceivesMaskedQueryParams(boolean removePath) {
+        final HeadersSanitizer<JsonNode> sanitizer =
+                HeadersSanitizer.builderForJson()
+                                .headersMaskingFunction((name, value) -> {
+                                    assertThat(name.toString())
+                                            .isNotEqualTo(HttpHeaderNames.AUTHORIZATION.toString());
+                                    if (name.equals(HttpHeaderNames.PATH)) {
+                                        assertThat(value).isEqualTo("/search?token=****");
+                                        return removePath ? null : value + "&logged=true";
+                                    }
+                                    return name.contentEquals("x-token") ? "masked" : value;
+                                })
+                                .build();
+        final LogFormatter formatter = LogFormatter.builderForJson()
+                                                   .maskQueryParams("token")
+                                                   .requestHeadersSanitizer(sanitizer)
+                                                   .build();
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/search?token=query-secret",
+                HttpHeaderNames.AUTHORIZATION, "auth-secret", "x-token", "header-secret"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        final String formatted = formatter.formatRequest(log);
+        assertThat(formatted).doesNotContain("query-secret", "auth-secret", "header-secret");
+        assertThatJson(formatted).node("headers.authorization").isEqualTo("****");
+        assertThatJson(formatted).node("headers.x-token").isEqualTo("masked");
+        if (removePath) {
+            assertThatJson(formatted).node("headers.:path").isAbsent();
+        } else {
+            assertThatJson(formatted).node("headers.:path").isEqualTo("/search?token=****&logged=true");
+        }
+        assertThat(request.headers().path()).isEqualTo("/search?token=query-secret");
+    }
+
     @Test
     void maskQueryParams() {
         final LogFormatter logFormatter = LogFormatter.builderForJson()

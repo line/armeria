@@ -115,6 +115,43 @@ class TextLogFormatterTest {
         assertThat(matcher.group(1)).isEqualTo("****");
     }
 
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void headersMaskingFunctionReceivesMaskedQueryParams(boolean removePath) {
+        final HeadersSanitizer<String> sanitizer =
+                HeadersSanitizer.builderForText()
+                                .headersMaskingFunction((name, value) -> {
+                                    assertThat(name.toString())
+                                            .isNotEqualTo(HttpHeaderNames.AUTHORIZATION.toString());
+                                    if (name.equals(HttpHeaderNames.PATH)) {
+                                        assertThat(value).isEqualTo("/search?token=****");
+                                        return removePath ? null : value + "&logged=true";
+                                    }
+                                    return name.contentEquals("x-token") ? "masked" : value;
+                                })
+                                .build();
+        final LogFormatter formatter = LogFormatter.builderForText()
+                                                   .maskQueryParams("token")
+                                                   .requestHeadersSanitizer(sanitizer)
+                                                   .build();
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/search?token=query-secret",
+                HttpHeaderNames.AUTHORIZATION, "auth-secret", "x-token", "header-secret"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        final String formatted = formatter.formatRequest(log);
+        assertThat(formatted).contains("authorization=****", "x-token=masked")
+                             .doesNotContain("query-secret", "auth-secret", "header-secret");
+        if (removePath) {
+            assertThat(formatted).doesNotContain(":path=");
+        } else {
+            assertThat(formatted).contains(":path=/search?token=****&logged=true");
+        }
+        assertThat(request.headers().path()).isEqualTo("/search?token=query-secret");
+    }
+
     @Test
     void maskQueryParams() {
         final LogFormatter logFormatter = LogFormatter.builderForText()

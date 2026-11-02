@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
 
@@ -48,6 +49,9 @@ abstract class AbstractHeadersSanitizerBuilder<SELF extends AbstractHeadersSanit
     private Set<AsciiString> sensitiveHeaders;
 
     private HeaderMaskingFunction maskingFunction = HeaderMaskingFunction.of();
+
+    @Nullable
+    private HeaderMaskingFunction headersMaskingFunction;
 
     @SuppressWarnings("unchecked")
     final SELF self() {
@@ -82,8 +86,10 @@ abstract class AbstractHeadersSanitizerBuilder<SELF extends AbstractHeadersSanit
     }
 
     /**
-     * Sets the {@link Function} to use to maskFunction headers before logging.
-     * The default maskingFunction is {@link HeaderMaskingFunction#of()}
+     * Sets the {@link HeaderMaskingFunction} to use for the headers included in
+     * {@link #sensitiveHeaders(CharSequence...)} before logging.
+     * The default masking function is {@link HeaderMaskingFunction#of()}.
+     * If the sensitive headers are empty, this function is not invoked.
      *
      * <pre>{@code
      * builder.maskingFunction((name, value) -> {
@@ -107,5 +113,26 @@ abstract class AbstractHeadersSanitizerBuilder<SELF extends AbstractHeadersSanit
      */
     final HeaderMaskingFunction maskingFunction() {
         return maskingFunction;
+    }
+
+    /**
+     * Sets the {@link HeaderMaskingFunction} to use for headers that are not included in
+     * {@link #sensitiveHeaders(CharSequence...)} before logging. These headers are left unchanged by default.
+     * Headers included in {@code sensitiveHeaders} are handled only by
+     * {@link #maskingFunction(HeaderMaskingFunction)}.
+     *
+     * <p>If the sensitive headers are empty, this function is applied to all headers.
+     * The function is invoked for each header value. Returning {@code null} removes that value from the log;
+     * returning the original value leaves it unchanged.
+     */
+    @UnstableApi
+    public SELF headersMaskingFunction(HeaderMaskingFunction headersMaskingFunction) {
+        this.headersMaskingFunction = requireNonNull(headersMaskingFunction, "headersMaskingFunction");
+        return self();
+    }
+
+    @Nullable
+    final HeaderMaskingFunction headersMaskingFunction() {
+        return headersMaskingFunction;
     }
 }
