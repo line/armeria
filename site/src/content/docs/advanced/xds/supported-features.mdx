@@ -184,9 +184,11 @@ virtual_hosts:
                       value:
                     append_action:
                 request_headers_to_remove: [...]
+                host_rewrite_literal:
           metadata_match: Metadata
           timeout:
           retry_policy: RetryPolicy
+          host_rewrite_literal:
         non_forwarding_action: {}
         typed_per_filter_config: {<name>: Any}
         request_headers_to_add:
@@ -212,6 +214,11 @@ request_headers_to_remove: [...]
 most_specific_header_mutations_wins:
 ignore_port_in_host_matching:
 ```
+
+`host_rewrite_literal` sets the authority sent upstream after request header mutations. If both
+the selected weighted cluster and its route specify nonempty literals, the route value takes precedence.
+An empty literal has no effect.
+`most_specific_header_mutations_wins` does not change this order.
 
 ### RetryPolicy
 
