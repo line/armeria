@@ -31,6 +31,8 @@ jobs:
     if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
+    env:
+      BUILD_JDK_VERSION: ${{ matrix.buildJdk || '25' }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,13 +58,16 @@ jobs:
             snapshot: true
             # blockhound makes the build run about 10 minutes slower
             blockhound: true
+          - java: 21
+            on: ubicloud-standard-16
+            buildJdk: 21
 
-    name: build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}
+    name: build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.buildJdk && format('-build-jdk-{0}', matrix.buildJdk) || '' }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}
 
     steps:
       - name: Set job name
         run: |
-          JOB_NAME="build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}"
+          JOB_NAME="build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.buildJdk && format('-build-jdk-{0}', matrix.buildJdk) || '' }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}"
           echo "JOB_NAME=$JOB_NAME" >> $GITHUB_ENV
         shell: bash
 
