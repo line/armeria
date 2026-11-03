@@ -32,8 +32,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
@@ -140,11 +138,8 @@ final class RouteCache {
                 return Routed.of(route, routingResult, cached);
             }
 
-            final CacheCheckingRoutingContext checkingCtx =
-                    dynamicPredicateRoutes.isEmpty() ? null : new CacheCheckingRoutingContext(routingCtx);
-            final Routed<V> result = delegate.find(checkingCtx != null ? checkingCtx : routingCtx);
+            final Routed<V> result = delegate.find(routingCtx);
             if (result.isPresent() && result.route().isCacheable() &&
-                (checkingCtx == null || checkingCtx.isCacheable()) &&
                 !dynamicPredicateRoutes.contains(result.route())) {
                 findCache.put(routingCtx, result.value());
             }
@@ -196,37 +191,6 @@ final class RouteCache {
                               .add("findCache", findCache)
                               .add("findAllCache", findAllCache)
                               .toString();
-        }
-    }
-
-    /**
-     * Tracks query parameter and header reads during route selection, including reads by rejected routes.
-     * A cacheable route may be selected because another route's predicate failed. Since the cache key omits
-     * query parameters and arbitrary headers, reusing that selection could skip a route that matches a later
-     * request.
-     */
-    private static final class CacheCheckingRoutingContext extends RoutingContextWrapper {
-
-        private boolean cacheable = true;
-
-        CacheCheckingRoutingContext(RoutingContext delegate) {
-            super(delegate);
-        }
-
-        @Override
-        public QueryParams params() {
-            cacheable = false;
-            return super.params();
-        }
-
-        @Override
-        public RequestHeaders headers() {
-            cacheable = false;
-            return super.headers();
-        }
-
-        boolean isCacheable() {
-            return cacheable;
         }
     }
 
