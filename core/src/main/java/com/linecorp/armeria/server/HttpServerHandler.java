@@ -67,6 +67,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
@@ -223,8 +224,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * still served. The returned future is completed when the connection is closed.
      */
     CompletableFuture<Void> handOver(Channel channel) {
-        final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
-        channel.closeFuture().addListener(unused -> closeFuture.complete(null));
         channel.eventLoop().execute(() -> {
             if (!channel.isActive()) {
                 return;
@@ -238,7 +237,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 channel.pipeline().fireUserEventTriggered(InitiateConnectionShutdown.of());
             }
         });
-        return closeFuture;
+        return UnmodifiableFuture.fromNetty(channel.closeFuture());
     }
 
     CompletableFuture<Void> shutdown(Channel channel) {
