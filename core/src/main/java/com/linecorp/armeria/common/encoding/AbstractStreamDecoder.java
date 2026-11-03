@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -114,7 +116,7 @@ class AbstractStreamDecoder implements StreamDecoder {
                 } else {
                     try {
                         composite = alloc.compositeBuffer();
-                        composite.addComponents(true, decoded, buf);
+                        composite.addComponents(true, ImmutableList.of(decoded, buf));
                     } catch (Throwable t) {
                         if (composite != null) {
                             composite.release();
