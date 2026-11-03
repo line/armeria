@@ -23,7 +23,6 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -58,13 +57,10 @@ import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentSpecBuilder;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 
 @EnableKubernetesMockClient(crud = true)
-@SetSystemProperty(key = "kubernetes.auth.tryKubeConfig", value = "false")
-@SetSystemProperty(key = "kubernetes.auth.tryServiceAccount", value = "false")
 class KubernetesClusterTypeIntegrationTest {
 
     private static final Map<String, String> LABELS = ImmutableMap.of("app", "test-app");
@@ -88,7 +84,7 @@ class KubernetesClusterTypeIntegrationTest {
     void basicEndpointDiscovery() {
         final Bootstrap bootstrap = bootstrapYaml(client.getMasterUrl().toString());
         final KubernetesClusterTypeFactory factory = KubernetesClusterTypeFactory.of(
-                new ConfigBuilder(client.getConfiguration()).withTrustCerts(true).build(),
+                client.getConfiguration(),
                 (clusterName, endpoints) -> backendCla(clusterName));
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
