@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.testng.util.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,6 +41,53 @@ class RouteTest {
     private static final String PATH = "/test";
 
     private static final RequestTarget REQ_TARGET = RequestTarget.forServer(PATH);
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void marksSelectionBeforeEvaluatingQueryPredicate(boolean matches) {
+        final RoutingContext ctx = RoutingContextTest.create(PATH, "itemIds=123");
+        final Route route = Route.builder()
+                                 .path(PATH)
+                                 .matchesParams("itemIds", value -> {
+                                     assertThat(ctx.isRouteSelectionCacheable()).isFalse();
+                                     return matches;
+                                 }).build();
+        assertThat(ctx.isRouteSelectionCacheable()).isTrue();
+        assertThat(route.apply(ctx, false).isPresent()).isEqualTo(matches);
+        assertThat(ctx.isRouteSelectionCacheable()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void marksSelectionBeforeEvaluatingHeaderPredicate(boolean matches) {
+        final VirtualHost virtualHost = virtualHost();
+        final RoutingContext ctx = DefaultRoutingContext.of(
+                virtualHost, virtualHost.defaultHostname(), REQ_TARGET,
+                RequestHeaders.of(HttpMethod.GET, PATH, "x-item-ids", "123"),
+                RoutingStatus.OK, SessionProtocol.H2C);
+        final Route route = Route.builder()
+                                 .path(PATH)
+                                 .matchesHeaders("x-item-ids", value -> {
+                                     assertThat(ctx.isRouteSelectionCacheable()).isFalse();
+                                     return matches;
+                                 }).build();
+        assertThat(ctx.isRouteSelectionCacheable()).isTrue();
+        assertThat(route.apply(ctx, false).isPresent()).isEqualTo(matches);
+        assertThat(ctx.isRouteSelectionCacheable()).isFalse();
+    }
+
+    @Test
+    void skippedPredicatesDoNotMarkSelection() {
+        final Route route = Route.builder()
+                                 .path(PATH)
+                                 .matchesParams("itemIds")
+                                 .matchesHeaders("x-item-ids")
+                                 .build();
+        final RoutingContext ctx = RoutingContextTest.create(PATH);
+        final RoutingContext cachingCtx = new RouteCache.CachingRoutingContext(ctx);
+        assertThat(route.apply(cachingCtx, false).isPresent()).isTrue();
+        assertThat(ctx.isRouteSelectionCacheable()).isTrue();
+    }
 
     @Test
     void route() {
