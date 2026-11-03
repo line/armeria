@@ -18,6 +18,8 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -100,6 +102,7 @@ class ArmeriaSettingsConfigurationTest {
         assertThat(server).isNotNull();
         assertThat(settings).isNotNull();
         assertThat(settings.getMetricsMaxCardinality()).isEqualTo(100);
+        assertThat(settings.getMetricsIdleTimeout()).isEqualTo(Duration.ofMinutes(5));
         final ServerConfig config = server.config();
 
         assertThat(config.maxNumConnections()).isEqualTo(8);

@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
@@ -56,6 +57,12 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
         return (MetricCollectingServiceBuilder) super.maxCardinality(maxCardinality);
     }
 
+    @UnstableApi
+    @Override
+    public MetricCollectingServiceBuilder maxCardinality(int maxCardinality, Duration idleTimeout) {
+        return (MetricCollectingServiceBuilder) super.maxCardinality(maxCardinality, idleTimeout);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
      * on the properties of this builder.
@@ -63,7 +70,8 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
     public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction(),
-                                           distributionStatisticConfig(), maxCardinality());
+                                           distributionStatisticConfig(), maxCardinality(),
+                                           metricIdleTimeout());
     }
 
     /**

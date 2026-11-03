@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
@@ -71,6 +72,18 @@ public final class MetricCollectingClient extends AbstractMetricCollectingClient
     }
 
     /**
+     * Returns an {@link HttpClient} decorator that tracks request stats using {@link MeterRegistry}
+     * with the specified {@code maxCardinality} and {@code idleTimeout}.
+     */
+    @UnstableApi
+    public static Function<? super HttpClient, MetricCollectingClient> newDecorator(
+            MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality, Duration idleTimeout) {
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        requireNonNull(idleTimeout, "idleTimeout");
+        return builder(meterIdPrefixFunction).maxCardinality(maxCardinality, idleTimeout).newDecorator();
+    }
+
+    /**
      * Returns a new {@link MetricCollectingClientBuilder} instance.
      */
     public static MetricCollectingClientBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
@@ -81,6 +94,16 @@ public final class MetricCollectingClient extends AbstractMetricCollectingClient
                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
                            DistributionStatisticConfig distributionStatisticConfig,
                            int maxCardinality) {
-        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig, maxCardinality);
+        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig,
+             maxCardinality, null);
+    }
+
+    MetricCollectingClient(HttpClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+                           @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+                           DistributionStatisticConfig distributionStatisticConfig,
+                           int maxCardinality,
+                           @Nullable Duration idleTimeout) {
+        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig,
+              maxCardinality, idleTimeout);
     }
 }

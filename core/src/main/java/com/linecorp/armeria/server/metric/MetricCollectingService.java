@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
@@ -89,6 +90,19 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     }
 
     /**
+     * Returns a new {@link HttpService} decorator that tracks request stats using {@link MeterRegistry}
+     * with the specified {@code maxCardinality} and {@code idleTimeout}.
+     */
+    @UnstableApi
+    public static Function<? super HttpService, MetricCollectingService> newDecorator(
+            MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality, Duration idleTimeout) {
+
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        requireNonNull(idleTimeout, "idleTimeout");
+        return builder(meterIdPrefixFunction).maxCardinality(maxCardinality, idleTimeout).newDecorator();
+    }
+
+    /**
      * Returns a newly created {@link MetricCollectingServiceBuilder}.
      */
     public static MetricCollectingServiceBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
@@ -108,13 +122,24 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
                             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
                             DistributionStatisticConfig distributionStatisticConfig,
                             int maxCardinality) {
+        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig,
+             maxCardinality, null);
+    }
+
+    MetricCollectingService(HttpService delegate,
+                            MeterIdPrefixFunction meterIdPrefixFunction,
+                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+                            DistributionStatisticConfig distributionStatisticConfig,
+                            int maxCardinality,
+                            @Nullable Duration idleTimeout) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
         this.distributionStatisticConfig =
                 requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
         if (maxCardinality > 0) {
-            metricLimiter = new RequestMetricLimiter(maxCardinality);
+            metricLimiter = idleTimeout != null ? new RequestMetricLimiter(maxCardinality, idleTimeout)
+                                                : new RequestMetricLimiter(maxCardinality);
         } else {
             metricLimiter = null;
         }

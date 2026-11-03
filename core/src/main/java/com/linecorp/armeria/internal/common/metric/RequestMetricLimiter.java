@@ -17,14 +17,18 @@
 package com.linecorp.armeria.internal.common.metric;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -37,16 +41,38 @@ public final class RequestMetricLimiter {
 
     private static final Logger logger = LoggerFactory.getLogger(RequestMetricLimiter.class);
 
-    private final Set<MeterIdPrefix> seenPrefixes = ConcurrentHashMap.newKeySet();
+    private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofMinutes(10);
+
+    private final Cache<MeterIdPrefix, Boolean> seenPrefixes;
     private final int maxCardinality;
     private boolean warned;
 
     /**
-     * Creates a new instance with the specified {@code maxCardinality}.
+     * Creates a new instance that forgets prefixes not accepted for the default idle timeout (10 minutes).
      */
     public RequestMetricLimiter(int maxCardinality) {
+        this(maxCardinality, DEFAULT_IDLE_TIMEOUT);
+    }
+
+    /**
+     * Creates a new instance that forgets prefixes not accepted for the specified {@code idleTimeout}.
+     */
+    public RequestMetricLimiter(int maxCardinality, Duration idleTimeout) {
+        this(maxCardinality, idleTimeout, Ticker.systemTicker());
+    }
+
+    @VisibleForTesting
+    RequestMetricLimiter(int maxCardinality, Duration idleTimeout, Ticker ticker) {
         checkArgument(maxCardinality > 0, "maxCardinality: %s (expected: > 0)", maxCardinality);
+        requireNonNull(idleTimeout, "idleTimeout");
+        checkArgument(!idleTimeout.isZero() && !idleTimeout.isNegative(),
+                      "idleTimeout: %s (expected: > 0)", idleTimeout);
+        requireNonNull(ticker, "ticker");
         this.maxCardinality = maxCardinality;
+        seenPrefixes = Caffeine.newBuilder()
+                               .ticker(ticker)
+                               .expireAfterAccess(idleTimeout)
+                               .build();
     }
 
     /**
@@ -60,14 +86,15 @@ public final class RequestMetricLimiter {
      * Returns {@code true} if the request metric for the specified {@code prefix} is accepted.
      */
     public boolean accept(MeterIdPrefix prefix) {
-        if (seenPrefixes.contains(prefix)) {
+        if (seenPrefixes.getIfPresent(prefix) != null) {
             return true;
         }
-        if (seenPrefixes.size() >= maxCardinality) {
+        seenPrefixes.cleanUp();
+        if (seenPrefixes.estimatedSize() >= maxCardinality) {
             warn(prefix);
             return false;
         }
-        seenPrefixes.add(prefix);
+        seenPrefixes.put(prefix, Boolean.TRUE);
         return true;
     }
 
@@ -85,6 +112,7 @@ public final class RequestMetricLimiter {
      */
     @VisibleForTesting
     public Set<MeterIdPrefix> seenPrefixes() {
-        return Collections.unmodifiableSet(seenPrefixes);
+        seenPrefixes.cleanUp();
+        return Collections.unmodifiableSet(seenPrefixes.asMap().keySet());
     }
 }

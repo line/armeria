@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.Flags;
@@ -73,6 +75,37 @@ class AbstractMetricCollectingBuilderTest {
         assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(0))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testDefaultMetricIdleTimeout() {
+        final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
+                new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
+
+        assertThat(abstractMetricCollectingBuilder.metricIdleTimeout()).isNull();
+    }
+
+    @Test
+    void testMaxCardinalityWithIdleTimeout() {
+        final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
+                new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
+
+        abstractMetricCollectingBuilder.maxCardinality(100, Duration.ofMinutes(5));
+        assertThat(abstractMetricCollectingBuilder.maxCardinality()).isEqualTo(100);
+        assertThat(abstractMetricCollectingBuilder.metricIdleTimeout()).isEqualTo(Duration.ofMinutes(5));
+    }
+
+    @Test
+    void testInvalidIdleTimeout() {
+        final AbstractMetricCollectingBuilder abstractMetricCollectingBuilder =
+                new AbstractMetricCollectingBuilder(MeterIdPrefixFunction.ofDefault("test")) {};
+
+        assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(100, null))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(100, Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> abstractMetricCollectingBuilder.maxCardinality(100, Duration.ofSeconds(-1)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

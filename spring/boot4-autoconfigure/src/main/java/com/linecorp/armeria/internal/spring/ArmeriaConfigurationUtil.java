@@ -183,7 +183,12 @@ public final class ArmeriaConfigurationUtil {
             final MetricCollectingServiceBuilder builder = MetricCollectingService
                     .builder(meterIdPrefixFunction);
             if (settings.getMetricsMaxCardinality() != null) {
-                builder.maxCardinality(settings.getMetricsMaxCardinality());
+                if (settings.getMetricsIdleTimeout() != null) {
+                    builder.maxCardinality(settings.getMetricsMaxCardinality(),
+                                           settings.getMetricsIdleTimeout());
+                } else {
+                    builder.maxCardinality(settings.getMetricsMaxCardinality());
+                }
             }
             for (MetricCollectingServiceConfigurator configurator : metricCollectingServiceConfigurators) {
                 configurator.configure(builder);

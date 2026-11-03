@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.Client;
@@ -57,13 +58,27 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
             DistributionStatisticConfig distributionStatisticConfig,
             int maxCardinality) {
+        this(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig,
+             maxCardinality, null);
+    }
+
+    AbstractMetricCollectingClient(
+            Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+            DistributionStatisticConfig distributionStatisticConfig,
+            int maxCardinality,
+            @Nullable Duration idleTimeout) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
         this.distributionStatisticConfig =
                 requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
         if (maxCardinality > 0) {
-            metricLimiter = new RequestMetricLimiter(maxCardinality);
+            if (idleTimeout != null) {
+                metricLimiter = new RequestMetricLimiter(maxCardinality, idleTimeout);
+            } else {
+                metricLimiter = new RequestMetricLimiter(maxCardinality);
+            }
         } else {
             metricLimiter = null;
         }

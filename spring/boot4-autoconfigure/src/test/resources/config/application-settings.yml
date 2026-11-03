@@ -18,5 +18,6 @@ armeria:
   max-request-length: 0
   verbose-responses: true
   metrics-max-cardinality: 100
+  metrics-idle-timeout: 5m
   graceful-shutdown-quiet-period-millis: 2000
   graceful-shutdown-timeout-millis: 20000

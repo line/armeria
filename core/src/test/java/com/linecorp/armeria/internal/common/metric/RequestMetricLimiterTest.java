@@ -19,10 +19,15 @@ package com.linecorp.armeria.internal.common.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+
+import com.github.benmanes.caffeine.cache.Ticker;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -57,6 +62,16 @@ class RequestMetricLimiterTest {
     }
 
     @Test
+    void invalidIdleTimeout() {
+        assertThatThrownBy(() -> new RequestMetricLimiter(1, Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new RequestMetricLimiter(1, Duration.ofSeconds(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new RequestMetricLimiter(1, null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
     void acceptLimitAndWarning() {
         final RequestMetricLimiter limiter = new RequestMetricLimiter(2);
         final MeterIdPrefix prefix1 = new MeterIdPrefix("test.active", "route", "1");
@@ -87,5 +102,56 @@ class RequestMetricLimiterTest {
 
         // Seen prefixes still accepted
         assertThat(limiter.accept(prefix1)).isTrue();
+    }
+
+    @Test
+    void idleTimeoutEviction() {
+        final AtomicLong nanos = new AtomicLong();
+        final Ticker ticker = nanos::get;
+        final Duration timeout = Duration.ofSeconds(10);
+        final RequestMetricLimiter limiter = new RequestMetricLimiter(1, timeout, ticker);
+
+        final MeterIdPrefix prefix1 = new MeterIdPrefix("test.active", "route", "1");
+        final MeterIdPrefix prefix2 = new MeterIdPrefix("test.active", "route", "2");
+
+        assertThat(limiter.accept(prefix1)).isTrue();
+        assertThat(limiter.accept(prefix2)).isFalse();
+
+        // Advance ticker past idle timeout (11 seconds)
+        nanos.addAndGet(Duration.ofSeconds(11).toNanos());
+
+        // Now prefix2 is accepted because prefix1 expired due to inactivity
+        assertThat(limiter.accept(prefix2)).isTrue();
+        assertThat(limiter.seenPrefixes()).containsExactly(prefix2);
+    }
+
+    @Test
+    void idleTimeoutRenewedOnAccess() {
+        final AtomicLong nanos = new AtomicLong();
+        final Ticker ticker = nanos::get;
+        final Duration timeout = Duration.ofSeconds(10);
+        final RequestMetricLimiter limiter = new RequestMetricLimiter(1, timeout, ticker);
+
+        final MeterIdPrefix prefix1 = new MeterIdPrefix("test.active", "route", "1");
+        final MeterIdPrefix prefix2 = new MeterIdPrefix("test.active", "route", "2");
+
+        assertThat(limiter.accept(prefix1)).isTrue();
+
+        // Advance 6 seconds (not expired yet)
+        nanos.addAndGet(Duration.ofSeconds(6).toNanos());
+        // Access prefix1, which should reset the idle timeout
+        assertThat(limiter.accept(prefix1)).isTrue();
+
+        // Advance another 6 seconds (total 12s from start, but only 6s from last access)
+        nanos.addAndGet(Duration.ofSeconds(6).toNanos());
+
+        // prefix2 is still rejected because prefix1 has not been idle for 10s
+        assertThat(limiter.accept(prefix2)).isFalse();
+
+        // Advance 11 seconds without accessing prefix1
+        nanos.addAndGet(Duration.ofSeconds(11).toNanos());
+
+        // Now prefix2 is accepted
+        assertThat(limiter.accept(prefix2)).isTrue();
     }
 }

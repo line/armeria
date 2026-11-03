@@ -530,6 +530,13 @@ public class ArmeriaSettings {
     private Integer metricsMaxCardinality;
 
     /**
+     * The idle timeout for evicting inactive metric tag combinations when {@link #metricsMaxCardinality}
+     * is set. If not specified, the default idle timeout is used.
+     */
+    @Nullable
+    private Duration metricsIdleTimeout;
+
+    /**
      * SSL configuration that the {@link Server} uses.
      */
     @Nullable
@@ -841,6 +848,23 @@ public class ArmeriaSettings {
     @UnstableApi
     public void setMetricsMaxCardinality(@Nullable Integer metricsMaxCardinality) {
         this.metricsMaxCardinality = metricsMaxCardinality;
+    }
+
+    /**
+     * Returns the idle timeout for evicting inactive metric tag combinations.
+     */
+    @UnstableApi
+    @Nullable
+    public Duration getMetricsIdleTimeout() {
+        return metricsIdleTimeout;
+    }
+
+    /**
+     * Sets the idle timeout for evicting inactive metric tag combinations.
+     */
+    @UnstableApi
+    public void setMetricsIdleTimeout(@Nullable Duration metricsIdleTimeout) {
+        this.metricsIdleTimeout = metricsIdleTimeout;
     }
 
     /**
