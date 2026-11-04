@@ -1,0 +1,15 @@
+dependencies {
+    api libs.jwt
+    implementation libs.caffeine
+    api libs.opensaml5.core.api
+    implementation libs.opensaml5.core.impl
+    api libs.opensaml5.saml.api
+    implementation libs.opensaml5.saml.impl
+    api libs.opensaml5.messaging.api
+    implementation libs.opensaml5.messaging.impl
+    api libs.opensaml5.security.api
+    api libs.opensaml5.soap.api
+    implementation libs.opensaml5.soap.impl
+    api libs.opensaml5.xmlsec.api
+    testImplementation libs.jsoup
+}
