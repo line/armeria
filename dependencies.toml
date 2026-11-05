@@ -157,7 +157,8 @@ resteasy = "5.0.10.Final"
 resteasy-jboss-logging = "3.4.3.Final"
 # JBoss Logging Annotations 3.x requires Java 11.
 resteasy-jboss-logging-annotations = "2.2.2.Final"
-retrofit2 = "3.0.0"
+# Keep Retrofit on 2.x.
+retrofit2 = { strictly = "2.12.0" }
 rxjava2 = "2.2.21"
 rxjava3 = "3.1.12"
 sangria = "4.2.20"
