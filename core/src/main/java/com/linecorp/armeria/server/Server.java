@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.ServerPortMetric.SERVER_PORT_METRIC;
 import static java.util.Objects.requireNonNull;
 
