@@ -29,6 +29,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -49,7 +50,8 @@ import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguratio
 
 import jakarta.inject.Inject;
 
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+@ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
 @ActiveProfiles({ "local", "internalServiceTest" })
 @DirtiesContext
 @EnableTestMetrics
@@ -105,7 +107,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
               });
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "actuatorTest" })
     @DirtiesContext
     @EnableTestMetrics
@@ -151,7 +154,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "basePathTest" })
     @DirtiesContext
     @EnableTestMetrics
@@ -185,7 +189,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "basePathSamePortTest" })
     @DirtiesContext
     @EnableTestMetrics
@@ -228,7 +233,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "basePathWithoutPortTest" })
     @DirtiesContext
     @EnableTestMetrics
@@ -271,7 +277,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "allInternalServices" })
     @DirtiesContext
     @EnableTestMetrics
@@ -312,7 +319,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "defaultInternalServices" })
     @DirtiesContext
     @EnableTestMetrics
@@ -356,7 +364,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "excludeInternalServices" })
     @DirtiesContext
     @EnableTestMetrics
@@ -392,7 +401,8 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
-    @SpringBootTest(classes = TestConfiguration.class)
+    @SpringBootTest(classes = TestConfiguration.class, properties = "armeria.test.startup-attempts=1")
+    @ContextConfiguration(loader = RetryableSpringBootContextLoader.class)
     @ActiveProfiles({ "local", "managementLocalhostTest" })
     @DirtiesContext
     @EnableTestMetrics

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.spring;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,7 +35,8 @@ import com.linecorp.armeria.server.Server;
 public class RetryableArmeriaServerGracefulShutdownLifecycleConfiguration {
 
     @Bean
-    public ArmeriaServerSmartLifecycle smartLifecycle(Server server) {
-        return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
+    public ArmeriaServerSmartLifecycle smartLifecycle(
+            Server server, @Value("${armeria.test.startup-attempts:8}") int maxAttempts) {
+        return new RetryableArmeriaServerGracefulShutdownLifecycle(server, maxAttempts);
     }
 }
