@@ -17,17 +17,22 @@
 package io.modelcontextprotocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -36,17 +41,24 @@ import com.linecorp.armeria.server.ai.mcp.ArmeriaStreamableServerTransportProvid
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.common.McpTransportContext;
+import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.server.McpServer;
 import io.modelcontextprotocol.server.McpServer.AsyncSpecification;
 import io.modelcontextprotocol.server.McpServer.SyncSpecification;
+import io.modelcontextprotocol.server.McpServerFeatures;
 import io.modelcontextprotocol.server.McpTransportContextExtractor;
+import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
+import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.ClientCapabilities;
 import io.modelcontextprotocol.spec.McpSchema.Root;
+import io.modelcontextprotocol.spec.McpSchema.TextContent;
+import io.modelcontextprotocol.spec.McpSchema.Tool;
 
 @Timeout(15)
 class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrationTests {
 
     private static final String CUSTOM_MESSAGE_ENDPOINT = "/otherPath/mcp/message";
+    private static final int MAX_REQUEST_SIZE = 2048;
 
     private Server httpServer;
 
@@ -56,21 +68,26 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
             r -> McpTransportContext
                     .create(Map.of("important", "value"));
 
+    static Stream<Arguments> clientsForTesting() {
+        return Stream.of(Arguments.of("httpclient"));
+    }
+
     @Override
-    protected McpClient.SyncSpec getMcpClientBuilder() {
-        return McpClient.sync(HttpClientStreamableHttpTransport
-                                      .builder("http://localhost:" + httpServer.activeLocalPort())
-                                      .endpoint(CUSTOM_MESSAGE_ENDPOINT)
-                                      .build())
-                        .requestTimeout(Duration.ofHours(10));
+    protected void prepareClients(int port, String mcpEndpoint) {
+        clientBuilders.put("httpclient", McpClient.sync(HttpClientStreamableHttpTransport
+                                                              .builder("http://localhost:" + port)
+                                                              .endpoint(mcpEndpoint)
+                                                              .build())
+                                                .requestTimeout(Duration.ofHours(10)));
     }
 
     // Override to close the server before the client to avoid a race condition where the
     // HttpClientStreamableHttpTransport receives an unexpected response when the server
     // closes the connection mid-flight during the roots/list round-trip.
-    @Test
+    @ParameterizedTest
+    @MethodSource("clientsForTesting")
     @Override
-    void testRootsServerCloseWithActiveSubscription() {
+    void testRootsServerCloseWithActiveSubscription(String clientType) {
         final var roots = List.of(Root.builder("uri1://").name("root1").build());
         final var rootsRef = new AtomicReference<List<Root>>();
 
@@ -78,7 +95,7 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
                 .rootsChangeHandler((exchange, rootsUpdate) -> rootsRef.set(rootsUpdate))
                 .build();
 
-        try (var mcpClient = getMcpClientBuilder()
+        try (var mcpClient = clientBuilders.get(clientType)
                 .capabilities(ClientCapabilities.builder().roots(true).build())
                 .roots(roots)
                 .build()) {
@@ -93,6 +110,37 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
             });
 
             // Close the server before the client to avoid a race condition.
+            mcpServer.closeGracefully();
+        }
+    }
+
+    @Test
+    void rejectsOversizedRequest() throws Exception {
+        final String inputSchema = """
+                {
+                    "type": "object",
+                    "properties": { "message": { "type": "string" } },
+                    "required": ["message"]
+                }
+                """;
+        final var tool = McpServerFeatures.SyncToolSpecification.builder()
+                .tool(Tool.builder("tool1", McpJsonDefaults.getMapper(), inputSchema).build())
+                .callHandler((exchange, request) -> CallToolResult.builder()
+                        .addContent(TextContent.builder("ok").build())
+                        .build())
+                .build();
+        final var mcpServer = prepareSyncServerBuilder().tools(tool).build();
+
+        try (var mcpClient = clientBuilders.get("httpclient").build()) {
+            mcpClient.initialize();
+            assertThat(mcpClient.listTools().tools()).contains(tool.tool());
+
+            final String oversizedBody = "a".repeat(MAX_REQUEST_SIZE + 1);
+            assertThatThrownBy(() -> mcpClient.callTool(CallToolRequest.builder("tool1")
+                    .arguments(Map.of("message", oversizedBody)).build()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("413");
+        } finally {
             mcpServer.closeGracefully();
         }
     }
@@ -119,6 +167,7 @@ class ArmeriaStreamableIntegrationTests extends AbstractMcpClientServerIntegrati
                            .service(CUSTOM_MESSAGE_ENDPOINT, mcpStreamableServerTransportProvider.httpService())
                            .build();
         httpServer.start().join();
+        prepareClients(httpServer.activeLocalPort(), CUSTOM_MESSAGE_ENDPOINT);
     }
 
     @AfterEach

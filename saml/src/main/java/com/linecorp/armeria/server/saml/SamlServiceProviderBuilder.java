@@ -105,10 +105,13 @@ public final class SamlServiceProviderBuilder {
     @Nullable
     private SamlRequestIdManager requestIdManager;
 
+    private boolean signatureRequired = true;
+
+    private int maxInflatedMessageLength =
+            HttpRedirectBindingUtil.DEFAULT_MAX_INFLATED_MESSAGE_LENGTH;
+
     @Nullable
     private SamlAssertionIdCache assertionIdCache;
-
-    private boolean signatureRequired = true;
 
     @Nullable
     private Integer relayStateMaxLength;
@@ -346,6 +349,21 @@ public final class SamlServiceProviderBuilder {
     }
 
     /**
+     * Sets the maximum number of bytes a SAML message received via the HTTP-Redirect binding is allowed
+     * to occupy after being inflated. A SAML message sent via the HTTP-Redirect binding is DEFLATE-
+     * compressed and base64-encoded, and the service provider inflates it before validating its signature.
+     * This option does not affect the HTTP-POST binding, which is not inflated.
+     *
+     * @param maxInflatedMessageLength the maximum inflated length in bytes. Must be positive.
+     */
+    public SamlServiceProviderBuilder maxInflatedMessageLength(int maxInflatedMessageLength) {
+        checkArgument(maxInflatedMessageLength > 0,
+                      "maxInflatedMessageLength: %s (expected: > 0)", maxInflatedMessageLength);
+        this.maxInflatedMessageLength = maxInflatedMessageLength;
+        return this;
+    }
+
+    /**
      * Builds a {@link SamlServiceProvider} which helps a {@link Server} have a SAML-based
      * authentication.
      */
@@ -495,6 +513,7 @@ public final class SamlServiceProviderBuilder {
                                        ssoHandler,
                                        sloHandler,
                                        signatureRequired,
+                                       maxInflatedMessageLength,
                                        assertionIdCache);
     }
 

@@ -260,9 +260,34 @@ RetryingClient.newDecorator(config);
 
 You can retry on this [ResponseTimeoutException](type).
 
+The per-attempt response timeout starts at the phase selected by [ResponseTimeoutMode](type).
+Configure it with [ClientBuilder#responseTimeoutMode(ResponseTimeoutMode)](type):
+
+| Mode | Per-attempt timeout starts |
+| --- | --- |
+| `FROM_START` | After endpoint acquisition, before the attempt's delegate decorators run. |
+| `CONNECTION_ACQUIRED` | When the connection is acquired. Request writing consumes the timeout. |
+| `REQUEST_SENT` (default) | When the request is fully written or response bytes are first read, whichever occurs first. |
+
+For example, with `REQUEST_SENT` and a 2-second per-attempt timeout, connection acquisition does not
+consume those 2 seconds. Each attempt gets its own response timeout. Decorators inside [RetryingClient](type)
+run on every attempt, while decorators outside it run once for the retry session.
+
+Setting `responseTimeoutMillisForEachAttempt` to `0` disables the per-attempt limit.
+The retry session's response timeout still applies.
+
+Before each attempt, [RetryingClient](type) caps
+the attempt's response timeout at the remaining session budget, if configured.
+With `CONNECTION_ACQUIRED` or `REQUEST_SENT`, that budget is calculated before the timer starts,
+so time spent waiting for the selected phase can make the total elapsed time exceed the session timeout.
+
+An explicit [ClientRequestContext#setResponseTimeoutMillis(TimeoutMode,long)](type) call using
+[TimeoutMode#SET_FROM_NOW](type) counts elapsed time from that call, including time before the selected phase.
+
 For example, when making a retrying request to an unresponsive service
 with `responseTimeoutMillis = 10,000`, `responseTimeoutMillisForEachAttempt = 3,000` and disabled
-[Backoff](type), the first three attempts will be timed out by the per-attempt timeout (3,000ms).
+[Backoff](type), assume each attempt's timer starts immediately.
+The first three attempts will be timed out by the per-attempt timeout (3,000ms).
 The 4th one will be aborted after 1,000ms since the request session has reached at 10,000ms before
 it is timed out by the per-attempt timeout.
 

@@ -49,6 +49,9 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
                         " (service: " + service() + ')'), true);
                 return;
             }
+            if (status == HttpStatus.CONTINUE) {
+                onContinueSent();
+            }
             merged = headers;
         } else {
             if (req.method() == HttpMethod.HEAD) {
@@ -65,6 +68,12 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
             }
             if (endOfStream) {
                 setDone(true);
+            }
+            if (!endOfStream && status.isSuccess() && !status.isContentAlwaysEmpty()) {
+                // The service may read the request content after sending the response headers.
+                sendContinue();
+            } else {
+                maybeDisconnectOnSuppressedContinue();
             }
             final ServerConfig config = reqCtx.config().server().config();
             merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),

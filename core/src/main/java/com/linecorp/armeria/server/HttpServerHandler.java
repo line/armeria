@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -588,6 +587,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
                          ResponseHeadersBuilder resHeaders, HttpData resContent,
                          @Nullable Throwable cause) {
+        final ExpectContinueHandler expectContinueHandler =
+                ((DecodedHttpRequest) reqCtx.request()).expectContinueHandler();
+        if (expectContinueHandler != null && expectContinueHandler.suppress()) {
+            // The client may or may not send the request content.
+            handledLastRequest = true;
+        }
         if (!handledLastRequest) {
             respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
         } else {
@@ -775,7 +780,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             responseCompleteHandler = (unused, cause) -> {
                 assert eventLoop.inEventLoop();
                 final long requestAutoAbortDelayMillis = reqCtx.requestAutoAbortDelayMillis();
-                if (cause != null || !req.isOpen() || requestAutoAbortDelayMillis == 0) {
+                final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+                if (cause != null || !req.isOpen() || requestAutoAbortDelayMillis == 0 ||
+                    (expectContinueHandler != null && expectContinueHandler.isSuppressed())) {
+                    // No need to wait for the request content if the client was not allowed to send it.
                     handleResponseComplete(cause);
                     return null;
                 }
@@ -859,7 +867,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         // Stop receiving new requests.
                         handledLastRequest = true;
                         if (unfinishedRequests.isEmpty()) {
-                            final long closeDelay = Flags.defaultHttp1ConnectionCloseDelayMillis();
+                            final long closeDelay = config.http1ConnectionCloseDelayMillis();
                             if (closeDelay == 0) {
                                 ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                             } else {

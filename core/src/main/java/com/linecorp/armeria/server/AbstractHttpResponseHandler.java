@@ -78,6 +78,40 @@ abstract class AbstractHttpResponseHandler {
         responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
+    /**
+     * Prevents a pending {@code 100 Continue} response from being sent because a final response is about to
+     * be written. If the client has not sent the request content, the connection is closed after
+     * the response for HTTP/1, because the client may or may not send the content.
+     */
+    final void maybeDisconnectOnSuppressedContinue() {
+        final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+        if (expectContinueHandler != null && expectContinueHandler.suppress()) {
+            disconnectWhenFinished();
+        }
+    }
+
+    /**
+     * Writes a pending {@code 100 Continue} response because final response headers that allow the client
+     * to send the content are about to be written. If it cannot be written because the request was aborted,
+     * the connection is closed after the response for HTTP/1, because the client may never send the content.
+     */
+    final void sendContinue() {
+        final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+        if (expectContinueHandler != null && expectContinueHandler.send()) {
+            disconnectWhenFinished();
+        }
+    }
+
+    /**
+     * Invoked when a service wrote a {@code 100 Continue} response by itself.
+     */
+    final void onContinueSent() {
+        final ExpectContinueHandler expectContinueHandler = req.expectContinueHandler();
+        if (expectContinueHandler != null) {
+            expectContinueHandler.onContinueSent();
+        }
+    }
+
     final boolean tryComplete(@Nullable Throwable cause) {
         if (isComplete) {
             return false;
@@ -133,6 +167,14 @@ abstract class AbstractHttpResponseHandler {
      * Note that the caller has to flush the written data when needed.
      */
     final ChannelFuture writeAggregatedHttpResponse(AggregatedHttpResponse res) {
+        for (ResponseHeaders informational : res.informationals()) {
+            if (informational.status() == HttpStatus.CONTINUE) {
+                onContinueSent();
+                break;
+            }
+        }
+        maybeDisconnectOnSuppressedContinue();
+
         final int id = req.id();
         final int streamId = req.streamId();
 

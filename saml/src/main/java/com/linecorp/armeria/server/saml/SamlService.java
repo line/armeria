@@ -94,6 +94,7 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                      sp.requestIdManager(),
                                                                      sp.ssoHandler(),
                                                                      sp.isSignatureRequired(),
+                                                                     sp.maxInflatedMessageLength(),
                                                                      sp.assertionIdCache())));
         sp.sloEndpoints().forEach(
                 cfg -> builder.put(cfg.uri().getPath(),
@@ -105,7 +106,8 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                 sp.defaultIdpConfig(),
                                                                 sp.requestIdManager(),
                                                                 sp.sloHandler(),
-                                                                sp.isSignatureRequired())));
+                                                                sp.isSignatureRequired(),
+                                                                sp.maxInflatedMessageLength())));
         final Route route = sp.metadataRoute();
         if (route.pathType() == RoutePathType.EXACT) {
             builder.put(route.paths().get(0),
