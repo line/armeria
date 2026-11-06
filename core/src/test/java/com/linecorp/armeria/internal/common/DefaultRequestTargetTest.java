@@ -141,7 +141,7 @@ class DefaultRequestTargetTest {
     @MethodSource("badSingleDotPatterns")
     void serverShouldRejectSingleDotSegments(String pattern) {
         assertRejected(forServer(toAbsolutePath(pattern)));
-        // Also rejected when semicolons are allowed: a servlet strips the matrix variable back to a dot segment.
+        // Reject even when semicolons are allowed, because servlets strip matrix variables.
         assertRejected(forServer(toAbsolutePath(pattern), true));
         // Allowed in a query.
         assertThat(forServer("/?" + pattern)).isNotNull();
