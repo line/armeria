@@ -1,0 +1,233 @@
+---
+date: 2026-11-05
+---
+
+# v1.43.0
+
+## 🌟 New features
+
+- **Client-Side Server-Sent Events**: You can now decode an SSE response into a stream of
+  [ServerSentEvent](type)s using [ServerSentEvent#newDecoder()](type), without writing a
+  custom parser. Individual event blocks can also be parsed with
+  [ServerSentEvent#parse(String)](type). #7065
+  ```java
+  WebClient client = WebClient.of("https://example.com");
+  HttpResponse response = client.get("/events");
+
+  StreamMessage<ServerSentEvent> events =
+      response.decode(ServerSentEvent.newDecoder()); // 👈👈👈
+  ```
+- **Kotlin Coroutine Services**: You can now register suspending request handlers as lambdas
+  on [ServerBuilder](type) and [VirtualHostBuilder](type), using Kotlin extensions for paths,
+  routes and path prefixes. #5671 #7034
+  ```kotlin
+  import com.linecorp.armeria.server.kotlin.coroutineService
+
+  val server = Server.builder()
+      .coroutineService("/hello") { _, _ -> // 👈👈👈
+          delay(100)
+          HttpResponse.of("Hello!")
+      }
+      .build()
+  ```
+- **Per-Server HTTP/1 Connection Close Delay**: You can now override the connection close
+  delay for each server with [ServerBuilder#http1ConnectionCloseDelay(Duration)](type).
+  Use `Duration.ZERO` to close connections immediately. #5721 #7033
+  ```java
+  Server server = Server.builder()
+                        .http(8080)
+                        .http1ConnectionCloseDelay(Duration.ZERO) // 👈👈👈
+                        .service("/", (ctx, req) -> HttpResponse.of("Hello!"))
+                        .build();
+  ```
+- **Spring Boot Internal Service Exclusions**: You can now use
+  `armeria.internal-services.exclude` to serve selected internal services on all ports,
+  while keeping the remaining services restricted to the internal port. #5753 #7020
+  ```yaml
+  armeria:
+    internal-services:
+      include: all
+      exclude: health # 👈👈👈
+      port: 8090
+  ```
+- **Thrift 0.25.0 Support**: Armeria now supports Apache Thrift 0.25.0 through the new
+  `armeria-thrift0.25` module. #7072
+- **xDS Host Rewriting**: The xDS client now applies `host_rewrite_literal` from routes and
+  weighted clusters to upstream request authorities. A non-empty route literal takes
+  precedence over the selected weighted cluster's literal. #7088
+  ```yaml
+  match:
+    prefix: "/"
+  route:
+    cluster: backend
+    host_rewrite_literal: api.example.com # 👈👈👈
+  ```
+- **xDS Bootstrap Customization**: Modules can now provide [XdsBootstrapCustomizer](type)
+  implementations via Java SPI to add static resources automatically. Opt out with
+  [XdsBootstrapBuilder#ignoreBootstrapCustomizers()](type). #7058
+  ```java
+  public final class MyBootstrapCustomizer implements XdsBootstrapCustomizer {
+      @Override
+      public Bootstrap customize(Bootstrap bootstrap) {
+          Cluster cluster = ...;
+          return bootstrap.toBuilder()
+                          .setStaticResources(bootstrap.getStaticResources().toBuilder()
+                              .addClusters(cluster)) // 👈👈👈
+                          .build();
+      }
+  }
+  ```
+  Register the implementation's fully qualified class name in
+  `META-INF/services/com.linecorp.armeria.xds.XdsBootstrapCustomizer`.
+- **Test Server Startup Retries**: Override
+  [ServerExtension#numAttemptsOnStartupFailure()](type) or
+  [ServerRule#numAttemptsOnStartupFailure()](type) to retry transient startup failures.
+  The default is one attempt, and configuration or build failures are not retried. #7029
+  ```java
+  @RegisterExtension
+  static final ServerExtension server = new ServerExtension() {
+      @Override
+      protected int numAttemptsOnStartupFailure() {
+          return 5; // 👈👈👈
+      }
+
+      @Override
+      protected void configure(ServerBuilder sb) {
+          sb.http(0).service("/hello", (ctx, req) -> HttpResponse.of("Hello!"));
+      }
+  };
+  ```
+
+## 🔒 Security fixes
+
+- Requests with a `.` path segment are now rejected with `400 Bad Request`, preventing
+  path-scoped decorators from being bypassed by services that normalize those segments.
+  - [GHSA-xqhm-4ph4-423v](https://github.com/line/armeria/security/advisories/GHSA-xqhm-4ph4-423v)
+- [CorsService](type) now honors configured routes for policies that allow any origin,
+  preventing CORS headers from being applied to paths outside those routes.
+  - [GHSA-386q-mrg6-jfj8](https://github.com/line/armeria/security/advisories/GHSA-386q-mrg6-jfj8)
+- [FileService](type) now escapes file names and safely encodes links in directory listings,
+  preventing stored cross-site scripting when file names are controlled by an untrusted party.
+  - [GHSA-x9vf-hjgg-cq25](https://github.com/line/armeria/security/advisories/GHSA-x9vf-hjgg-cq25)
+- Thrift clients and services using the binary or compact protocol now validate field and
+  container lengths before allocating memory for missing payloads, preventing denial of
+  service through malformed messages.
+  - [GHSA-2pfv-5p52-crjm](https://github.com/line/armeria/security/advisories/GHSA-2pfv-5p52-crjm)
+- SAML HTTP-Redirect binding messages are now rejected if their inflated size exceeds 1 MiB
+  by default, preventing denial of service through compressed payloads. Configure the limit
+  with [SamlServiceProviderBuilder#maxInflatedMessageLength(int)](type).
+  - [GHSA-6hgp-j5h7-33m3](https://github.com/line/armeria/security/advisories/GHSA-6hgp-j5h7-33m3)
+- File-based xDS `DataSource`s now check symbolic-link targets against
+  [DataSourcePolicy](type) before reading, preventing links inside an allowed root from
+  exposing files outside it. Keep allowed directory trees and their ancestors writable only
+  by trusted users.
+  - [GHSA-m64h-m6r5-6jrx](https://github.com/line/armeria/security/advisories/GHSA-m64h-m6r5-6jrx)
+- Brotli4j is now upgraded to 1.24.0 to fix an out-of-bounds write in its native Brotli decoder.
+  Applications using [DecodingClient](type) or [DecodingService](type) with Brotli4j's native
+  libraries should upgrade those artifacts as well. #7083
+  - [CVE-2026-111497](https://github.com/hyperxpro/Brotli4j/security/advisories/GHSA-x524-jrqf-vwq6)
+
+## 📈 Improvements
+
+- The [DocService](type) debug console now displays initial GraphQL queries and request
+  examples correctly, preserves edits and undo history when expanding the editor, and keeps
+  late responses from appearing under another method. #6978
+- Newsletter signup on the website now shows a loading indicator while a subscription
+  request is in progress. #7006
+
+## 🛠️ Bug fixes
+
+- Overlapping routes with query or header predicates now select the correct service instead
+  of reusing a cached selection from a request with different parameters or headers. #7106
+- Aborted [HttpFile](type) downloads now release their file descriptors promptly instead of
+  keeping them open until garbage collection. #7066 #7080
+- Per-attempt response timeouts in [RetryingClient](type) now start at the configured
+  [ResponseTimeoutMode](type) phase. Time spent before that phase no longer shortens the
+  attempt's timeout, fixing a regression introduced in 1.42.0. #7104
+- A decorator or service can now reject an `Expect: 100-continue` request before the client
+  uploads its body. Armeria defers `100 Continue` until the body is subscribed to or a
+  streaming success response starts. #7036 #7060
+  - The client now keeps waiting for `100 Continue` after receiving `103 Early Hints`.
+- File-backed [PropertiesEndpointGroup](type) updates no longer overwrite newer endpoints
+  with stale results when file reloads overlap. #7012
+- [WebSocketClient](type) now waits for asynchronous endpoint selection instead of throwing
+  an `IllegalStateException` when its [EndpointGroup](type) is not immediately ready. #6839 #6926
+- The gRPC server now measures `grpc-timeout` from the start of the request, including time
+  spent in routing and decorators, instead of extending the deadline. #7051 #7054
+- gRPC callbacks now retain their order when asynchronous interceptors are used with
+  [GrpcServiceBuilder#useBlockingTaskExecutor(boolean)](type), preventing
+  `ClosedSendChannelException` in Kotlin streaming calls. #6980
+- Non-blocking gRPC services no longer receive reentrant `onReady()` callbacks that could
+  cause duplicate streaming responses. #6938 #6931
+- Annotated services using [ProtobufRequestConverterFunction](type) now return
+  `400 Bad Request` instead of `500 Internal Server Error` for malformed Protobuf or JSON
+  request bodies. #4062 #7063
+- [DocService](type) now serves an empty `schemas.json` with HTTP 200 when no documentable
+  services are registered, instead of failing with HTTP 500. #7079
+- [DocService](type) and [XdsResourceReader](type) no longer close JAR files shared with a
+  class loader, avoiding intermittent `ClassNotFoundException` failures in Spring Boot
+  applications. #7057
+- Shared bootstraps obtained from [XdsBootstrapRegistry](type) can no longer be accidentally
+  closed by a caller, preventing disruption to other clients using the same bootstrap. #7042
+- Closing [KubernetesEndpointGroup](type) no longer blocks an event loop while its underlying
+  Kubernetes client shuts down. #7044
+- [AthenzService](type) no longer fails requests with a `NullPointerException` during
+  [Server#reconfigure(ServerConfigurator)](type). #7008
+
+## 📃 Documentation
+
+- Updated the [xDS guide](/docs/advanced/xds/introduction) with URI-based client setup and
+  managed bootstrap configuration. #7042
+- Added an [Istio integration example](https://github.com/line/armeria/tree/main/it/xds-istio)
+  demonstrating direct mTLS traffic between xDS-configured Armeria clients and servers,
+  without sidecars in the data path. #7049
+- Clarified that client request timings include connection acquisition time in the
+  [structured logging guide](/docs/advanced/structured-logging). #5216 #7040
+
+## ⛓ Dependencies
+
+- Athenz 1.12.48 → 1.12.51
+- Brotli4j 1.23.0 → 1.24.0
+- GraphQL Java 26.0 → 26.1
+- gRPC-Java 1.84.0 → 1.85.1
+- Jackson 2.22.3 → 2.22.4
+- java-jwt 4.6.1 → 4.6.2
+- Jetty 12.0.37 → 12.0.40
+- Logback 1.3.14 → 1.3.16
+- MCP SDK 2.0.1 → 2.1.0
+- Micrometer 1.17.1 → 1.17.2
+- Netty 4.2.18 → 4.2.19
+- Prometheus 1.9.0 → 1.10.0
+- Reactor 3.8.7 → 3.8.8
+- Sangria 4.2.19 → 4.2.20
+- Sangria Slowlog 3.0.0 → 3.0.1
+- ScalaPB 0.11.20 → 0.11.21
+- ScalaPB JSON 0.12.2 → 0.12.3
+- Spring Boot 4.1.1 → 4.1.2
+- Spring Framework 7.0.9 → 7.0.10
+- Tomcat 9.0.120 → 9.0.123, 10.1.57 → 10.1.61
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  '0x1306e6d',
+  'Dogacel',
+  'EeeasyCode',
+  'Gautam-aman',
+  'Hun425',
+  'JimmyLiuJia',
+  'KarboniteKream',
+  'aakugan',
+  'benmoss',
+  'cprayer',
+  'dejankos',
+  'iamhuman-cheolheelee',
+  'ikhoon',
+  'jrhee17',
+  'kalayciburak',
+  'kdomo',
+  'minwoox',
+  'poketopa',
+  'sh-cho',
+  'trustin'
+]} />

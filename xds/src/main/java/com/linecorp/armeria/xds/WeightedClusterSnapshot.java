@@ -45,17 +45,14 @@ public final class WeightedClusterSnapshot implements RouteCluster, Weighted {
     private final HttpClient httpClient;
 
     WeightedClusterSnapshot(ClusterSnapshot clusterSnapshot, int weight, Metadata metadataMatch,
-                            ClusterWeight clusterWeight, RequestHeadersMutationChain baseMutationChain,
+                            RequestHeadersMutator requestHeadersMutator,
                             @Nullable ClientDecoration retryDecoration,
                             ClientDecoration downstreamDecoration,
                             ClientDecoration upstreamDecoration) {
         this.clusterSnapshot = requireNonNull(clusterSnapshot, "clusterSnapshot");
         this.weight = weight;
         this.metadataMatch = requireNonNull(metadataMatch, "metadataMatch");
-        final RequestHeadersMutation wcMutation = RequestHeadersMutation.of(
-                clusterWeight.getRequestHeadersToAddList(),
-                clusterWeight.getRequestHeadersToRemoveList());
-        requestHeadersMutator = baseMutationChain.append(wcMutation);
+        this.requestHeadersMutator = requireNonNull(requestHeadersMutator, "requestHeadersMutator");
         httpClient = FilterUtil.buildHttpClient(retryDecoration, downstreamDecoration, upstreamDecoration);
     }
 

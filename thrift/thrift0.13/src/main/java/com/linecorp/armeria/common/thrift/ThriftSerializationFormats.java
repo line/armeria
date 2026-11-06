@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common.thrift;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.IS_THRIFT_091;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -27,8 +26,6 @@ import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
@@ -39,8 +36,6 @@ import com.linecorp.armeria.common.SerializationFormat;
  * Provides Thrift-related {@link SerializationFormat} instances and their {@link TProtocolFactory}s.
  */
 public final class ThriftSerializationFormats {
-
-    private static final Logger logger = LoggerFactory.getLogger(ThriftSerializationFormats.class);
 
     /**
      * Thrift TBinary serialization format.
@@ -127,12 +122,6 @@ public final class ThriftSerializationFormats {
             } else {
                 throw newUnsupportedFormatException(serializationFormat);
             }
-        }
-
-        if (IS_THRIFT_091 && (serializationFormat == BINARY || serializationFormat == COMPACT)) {
-            logger.warn("Thrift 0.9.1 does not support length limit for {}. " +
-                        "Ignoring maxStringLength({}) and maxContainerLength({}).",
-                        serializationFormat, maxStringLength, maxContainerLength);
         }
 
         for (ThriftProtocolFactoryProvider provider : protocolFactoryProviders) {

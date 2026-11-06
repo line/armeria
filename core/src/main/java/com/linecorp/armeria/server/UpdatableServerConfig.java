@@ -200,6 +200,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public long http1ConnectionCloseDelayMillis() {
+        return delegate.http1ConnectionCloseDelayMillis();
+    }
+
+    @Override
     public int http2InitialConnectionWindowSize() {
         return delegate.http2InitialConnectionWindowSize();
     }

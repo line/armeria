@@ -39,12 +39,7 @@ public final class TByteBufTransport extends AbstractTByteBufTransport {
     }
 
     @Override
-    public void checkReadBytesAvailable(long numBytes) throws TTransportException {
-        // The size of readable bytes is already checked by the underlying ByteBuf.
-    }
-
-    @Override
     public void resetMessageSizeAndConsumedBytes(long newSize) throws TTransportException {
-        // The size of readable bytes is already checked by the underlying ByteBuf.
+        // The readable bytes in the underlying ByteBuf determine the read budget.
     }
 }

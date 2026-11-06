@@ -40,7 +40,7 @@ class EmptyContentDecodedHttpRequestTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final EmptyContentDecodedHttpRequest req =
                 new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true, routingContext,
-                                                   ExchangeType.BIDI_STREAMING, 0, 0);
+                                                   ExchangeType.BIDI_STREAMING, 0, 0, null);
 
         StepVerifier.create(req)
                     .expectComplete()
