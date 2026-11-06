@@ -15,14 +15,17 @@
  */
 package com.linecorp.armeria.common.metric;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -39,6 +42,11 @@ public abstract class AbstractMetricCollectingBuilder {
     private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
 
     private DistributionStatisticConfig distributionStatisticConfig = MoreMeters.distributionStatisticConfig();
+
+    private int maxCardinality;
+
+    @Nullable
+    private Duration metricIdleTimeout;
 
     /**
      * Creates a new instance with the specified {@link MeterIdPrefixFunction}.
@@ -103,5 +111,52 @@ public abstract class AbstractMetricCollectingBuilder {
         this.distributionStatisticConfig = requireNonNull(distributionStatisticConfig,
                                                           "distributionStatisticConfig");
         return this;
+    }
+
+    /**
+     * Sets the maximum number of distinct active request metric tag combinations allowed for request metrics.
+     * When this threshold is reached, metrics for new tag combinations will not be recorded.
+     *
+     * @param maxCardinality the maximum cardinality. Must be greater than {@code 0}.
+     */
+    @UnstableApi
+    public AbstractMetricCollectingBuilder maxCardinality(int maxCardinality) {
+        checkArgument(maxCardinality > 0, "maxCardinality: %s (expected: > 0)", maxCardinality);
+        this.maxCardinality = maxCardinality;
+        return this;
+    }
+
+    /**
+     * Sets the maximum number of distinct active request metric tag combinations allowed for request metrics
+     * and the duration of inactivity after which an idle metric tag combination is removed.
+     * When this threshold is reached, metrics for new tag combinations will not be recorded.
+     *
+     * @param maxCardinality the maximum cardinality. Must be greater than {@code 0}.
+     * @param idleTimeout the duration of inactivity after which an idle tag combination is evicted.
+     */
+    @UnstableApi
+    public AbstractMetricCollectingBuilder maxCardinality(int maxCardinality, Duration idleTimeout) {
+        checkArgument(maxCardinality > 0, "maxCardinality: %s (expected: > 0)", maxCardinality);
+        requireNonNull(idleTimeout, "idleTimeout");
+        checkArgument(!idleTimeout.isZero() && !idleTimeout.isNegative(),
+                      "idleTimeout: %s (expected: > 0)", idleTimeout);
+        this.maxCardinality = maxCardinality;
+        metricIdleTimeout = idleTimeout;
+        return this;
+    }
+
+    /**
+     * Returns the maximum cardinality, or {@code 0} if no limit is set.
+     */
+    protected final int maxCardinality() {
+        return maxCardinality;
+    }
+
+    /**
+     * Returns the idle timeout for request metrics cardinality, or {@code null} if no custom timeout is set.
+     */
+    @Nullable
+    protected final Duration metricIdleTimeout() {
+        return metricIdleTimeout;
     }
 }
