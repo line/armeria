@@ -100,6 +100,28 @@ date: 2026-11-05
 
 ## 🔒 Security fixes
 
+- Requests with a `.` path segment are now rejected with `400 Bad Request`, preventing
+  path-scoped decorators from being bypassed by services that normalize those segments.
+  - [GHSA-xqhm-4ph4-423v](https://github.com/line/armeria/security/advisories/GHSA-xqhm-4ph4-423v)
+- [CorsService](type) now honors configured routes for policies that allow any origin,
+  preventing CORS headers from being applied to paths outside those routes.
+  - [GHSA-386q-mrg6-jfj8](https://github.com/line/armeria/security/advisories/GHSA-386q-mrg6-jfj8)
+- [FileService](type) now escapes file names and safely encodes links in directory listings,
+  preventing stored cross-site scripting when file names are controlled by an untrusted party.
+  - [GHSA-x9vf-hjgg-cq25](https://github.com/line/armeria/security/advisories/GHSA-x9vf-hjgg-cq25)
+- Thrift clients and services using the binary or compact protocol now validate field and
+  container lengths before allocating memory for missing payloads, preventing denial of
+  service through malformed messages.
+  - [GHSA-2pfv-5p52-crjm](https://github.com/line/armeria/security/advisories/GHSA-2pfv-5p52-crjm)
+- SAML HTTP-Redirect binding messages are now rejected if their inflated size exceeds 1 MiB
+  by default, preventing denial of service through compressed payloads. Configure the limit
+  with [SamlServiceProviderBuilder#maxInflatedMessageLength(int)](type).
+  - [GHSA-6hgp-j5h7-33m3](https://github.com/line/armeria/security/advisories/GHSA-6hgp-j5h7-33m3)
+- File-based xDS `DataSource`s now check symbolic-link targets against
+  [DataSourcePolicy](type) before reading, preventing links inside an allowed root from
+  exposing files outside it. Keep allowed directory trees and their ancestors writable only
+  by trusted users.
+  - [GHSA-m64h-m6r5-6jrx](https://github.com/line/armeria/security/advisories/GHSA-m64h-m6r5-6jrx)
 - Brotli4j is now upgraded to 1.24.0 to fix an out-of-bounds write in its native Brotli decoder.
   Applications using [DecodingClient](type) or [DecodingService](type) with Brotli4j's native
   libraries should upgrade those artifacts as well. #7083
