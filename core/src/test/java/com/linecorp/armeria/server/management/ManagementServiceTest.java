@@ -25,6 +25,8 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.WebClient;
@@ -43,13 +45,16 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ManagementServiceTest {
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static final AppInfo TEST_APP_INFO = new AppInfo(
+            "1.0.0", "test-app-name", "test-app-description"
+    );
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.requestTimeout(Duration.ofSeconds(45)); // Heap dump can take time.
-            sb.serviceUnder("/internal/management", ManagementService.of());
+            sb.serviceUnder("/internal/management", ManagementService.of(TEST_APP_INFO));
         }
     };
 
@@ -102,5 +107,23 @@ class ManagementServiceTest {
 
         // Make sure that the returned file has a valid hprof format
         assertThat(Arrays.copyOf(actual, fileHeader.length)).isEqualTo(fileHeader);
+    }
+
+    @Test
+    void appInfo() throws JsonProcessingException {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .build();
+
+        final AggregatedHttpResponse response = client.get("/internal/management/info").aggregate().join();
+        final String content = response.contentUtf8();
+        final JsonNode jsonNode = mapper.readTree(content).path("app");
+
+        final String actualVersion = jsonNode.path("version").textValue();
+        final String actualName = jsonNode.path("name").textValue();
+        final String actualDescription = jsonNode.path("description").textValue();
+
+        assertThat(actualVersion).isEqualTo(TEST_APP_INFO.version);
+        assertThat(actualName).isEqualTo(TEST_APP_INFO.name);
+        assertThat(actualDescription).isEqualTo(TEST_APP_INFO.description);
     }
 }
