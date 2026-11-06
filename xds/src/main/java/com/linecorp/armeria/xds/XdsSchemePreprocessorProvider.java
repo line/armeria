@@ -21,8 +21,15 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.net.URI;
 
 import com.linecorp.armeria.client.HttpPreprocessor;
+import com.linecorp.armeria.client.PreClient;
+import com.linecorp.armeria.client.PreClientRequestContext;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.client.SchemePreprocessorProvider;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -38,12 +45,16 @@ public final class XdsSchemePreprocessorProvider implements SchemePreprocessorPr
 
     @Override
     public HttpPreprocessor preprocessor(URI uri) {
-        return XdsBootstrapRegistry.httpPreprocessor(bootstrapName(uri), listenerName(uri));
+        final String bootstrap = bootstrapName(uri);
+        final String listener = listenerName(uri);
+        return new DeferringHttpPreprocessor(bootstrap, listener);
     }
 
     @Override
     public RpcPreprocessor rpcPreprocessor(URI uri) {
-        return XdsBootstrapRegistry.rpcPreprocessor(bootstrapName(uri), listenerName(uri));
+        final String bootstrap = bootstrapName(uri);
+        final String listener = listenerName(uri);
+        return new DeferringRpcPreprocessor(bootstrap, listener);
     }
 
     private static String bootstrapName(URI uri) {
@@ -75,5 +86,61 @@ public final class XdsSchemePreprocessorProvider implements SchemePreprocessorPr
     @Override
     public String toString() {
         return scheme();
+    }
+
+    private static final class DeferringHttpPreprocessor implements HttpPreprocessor {
+
+        private final String bootstrapName;
+        private final String listenerName;
+        @Nullable
+        private HttpPreprocessor delegate;
+
+        DeferringHttpPreprocessor(String bootstrapName, String listenerName) {
+            this.bootstrapName = bootstrapName;
+            this.listenerName = listenerName;
+        }
+
+        @Override
+        public HttpResponse execute(PreClient<HttpRequest, HttpResponse> delegate,
+                                    PreClientRequestContext ctx, HttpRequest req) throws Exception {
+            return resolveDelegate().execute(delegate, ctx, req);
+        }
+
+        private HttpPreprocessor resolveDelegate() {
+            HttpPreprocessor resolved = delegate;
+            if (resolved == null) {
+                resolved = XdsBootstrapRegistry.httpPreprocessor(bootstrapName, listenerName);
+                delegate = resolved;
+            }
+            return resolved;
+        }
+    }
+
+    private static final class DeferringRpcPreprocessor implements RpcPreprocessor {
+
+        private final String bootstrapName;
+        private final String listenerName;
+        @Nullable
+        private RpcPreprocessor delegate;
+
+        DeferringRpcPreprocessor(String bootstrapName, String listenerName) {
+            this.bootstrapName = bootstrapName;
+            this.listenerName = listenerName;
+        }
+
+        @Override
+        public RpcResponse execute(PreClient<RpcRequest, RpcResponse> delegate,
+                                   PreClientRequestContext ctx, RpcRequest req) throws Exception {
+            return resolveDelegate().execute(delegate, ctx, req);
+        }
+
+        private RpcPreprocessor resolveDelegate() {
+            RpcPreprocessor resolved = delegate;
+            if (resolved == null) {
+                resolved = XdsBootstrapRegistry.rpcPreprocessor(bootstrapName, listenerName);
+                delegate = resolved;
+            }
+            return resolved;
+        }
     }
 }
