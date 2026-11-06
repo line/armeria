@@ -184,6 +184,12 @@ class HttpServerCorsTest {
                                .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                                .maxAge(3600)
                                .newDecorator()));
+            sb.serviceUnder("/cors_any_route/", myService.decorate(
+                    CorsService.builderForAnyOrigin()
+                               .route("glob:/cors_any_route/public/**")
+                               .allowCredentials()
+                               .allowRequestMethods(HttpMethod.GET)
+                               .newDecorator()));
             final Object myAnnotatedService = new Object() {
                 // We don't need to specify '@Options` annotation here to support a CORS preflight request.
                 @Post("/post")
@@ -478,6 +484,27 @@ class HttpServerCorsTest {
                 .isEqualTo("allow_request_header");
         assertThat(response3.headers().get(HttpHeaderNames.of("x-preflight-cors")))
                 .isEqualTo("Hello CORS");
+    }
+
+    @Test
+    void testCorsAnyOriginWithRoute() throws Exception {
+        final WebClient client = client();
+        final String origin = "http://evil.com";
+        final AggregatedHttpResponse matched =
+                request(client, HttpMethod.GET, "/cors_any_route/public/a", origin, "GET");
+        assertThat(matched.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo(origin);
+        assertThat(matched.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS)).isEqualTo("true");
+
+        final AggregatedHttpResponse unmatched =
+                request(client, HttpMethod.GET, "/cors_any_route/private", origin, "GET");
+        assertThat(unmatched.status()).isEqualTo(HttpStatus.OK);
+        assertThat(unmatched.headers().contains(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isFalse();
+        assertThat(unmatched.headers().contains(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS)).isFalse();
+
+        final AggregatedHttpResponse preflight =
+                preflightRequest(client, "/cors_any_route/private", origin, "GET");
+        assertThat(preflight.headers().contains(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isFalse();
+        assertThat(preflight.headers().contains(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isFalse();
     }
 
     // Makes sure if shortCircuit works properly.
