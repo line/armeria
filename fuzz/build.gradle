@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':core')
+    // Provided by the Jazzer agent at runtime.
+    compileOnly libs.jazzer.api
+}
+
+// Copies the fuzzers and their runtime dependencies to OSS-Fuzz's $OUT.
+tasks.register('copyToFuzzOut', Copy) {
+    from tasks.named('jar')
+    from configurations.runtimeClasspath
+    into providers.gradleProperty('fuzzOut').map { file(it) }
+                  .orElse(layout.buildDirectory.dir('fuzzOut'))
+}
