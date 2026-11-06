@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.Charset;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -488,4 +490,58 @@ public interface BlockingWebClient extends ClientBuilderParams, Unwrappable {
 
     @Override
     HttpClient unwrap();
+
+    /**
+     * Sends an HTTP POST request with the specified content serialized as JSON using the default
+     * {@link ObjectMapper}.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse postJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.POST, path, content));
+    }
+
+    /**
+     * Sends an HTTP POST request with the specified content serialized as JSON using the specified
+     * {@link ObjectMapper}.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse postJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.POST, path, content, mapper));
+    }
+
+    /**
+     * Sends an HTTP PUT request with the specified content serialized as JSON using the default
+     * {@link ObjectMapper}.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse putJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content));
+    }
+
+    /**
+     * Sends an HTTP PUT request with the specified content serialized as JSON using the specified
+     * {@link ObjectMapper}.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse putJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.PUT, path, content, mapper));
+    }
+
+    /**
+     * Sends an HTTP PATCH request with the specified content serialized as JSON using the default
+     * {@link ObjectMapper}.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse patchJson(String path, Object content) {
+        return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content));
+    }
+
+    /**
+     * Sends an HTTP PATCH request with the specified content serialized as JSON using the specified
+     * {@link ObjectMapper}.
+     */
+    @UnstableApi
+    default AggregatedHttpResponse patchJson(String path, Object content, ObjectMapper mapper) {
+        return execute(HttpRequest.ofJson(HttpMethod.PATCH, path, content, mapper));
+    }
 }
