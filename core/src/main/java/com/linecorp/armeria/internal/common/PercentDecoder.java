@@ -193,6 +193,11 @@ public final class PercentDecoder {
                 final int codepoint =
                         ((byte) b << 18) ^ ((byte) b2 << 12) ^ ((byte) b3 << 6) ^ (byte) b4 ^
                         ((byte) 0xF0 << 18) ^ ((byte) 0x80 << 12) ^ ((byte) 0x80 << 6) ^ (byte) 0x80;
+                // Reject overlong encodings and code points beyond U+10FFFF.
+                if (codepoint < 0x10000 || codepoint > 0x10FFFF) {
+                    buf[bufIdx++] = UNKNOWN_CHAR;
+                    continue;
+                }
                 buf[bufIdx++] = Character.highSurrogate(codepoint);
                 buf[bufIdx++] = Character.lowSurrogate(codepoint);
                 continue;
