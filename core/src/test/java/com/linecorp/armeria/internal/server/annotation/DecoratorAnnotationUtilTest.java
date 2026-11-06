@@ -54,13 +54,14 @@ class DecoratorAnnotationUtilTest {
                                                           TestClass.class.getMethod("noOrdering"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
+                                                 UserDefinedDecoratorWithoutAdditivityFactory.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  Decorator2.class);
-        assertThat(orders(list)).containsExactly(0, 0, 0, 0);
+        assertThat(orders(list)).containsExactly(0, 0, 0, 0, 0);
 
         final LoggingDecorator info = (LoggingDecorator) list.get(1).annotation();
         assertThat(info.requestLogLevel()).isEqualTo(LogLevel.INFO);
-        final LoggingDecorator trace = (LoggingDecorator) list.get(2).annotation();
+        final LoggingDecorator trace = (LoggingDecorator) list.get(3).annotation();
         assertThat(trace.requestLogLevel()).isEqualTo(LogLevel.TRACE);
     }
 
@@ -71,17 +72,18 @@ class DecoratorAnnotationUtilTest {
                                                           TestClass.class.getMethod("methodScopeOrdering"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
+                                                 UserDefinedDecoratorWithoutAdditivityFactory.class,
                                                  RateLimitingDecoratorFactoryFunction.class,
                                                  Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  Decorator2.class);
-        assertThat(orders(list)).containsExactly(0, 0, 0, 1, 2, 3);
+        assertThat(orders(list)).containsExactly(0, 0, 0, 0, 1, 2, 3);
 
         final LoggingDecorator info = (LoggingDecorator) list.get(1).annotation();
         assertThat(info.requestLogLevel()).isEqualTo(LogLevel.INFO);
-        final RateLimitingDecorator limit = (RateLimitingDecorator) list.get(2).annotation();
+        final RateLimitingDecorator limit = (RateLimitingDecorator) list.get(3).annotation();
         assertThat(limit.value()).isEqualTo(1);
-        final LoggingDecorator trace = (LoggingDecorator) list.get(4).annotation();
+        final LoggingDecorator trace = (LoggingDecorator) list.get(5).annotation();
         assertThat(trace.requestLogLevel()).isEqualTo(LogLevel.TRACE);
     }
 
@@ -93,8 +95,9 @@ class DecoratorAnnotationUtilTest {
         assertThat(values(list)).containsExactly(LoggingDecoratorFactoryFunction.class,
                                                  Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
+                                                 UserDefinedDecoratorWithoutAdditivityFactory.class,
                                                  Decorator2.class);
-        assertThat(orders(list)).containsExactly(-1, 0, 0, 1);
+        assertThat(orders(list)).containsExactly(-1, 0, 0, 0, 1);
 
         final LoggingDecorator trace = (LoggingDecorator) list.get(0).annotation();
         assertThat(trace.requestLogLevel()).isEqualTo(LogLevel.TRACE);
@@ -109,17 +112,56 @@ class DecoratorAnnotationUtilTest {
                         TestClass.class, TestClass.class.getMethod("userDefinedRepeatableDecorator"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
+                                                 UserDefinedDecoratorWithoutAdditivityFactory.class,
                                                  UserDefinedRepeatableDecoratorFactory.class,
                                                  Decorator2.class,
                                                  UserDefinedRepeatableDecoratorFactory.class);
-        assertThat(orders(list)).containsExactly(0, 0, 1, 2, 3);
+        assertThat(orders(list)).containsExactly(0, 0, 0, 1, 2, 3);
 
         final LoggingDecorator info = (LoggingDecorator) list.get(1).annotation();
         assertThat(info.requestLogLevel()).isEqualTo(LogLevel.INFO);
-        final UserDefinedRepeatableDecorator udd1 = (UserDefinedRepeatableDecorator) list.get(2).annotation();
+        final UserDefinedRepeatableDecorator udd1 = (UserDefinedRepeatableDecorator) list.get(3).annotation();
         assertThat(udd1.value()).isEqualTo(1);
-        final UserDefinedRepeatableDecorator udd2 = (UserDefinedRepeatableDecorator) list.get(4).annotation();
+        final UserDefinedRepeatableDecorator udd2 = (UserDefinedRepeatableDecorator) list.get(5).annotation();
         assertThat(udd2.value()).isEqualTo(2);
+    }
+
+    @Test
+    void ofUserDefinedDecoratorsWithSameOrder() throws NoSuchMethodException {
+        final List<DecoratorAndOrder> list = DecoratorAnnotationUtil
+                .collectDecorators(TestClass.class,
+                                   TestClass.class.getMethod("userDefinedDecoratorWithAdditivity"));
+        assertThat(values(list)).containsExactly(Decorator1.class,
+                                                 LoggingDecoratorFactoryFunction.class,
+                                                 UserDefinedDecoratorWithoutAdditivityFactory.class,
+                                                 UserDefinedDecoratorWithoutAdditivityFactory.class);
+        assertThat(orders(list)).containsExactly(0, 0, 0, 0);
+
+        final UserDefinedDecoratorWithoutAdditivity udda1 =
+                (UserDefinedDecoratorWithoutAdditivity) list.get(2).annotation();
+        assertThat(udda1.value()).isEqualTo(1);
+        final UserDefinedDecoratorWithoutAdditivity udda2 =
+                (UserDefinedDecoratorWithoutAdditivity) list.get(3).annotation();
+        assertThat(udda2.value()).isEqualTo(2);
+    }
+
+    @Test
+    void ofUserDefinedDecoratorsWithDifferentOrders() throws NoSuchMethodException {
+        final List<DecoratorAndOrder> list = DecoratorAnnotationUtil
+                .collectDecorators(TestClass2.class,
+                                   TestClass2.class.getMethod("userDefinedDecoratorWithAdditivity"));
+        assertThat(values(list)).containsExactly(UserDefinedDecoratorWithoutAdditivityFactory.class,
+                                                 UserDefinedRepeatableDecoratorFactory.class,
+                                                 UserDefinedRepeatableDecoratorFactory.class);
+        assertThat(orders(list)).containsExactly(1, 2, 20);
+
+        final UserDefinedDecoratorWithoutAdditivity udda1 =
+                (UserDefinedDecoratorWithoutAdditivity) list.get(0).annotation();
+        assertThat(udda1.value()).isEqualTo(1);
+        final UserDefinedRepeatableDecorator udd1 = (UserDefinedRepeatableDecorator) list.get(1).annotation();
+        assertThat(udd1.value()).isEqualTo(2);
+        final UserDefinedRepeatableDecorator udd2 = (UserDefinedRepeatableDecorator) list.get(2).annotation();
+        assertThat(udd2.value()).isEqualTo(20);
     }
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
@@ -161,6 +203,7 @@ class DecoratorAnnotationUtilTest {
 
     @Decorator(Decorator1.class)
     @LoggingDecorator(requestLogLevel = LogLevel.INFO)
+    @UserDefinedDecoratorWithoutAdditivity(1)
     static class TestClass {
 
         @LoggingDecorator
@@ -189,6 +232,21 @@ class DecoratorAnnotationUtilTest {
         public String userDefinedRepeatableDecorator() {
             return "";
         }
+
+        @UserDefinedDecoratorWithoutAdditivity(2)
+        public String userDefinedDecoratorWithAdditivity() {
+            return "";
+        }
+    }
+
+    @UserDefinedRepeatableDecorator(value = 2, order = 2)
+    @UserDefinedDecoratorWithoutAdditivity(value = 10, order = 10)
+    static class TestClass2 {
+        @UserDefinedDecoratorWithoutAdditivity(value = 1, order = 1)
+        @UserDefinedRepeatableDecorator(value = 20, order = 20)
+        public String userDefinedDecoratorWithAdditivity() {
+            return "";
+        }
     }
 
     @Retention(RetentionPolicy.RUNTIME)
@@ -215,6 +273,32 @@ class DecoratorAnnotationUtilTest {
         @Override
         public Function<? super HttpService, ? extends HttpService> newDecorator(
                 UserDefinedRepeatableDecorator parameter) {
+            return service -> new SimpleDecoratingHttpService(service) {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return service.serve(ctx, req);
+                }
+            };
+        }
+    }
+
+    @DecoratorFactory(value = UserDefinedDecoratorWithoutAdditivityFactory.class, additivity = false)
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @interface UserDefinedDecoratorWithoutAdditivity {
+
+        // To identify the decorator instance.
+        int value();
+
+        // For ordering.
+        int order() default 0;
+    }
+
+    private static class UserDefinedDecoratorWithoutAdditivityFactory
+            implements DecoratorFactoryFunction<UserDefinedDecoratorWithoutAdditivity> {
+        @Override
+        public Function<? super HttpService, ? extends HttpService> newDecorator(
+                UserDefinedDecoratorWithoutAdditivity parameter) {
             return service -> new SimpleDecoratingHttpService(service) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
