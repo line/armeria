@@ -175,6 +175,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public double maxConnectionAgeJitterRate() {
+        return delegate.maxConnectionAgeJitterRate();
+    }
+
+    @Override
     public long connectionDrainDurationMicros() {
         return delegate.connectionDrainDurationMicros();
     }

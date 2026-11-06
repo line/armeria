@@ -78,6 +78,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         final long pingIntervalMillis = clientFactory.pingIntervalMillis();
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
+        final double maxConnectionAgeJitterRate = clientFactory.maxConnectionAgeJitterRate();
         final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
         final boolean keepAliveOnPing = clientFactory.keepAliveOnPing();
         final boolean needsKeepAliveHandler =
@@ -91,7 +92,8 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http1ClientKeepAliveHandler(
                     channel, this, keepAliveTimer, idleTimeoutMillis,
-                    pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                    pingIntervalMillis, maxConnectionAgeMillis, maxConnectionAgeJitterRate,
+                    maxNumRequestsPerConnection,
                     keepAliveOnPing);
         } else {
             keepAliveHandler = new NoopKeepAliveHandler();
