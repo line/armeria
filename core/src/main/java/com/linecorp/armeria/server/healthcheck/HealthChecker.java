@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.healthcheck;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.management.ThreadMXBean;
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
@@ -103,6 +104,39 @@ public interface HealthChecker {
      */
     static HealthChecker ofCpu(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         return new CpuHealthChecker(targetSystemCpuUsage, targetProcessCpuUsage);
+    }
+
+    /**
+     * Returns a newly created {@link ListenableHealthChecker} that reports as unhealthy when the JVM has
+     * deadlocked threads. Deadlocks are detected with {@link ThreadMXBean#findDeadlockedThreads()}, or with
+     * {@link ThreadMXBean#findMonitorDeadlockedThreads()} if the JVM does not support monitoring of
+     * ownable synchronizers. Because the detection inspects every thread in the JVM and can be expensive,
+     * it runs periodically on a daemon thread dedicated to deadlock detection, which is shared by all the
+     * health checkers returned by this method, and {@link #isHealthy()} returns the result of the last
+     * completed check. The next check is scheduled {@code checkInterval} after the previous check
+     * completes. If the JVM does not permit deadlock detection, the returned {@link ListenableHealthChecker}
+     * reports as healthy and logs a warning once.
+     *
+     * <p>Note that the periodic check starts only when a {@link Server} starts with a
+     * {@link HealthCheckService} that the returned {@link ListenableHealthChecker} was passed to directly;
+     * wrapping it in another {@link HealthChecker} prevents the check from starting. It reports as
+     * unhealthy until the first check completes. After the {@link Server} stops, the result of the last
+     * completed check is retained. For example:
+     * <pre>{@code
+     * Server.builder()
+     *       .service("/internal/healthcheck",
+     *                HealthCheckService.of(HealthChecker.ofDeadlock(Duration.ofSeconds(10))))
+     *       .build();
+     * }</pre>
+     *
+     * @param checkInterval the interval between deadlock checks, which must be at least one millisecond
+     */
+    @UnstableApi
+    static ListenableHealthChecker ofDeadlock(Duration checkInterval) {
+        requireNonNull(checkInterval, "checkInterval");
+        final long ttlMillis = checkInterval.toMillis();
+        checkArgument(ttlMillis > 0, "checkInterval: %s (expected: >= 1ms)", checkInterval);
+        return of(new DeadlockHealthChecker().toStatusSupplier(ttlMillis), checkInterval);
     }
 
     /**
