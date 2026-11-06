@@ -36,30 +36,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ ubicloud-standard-16, macos-latest, windows-latest ]
+        on: [ ubicloud-standard-8, macos-latest, windows-latest ]
         java: [ 25 ]
         include:
           - java: 8
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
           - java: 11
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
           - java: 17
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
             leak: true
           - java: 17
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
             min-java: 11
           - java: 17
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
             min-java: 17
             coverage: true
           - java: 21
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
             snapshot: true
             # blockhound makes the build run about 10 minutes slower
             blockhound: true
           - java: 21
-            on: ubicloud-standard-16
+            on: ubicloud-standard-8
             buildJdk: 21
 
     name: build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.buildJdk && format('-build-jdk-{0}', matrix.buildJdk) || '' }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}
@@ -103,7 +103,7 @@ jobs:
       - name: Build with Gradle (Shading only)
         run: |
           ./gradlew --no-daemon --stacktrace shadedJar shadedTestJar trimShadedJar \
-          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=4' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
@@ -122,7 +122,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew --no-daemon --stacktrace build \
-          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+          ${{ startsWith(matrix.on, 'ubicloud') && '--max-workers=4' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
           ${{ matrix.blockhound && '-Pblockhound' || '' }} \
