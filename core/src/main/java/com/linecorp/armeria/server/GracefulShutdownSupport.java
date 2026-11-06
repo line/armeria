@@ -42,6 +42,7 @@ abstract class GracefulShutdownSupport {
     }
 
     private final LongAdder pendingResponses = new LongAdder();
+    private volatile boolean terminating;
 
     /**
      * Increases the number of pending responses.
@@ -68,6 +69,22 @@ abstract class GracefulShutdownSupport {
      * Returns {@code true} if the graceful shutdown has started (or finished).
      */
     abstract boolean isShuttingDown();
+
+    /**
+     * Marks the end of the graceful shutdown. Unfinished requests and connections are closed
+     * without waiting any longer.
+     */
+    final void terminate() {
+        terminating = true;
+    }
+
+    /**
+     * Returns {@code true} if the graceful shutdown has ended and unfinished requests and connections
+     * should be closed immediately.
+     */
+    final boolean isTerminating() {
+        return terminating;
+    }
 
     /**
      * Indicates the quiet period duration has passed since the last request.

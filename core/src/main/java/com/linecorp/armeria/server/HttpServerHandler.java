@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
@@ -215,6 +216,30 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         cleanup(ctx.channel(), false, null);
     }
 
+    /**
+     * Stops accepting new requests on the connection while letting the unfinished requests complete.
+     * For HTTP/2, this sends GOAWAY frames, so that the requests sent before the client receives them are
+     * still served. The returned future is completed when the connection is closed.
+     */
+    CompletableFuture<Void> handOver(Channel channel) {
+        final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+        channel.closeFuture().addListener(unused -> closeFuture.complete(null));
+        channel.eventLoop().execute(() -> {
+            if (!channel.isActive()) {
+                return;
+            }
+            if (!protocol.isMultiplex() && unfinishedRequests.isEmpty()) {
+                // HTTP/1 has no way to tell a client to stop sending requests, so close an idle connection.
+                channel.close();
+            } else {
+                // HTTP/2: The connection is closed after the drain and all active streams end.
+                // HTTP/1: The connection is closed after sending the response with 'Connection: close'.
+                channel.pipeline().fireUserEventTriggered(InitiateConnectionShutdown.of());
+            }
+        });
+        return closeFuture;
+    }
+
     CompletableFuture<Void> shutdown(Channel channel) {
         final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
         // This method is called from a startStopExecutor
@@ -226,6 +251,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void cleanup(Channel ch, boolean shutdown, @Nullable CompletableFuture<Void> completionFuture) {
         if (isClosing) {
+            if (completionFuture != null) {
+                completionFuture.complete(null);
+            }
             return;
         }
         isClosing = true;
@@ -292,6 +320,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             unfinishedRequests.clear();
+        } else if (completionFuture != null) {
+            completionFuture.complete(null);
         }
     }
 
