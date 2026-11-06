@@ -23,13 +23,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -52,6 +55,8 @@ public final class DocServiceBuilder {
     private DocServiceFilter includeFilter = ALL_SERVICES;
 
     private DocServiceFilter excludeFilter = NO_SERVICE;
+
+    private Set<String> sensitiveHeaders = ImmutableSet.of(HttpHeaderNames.AUTHORIZATION.toString());
 
     // These maps contain the entries whose key is a service name and value is a multimap.
     // The multimap contains the entries whose key is the method name.
@@ -344,6 +349,29 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Sets the sensitive header names whose values are redacted in the debug-page URL
+     * in the documentation service.
+     *
+     * <p>This replaces the previously configured header names, including the default
+     * {@link HttpHeaderNames#AUTHORIZATION}. Specifying {@code null} or an empty iterable disables redaction.
+     */
+    @UnstableApi
+    public DocServiceBuilder sensitiveHeaders(
+            @Nullable Iterable<? extends CharSequence> sensitiveHeaders) {
+        if (sensitiveHeaders == null) {
+            this.sensitiveHeaders = ImmutableSet.of();
+            return this;
+        }
+        final ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+        for (CharSequence sensitiveHeader : sensitiveHeaders) {
+            requireNonNull(sensitiveHeader, "sensitiveHeaders contains null.");
+            builder.add(HttpHeaderNames.of(sensitiveHeader).toString());
+        }
+        this.sensitiveHeaders = builder.build();
+        return this;
+    }
+
+    /**
      * Adds the {@link DocServiceFilter} that checks whether a method will be <b>included</b> while building
      * {@link DocService}. The {@link DocServiceFilter} will be invoked with the plugin, service and
      * method name. The rule is as follows:
@@ -582,6 +610,7 @@ public final class DocServiceBuilder {
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
-                              descriptiveTypeInfoProvider, ImmutableMap.copyOf(docServiceExtraInfo));
+                              descriptiveTypeInfoProvider, ImmutableMap.copyOf(docServiceExtraInfo),
+                              sensitiveHeaders);
     }
 }
