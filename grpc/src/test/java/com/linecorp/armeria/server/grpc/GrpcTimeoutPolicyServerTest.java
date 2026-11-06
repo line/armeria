@@ -165,6 +165,21 @@ class GrpcTimeoutPolicyServerTest {
     }
 
     @Test
+    void deadlineAlreadyExhaustedFailsWithDeadlineExceeded() {
+        // The pipeline takes 400ms before the service, so a 300ms deadline is already past when the timeout
+        // is applied. That must fail the same way a policy returning Duration.ZERO does, rather than being
+        // cancelled before a response has started - which a client sees as UNAVAILABLE.
+        final TestServiceBlockingStub client = GrpcClients.builder(delayedServer.httpUri())
+                                                          .responseTimeoutMillis(0)
+                                                          .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "300m")
+                                                          .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                });
+    }
+
+    @Test
     void missingClientTimeoutIsCapped() {
         // A client that does not send a 'grpc-timeout' header must not get an infinite timeout, either.
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
