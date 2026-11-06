@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.thrift.ThriftMessageTestUtil.newMessag
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,12 +36,9 @@ import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.protocol.TType;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.base.Strings;
@@ -56,6 +54,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
+import com.linecorp.armeria.internal.server.thrift.ThriftVersionDetector;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -120,7 +119,7 @@ class ThriftClientLengthLimitTest {
         }
     };
 
-    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @MethodSource("formats")
     @ParameterizedTest
     void defaultStringLimit(SerializationFormat serializationFormat) throws TException {
         final HelloService.Iface client =
@@ -161,7 +160,7 @@ class ThriftClientLengthLimitTest {
                 .hasMessageContaining("unexpected end of frame");
     }
 
-    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @MethodSource("formats")
     @ParameterizedTest
     void defaultContainerLimit(SerializationFormat serializationFormat) throws TException {
         final NameSortService.Iface client =
@@ -171,13 +170,22 @@ class ThriftClientLengthLimitTest {
         // Should respect maxResponseLength if maxContainerLength is unspecified.
         final int maxContainerLength = (int) params.options().maxResponseLength();
 
-        assertThatThrownBy(() -> {
+        final Throwable cause = catchThrowable(() -> {
             client.sort(ImmutableList.of(new Name("", "", "")));
-        }).isInstanceOf(TProtocolException.class)
-          .hasMessageContaining("Length exceeded max allowed: " + (maxContainerLength + 1));
+        });
+
+        if (serializationFormat == ThriftSerializationFormats.BINARY &&
+            ThriftVersionDetector.minorVersion() >= 14) {
+            // The declared elements cannot fit in the frame.
+            assertThat(cause).isInstanceOf(TTransportException.class)
+                             .hasMessage("unexpected end of frame");
+        } else {
+            assertThat(cause).isInstanceOf(TProtocolException.class)
+                             .hasMessageContaining("Length exceeded max allowed: " + (maxContainerLength + 1));
+        }
     }
 
-    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @MethodSource("formats")
     @ParameterizedTest
     void customStringLimit(SerializationFormat serializationFormat) {
         final int maxStringLength = 100;
@@ -192,7 +200,7 @@ class ThriftClientLengthLimitTest {
           .hasMessageContaining("Length exceeded max allowed: " + (maxStringLength + 1));
     }
 
-    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @MethodSource("formats")
     @ParameterizedTest
     void customContainerLimit(SerializationFormat serializationFormat) {
         final int maxContainerLength = 100;
@@ -220,12 +228,7 @@ class ThriftClientLengthLimitTest {
                 Arguments.of(ThriftSerializationFormats.COMPACT, 100));
     }
 
-    private static class ThriftSerializationFormatProvider implements ArgumentsProvider {
-
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(ThriftSerializationFormats.BINARY, ThriftSerializationFormats.COMPACT)
-                         .map(Arguments::of);
-        }
+    private static Stream<SerializationFormat> formats() {
+        return Stream.of(ThriftSerializationFormats.BINARY, ThriftSerializationFormats.COMPACT);
     }
 }

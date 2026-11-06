@@ -96,6 +96,56 @@ class DataSourcePolicyTest {
     }
 
     @Test
+    void symlinkEscapingRootIsBlocked(@TempDir Path tempDir,
+                                      @TempDir Path outsideDir) throws Exception {
+        // The real certificate material lives OUTSIDE the allowed root.
+        final Path secretDir = copyCerts(outsideDir.resolve("secret"));
+
+        // The allowed root contains only symlinks pointing at the outside material.
+        final Path allowedDir = tempDir.resolve("allowed");
+        Files.createDirectories(allowedDir);
+        Files.createSymbolicLink(allowedDir.resolve("private_key.pem"),
+                                 secretDir.resolve("private_key.pem"));
+        Files.createSymbolicLink(allowedDir.resolve("certificate.pem"),
+                                 secretDir.resolve("certificate.pem"));
+
+        // The SDS filename names the symlink under the allowed root. A purely lexical check would let it
+        // through; resolving the real path rejects it because it escapes the allowed root.
+        final Bootstrap bootstrap = bootstrapYaml(allowedDir);
+        final DataSourcePolicy policy = DataSourcePolicy.builder()
+                                                        .allowedRootDirs(allowedDir)
+                                                        .build();
+        final Throwable error = awaitError(bootstrap, policy);
+        assertThat(error)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("resolves outside any allowed root directory");
+    }
+
+    @Test
+    void symlinkWithinRootIsAllowed(@TempDir Path tempDir) throws Exception {
+        // Mirrors how Kubernetes mounts secrets: the referenced files are symlinks that resolve to
+        // other files still under the mounted (allowed) root. These must remain readable.
+        final Path allowedDir = tempDir.resolve("allowed");
+        final Path dataDir = copyCerts(allowedDir.resolve("..data-like"));
+        Files.createSymbolicLink(allowedDir.resolve("private_key.pem"),
+                                 dataDir.resolve("private_key.pem"));
+        Files.createSymbolicLink(allowedDir.resolve("certificate.pem"),
+                                 dataDir.resolve("certificate.pem"));
+
+        final Bootstrap bootstrap = bootstrapYaml(allowedDir);
+        final DataSourcePolicy policy = DataSourcePolicy.builder()
+                                                        .allowedRootDirs(allowedDir)
+                                                        .build();
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
+                                                     .dataSourcePolicy(policy)
+                                                     .build()) {
+            final TlsCertificateSnapshot certSnapshot = awaitCertSnapshot(xdsBootstrap);
+            assertThat(certSnapshot).isNotNull();
+            assertThat(certSnapshot.tlsKeyPair()).isEqualTo(certificate.tlsKeyPair());
+        }
+    }
+
+    @Test
     void allowAllPolicyPermitsEverything(@TempDir Path tempDir) throws Exception {
         final Path certsDir = copyCerts(tempDir.resolve("certs"));
 

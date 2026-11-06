@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.xds;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Future;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,6 +102,19 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
                         "DataSource file path is not under any allowed root directory: " + filePath);
                 return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
             }
+            if (dataSourcePolicy.hasFileRestrictions()) {
+                try {
+                    final Path realPath = filePath.toRealPath();
+                    if (!dataSourcePolicy.isRealPathAllowed(realPath)) {
+                        final IllegalArgumentException e = new IllegalArgumentException(
+                                "DataSource file path resolves outside any allowed root directory: " +
+                                filePath + " -> " + realPath);
+                        return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
+                    }
+                } catch (IOException e) {
+                    // The file does not exist yet or could not be resolved; defer to the read-time guard below.
+                }
+            }
             Path dirPath = filePath.getParent();
             if (watchedDirectory != WatchedDirectory.getDefaultInstance()) {
                 dirPath = Paths.get(watchedDirectory.getPath());
@@ -110,11 +125,15 @@ final class DataSourceStream extends RefCountedStream<Optional<ByteString>> {
                 return SnapshotStream.<Optional<ByteString>>error(e).subscribe(watcher);
             }
             final Path dirPath0 = dirPath;
+            final Predicate<Path> readGuard =
+                    dataSourcePolicy.hasFileRestrictions() ? dataSourcePolicy::isRealPathAllowed : null;
             final Future<Cancellable> f = CommonPools.blockingTaskExecutor().submit(
-                    () -> context.watchService().register(dirPath0, PathWatcher.ofFile(filePath, bytes -> {
-                        context.eventLoop().execute(
-                                () -> watcher.onUpdate(Optional.of(ByteString.copyFrom(bytes)), null));
-                    })));
+                    () -> context.watchService().register(
+                            dirPath0, PathWatcher.ofFile(filePath, readGuard, bytes -> {
+                                context.eventLoop().execute(
+                                        () -> watcher.onUpdate(
+                                                Optional.of(ByteString.copyFrom(bytes)), null));
+                            })));
             return () -> {
                 // watch key cancellation can be blocking
                 CommonPools.blockingTaskExecutor().execute(() -> {

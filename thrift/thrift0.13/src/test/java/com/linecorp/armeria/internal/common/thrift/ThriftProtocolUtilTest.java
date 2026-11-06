@@ -24,7 +24,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.stream.Stream;
 
-import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
@@ -57,7 +56,7 @@ class ThriftProtocolUtilTest {
             writer.writeMessageEnd();
 
             final TProtocol protocol = newProtocol(buf, format, maxStringLength);
-            assertMessage(readMessageBegin(protocol, format, buf, maxStringLength));
+            assertMessage(ThriftProtocolUtil.readMessageBegin(protocol, format, buf, maxStringLength));
             protocol.readMessageEnd();
             assertThat(buf.isReadable()).isFalse();
         } finally {
@@ -73,7 +72,7 @@ class ThriftProtocolUtilTest {
             final TProtocol protocol = newProtocol(buf, BINARY, 0);
             writeUnversionedBinaryHeader(protocol);
 
-            assertMessage(readMessageBegin(protocol, BINARY, buf, 0));
+            assertMessage(ThriftProtocolUtil.readMessageBegin(protocol, BINARY, buf, 0));
             assertThat(buf.isReadable()).isFalse();
         } finally {
             buf.release();
@@ -92,8 +91,7 @@ class ThriftProtocolUtilTest {
             final TProtocol protocol = newProtocol(buf, BINARY, 1);
 
             // A truncated primitive is not an oversized name, even if its size exceeds the limit.
-            assertThatThrownBy(() -> readMessageBegin(
-                    protocol, BINARY, buf, 1))
+            assertThatThrownBy(() -> ThriftProtocolUtil.readMessageBegin(protocol, BINARY, buf, 1))
                     .isInstanceOf(TTransportException.class)
                     .hasMessage("unexpected end of frame");
         } finally {
@@ -109,8 +107,7 @@ class ThriftProtocolUtilTest {
             buf.writeInt(0x80020001);
             final TProtocol protocol = newProtocol(buf, BINARY, 1);
 
-            assertThatThrownBy(() -> readMessageBegin(
-                    protocol, BINARY, buf, 1))
+            assertThatThrownBy(() -> ThriftProtocolUtil.readMessageBegin(protocol, BINARY, buf, 1))
                     .isInstanceOf(TProtocolException.class)
                     .satisfies(cause -> assertThat(((TProtocolException) cause).getType())
                             .isEqualTo(TProtocolException.BAD_VERSION));
@@ -130,7 +127,7 @@ class ThriftProtocolUtilTest {
             final TProtocol protocol = newProtocol(buf, BINARY, NAME.length() - 1);
             writeUnversionedBinaryHeader(protocol);
 
-            assertThatThrownBy(() -> readMessageBegin(
+            assertThatThrownBy(() -> ThriftProtocolUtil.readMessageBegin(
                     protocol, BINARY, buf, NAME.length() - 1))
                     .isInstanceOf(TProtocolException.class)
                     .hasMessage("Length exceeded max allowed: " + NAME.length())
@@ -152,7 +149,7 @@ class ThriftProtocolUtilTest {
             final TProtocol protocol = newProtocol(buf, BINARY, NAME.length());
             writeUnversionedBinaryHeader(protocol);
 
-            assertMessage(readMessageBegin(protocol, BINARY, buf, NAME.length()));
+            assertMessage(ThriftProtocolUtil.readMessageBegin(protocol, BINARY, buf, NAME.length()));
             assertThat(buf.isReadable()).isFalse();
         } finally {
             buf.release();
@@ -161,12 +158,6 @@ class ThriftProtocolUtilTest {
 
     private static Stream<SerializationFormat> formats() {
         return Stream.of(BINARY, COMPACT, JSON);
-    }
-
-    private static TMessage readMessageBegin(TProtocol protocol, SerializationFormat format,
-                                             ByteBuf buf, int maxStringLength) throws TException {
-        ThriftProtocolUtil.maybeCheckMessageLength(format, buf, maxStringLength);
-        return protocol.readMessageBegin();
     }
 
     private static TProtocol newProtocol(ByteBuf buf, SerializationFormat format, int maxStringLength) {

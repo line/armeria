@@ -24,13 +24,16 @@ import java.lang.reflect.Constructor;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
+import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
+import org.apache.thrift.transport.TTransport;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 import com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryProvider;
+import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 
 /**
  * Provides a set of well-known {@link TProtocolFactory}s.
@@ -137,9 +140,19 @@ public final class ThriftProtocolFactories {
         final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
 
         if (IS_THRIFT_091) {
-            // Thrift 0.9.1 does not support a message length limit.
+            // Thrift 0.9.1 lacks constructors with field and container length limits.
             return new TBinaryProtocol.Factory() {
                 private static final long serialVersionUID = 1315460223026778806L;
+
+                @Override
+                public TProtocol getProtocol(TTransport trans) {
+                    if (trans instanceof TByteBufTransport) {
+                        return ((TByteBufTransport) trans).newBinaryProtocol(maxStringLength0,
+                                                                             maxContainerLength0);
+                    }
+
+                    return super.getProtocol(trans);
+                }
 
                 @Override
                 public String toString() {
@@ -154,6 +167,15 @@ public final class ThriftProtocolFactories {
         // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L68-L77
         return new TBinaryProtocol.Factory(false, true, maxStringLength0, maxContainerLength0) {
             private static final long serialVersionUID = -9020693963961565748L;
+
+            @Override
+            public TProtocol getProtocol(TTransport trans) {
+                if (trans instanceof TByteBufTransport) {
+                    return ((TByteBufTransport) trans).newBinaryProtocol(maxStringLength0, maxContainerLength0);
+                }
+
+                return super.getProtocol(trans);
+            }
 
             @Override
             public String toString() {
@@ -181,9 +203,19 @@ public final class ThriftProtocolFactories {
         final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
 
         if (IS_THRIFT_091) {
-            // Thrift 0.9.1 does not support a message length limit.
+            // Thrift 0.9.1 lacks constructors with field and container length limits.
             return new TCompactProtocol.Factory() {
                 private static final long serialVersionUID = 4430306676070073610L;
+
+                @Override
+                public TProtocol getProtocol(TTransport trans) {
+                    if (trans instanceof TByteBufTransport) {
+                        return ((TByteBufTransport) trans).newCompactProtocol(maxStringLength0,
+                                                                              maxContainerLength0);
+                    }
+
+                    return super.getProtocol(trans);
+                }
 
                 @Override
                 public String toString() {
@@ -196,6 +228,16 @@ public final class ThriftProtocolFactories {
 
         return new TCompactProtocol.Factory(maxStringLength0, maxContainerLength0) {
             private static final long serialVersionUID = 1629726795326210377L;
+
+            @Override
+            public TProtocol getProtocol(TTransport trans) {
+                if (trans instanceof TByteBufTransport) {
+                    return ((TByteBufTransport) trans).newCompactProtocol(maxStringLength0,
+                                                                          maxContainerLength0);
+                }
+
+                return super.getProtocol(trans);
+            }
 
             @Override
             public String toString() {

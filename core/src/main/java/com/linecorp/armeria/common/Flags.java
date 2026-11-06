@@ -1605,6 +1605,12 @@ public final class Flags {
      * }</pre>
      * Note that this flag has no effect on the client-side.
      *
+     * <p>Enabling this flag with a servlet container such as Tomcat or Jetty can desynchronize routing:
+     * the container strips matrix variables and normalizes {@code .} and {@code ..} segments, so a
+     * path-prefix route or decorator may not match the path the servlet finally serves
+     * (e.g. {@code /admin;a=b/x} bypasses a decorator bound to {@code /admin}). Avoid relying on
+     * path-prefix matching for authorization in that combination.
+     *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
      */

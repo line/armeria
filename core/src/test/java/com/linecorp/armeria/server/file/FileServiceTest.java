@@ -346,10 +346,10 @@ class FileServiceTest {
                         .contains("Directory listing: " + basePath + "/fs/auto_index/")
                         .contains("4 file(s) total")
                         .contains("<a href=\"../\">../</a>")
-                        .contains("<a href=\"child_dir/\">child_dir/</a>")
-                        .contains("<a href=\"child_file\">child_file</a>")
-                        .contains("<a href=\"child_dir_with_custom_index/\">child_dir_with_custom_index/</a>")
-                        .contains("<a href=\"empty_child_dir/\">empty_child_dir/</a>");
+                        .contains("<a href=\"./child_dir/\">child_dir/</a>")
+                        .contains("<a href=\"./child_file\">child_file</a>")
+                        .contains("<a href=\"./child_dir_with_custom_index/\">child_dir_with_custom_index/</a>")
+                        .contains("<a href=\"./empty_child_dir/\">empty_child_dir/</a>");
             }
 
             // Ensure directory listing on an empty directory works as expected.
