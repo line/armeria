@@ -29,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +104,7 @@ class DefaultRequestTargetTest {
     @MethodSource("badDoubleDotPatterns")
     void serverShouldRejectBadDoubleDotPatterns(String pattern) {
         assertRejected(forServer(toAbsolutePath(pattern))); // in a path
+        assertRejected(forServer(toAbsolutePath(pattern), true)); // ... and when semicolons are allowed
         assertRejected(forServer("/?" + pattern)); // in a free-form query
         assertRejected(forServer("/?" + pattern + "=foo")); // in a query name
         assertRejected(forServer("/?foo=" + pattern)); // in a query value
@@ -133,6 +135,30 @@ class DefaultRequestTargetTest {
             assertThat(forServer("/?a=b" + qs + pattern + "=c")).isNotNull();
             assertThat(forServer("/?a=b" + qs + "c=" + pattern)).isNotNull();
         });
+    }
+
+    @ParameterizedTest
+    @MethodSource("badSingleDotPatterns")
+    void serverShouldRejectSingleDotSegments(String pattern) {
+        assertRejected(forServer(toAbsolutePath(pattern)));
+        // Also rejected when semicolons are allowed: a servlet strips the matrix variable back to a dot segment.
+        assertRejected(forServer(toAbsolutePath(pattern), true));
+        // Allowed in a query.
+        assertThat(forServer("/?" + pattern)).isNotNull();
+        assertThat(forServer("/?foo=" + pattern)).isNotNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/foo;a=b/bar",     // a matrix variable on an ordinary segment
+            "/foo;./bar",       // a dot after ';' belongs to the matrix variable, not a dot segment
+            "/foo;..;a=b/bar",  // ... and so do dots after the first ';'
+            "/.a;b", "/a.;b"    // a dot-prefixed or -suffixed name with a matrix variable
+    })
+    void serverShouldAcceptSemicolonSegmentsThatAreNotDotSegments(String path) {
+        // Accepted in both modes: kept as-is when allowed, matrix variable removed otherwise.
+        assertThat(forServer(path)).isNotNull();
+        assertThat(forServer(path, true)).isNotNull();
     }
 
     /**
@@ -706,12 +732,33 @@ class DefaultRequestTargetTest {
         );
     }
 
+    private static Stream<String> badSingleDotPatterns() {
+        return Stream.of(
+                ".", "/.", "./", "/./",
+                "./foo", "/./foo",
+                "foo/.", "/foo/.",
+                "foo/./bar", "/foo/./bar",
+
+                // Dots escaped
+                "%2e", "/%2E", "%2e/foo", "/%2E/foo", "/foo/%2e", "/foo/%2E/bar",
+
+                // Slashes escaped
+                ".%2F", "/.%2f", "%2F./", "/foo%2f.", "/foo/.%2Fbar",
+
+                // With matrix variables
+                ".;a=b", "/.;a=b", "/.;a=b/foo", "/foo/.;a=b", "/foo/%2e;a=b/bar"
+        );
+    }
+
     private static Stream<String> goodDoubleDotPatterns() {
         return Stream.of(
                 "..a", "a..", "a..b",
                 "/..a", "/a..", "/a..b",
                 "..a/", "a../", "a..b/",
-                "/..a/", "/a../", "/a..b/"
+                "/..a/", "/a../", "/a..b/",
+
+                // Not a dot segment
+                ".a", "a.", "...", "/.a", "/a.", "/...", "/.well-known/foo", "/foo/.../bar"
         );
     }
 }
