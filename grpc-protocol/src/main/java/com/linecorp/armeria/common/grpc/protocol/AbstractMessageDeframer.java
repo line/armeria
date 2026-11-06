@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
+import com.linecorp.armeria.internal.common.SizeEnforcingInputStream;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -132,7 +130,13 @@ public abstract class AbstractMessageDeframer {
             final InputStream unlimitedStream =
                     decompressor.decompress(new ByteBufInputStream(buf, true));
             return new DeframedMessage(
-                    new SizeEnforcingInputStream(unlimitedStream, maxMessageLength, DEBUG_STRING),
+                    new SizeEnforcingInputStream(
+                            unlimitedStream, maxMessageLength,
+                            count -> new ArmeriaStatusException(
+                                    StatusCodes.RESOURCE_EXHAUSTED,
+                                    String.format(
+                                            "%s: Compressed frame exceeds maximum frame size: %d. " +
+                                            "Bytes read: %d. ", DEBUG_STRING, maxMessageLength, count))),
                     currentType);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -145,90 +149,5 @@ public abstract class AbstractMessageDeframer {
     protected AbstractMessageDeframer decompressor(@Nullable Decompressor decompressor) {
         this.decompressor = decompressor;
         return this;
-    }
-
-    /**
-     * An {@link InputStream} that enforces the {@link #maxMessageSize} limit for compressed frames.
-     */
-    @VisibleForTesting
-    static final class SizeEnforcingInputStream extends FilterInputStream {
-        private final int maxMessageSize;
-        private final String debugString;
-        private long maxCount;
-        private long count;
-        private long mark = -1;
-
-        SizeEnforcingInputStream(InputStream in, int maxMessageSize, String debugString) {
-            super(in);
-            this.maxMessageSize = maxMessageSize;
-            this.debugString = debugString;
-        }
-
-        @Override
-        public int read() throws IOException {
-            final int result = in.read();
-            if (result != -1) {
-                count++;
-            }
-            verifySize();
-            reportCount();
-            return result;
-        }
-
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
-            final int result = in.read(b, off, len);
-            if (result != -1) {
-                count += result;
-            }
-            verifySize();
-            reportCount();
-            return result;
-        }
-
-        @Override
-        public long skip(long n) throws IOException {
-            final long result = in.skip(n);
-            count += result;
-            verifySize();
-            reportCount();
-            return result;
-        }
-
-        @Override
-        public synchronized void mark(int readlimit) {
-            in.mark(readlimit);
-            mark = count;
-            // it's okay to mark even if mark isn't supported, as reset won't work
-        }
-
-        @Override
-        public synchronized void reset() throws IOException {
-            if (!in.markSupported()) {
-                throw new IOException("Mark not supported");
-            }
-            if (mark == -1) {
-                throw new IOException("Mark not set");
-            }
-
-            in.reset();
-            count = mark;
-        }
-
-        private void reportCount() {
-            if (count > maxCount) {
-                maxCount = count;
-            }
-        }
-
-        private void verifySize() {
-            if (count > maxMessageSize) {
-                throw new ArmeriaStatusException(
-                        StatusCodes.RESOURCE_EXHAUSTED,
-                        String.format(
-                                "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
-                                debugString, maxMessageSize, count));
-            }
-        }
     }
 }
