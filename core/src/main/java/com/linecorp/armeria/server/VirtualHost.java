@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -83,6 +85,7 @@ public final class VirtualHost {
     private final int port;
     @Nullable
     private final ServerPort serverPort;
+    private final ReentrantLock hostnameCacheLock = new ReentrantShortLock();
     @Nullable
     private volatile String cachedDefaultHostname;
     @Nullable
@@ -308,11 +311,20 @@ public final class VirtualHost {
             if (cached != null) {
                 return cached;
             }
-            final int actualPort = serverPort.actualPort();
-            if (actualPort > 0) {
-                cached = originalDefaultHostname + ':' + actualPort;
-                cachedDefaultHostname = cached;
-                return cached;
+            hostnameCacheLock.lock();
+            try {
+                cached = cachedDefaultHostname;
+                if (cached != null) {
+                    return cached;
+                }
+                final int actualPort = serverPort.actualPort();
+                if (actualPort > 0) {
+                    cached = originalDefaultHostname + ':' + actualPort;
+                    cachedDefaultHostname = cached;
+                    return cached;
+                }
+            } finally {
+                hostnameCacheLock.unlock();
             }
         }
         return defaultHostname;
@@ -328,14 +340,33 @@ public final class VirtualHost {
             if (cached != null) {
                 return cached;
             }
-            final int actualPort = serverPort.actualPort();
-            if (actualPort > 0) {
-                cached = originalHostnamePattern + ':' + actualPort;
-                cachedHostnamePattern = cached;
-                return cached;
+            hostnameCacheLock.lock();
+            try {
+                cached = cachedHostnamePattern;
+                if (cached != null) {
+                    return cached;
+                }
+                final int actualPort = serverPort.actualPort();
+                if (actualPort > 0) {
+                    cached = originalHostnamePattern + ':' + actualPort;
+                    cachedHostnamePattern = cached;
+                    return cached;
+                }
+            } finally {
+                hostnameCacheLock.unlock();
             }
         }
         return hostnamePattern;
+    }
+
+    void resetCachedHostnames() {
+        hostnameCacheLock.lock();
+        try {
+            cachedDefaultHostname = null;
+            cachedHostnamePattern = null;
+        } finally {
+            hostnameCacheLock.unlock();
+        }
     }
 
     /**

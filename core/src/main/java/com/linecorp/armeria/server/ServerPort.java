@@ -265,6 +265,12 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.actualPort = actualPort;
     }
 
+    void resetActualPort() {
+        if (localAddress.getPort() == 0) {
+            actualPort = -1;
+        }
+    }
+
     @Nullable
     ServerPortMetric serverPortMetric() {
         return serverPortMetric;

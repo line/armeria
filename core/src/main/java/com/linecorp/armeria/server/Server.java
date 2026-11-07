@@ -642,6 +642,8 @@ public final class Server implements ListenableAsyncCloseable {
                 lock.lock();
                 try {
                     activePorts.clear();
+                    config.ports().forEach(ServerPort::resetActualPort);
+                    config.virtualHosts().forEach(VirtualHost::resetCachedHostnames);
                 } finally {
                     lock.unlock();
                 }
@@ -800,6 +802,14 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         public void operationComplete(ChannelFuture f) {
+            try {
+                collectServerPort(f);
+            } catch (Throwable cause) {
+                future.completeExceptionally(cause);
+            }
+        }
+
+        private void collectServerPort(ChannelFuture f) {
             final ServerChannel ch = (ServerChannel) f.channel();
             assert ch.eventLoop().inEventLoop();
             serverChannels.add(ch);
@@ -878,7 +888,7 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         public void operationComplete(ChannelFuture f) throws Exception {
-            if (!f.isSuccess()) {
+            if (!f.isSuccess() || future.isCompletedExceptionally()) {
                 return;
             }
             if (!it.hasNext()) {

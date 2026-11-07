@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.DefaultServerConfig.DEFAULT_BOSS_GROUP_FACTORY;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +36,7 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
@@ -42,6 +44,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -57,6 +60,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -244,6 +249,57 @@ class ServerTest {
                       .filter(predicate)
                       .count();
         assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
+    }
+
+    @Test
+    void serverPortStartListenerFailureFailsStartup() {
+        final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
+        final Server server = Server.builder()
+                                    .port(port)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .build();
+        port.setActualPort(1);
+
+        try {
+            assertThatThrownBy(() -> server.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("already set");
+            assertThat(server.activePorts()).isEmpty();
+            assertThat(port.actualPort()).isZero();
+        } finally {
+            server.close();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1 })
+    void serverPortStartListenerFailureStopsStartingRemainingPorts(int failedPortIndex) {
+        final List<ServerPort> ports = Arrays.asList(new ServerPort(0, SessionProtocol.HTTP),
+                                                   new ServerPort(0, SessionProtocol.HTTP),
+                                                   new ServerPort(0, SessionProtocol.HTTP));
+        final AtomicInteger bossGroupCreations = new AtomicInteger();
+        final ServerBuilder sb = Server.builder()
+                                       .service("/", (ctx, req) -> HttpResponse.of(200))
+                                       .bossGroupFactory(threadName -> {
+                                           if (bossGroupCreations.incrementAndGet() > failedPortIndex + 1) {
+                                               // Avoid creating resources if a remaining port is started.
+                                               throw new AnticipatedException("Unexpected port startup");
+                                           }
+                                           return DEFAULT_BOSS_GROUP_FACTORY.apply(threadName);
+                                       });
+        ports.forEach(sb::port);
+        ports.get(failedPortIndex).setActualPort(1);
+
+        try (Server server = sb.build()) {
+            assertThatThrownBy(() -> server.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("already set");
+            assertThat(bossGroupCreations).hasValue(failedPortIndex + 1);
+            assertThat(server.activePorts()).isEmpty();
+            assertThat(ports).allSatisfy(port -> assertThat(port.actualPort()).isZero());
+        }
     }
 
     private static void testInvocation0(String path) throws IOException, ParseException {
