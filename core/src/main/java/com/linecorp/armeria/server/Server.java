@@ -641,7 +641,18 @@ public final class Server implements ListenableAsyncCloseable {
                 // All server ports have been closed.
                 lock.lock();
                 try {
+                    // Reset only ports still in the current configuration.
+                    // Preserve the existing behavior for ports replaced by reconfiguration.
+                    final List<ServerPort> configuredPorts = config.ports();
+                    for (ServerPort activePort : activePorts.values()) {
+                        final ServerPort configuredPort = activePort.configuredPort();
+                        if (configuredPort != null &&
+                            configuredPorts.stream().anyMatch(port -> port == configuredPort)) {
+                            configuredPort.resetActualPort();
+                        }
+                    }
                     activePorts.clear();
+                    config.virtualHosts().forEach(VirtualHost::resetCachedHostnames);
                 } finally {
                     lock.unlock();
                 }
@@ -800,6 +811,14 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         public void operationComplete(ChannelFuture f) {
+            try {
+                collectServerPort(f);
+            } catch (Throwable cause) {
+                future.completeExceptionally(cause);
+            }
+        }
+
+        private void collectServerPort(ChannelFuture f) {
             final ServerChannel ch = (ServerChannel) f.channel();
             assert ch.eventLoop().inEventLoop();
             serverChannels.add(ch);
@@ -810,18 +829,19 @@ public final class Server implements ListenableAsyncCloseable {
             }
 
             final SocketAddress localAddress = ch.localAddress();
+            final ServerPort configuredPort = port.localAddress().getPort() == 0 ? port : null;
             final ServerPort actualPort;
             if (localAddress instanceof InetSocketAddress) {
                 actualPort = new ServerPort((InetSocketAddress) localAddress,
                                             port.protocols(),
-                                            port.portGroup());
+                                            port.portGroup(), configuredPort);
             } else if (localAddress instanceof io.netty.channel.unix.DomainSocketAddress) {
                 // Convert Netty's DomainSocketAddress to ours.
                 final DomainSocketAddress converted = DomainSocketAddress.of(
                         (io.netty.channel.unix.DomainSocketAddress) localAddress);
                 actualPort = new ServerPort(converted,
                                             port.protocols(),
-                                            port.portGroup());
+                                            port.portGroup(), configuredPort);
             } else {
                 logger.warn("Unexpected local address type: {}", localAddress.getClass().getName());
                 return;
@@ -830,16 +850,15 @@ public final class Server implements ListenableAsyncCloseable {
             assert serverPortMetric != null;
             actualPort.setServerPortMetric(serverPortMetric);
 
-            // Set the actual port on the original ServerPort for ephemeral ports
-            if (port.localAddress().getPort() == 0) {
-                port.setActualPort(actualPort.localAddress().getPort());
-            }
-
             // Update the boss thread so its name contains the actual port.
             Thread.currentThread().setName(bossThreadName(actualPort));
 
             lock.lock();
             try {
+                // Set the actual port before registering the binding.
+                if (configuredPort != null) {
+                    configuredPort.setActualPort(actualPort.localAddress().getPort());
+                }
                 // Update the map of active ports.
                 activePorts.put(actualPort.localAddress(), actualPort);
             } finally {
@@ -878,7 +897,7 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         public void operationComplete(ChannelFuture f) throws Exception {
-            if (!f.isSuccess()) {
+            if (!f.isSuccess() || future.isCompletedExceptionally()) {
                 return;
             }
             if (!it.hasNext()) {

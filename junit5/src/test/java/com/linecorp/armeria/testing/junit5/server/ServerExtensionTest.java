@@ -33,8 +33,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServerPortBindException;
 import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
@@ -120,10 +121,14 @@ class ServerExtensionTest {
 
                 @Override
                 protected void configure(ServerBuilder sb) {
-                    final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
-                    ports.add(port);
-                    sb.port(port).http(occupiedPort.getLocalPort())
-                      .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+                    sb.http(0).http(occupiedPort.getLocalPort())
+                      .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .serverListener(new ServerListenerAdapter() {
+                          @Override
+                          public void serverStopping(Server server) {
+                              ports.addAll(server.activePorts().values());
+                          }
+                      });
                 }
             };
             assertThatThrownBy(extension::start).isInstanceOf(CompletionException.class)
@@ -131,9 +136,10 @@ class ServerExtensionTest {
             assertThat(ports).hasSize(5);
             assertThatThrownBy(extension::server).isInstanceOf(IllegalStateException.class);
             for (ServerPort port : ports) {
-                assertThat(port.actualPort()).isPositive();
-                try (ServerSocket releasedPort = new ServerSocket(port.actualPort())) {
-                    assertThat(releasedPort.getLocalPort()).isEqualTo(port.actualPort());
+                final int actualPort = port.localAddress().getPort();
+                assertThat(actualPort).isPositive();
+                try (ServerSocket releasedPort = new ServerSocket(actualPort)) {
+                    assertThat(releasedPort.getLocalPort()).isEqualTo(actualPort);
                 }
             }
         }
