@@ -65,6 +65,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
@@ -278,9 +279,47 @@ class ServerTest {
                     .hasMessageContaining("already set");
             assertThat(bossGroups).hasSize(failedPortIndex + 1);
             assertThat(server.activePorts()).isEmpty();
-            assertThat(ports).allSatisfy(port -> assertThat(port.actualPort()).isZero());
+            for (int i = 0; i < ports.size(); i++) {
+                assertThat(ports.get(i).actualPort()).isEqualTo(i == failedPortIndex ? 1 : 0);
+            }
         } finally {
             closeServerAfterStartupFailure(server, bossGroups);
+        }
+    }
+
+    @Test
+    void failedStartupDoesNotResetAnotherServersPort() throws Exception {
+        final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
+        final Server first = Server.builder().port(port)
+                                   .service("/", (ctx, req) -> HttpResponse.of("first")).build();
+        final Server second = Server.builder().port(port)
+                                    .service("/", (ctx, req) -> HttpResponse.of("second")).build();
+        try {
+            first.start().get(10, TimeUnit.SECONDS);
+            final int firstPort = port.actualPort();
+            assertThatThrownBy(() -> second.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
+            assertThat(port.actualPort()).isEqualTo(firstPort);
+            assertThat(WebClient.of("http://127.0.0.1:" + firstPort).get("/").aggregate()
+                                .get(10, TimeUnit.SECONDS).contentUtf8()).isEqualTo("first");
+
+            first.stop().get(10, TimeUnit.SECONDS);
+            assertThat(port.actualPort()).isZero();
+            second.start().get(10, TimeUnit.SECONDS);
+            final int secondPort = port.actualPort();
+            assertThatThrownBy(() -> first.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
+            assertThat(port.actualPort()).isEqualTo(secondPort);
+            assertThat(WebClient.of("http://127.0.0.1:" + secondPort).get("/").aggregate()
+                                .get(10, TimeUnit.SECONDS).contentUtf8()).isEqualTo("second");
+        } finally {
+            try {
+                second.closeAsync().get(10, TimeUnit.SECONDS);
+            } finally {
+                first.closeAsync().get(10, TimeUnit.SECONDS);
+            }
         }
     }
 

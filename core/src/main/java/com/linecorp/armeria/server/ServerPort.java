@@ -66,6 +66,9 @@ public final class ServerPort implements Comparable<ServerPort> {
     private final String comparisonStr;
     private final Set<SessionProtocol> protocols;
     private final long portGroup;
+    // The configured ephemeral port associated with this bound port, or null.
+    @Nullable
+    private final ServerPort configuredPort;
     private int hashCode;
     @Nullable
     private ServerPortMetric serverPortMetric;
@@ -119,6 +122,11 @@ public final class ServerPort implements Comparable<ServerPort> {
      *                  will choose the same port number for them, rather than allocating two ephemeral ports.
      */
     ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup) {
+        this(localAddress, protocols, portGroup, null);
+    }
+
+    ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols, long portGroup,
+               @Nullable ServerPort configuredPort) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -133,6 +141,7 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.localAddress = localAddress;
         this.protocols = checkProtocols(protocols);
         this.portGroup = portGroup;
+        this.configuredPort = configuredPort;
 
         if (localAddress instanceof DomainSocketAddress) {
             comparisonStr = ((DomainSocketAddress) localAddress).authority() + '/' + protocols;
@@ -235,10 +244,10 @@ public final class ServerPort implements Comparable<ServerPort> {
     }
 
     /**
-     * Returns the actual port this {@link ServerPort} is bound to.
-     * If the port was configured as 0 (ephemeral) and is bound, returns the actual bound port.
-     * Otherwise, returns the configured port from {@link #localAddress()}.
-     * After the server stops, returns the configured port again, including 0 for an ephemeral port.
+     * Returns the configured port from {@link #localAddress()}, or the assigned port for an ephemeral port.
+     * For an ephemeral port, this method returns {@code 0} before binding.
+     * The assigned port is reset to {@code 0} when the server stops, unless the server has been
+     * reconfigured using {@link Server#reconfigure(ServerConfigurator)}.
      */
     @UnstableApi
     public int actualPort() {
@@ -273,6 +282,11 @@ public final class ServerPort implements Comparable<ServerPort> {
     }
 
     @Nullable
+    ServerPort configuredPort() {
+        return configuredPort;
+    }
+
+    @Nullable
     ServerPortMetric serverPortMetric() {
         return serverPortMetric;
     }
@@ -281,7 +295,7 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.serverPortMetric = serverPortMetric;
     }
 
-    // Do not take account into serverPortMetric for equality and hashCode.
+    // Do not take account of configuredPort or serverPortMetric in equality and hashCode.
     @Override
     public int hashCode() {
         int hashCode = this.hashCode;
