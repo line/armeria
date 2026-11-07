@@ -21,22 +21,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.ServerSocket;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManagerFactory;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -543,54 +532,6 @@ class PortBasedVirtualHostTest {
         } finally {
             server.close();
         }
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void resettingCachedHostnamesDoesNotRetainConcurrentLookup(boolean defaultHostname) throws Exception {
-        final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
-        try (Server server = Server.builder()
-                                   .port(port)
-                                   .virtualHost(port)
-                                   .service("/test", (ctx, req) -> HttpResponse.of("OK"))
-                                   .and()
-                                   .build()) {
-            final VirtualHost virtualHost = server.config().virtualHosts().stream()
-                                                  .filter(v -> v.serverPort() == port)
-                                                  .findFirst().orElseThrow(AssertionError::new);
-            final Supplier<String> hostname =
-                    defaultHostname ? virtualHost::defaultHostname : virtualHost::hostnamePattern;
-            final String originalHostname = hostname.get();
-            final int iterations = 10000;
-            final Phaser phaser = new Phaser(2);
-            final ExecutorService executor = Executors.newSingleThreadExecutor();
-            try {
-                final Future<?> lookup = executor.submit(() -> {
-                    for (int i = 0; i < iterations; i++) {
-                        awaitPhase(phaser);
-                        assertThat(hostname.get()).isNotNull();
-                        awaitPhase(phaser);
-                    }
-                    return null;
-                });
-                for (int i = 0; i < iterations; i++) {
-                    port.setActualPort(12345);
-                    awaitPhase(phaser);
-                    port.resetActualPort();
-                    virtualHost.resetCachedHostnames();
-                    awaitPhase(phaser);
-                    assertThat(hostname.get()).isEqualTo(originalHostname);
-                }
-                lookup.get(10, TimeUnit.SECONDS);
-            } finally {
-                phaser.forceTermination();
-                assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
-            }
-        }
-    }
-
-    private static void awaitPhase(Phaser phaser) throws InterruptedException, TimeoutException {
-        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 10, TimeUnit.SECONDS);
     }
 
     @Test

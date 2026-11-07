@@ -236,8 +236,9 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     /**
      * Returns the actual port this {@link ServerPort} is bound to.
-     * If the port was configured as 0 (ephemeral) and has been bound, returns the actual bound port.
+     * If the port was configured as 0 (ephemeral) and is bound, returns the actual bound port.
      * Otherwise, returns the configured port from {@link #localAddress()}.
+     * After the server stops, returns the configured port again, including 0 for an ephemeral port.
      */
     @UnstableApi
     public int actualPort() {

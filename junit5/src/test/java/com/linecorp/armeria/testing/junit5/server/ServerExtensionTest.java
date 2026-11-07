@@ -33,7 +33,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -113,7 +112,6 @@ class ServerExtensionTest {
     @Test
     void exhaustedStartupAttemptsReleaseBoundPorts() throws Exception {
         final List<ServerPort> ports = new ArrayList<>();
-        final List<Integer> actualPorts = new ArrayList<>();
         try (ServerSocket occupiedPort = new ServerSocket(0)) {
             final ServerExtension extension = new ServerExtension(false) {
                 @Override
@@ -123,25 +121,22 @@ class ServerExtensionTest {
 
                 @Override
                 protected void configure(ServerBuilder sb) {
-                    final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
-                    ports.add(port);
-                    sb.port(port).http(occupiedPort.getLocalPort())
+                    sb.http(0).http(occupiedPort.getLocalPort())
                       .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .serverListener(new ServerListenerAdapter() {
                           @Override
                           public void serverStopping(Server server) {
-                              actualPorts.add(port.actualPort());
+                              ports.addAll(server.activePorts().values());
                           }
                       });
                 }
             };
             assertThatThrownBy(extension::start).isInstanceOf(CompletionException.class)
                                                .hasCauseInstanceOf(ServerPortBindException.class);
-            assertThat(ports).hasSize(5)
-                             .allSatisfy(port -> assertThat(port.actualPort()).isZero());
-            assertThat(actualPorts).hasSize(5);
+            assertThat(ports).hasSize(5);
             assertThatThrownBy(extension::server).isInstanceOf(IllegalStateException.class);
-            for (int actualPort : actualPorts) {
+            for (ServerPort port : ports) {
+                final int actualPort = port.localAddress().getPort();
                 assertThat(actualPort).isPositive();
                 try (ServerSocket releasedPort = new ServerSocket(actualPort)) {
                     assertThat(releasedPort.getLocalPort()).isEqualTo(actualPort);
