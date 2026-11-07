@@ -313,10 +313,6 @@ public final class VirtualHost {
             }
             hostnameCacheLock.lock();
             try {
-                cached = cachedDefaultHostname;
-                if (cached != null) {
-                    return cached;
-                }
                 final int actualPort = serverPort.actualPort();
                 if (actualPort > 0) {
                     cached = originalDefaultHostname + ':' + actualPort;
@@ -342,10 +338,6 @@ public final class VirtualHost {
             }
             hostnameCacheLock.lock();
             try {
-                cached = cachedHostnamePattern;
-                if (cached != null) {
-                    return cached;
-                }
                 final int actualPort = serverPort.actualPort();
                 if (actualPort > 0) {
                     cached = originalHostnamePattern + ':' + actualPort;
