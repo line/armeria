@@ -26,14 +26,21 @@ import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -296,5 +303,32 @@ class HttpEncodedResponseTest {
         }, ImmediateEventExecutor.INSTANCE);
 
         assertThat(exceptionRef.get()).isNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("varyArgs")
+    void shouldPreserveExistingVary(List<String> vary, List<String> expected) {
+        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                                                       .add(HttpHeaderNames.VARY, vary)
+                                                       .build();
+        final HttpResponse orig = HttpResponse.of(headers, HttpData.ofUtf8("foo"));
+        final HttpEncodedResponse encoded = new HttpEncodedResponse(
+                orig, StreamEncoderFactories.GZIP, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+
+        final ResponseHeaders encodedHeaders = encoded.aggregate().join().headers();
+        assertThat(encodedHeaders.get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+        assertThat(encodedHeaders.getAll(HttpHeaderNames.VARY)).isEqualTo(expected);
+    }
+
+    private static Stream<Arguments> varyArgs() {
+        return Stream.of(
+                Arguments.of(ImmutableList.of(), ImmutableList.of("accept-encoding")),
+                Arguments.of(ImmutableList.of("Accept-Language"),
+                             ImmutableList.of("Accept-Language", "accept-encoding")),
+                Arguments.of(ImmutableList.of("Accept-Language, Accept-Encoding"),
+                             ImmutableList.of("Accept-Language, Accept-Encoding")),
+                Arguments.of(ImmutableList.of("Accept-Language", "ACCEPT-ENCODING"),
+                             ImmutableList.of("Accept-Language", "ACCEPT-ENCODING")),
+                Arguments.of(ImmutableList.of("*"), ImmutableList.of("*")));
     }
 }

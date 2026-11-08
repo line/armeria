@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -57,6 +58,8 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private static final AtomicIntegerFieldUpdater<HttpEncodedResponse> encoderClosedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(HttpEncodedResponse.class, "encoderClosed");
+
+    private static final Splitter VARY_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private final StreamEncoderFactory encoderFactory;
     private final Predicate<MediaType> encodableContentTypePredicate;
@@ -124,7 +127,10 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
             // Always use chunked encoding when compressing.
             mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
             mutable.set(HttpHeaderNames.CONTENT_ENCODING, encoderFactory.encodingHeaderValue());
-            mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
+            if (!varyContainsAcceptEncodingOrWildcard(headers)) {
+                // Keep the existing fields, e.g. `Vary: accept-language`.
+                mutable.add(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
+            }
             return mutable.build();
         }
 
@@ -206,6 +212,18 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
             encodedStream.buffer().release();
         }
         return true;
+    }
+
+    private static boolean varyContainsAcceptEncodingOrWildcard(ResponseHeaders headers) {
+        for (String value : headers.getAll(HttpHeaderNames.VARY)) {
+            for (String field : VARY_SPLITTER.split(value)) {
+                if ("*".equals(field) ||
+                    HttpHeaderNames.ACCEPT_ENCODING.contentEqualsIgnoreCase(field)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean shouldEncodeResponse(ResponseHeaders headers) {
