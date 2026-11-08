@@ -259,6 +259,96 @@ class HealthCheckTransportSocketMatchTest {
         }
     }
 
+    @Test
+    void healthCheckUsesEndpointMatchedTransportSocket() throws Exception {
+        final String wrongCa = base64Cert(wrongCert.certificateFile());
+        final String correctCa = base64Cert(serverCert.certificateFile());
+
+        //language=YAML
+        final String bootstrapYaml =
+                """
+                static_resources:
+                  listeners:
+                  - name: listener
+                    api_listener:
+                      api_listener:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager\
+                .v3.HttpConnectionManager
+                        stat_prefix: http
+                        route_config:
+                          name: local_route
+                          virtual_hosts:
+                          - name: local_service
+                            domains: ["*"]
+                            routes:
+                            - match:
+                                prefix: /
+                              route:
+                                cluster: cluster
+                        http_filters:
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  clusters:
+                  - name: cluster
+                    type: STATIC
+                    load_assignment:
+                      cluster_name: cluster
+                      endpoints:
+                      - lb_endpoints:
+                        - endpoint:
+                            address:
+                              socket_address:
+                                address: 127.0.0.1
+                                port_value: %d
+                          metadata:
+                            filter_metadata:
+                              envoy.transport_socket_match:
+                                tls_mode: "custom"
+                    transport_socket:
+                      name: envoy.transport_sockets.tls
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.UpstreamTlsContext
+                        common_tls_context:
+                          validation_context:
+                            trusted_ca:
+                              inline_bytes: %s
+                    transport_socket_matches:
+                    - name: custom_tls
+                      match:
+                        tls_mode: "custom"
+                      transport_socket:
+                        name: envoy.transport_sockets.tls
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.transport_sockets\
+                .tls.v3.UpstreamTlsContext
+                          common_tls_context:
+                            validation_context:
+                              trusted_ca:
+                                inline_bytes: %s
+                    health_checks:
+                    - http_health_check:
+                        path: /monitor/healthcheck
+                      timeout: 5s
+                      interval: 10s
+                      unhealthy_threshold: 1
+                      healthy_threshold: 1
+                """.formatted(tlsServer.httpsPort(), wrongCa, correctCa);
+
+        final Bootstrap bootstrap = XdsResourceReader.fromYaml(bootstrapYaml);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             ListenerRoot root = xdsBootstrap.listenerRoot("listener")) {
+            final XdsLoadBalancer loadBalancer = pollLoadBalancer(root, "cluster");
+            // Without transport_socket_match_criteria, the health check uses the transport socket
+            // that the endpoint's metadata selects, which has the correct CA certificate.
+            final List<Integer> healthyPorts =
+                    loadBalancer.hostSets().get(0).healthyHostsEndpointGroup().endpoints()
+                                .stream().map(Endpoint::port).collect(Collectors.toList());
+            assertThat(healthyPorts).containsExactly(tlsServer.httpsPort());
+        }
+    }
+
     private static String base64Cert(File certFile) throws Exception {
         return Base64.getEncoder().encodeToString(Files.readAllBytes(certFile.toPath()));
     }
