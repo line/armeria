@@ -44,9 +44,9 @@ public final class EncodingServiceBuilder {
 
     private static final Set<MediaType> defaultEncodableMediaTypsSet =
             ImmutableSet.of(MediaType.ANY_TEXT_TYPE,
-                            MediaType.APPLICATION_XML_UTF_8,
-                            MediaType.JAVASCRIPT_UTF_8,
-                            MediaType.JSON_UTF_8);
+                            MediaType.APPLICATION_XML_UTF_8.withoutParameters(),
+                            MediaType.JAVASCRIPT_UTF_8.withoutParameters(),
+                            MediaType.JSON);
 
     // TODO(minwoox) consider this condition to align with the default text previewer.
     private static final Predicate<MediaType> defaultEncodableContentTypePredicate =
