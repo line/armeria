@@ -42,6 +42,7 @@ class GraphqlServiceTest {
     ) {
         runBlocking {
             val response = client().execute(UserNameQuery(id))
+            assertThat(response.data?.userById?.id).isEqualTo(id.toInt())
             assertThat(response.data?.userById?.name).isEqualTo(expected)
         }
     }
@@ -53,7 +54,7 @@ class GraphqlServiceTest {
     class UserNameQuery(
         id: String,
     ) : GraphQLClientRequest<UserNameResult> {
-        override val query: String = "query {userById(id: $id) {name}}"
+        override val query: String = "query {userById(id: $id) {id name}}"
         override val operationName: String? = null
 
         override fun responseType(): KClass<UserNameResult> = UserNameResult::class

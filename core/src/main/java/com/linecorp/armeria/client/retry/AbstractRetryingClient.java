@@ -190,7 +190,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             derivedCtx.clearResponseTimeout();
             return true;
         } else {
-            derivedCtx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, responseTimeoutMillis);
+            derivedCtx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, responseTimeoutMillis);
             return true;
         }
     }

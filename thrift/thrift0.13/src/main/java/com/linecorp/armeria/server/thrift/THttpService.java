@@ -523,12 +523,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             }
 
             try {
-                // Optionally checks the message length before calling `readMessageBegin()` because
-                // Thrift 0.9.x and 0.10.x does not support a correct validation of `readMessageBegin()` for
-                // some `TProtocol`s.
-                ThriftProtocolUtil.maybeCheckMessageLength(serializationFormat, buf, maxRequestStringLength);
-
-                header = inProto.readMessageBegin();
+                header = ThriftProtocolUtil.readMessageBegin(inProto, serializationFormat,
+                                                             buf, maxRequestStringLength);
             } catch (Exception e) {
                 logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);
 

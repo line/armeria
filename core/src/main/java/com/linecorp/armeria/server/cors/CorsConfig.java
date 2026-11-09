@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList.Builder;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.CorsHeaderUtil;
@@ -97,7 +96,8 @@ public final class CorsConfig {
         }
 
         if (isAnyOriginSupported()) {
-            return Iterables.getFirst(policies, null);
+            final CorsPolicy policy = policies.get(0);
+            return isPathMatched(policy, routingContext) ? policy : null;
         }
 
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);

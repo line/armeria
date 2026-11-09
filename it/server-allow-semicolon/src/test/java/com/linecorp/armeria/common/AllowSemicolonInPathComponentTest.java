@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -53,5 +55,30 @@ class AllowSemicolonInPathComponentTest {
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
         assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
         assertThat(lastRouteWasFallback).isTrue();
+    }
+
+    @RegisterExtension
+    static final ServerExtension decoratorServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.serviceUnder("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.decoratorUnder("/admin", (delegate, ctx, req) -> HttpResponse.of(HttpStatus.FORBIDDEN));
+        }
+    };
+
+    @ParameterizedTest
+    @CsvSource({
+            "/admin/secret, 403",
+            // `.`/`..` + matrix variable must not bypass the decorator (GHSA-xqhm-4ph4-423v): a servlet
+            // strips `;a=b` and resolves the dot segment back to `/admin/secret`.
+            "/.;a=b/admin/secret, 400",
+            "/..;a=b/admin/secret, 400",
+            "/%2e;a=b/admin/secret, 400",
+            // Ordinary matrix variables (including a dot inside one) stay allowed.
+            "/foo;a=b/bar, 200",
+            "/foo;./bar, 200",
+    })
+    void dotSegmentWithMatrixVariableShouldNotBypassDecorator(String path, int status) {
+        assertThat(decoratorServer.blockingWebClient().get(path).status().code()).isEqualTo(status);
     }
 }

@@ -100,6 +100,14 @@ class JsonSchemaGeneratorTest {
     // ---- Tests --------------------------------------------------------------
 
     @Test
+    void emptyServices() {
+        final ServiceSpecification spec = new ServiceSpecification(
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+
+        assertThatJson(JsonSchemaGenerator.generate(spec)).isEqualTo("{}");
+    }
+
+    @Test
     void optionalIsUnwrapped_andNotRequired() {
         final FieldInfo opt = FieldInfo.builder("maybe",
                                                 TypeSignature.ofOptional(TypeSignature.ofBase("int")))
