@@ -42,7 +42,6 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private ServerHttp2ObjectEncoder responseEncoder;
 
     private final Http2GracefulConnectionShutdownHandler gracefulConnectionShutdownHandler;
-    private boolean drainEnded;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
@@ -154,9 +153,9 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (drainEnded && gracefulShutdownSupport.isTerminating()) {
-            // The final GOAWAY has been sent and the connection is waiting for its active streams,
-            // but the graceful shutdown of the server is over.
+        if (gracefulShutdownSupport.isTerminating()) {
+            // The graceful shutdown of the server is over. Close the active streams immediately
+            // instead of waiting for them. New streams are rejected by Netty after the GOAWAY.
             closeActiveStreams();
             super.close(ctx, promise);
             return;
@@ -188,7 +187,6 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
          */
         @Override
         public void onDrainEnd(ChannelHandlerContext ctx) throws Exception {
-            drainEnded = true;
             Http2ServerConnectionHandler.super.close(ctx, ctx.newPromise());
             // Cancel scheduled tasks after the call to the super class above to avoid triggering
             // needsImmediateDisconnection.
