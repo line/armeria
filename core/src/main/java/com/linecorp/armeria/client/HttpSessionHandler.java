@@ -285,8 +285,28 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
+    public void decrementNumUnfinishedResponses() {
+        assert responseDecoder != null;
+        responseDecoder.decrementUnfinishedResponses();
+    }
+
+    @Override
     public int incrementAndGetNumRequestsSent() {
         return ++numRequestsSent;
+    }
+
+    void retireAfterSuccessor(Runnable retire) {
+        assert channel.eventLoop().inEventLoop();
+        if (!isWorthReplacing()) {
+            retire.run();
+            return;
+        }
+        channelPool.connectSuccessor(desiredProtocol, serializationFormat, poolKey, retire);
+    }
+
+    private boolean isWorthReplacing() {
+        return clientFactory.replaceConnectionOnMaxAge() && !isWebSocket() && numRequestsSent > 0 &&
+               isAcquirable();
     }
 
     private boolean handleEarlyCancellation(ClientRequestContext ctx, HttpRequest req,

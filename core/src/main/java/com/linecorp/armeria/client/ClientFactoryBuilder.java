@@ -867,6 +867,24 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets whether an HTTP/2 connection that reached its max connection age keeps serving requests until
+     * a new connection to the same endpoint is established or fails to connect, so that the max age
+     * rotation does not make a request wait for a new connection. The old connection is closed once its
+     * new connection is ready. The connections to an endpoint are replaced one after another, so the old
+     * connection may outlive its max age by the time it takes to establish a new connection for each
+     * connection to that endpoint. Only a connection that served at least one request is replaced, so that
+     * an endpoint that stopped receiving requests is not kept connected forever. HTTP/1 and WebSocket
+     * connections are always closed at their max age.
+     * This option has no effect unless {@link #maxConnectionAgeMillis(long)} is set, and is disabled by
+     * default.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder replaceConnectionOnMaxAge(boolean replaceConnectionOnMaxAge) {
+        option(ClientFactoryOptions.REPLACE_CONNECTION_ON_MAX_AGE, replaceConnectionOnMaxAge);
+        return this;
+    }
+
+    /**
      * Sets the maximum allowed number of requests that can be sent through one connection.
      * This option is disabled by default, which means unlimited.
      *

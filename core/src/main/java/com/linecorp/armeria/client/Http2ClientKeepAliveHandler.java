@@ -40,4 +40,9 @@ final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
         return HttpSession.get(ctx.channel()).hasUnfinishedResponses();
     }
+
+    @Override
+    protected void onMaxConnectionAgeExceeded(ChannelHandlerContext ctx, Runnable retire) {
+        ctx.pipeline().get(HttpSessionHandler.class).retireAfterSuccessor(retire);
+    }
 }
