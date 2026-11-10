@@ -196,6 +196,14 @@ const getRequestBody = (
   return urlRequestBody || method.exampleRequests[0] || '';
 };
 
+const serializeDebugFormSearchParams = (
+  params: URLSearchParams | string,
+): string => {
+  const debugFormParams = new URLSearchParams(params);
+  debugFormParams.delete('debug_form_is_open');
+  return debugFormParams.toString();
+};
+
 const errorResponseData = (error: unknown): ResponseData => ({
   body:
     error instanceof Object ? error.toString?.() ?? '<unknown>' : '<unknown>',
@@ -222,9 +230,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   docServiceRoute,
   sensitiveHeaders,
 }) => {
-  const debugFormSearchParams = new URLSearchParams(location.search);
-  debugFormSearchParams.delete('debug_form_is_open');
-  const debugFormSearch = debugFormSearchParams.toString();
+  const debugFormSearch = serializeDebugFormSearchParams(location.search);
   const initialRequestBody = getRequestBody(
     method,
     useRequestBody,
@@ -240,8 +246,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const responseCache = useRef<Record<string, ResponseData>>({});
-  // Keep the submitted value in memory while writing only its redacted copy to the URL.
-  const preserveHeadersForSearch = useRef<string | null>(null);
+  // Tracks URL state created by a submission so form fields can preserve their in-memory values.
+  const submittedSearchParams = useRef<string | null>(null);
   const currentMethodId = useRef(method.id);
   const isMounted = useRef(true);
   currentMethodId.current = method.id;
@@ -321,11 +327,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    if (preserveHeadersForSearch.current === debugFormSearch) {
-      preserveHeadersForSearch.current = null;
+    if (submittedSearchParams.current === debugFormSearch) {
+      submittedSearchParams.current = null;
       return;
     }
-    preserveHeadersForSearch.current = null;
+    submittedSearchParams.current = null;
 
     const urlParams = new URLSearchParams(debugFormSearch);
 
@@ -526,7 +532,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const queries = additionalQueries;
     const headers = additionalHeaders;
     let requestHeaders: { [name: string]: string } = {};
-    let preserveHeadersAfterSubmit = false;
     const params = new URLSearchParams(location.search);
 
     try {
@@ -567,8 +572,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
           sensitiveHeaders,
         );
         let minifiedHeaders = JSON.stringify(redactedHeaders);
-        preserveHeadersAfterSubmit =
-          minifiedHeaders !== JSON.stringify(requestHeaders);
         if (minifiedHeaders === '{}') {
           minifiedHeaders = '';
         }
@@ -593,11 +596,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     const serializedParams = `?${params.toString()}`;
     if (serializedParams !== location.search) {
-      if (preserveHeadersAfterSubmit) {
-        const nextDebugFormParams = new URLSearchParams(params);
-        nextDebugFormParams.delete('debug_form_is_open');
-        preserveHeadersForSearch.current = nextDebugFormParams.toString();
-      }
+      submittedSearchParams.current = serializeDebugFormSearchParams(params);
       history.push(`${location.pathname}${serializedParams}`);
     }
     await executeRequest(params, requestHeaders);

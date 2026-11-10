@@ -105,12 +105,7 @@ import java.util.Collections;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.server.docs.DocService;
 
-// Passing null disables redaction, including the default authorization header.
-DocService.builder()
-          .sensitiveHeaders(null)
-          .build();
-
-// Passing an empty list also disables redaction.
+// Passing an empty list disables redaction.
 DocService.builder()
           .sensitiveHeaders(Collections.emptyList())
           .build();

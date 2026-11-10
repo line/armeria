@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +43,6 @@ class DocServiceSettingsTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.serviceUnder("/default", DocService.builder().build());
-            sb.serviceUnder("/null", DocService.builder().sensitiveHeaders(null).build());
             sb.serviceUnder("/empty",
                             DocService.builder().sensitiveHeaders(Collections.emptyList()).build());
             sb.serviceUnder("/custom",
@@ -62,8 +62,20 @@ class DocServiceSettingsTest {
     }
 
     @Test
-    void nullDisablesSensitiveHeaders() throws Exception {
-        assertThat(sensitiveHeaders("/null/settings.json")).isEmpty();
+    void rejectsNullSensitiveHeaders() {
+        assertThatThrownBy(() -> DocService.builder().sensitiveHeaders(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("sensitiveHeaders");
+    }
+
+    @Test
+    void rejectsNullInSensitiveHeaders() {
+        final List<String> sensitiveHeaders = new ArrayList<>();
+        sensitiveHeaders.add("valid-header");
+        sensitiveHeaders.add(null);
+        assertThatThrownBy(() -> DocService.builder().sensitiveHeaders(sensitiveHeaders))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("sensitiveHeaders contains null.");
     }
 
     @Test

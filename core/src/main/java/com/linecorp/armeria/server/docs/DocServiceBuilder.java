@@ -353,15 +353,11 @@ public final class DocServiceBuilder {
      * in the documentation service.
      *
      * <p>This replaces the previously configured header names, including the default
-     * {@link HttpHeaderNames#AUTHORIZATION}. Specifying {@code null} or an empty iterable disables redaction.
+     * {@link HttpHeaderNames#AUTHORIZATION}. Specifying an empty iterable disables redaction.
      */
     @UnstableApi
-    public DocServiceBuilder sensitiveHeaders(
-            @Nullable Iterable<? extends CharSequence> sensitiveHeaders) {
-        if (sensitiveHeaders == null) {
-            this.sensitiveHeaders = ImmutableSet.of();
-            return this;
-        }
+    public DocServiceBuilder sensitiveHeaders(Iterable<? extends CharSequence> sensitiveHeaders) {
+        requireNonNull(sensitiveHeaders, "sensitiveHeaders");
         final ImmutableSet.Builder<String> builder = ImmutableSet.builder();
         for (CharSequence sensitiveHeader : sensitiveHeaders) {
             requireNonNull(sensitiveHeader, "sensitiveHeaders contains null.");
