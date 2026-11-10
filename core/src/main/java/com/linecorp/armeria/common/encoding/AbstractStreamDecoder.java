@@ -110,21 +110,21 @@ class AbstractStreamDecoder implements StreamDecoder {
                         composite.addComponent(true, buf);
                     } catch (Throwable t) {
                         composite.release();
-                        decoded = null;
                         throw t;
                     }
                 } else {
                     try {
                         composite = alloc.compositeBuffer();
+                    } catch (Throwable t) {
+                        decoded.release();
+                        buf.release();
+                        throw t;
+                    }
+
+                    try {
                         composite.addComponents(true, ImmutableList.of(decoded, buf));
                     } catch (Throwable t) {
-                        if (composite != null) {
-                            composite.release();
-                        } else {
-                            decoded.release();
-                            buf.release();
-                        }
-                        decoded = null;
+                        composite.release();
                         throw t;
                     }
                     decoded = composite;
