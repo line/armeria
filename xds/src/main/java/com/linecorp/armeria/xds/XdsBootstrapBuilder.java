@@ -20,6 +20,9 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+import java.util.ServiceLoader;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +81,19 @@ public final class XdsBootstrapBuilder {
         }
     };
 
+    private static final class BootstrapCustomizerHolder {
+        static final List<XdsBootstrapCustomizer> CUSTOMIZERS;
+
+        static {
+            final ImmutableList.Builder<XdsBootstrapCustomizer> builder = ImmutableList.builder();
+            for (XdsBootstrapCustomizer customizer : ServiceLoader.load(
+                    XdsBootstrapCustomizer.class, XdsBootstrapBuilder.class.getClassLoader())) {
+                builder.add(customizer);
+            }
+            CUSTOMIZERS = builder.build();
+        }
+    }
+
     private MeterRegistry meterRegistry = Flags.meterRegistry();
     private MeterIdPrefix meterIdPrefix = DEFAULT_METER_ID_PREFIX;
     @Nullable
@@ -86,6 +102,7 @@ public final class XdsBootstrapBuilder {
     private SnapshotWatcher<Object> snapshotWatcher = DEFAULT_SNAPSHOT_WATCHER;
     private DataSourcePolicy dataSourcePolicy = DataSourcePolicy.allowAll();
     private final ImmutableList.Builder<XdsExtensionFactory> extensionFactories = ImmutableList.builder();
+    private boolean includeBootstrapCustomizers = true;
 
     XdsBootstrapBuilder(Bootstrap bootstrap) {
         this.bootstrap = requireNonNull(bootstrap, "bootstrap");
@@ -159,11 +176,33 @@ public final class XdsBootstrapBuilder {
     }
 
     /**
+     * Disables applying {@link XdsBootstrapCustomizer} SPI implementations.
+     * By default, all customizers discovered via {@link ServiceLoader} are applied
+     * to the bootstrap during {@link #build()}.
+     */
+    public XdsBootstrapBuilder ignoreBootstrapCustomizers() {
+        includeBootstrapCustomizers = false;
+        return this;
+    }
+
+    /**
      * Builds the {@link XdsBootstrap}.
      */
     public XdsBootstrap build() {
         final EventExecutor eventExecutor = firstNonNull(this.eventExecutor, defaultGroup().next());
-        return new XdsBootstrapImpl(bootstrap, eventExecutor, meterIdPrefix, meterRegistry,
+        final Bootstrap finalBootstrap = applyBootstrapCustomizers(bootstrap);
+        return new XdsBootstrapImpl(finalBootstrap, eventExecutor, meterIdPrefix, meterRegistry,
                                     snapshotWatcher, dataSourcePolicy, extensionFactories.build());
+    }
+
+    private Bootstrap applyBootstrapCustomizers(Bootstrap bootstrap) {
+        if (!includeBootstrapCustomizers || BootstrapCustomizerHolder.CUSTOMIZERS.isEmpty()) {
+            return bootstrap;
+        }
+        Bootstrap result = bootstrap;
+        for (XdsBootstrapCustomizer customizer : BootstrapCustomizerHolder.CUSTOMIZERS) {
+            result = customizer.customize(result);
+        }
+        return result;
     }
 }

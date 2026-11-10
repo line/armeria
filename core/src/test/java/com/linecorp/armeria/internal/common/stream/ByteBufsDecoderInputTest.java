@@ -115,6 +115,29 @@ class ByteBufsDecoderInputTest {
     }
 
     @Test
+    void readUnsignedShort_splitAcrossBuffers() {
+        final ByteBufsDecoderInput input = new ByteBufsDecoderInput(UnpooledByteBufAllocator.DEFAULT);
+        input.add(Unpooled.wrappedBuffer(new byte[] { 0x01 }));
+        input.add(Unpooled.wrappedBuffer(new byte[] { (byte) 0x80 }));
+        input.add(Unpooled.wrappedBuffer(new byte[] { (byte) 0xFF }));
+        input.add(Unpooled.wrappedBuffer(new byte[] { (byte) 0xFE }));
+        assertThat(input.readUnsignedShort()).isEqualTo(0x0180);
+        assertThat(input.readUnsignedShort()).isEqualTo(0xFFFE);
+        assertThat(input.readableBytes()).isZero();
+        input.close();
+    }
+
+    @Test
+    void readLong_splitAcrossBuffers() {
+        final ByteBufsDecoderInput input = new ByteBufsDecoderInput(UnpooledByteBufAllocator.DEFAULT);
+        input.add(Unpooled.wrappedBuffer(new byte[] { 0x00, 0x00, 0x00 }));
+        input.add(Unpooled.wrappedBuffer(new byte[] { 0x01, (byte) 0x80, 0x00, 0x00, 0x00 }));
+        assertThat(input.readLong()).isEqualTo(0x0000_0001_8000_0000L);
+        assertThat(input.readableBytes()).isZero();
+        input.close();
+    }
+
+    @Test
     void readableBytes_readInt() {
         assertThat(input.readableBytes()).isEqualTo(9);
         input.readInt();

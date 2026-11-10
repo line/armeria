@@ -20,14 +20,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.reflections.ReflectionUtils.getMethods;
 import static org.reflections.ReflectionUtils.getSuperTypes;
 import static org.reflections.ReflectionUtils.includeObject;
-import static org.reflections.util.Utils.isEmpty;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -62,10 +61,10 @@ final class InternalReflectionUtils {
     }
 
     private static <T> List<T> filter(List<T> elements, Predicate<? super T>... predicates) {
-        return isEmpty(predicates) ? elements
-                                   : elements.stream()
-                                             .filter(Predicates.and(predicates)::apply)
-                                             .collect(toImmutableList());
+        return predicates.length == 0 ? elements
+                                      : elements.stream()
+                                                .filter(e -> Arrays.stream(predicates).allMatch(p -> p.test(e)))
+                                                .collect(toImmutableList());
     }
 
     private InternalReflectionUtils() {}
