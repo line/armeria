@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
@@ -188,8 +189,7 @@ public final class SslContextUtil {
                    "SSLContext has no cipher suites enabled. " +
                    "You must specify at least one cipher suite.");
         if (sslContext.applicationProtocolNegotiator().protocols().contains(ApplicationProtocolNames.HTTP_2)) {
-            final Set<String> enabledProtocols = enabledProtocols(sslContext);
-            validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers, enabledProtocols);
+            validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers, () -> enabledProtocols(sslContext));
         }
     }
 
@@ -221,33 +221,40 @@ public final class SslContextUtil {
     }
 
     static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers,
-                                     Set<String> tlsProtocols) {
-        // When only TLS 1.3 is enabled, the mandatory HTTP/2 cipher suite from RFC 7540
-        // (TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) is not applicable because it is a TLS 1.2 cipher.
-        // Instead, TLS 1.3 requires TLS_AES_128_GCM_SHA256 (RFC 8446).
-        // If TLS 1.2 is enabled (either alone or alongside TLS 1.3), we still enforce
-        // the TLS 1.2 essential cipher suite for backwards compatibility.
-        final boolean tls13Only = tlsProtocols.contains("TLSv1.3") && !tlsProtocols.contains("TLSv1.2");
-        if (tls13Only) {
-            if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13)) {
-                if (tlsAllowUnsafeCiphers) {
-                    if (!warnedMissingEssentialCipherSuiteTls13) {
-                        warnedMissingEssentialCipherSuiteTls13 = true;
-                        logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
+                                     Supplier<Set<String>> tlsProtocolsSupplier) {
+        final boolean hasTls13Essential = ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13);
+        final boolean hasTls12Essential = ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE);
+        // If both essential cipher suites are enabled, the HTTP/2 requirements are met regardless of which
+        // TLS version is negotiated, so we can avoid creating a temporary SSLEngine to inspect protocols.
+        if (!hasTls13Essential || !hasTls12Essential) {
+            final Set<String> tlsProtocols = tlsProtocolsSupplier.get();
+            // When only TLS 1.3 is enabled, the mandatory HTTP/2 cipher suite from RFC 7540
+            // (TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) is not applicable because it is a TLS 1.2 cipher.
+            // Instead, TLS 1.3 requires TLS_AES_128_GCM_SHA256 (RFC 8446).
+            // If TLS 1.2 is enabled (either alone or alongside TLS 1.3), we still enforce
+            // the TLS 1.2 essential cipher suite for backwards compatibility.
+            final boolean tls13Only = tlsProtocols.contains("TLSv1.3") && !tlsProtocols.contains("TLSv1.2");
+            if (tls13Only) {
+                if (!hasTls13Essential) {
+                    if (tlsAllowUnsafeCiphers) {
+                        if (!warnedMissingEssentialCipherSuiteTls13) {
+                            warnedMissingEssentialCipherSuiteTls13 = true;
+                            logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
+                        }
+                    } else {
+                        throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
                     }
-                } else {
-                    throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
                 }
-            }
-        } else {
-            if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
-                if (tlsAllowUnsafeCiphers) {
-                    if (!warnedMissingEssentialCipherSuite) {
-                        warnedMissingEssentialCipherSuite = true;
-                        logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+            } else {
+                if (!hasTls12Essential) {
+                    if (tlsAllowUnsafeCiphers) {
+                        if (!warnedMissingEssentialCipherSuite) {
+                            warnedMissingEssentialCipherSuite = true;
+                            logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+                        }
+                    } else {
+                        throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
                     }
-                } else {
-                    throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
                 }
             }
         }

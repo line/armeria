@@ -27,6 +27,7 @@ import javax.net.ssl.SSLException;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientTlsSpec;
@@ -189,6 +190,39 @@ class SslContextUtilTest {
             factory.closeAsync();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+    }
+
+    @Test
+    void validateHttp2CiphersBothEssentialPresent() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_AES_128_GCM_SHA256",
+                                                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+        SslContextUtil.validateHttp2Ciphers(ciphers, false, () -> {
+            throw new AssertionError("Supplier should not be called when both essential ciphers are present");
+        });
+    }
+
+    @Test
+    void validateHttp2CiphersTls13MissingEssentialCipher() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_AES_256_GCM_SHA384");
+        assertThatThrownBy(() -> SslContextUtil.validateHttp2Ciphers(ciphers, false,
+                                                                     () -> ImmutableSet.of("TLSv1.3")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TLS without the TLS_AES_128_GCM_SHA256 cipher suite enabled");
+    }
+
+    @Test
+    void validateHttp2CiphersTls13MissingEssentialCipherAllowed() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_AES_256_GCM_SHA384");
+        SslContextUtil.validateHttp2Ciphers(ciphers, true, () -> ImmutableSet.of("TLSv1.3"));
+    }
+
+    @Test
+    void validateHttp2CiphersTls12MissingEssentialCipher() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384");
+        assertThatThrownBy(() -> SslContextUtil.validateHttp2Ciphers(ciphers, false,
+                                                                     () -> ImmutableSet.of("TLSv1.2")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
     }
 
     @Nullable
