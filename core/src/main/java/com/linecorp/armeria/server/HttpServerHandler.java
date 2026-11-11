@@ -541,6 +541,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             try {
                 decreasePendingRequests();
                 increaseActiveRequests(isHttp1WebSocket);
+                if (!isHttp1WebSocket) {
+                    req = ServerRequestContent.prepare(reqCtx, req);
+                }
                 return service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.

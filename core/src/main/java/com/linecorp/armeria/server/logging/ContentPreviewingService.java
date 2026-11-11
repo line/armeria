@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServerOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
@@ -157,6 +158,10 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (ctx.config().options().get(ServerOptions.CONTENT_PREVIEW)
+               .factory() != null) {
+            return unwrap().serve(ctx, req);
+        }
         final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
         if (Boolean.TRUE.equals(settingContentPreview)) {
             return unwrap().serve(ctx, req);

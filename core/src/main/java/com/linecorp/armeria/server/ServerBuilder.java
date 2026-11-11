@@ -2355,6 +2355,16 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
     }
 
     /**
+     * Sets an HTTP content processing option for all virtual hosts and services unless overridden.
+     * The order of different options does not affect processing order.
+     */
+    @UnstableApi
+    public <T> ServerBuilder option(ServerOption<T> option, T value) {
+        virtualHostTemplate.option(option, value);
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request.
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.

@@ -54,6 +54,8 @@ import io.netty.channel.EventLoopGroup;
  */
 final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultServiceConfigSetters> {
 
+    private ServerOptions serverOptions = ServerOptions.of();
+
     @Nullable
     private String defaultServiceName;
     @Nullable
@@ -89,6 +91,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultS
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
+
+    @Override
+    public <T> DefaultServiceConfigSetters option(ServerOption<T> option, T value) {
+        serverOptions = ServerOptions.of(serverOptions, option.newValue(value));
+        return this;
+    }
 
     @Override
     public DefaultServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -407,6 +415,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultS
         if (serviceErrorHandler != null) {
             serviceConfigBuilder.errorHandler(serviceErrorHandler);
         }
+        serverOptions.forEach(value -> serviceConfigBuilder.option(value.option(), value.value()));
         serviceConfigBuilder.contextHook(contextHook);
         return serviceConfigBuilder;
     }

@@ -54,6 +54,19 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
             }
             merged = headers;
         } else {
+            final ServerConfig config = reqCtx.config().server().config();
+            try {
+                merged = prepareResponseHeaders(
+                        mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
+                                             reqCtx.config().defaultHeaders(),
+                                             config.isServerHeaderEnabled(), config.isDateHeaderEnabled()),
+                        endOfStream);
+            } catch (Exception cause) {
+                disableResponseCompression();
+                onError(cause);
+                setDone(true);
+                return;
+            }
             if (req.method() == HttpMethod.HEAD) {
                 endOfStream = true;
             } else {
@@ -75,11 +88,6 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
             } else {
                 maybeDisconnectOnSuppressedContinue();
             }
-            final ServerConfig config = reqCtx.config().server().config();
-            merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
-                                          reqCtx.config().defaultHeaders(),
-                                          config.isServerHeaderEnabled(),
-                                          config.isDateHeaderEnabled());
             final String connectionOption = merged.get(HttpHeaderNames.CONNECTION);
             if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
                 disconnectWhenFinished();

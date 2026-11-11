@@ -45,7 +45,11 @@ interface DecodedHttpRequest extends HttpRequest {
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
-            final ExchangeType exchangeType = service.exchangeType(routingCtx);
+            final ExchangeType serviceExchangeType = service.exchangeType(routingCtx);
+            final ExchangeType exchangeType = ExchangeType.of(
+                    serviceExchangeType.isRequestStreaming() ||
+                    ServerRequestContent.decoderFactory(config.options(), headers) != null,
+                    serviceExchangeType.isResponseStreaming());
             if (endOfStream) {
                 assert expectContinueHandler == null;
                 return new EmptyContentDecodedHttpRequest(

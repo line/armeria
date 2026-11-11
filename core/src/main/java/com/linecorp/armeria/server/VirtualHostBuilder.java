@@ -143,6 +143,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private ServiceNaming defaultServiceNaming;
     @Nullable
     private String defaultLogName;
+    private ServerOptions serverOptions = ServerOptions.of();
+
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -1079,6 +1081,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Sets an HTTP content processing option, overriding the server's value.
+     */
+    @UnstableApi
+    public <T> VirtualHostBuilder option(ServerOption<T> option, T value) {
+        serverOptions = ServerOptions.of(serverOptions, option.newValue(value));
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -1388,6 +1399,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
 
+        final ServerOptions serverOptions = ServerOptions.of(template.serverOptions, this.serverOptions);
+
         // Retrieve all settings as a local copy. Use default builder's properties if not set.
         assert template.defaultServiceNaming != null;
         final ServiceNaming defaultServiceNaming =
@@ -1510,7 +1523,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                             multipartUploadsLocation, multipartRemovalStrategy,
                                             serviceWorkerGroup, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unloggedExceptionsReporter, baseContextPath, contextHook);
+                                            unloggedExceptionsReporter, baseContextPath, contextHook,
+                                            serverOptions);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
@@ -1519,7 +1533,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                verboseResponses, accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation, multipartRemovalStrategy,
                                serviceWorkerGroup, defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler, unloggedExceptionsReporter, "/", contextHook);
+                               defaultErrorHandler, unloggedExceptionsReporter, "/", contextHook,
+                               serverOptions);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);

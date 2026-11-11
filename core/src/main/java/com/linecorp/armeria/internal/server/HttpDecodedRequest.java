@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.encoding;
+package com.linecorp.armeria.internal.server;
 
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
@@ -35,7 +35,7 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * A {@link FilteredHttpRequest} that applies HTTP decoding to {@link HttpObject}s as they are published.
  */
-final class HttpDecodedRequest extends FilteredHttpRequest {
+public final class HttpDecodedRequest extends FilteredHttpRequest {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpDecodedRequest.class);
 
@@ -43,7 +43,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     private boolean decoderFinished;
 
-    HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
+    public HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
                        ByteBufAllocator alloc, int maxRequestLength) {
         super(delegate);
         requestDecoder = decoderFactory.newDecoder(alloc, maxRequestLength);

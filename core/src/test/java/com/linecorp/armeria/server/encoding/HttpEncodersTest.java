@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactories;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
+import com.linecorp.armeria.internal.server.HttpEncoders;
 
 import io.netty.buffer.ByteBufOutputStream;
 

@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.server.logging;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.HttpService;
 
 /**
@@ -32,20 +29,10 @@ import com.linecorp.armeria.server.HttpService;
  */
 public final class ContentPreviewingServiceBuilder {
 
-    private static final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> DEFAULT_REQUEST_PREVIEW_SANITIZER = Functions.second();
-    private static final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> DEFAULT_RESPONSE_PREVIEW_SANITIZER = Functions.second();
-
-    private final ContentPreviewerFactory contentPreviewerFactory;
-
-    private BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> requestPreviewSanitizer = DEFAULT_REQUEST_PREVIEW_SANITIZER;
-    private BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> responsePreviewSanitizer = DEFAULT_RESPONSE_PREVIEW_SANITIZER;
+    private final ContentPreviewBuilder builder;
 
     ContentPreviewingServiceBuilder(ContentPreviewerFactory contentPreviewerFactory) {
-        this.contentPreviewerFactory = contentPreviewerFactory;
+        builder = ContentPreview.builder(contentPreviewerFactory);
     }
 
     /**
@@ -56,7 +43,7 @@ public final class ContentPreviewingServiceBuilder {
     public ContentPreviewingServiceBuilder requestPreviewSanitizer(
             BiFunction<? super RequestContext, String,
                     ? extends @Nullable Object> requestPreviewSanitizer) {
-        this.requestPreviewSanitizer = requireNonNull(requestPreviewSanitizer, "requestPreviewSanitizer");
+        builder.requestPreviewSanitizer(requestPreviewSanitizer);
         return this;
     }
 
@@ -68,7 +55,7 @@ public final class ContentPreviewingServiceBuilder {
     public ContentPreviewingServiceBuilder responsePreviewSanitizer(
             BiFunction<? super RequestContext, String,
                     ? extends @Nullable Object> responsePreviewSanitizer) {
-        this.responsePreviewSanitizer = requireNonNull(responsePreviewSanitizer, "responsePreviewSanitizer");
+        builder.responsePreviewSanitizer(responsePreviewSanitizer);
         return this;
     }
 
@@ -88,9 +75,7 @@ public final class ContentPreviewingServiceBuilder {
     public ContentPreviewingServiceBuilder previewSanitizer(
             BiFunction<? super RequestContext, String,
                     ? extends @Nullable Object> previewSanitizer) {
-        requireNonNull(previewSanitizer, "previewSanitizer");
-        this.requestPreviewSanitizer = previewSanitizer;
-        this.responsePreviewSanitizer = previewSanitizer;
+        builder.previewSanitizer(previewSanitizer);
         return this;
     }
 
@@ -99,8 +84,12 @@ public final class ContentPreviewingServiceBuilder {
      * properties of this builder.
      */
     public ContentPreviewingService build(HttpService delegate) {
-        return new ContentPreviewingService(delegate, contentPreviewerFactory,
-                                            requestPreviewSanitizer, responsePreviewSanitizer);
+        final ContentPreview preview = builder.build();
+        final ContentPreviewerFactory factory = preview.factory();
+        assert factory != null;
+        return new ContentPreviewingService(delegate, factory,
+                                            preview.requestPreviewSanitizer(),
+                                            preview.responsePreviewSanitizer());
     }
 
     /**

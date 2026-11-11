@@ -171,28 +171,30 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
 
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(merged);
-                    responseEncoder.writeTrailers(req.id(), req.streamId(), merged)
-                                   .addListener(writeHeadersFutureListener(true));
+                    writeResponseTrailers(merged)
+                            .addListener(writeHeadersFutureListener(true));
                 } else {
                     final boolean endOfStream = o.isEndOfStream();
                     final HttpData data = (HttpData) o;
                     data.touch(reqCtx);
                     final boolean wroteEmptyData = data.isEmpty();
-                    logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
                         setDone(false);
                     }
 
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
                     if (endOfStream && !additionalTrailers.isEmpty()) { // Last DATA frame
-                        responseEncoder.writeData(req.id(), req.streamId(), data, false)
-                                       .addListener(writeDataFutureListener(false, wroteEmptyData));
+                        final ChannelFuture future = writeResponseData(data, false);
+                        future.addListener(writeDataFutureListener(false, wroteEmptyData));
+                        if (future.isDone() && !future.isSuccess()) {
+                            return;
+                        }
                         logBuilder().responseTrailers(additionalTrailers);
-                        responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
-                                       .addListener(writeHeadersFutureListener(true));
+                        writeResponseTrailers(additionalTrailers)
+                                .addListener(writeHeadersFutureListener(true));
                     } else {
-                        responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream)
-                                       .addListener(writeDataFutureListener(endOfStream, wroteEmptyData));
+                        writeResponseData(data, endOfStream)
+                                .addListener(writeDataFutureListener(endOfStream, wroteEmptyData));
                     }
                 }
                 break;
@@ -208,12 +210,11 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
                 final HttpData data = (HttpData) o;
                 data.touch(reqCtx);
                 final boolean wroteEmptyData = data.isEmpty();
-                logBuilder().increaseResponseLength(data);
                 if (endOfStream) {
                     setDone(false);
                 }
-                responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream)
-                               .addListener(writeDataFutureListener(endOfStream, wroteEmptyData));
+                writeResponseData(data, endOfStream)
+                        .addListener(writeDataFutureListener(endOfStream, wroteEmptyData));
                 break;
             }
             case DONE:
@@ -311,13 +312,13 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
             final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
             if (!additionalTrailers.isEmpty()) {
                 logBuilder().responseTrailers(additionalTrailers);
-                responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
-                               .addListener(writeHeadersFutureListener(true));
+                writeResponseTrailers(additionalTrailers)
+                        .addListener(writeHeadersFutureListener(true));
                 ctx.flush();
             } else {
                 if (isWritable()) {
-                    responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true)
-                                   .addListener(writeDataFutureListener(true, true));
+                    writeResponseData(HttpData.empty(), true)
+                            .addListener(writeDataFutureListener(true, true));
                     ctx.flush();
                 } else {
                     if (!reqCtx.sessionProtocol().isMultiplex()) {

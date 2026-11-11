@@ -89,6 +89,7 @@ public final class ServiceConfig {
     private final Function<RoutingContext, RequestId> requestIdGenerator;
     private final ServiceErrorHandler serviceErrorHandler;
     private final Supplier<AutoCloseable> contextHook;
+    private final ServerOptions options;
 
     /**
      * Creates a new instance.
@@ -104,13 +105,14 @@ public final class ServiceConfig {
                   List<ShutdownSupport> shutdownSupports,
                   HttpHeaders defaultHeaders,
                   Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
-                  ServiceErrorHandler serviceErrorHandler, Supplier<? extends AutoCloseable> contextHook) {
+                  ServiceErrorHandler serviceErrorHandler, Supplier<? extends AutoCloseable> contextHook,
+                  ServerOptions options) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
              multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup, shutdownSupports,
-             defaultHeaders, requestIdGenerator, serviceErrorHandler, contextHook);
+             defaultHeaders, requestIdGenerator, serviceErrorHandler, contextHook, options);
     }
 
     /**
@@ -130,7 +132,8 @@ public final class ServiceConfig {
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
                           Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
                           ServiceErrorHandler serviceErrorHandler,
-                          Supplier<? extends AutoCloseable> contextHook) {
+                          Supplier<? extends AutoCloseable> contextHook, ServerOptions options) {
+        this.options = requireNonNull(options, "options");
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
@@ -160,6 +163,14 @@ public final class ServiceConfig {
         this.contextHook = (Supplier<AutoCloseable>) requireNonNull(contextHook, "contextHook");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
+    }
+
+    /**
+     * Returns the effective HTTP content processing options for this service.
+     */
+    @UnstableApi
+    public ServerOptions options() {
+        return options;
     }
 
     private static Set<TransientServiceOption> extractTransientServiceOptions(HttpService service) {
@@ -197,7 +208,7 @@ public final class ServiceConfig {
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                  multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup,
                                  shutdownSupports, defaultHeaders,
-                                 requestIdGenerator, serviceErrorHandler, contextHook);
+                                 requestIdGenerator, serviceErrorHandler, contextHook, options);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -209,7 +220,7 @@ public final class ServiceConfig {
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                  multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup,
                                  shutdownSupports, defaultHeaders,
-                                 requestIdGenerator, serviceErrorHandler, contextHook);
+                                 requestIdGenerator, serviceErrorHandler, contextHook, options);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -220,7 +231,7 @@ public final class ServiceConfig {
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                  multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup,
                                  shutdownSupports, defaultHeaders,
-                                 requestIdGenerator, serviceErrorHandler, contextHook);
+                                 requestIdGenerator, serviceErrorHandler, contextHook, options);
     }
 
     /**
@@ -504,6 +515,7 @@ public final class ServiceConfig {
                              .add("service", service)
                              .add("defaultServiceNaming", defaultServiceNaming)
                              .add("defaultLogName", defaultLogName)
+                             .add("options", options)
                              .add("requestTimeoutMillis", requestTimeoutMillis)
                              .add("maxRequestLength", maxRequestLength)
                              .add("verboseResponses", verboseResponses)
