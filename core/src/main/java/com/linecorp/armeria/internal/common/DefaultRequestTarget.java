@@ -435,7 +435,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
 
         // Reject the prohibited patterns.
-        if (pathContainsDoubleDots(path, allowSemicolonInPathComponent)) {
+        if (pathContainsDotSegments(path)) {
             return null;
         }
         if (!allowDoubleDotsInQueryString && queryContainsDoubleDots(query)) {
@@ -845,25 +845,29 @@ public final class DefaultRequestTarget implements RequestTarget {
         return true;
     }
 
-    private static boolean pathContainsDoubleDots(Bytes path, boolean allowSemicolonInPathComponent) {
-        final int length = path.length;
-        byte b0 = 0;
-        byte b1 = 0;
-        byte b2 = '/';
-        for (int i = 1; i < length; i++) {
-            final byte b3 = path.data[i];
-            // Flag if the last four bytes are `/../`.
-            if (b1 == '.' && b2 == '.' && isSlash(b0) &&
-                (isSlash(b3) || (!allowSemicolonInPathComponent && b3 == ';'))) {
-                return true;
+    /**
+     * Returns {@code true} if the path contains a {@code .} or {@code ..} segment, e.g. {@code /./},
+     * {@code /..} and {@code /.;a=b}. They are not normalized by routing but resolved by a service such as
+     * {@code FileService} or a servlet container, which would bypass the decorators bound to a path prefix.
+     */
+    private static boolean pathContainsDotSegments(Bytes path) {
+        // The number of dots since the last segment boundary, or -1 if the segment has other characters.
+        int numDots = 0;
+        for (int i = 0; i < path.length; i++) {
+            final byte b = path.data[i];
+            // ';' ends a segment even in allowSemicolonInPathComponent mode: servlets strip matrix variables.
+            if (isSlash(b) || b == ';') {
+                if (numDots == 1 || numDots == 2) {
+                    return true;
+                }
+                numDots = isSlash(b) ? 0 : -1;
+            } else if (b == '.' && numDots >= 0) {
+                numDots++;
+            } else {
+                numDots = -1;
             }
-            b0 = b1;
-            b1 = b2;
-            b2 = b3;
         }
-
-        // Flag if the last three bytes are `/..`.
-        return b1 == '.' && b2 == '.' && isSlash(b0);
+        return numDots == 1 || numDots == 2;
     }
 
     private static boolean queryContainsDoubleDots(@Nullable Bytes query) {

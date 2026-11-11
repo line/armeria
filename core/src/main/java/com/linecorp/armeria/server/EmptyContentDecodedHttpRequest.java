@@ -64,11 +64,14 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
+    @Nullable
+    private final ExpectContinueHandler expectContinueHandler;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
                                    ExchangeType exchangeType, long requestStartTimeNanos,
-                                   long requestStartTimeMicros) {
+                                   long requestStartTimeMicros,
+                                   @Nullable ExpectContinueHandler expectContinueHandler) {
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
@@ -78,6 +81,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
+        this.expectContinueHandler = expectContinueHandler;
     }
 
     @Override
@@ -192,6 +196,12 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Nullable
+    @Override
+    public ExpectContinueHandler expectContinueHandler() {
+        return expectContinueHandler;
     }
 
     @Override

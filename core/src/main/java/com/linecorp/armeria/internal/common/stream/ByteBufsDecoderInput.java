@@ -174,7 +174,7 @@ public final class ByteBufsDecoderInput implements StreamDecoderInput {
         }
 
         // readableBytes is decreased in readInt.
-        return (long) readInt() << 32 | readInt();
+        return (long) readInt() << 32 | (readInt() & 0xFFFFFFFFL);
     }
 
     @Override

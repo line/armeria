@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.ClassRule;
@@ -27,9 +28,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -66,6 +69,18 @@ public class ServerSentEventsTest {
             assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
             assertThat(response.content().toStringUtf8()).isEqualTo("data:foo\n\ndata:bar\n\n");
         }
+    }
+
+    @Test
+    public void decodeWithFactory() {
+        final WebClient client = WebClient.of(rule.httpUri() + "/sse");
+        final HttpResponse response = client.get("/publisher");
+        final StreamMessage<ServerSentEvent> decoded = response.decode(ServerSentEvent.newDecoder());
+        final List<ServerSentEvent> events = decoded.collect().join();
+
+        assertThat(events).containsExactly(
+                ServerSentEvent.ofData("foo"),
+                ServerSentEvent.ofData("bar"));
     }
 
     @Test

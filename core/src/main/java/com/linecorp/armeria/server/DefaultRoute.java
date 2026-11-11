@@ -174,6 +174,7 @@ final class DefaultRoute implements Route {
 
         if (routingCtx.requiresMatchingParamsPredicates()) {
             if (!paramPredicates.isEmpty()) {
+                routingCtx.markRouteSelectionUncacheable();
                 for (RoutingPredicate<QueryParams> p : paramPredicates) {
                     if (!p.test(routingCtx.params())) {
                         return RoutingResult.empty();
@@ -183,6 +184,7 @@ final class DefaultRoute implements Route {
         }
         if (routingCtx.requiresMatchingHeadersPredicates()) {
             if (!headerPredicates.isEmpty()) {
+                routingCtx.markRouteSelectionUncacheable();
                 for (RoutingPredicate<HttpHeaders> p : headerPredicates) {
                     if (!p.test(routingCtx.headers())) {
                         return RoutingResult.empty();
