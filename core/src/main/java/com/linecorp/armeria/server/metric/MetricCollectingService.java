@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricLimiter;
@@ -75,31 +74,6 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
 
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         return builder(meterIdPrefixFunction).newDecorator();
-    }
-
-    /**
-     * Returns a new {@link HttpService} decorator that tracks request stats using {@link MeterRegistry}
-     * with the specified {@code maxCardinality}.
-     */
-    @UnstableApi
-    public static Function<? super HttpService, MetricCollectingService> newDecorator(
-            MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality) {
-
-        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        return builder(meterIdPrefixFunction).maxCardinality(maxCardinality).newDecorator();
-    }
-
-    /**
-     * Returns a new {@link HttpService} decorator that tracks request stats using {@link MeterRegistry}
-     * with the specified {@code maxCardinality} and {@code idleTimeout}.
-     */
-    @UnstableApi
-    public static Function<? super HttpService, MetricCollectingService> newDecorator(
-            MeterIdPrefixFunction meterIdPrefixFunction, int maxCardinality, Duration idleTimeout) {
-
-        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        requireNonNull(idleTimeout, "idleTimeout");
-        return builder(meterIdPrefixFunction).maxCardinality(maxCardinality, idleTimeout).newDecorator();
     }
 
     /**
