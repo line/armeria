@@ -71,9 +71,14 @@ class ServerOptionsTest {
           .build((ctx, req) -> HttpResponse.of("disabled"));
         final Server server = sb.build();
         try {
+            assertThat(server.config().defaultVirtualHost().options().get(ServerOptions.CONTENT_PREVIEW))
+                    .isSameAs(serverPreview);
             assertThat(server.config().defaultVirtualHost().serviceConfigs().get(0)
                              .options().get(ServerOptions.CONTENT_PREVIEW)).isSameAs(serverPreview);
             final VirtualHost host = server.config().findVirtualHost("example.com", -1);
+            assertThat(host.options().get(ServerOptions.CONTENT_PREVIEW)).isSameAs(hostPreview);
+            assertThat(host.options().get(ServerOptions.DECOMPRESSION))
+                    .containsExactlyElementsOf(StreamDecoderFactory.all());
             for (ServiceConfig config : host.serviceConfigs()) {
                 if (config.route().patternString().equals("/service")) {
                     assertThat(config.options().get(ServerOptions.CONTENT_PREVIEW)).isSameAs(servicePreview);
