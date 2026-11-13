@@ -21,15 +21,18 @@ import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SIGNATURE_
 import static java.util.Objects.requireNonNull;
 import static net.shibboleth.shared.xml.SerializeSupport.nodeToString;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
-import java.util.zip.InflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
 import org.opensaml.core.xml.XMLObject;
 import org.opensaml.core.xml.io.MarshallingException;
@@ -45,6 +48,7 @@ import org.opensaml.security.credential.Credential;
 import org.opensaml.xmlsec.crypto.XMLSigningUtil;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -54,6 +58,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.SizeEnforcingInputStream;
 import com.linecorp.armeria.server.saml.SamlService.SamlParameters;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -66,6 +71,10 @@ final class HttpRedirectBindingUtil {
     private static final String DEFAULT_CACHE_CONTROL =
             String.join(",", HttpHeaderValues.NO_CACHE, HttpHeaderValues.NO_STORE);
     private static final String DEFAULT_PRAGMA = HttpHeaderValues.NO_CACHE.toString();
+
+    static final int DEFAULT_MAX_INFLATED_MESSAGE_LENGTH = 1024 * 1024; // 1 MiB
+
+    private static final int INFLATE_BUFFER_LENGTH = 8192;
 
     /**
      * Returns a {@link ResponseHeaders} with the specified {@code location}, the default {@code cache-control}
@@ -207,9 +216,10 @@ final class HttpRedirectBindingUtil {
     }
 
     /**
-     * Decodes, inflates and deserializes the specified base64-encoded message to an {@link XMLObject}.
+     * Decodes, inflates and deserializes the specified base64-encoded message to an {@link XMLObject},
+     * rejecting the message if it inflates to more than {@code maxInflatedMessageLength} bytes.
      */
-    static XMLObject fromDeflatedBase64(String base64Encoded) {
+    static XMLObject fromDeflatedBase64(String base64Encoded, int maxInflatedMessageLength) {
         requireNonNull(base64Encoded, "base64Encoded");
 
         final byte[] base64decoded;
@@ -219,15 +229,25 @@ final class HttpRedirectBindingUtil {
             throw new InvalidSamlRequestException("failed to decode a deflated base64 string", e);
         }
 
-        final ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-        try (InflaterOutputStream inflaterOutputStream =
-                     new InflaterOutputStream(bytesOut, new Inflater(true))) {
-            inflaterOutputStream.write(base64decoded);
+        return SamlMessageUtil.deserialize(inflate(base64decoded, maxInflatedMessageLength));
+    }
+
+    private static byte[] inflate(byte[] deflated, int maxInflatedMessageLength) {
+        final Inflater inflater = new Inflater(true);
+        try (InputStream in = new SizeEnforcingInputStream(
+                new InflaterInputStream(new ByteArrayInputStream(deflated), inflater, INFLATE_BUFFER_LENGTH),
+                maxInflatedMessageLength,
+                count -> new InvalidSamlRequestException(
+                        "inflated SAML message exceeds the maximum allowed length: " +
+                        maxInflatedMessageLength + " bytes"))) {
+            return ByteStreams.toByteArray(in);
+        } catch (EOFException e) {
+            throw new InvalidSamlRequestException("truncated SAML message", e);
         } catch (IOException e) {
             throw new InvalidSamlRequestException("failed to inflate a SAML message", e);
+        } finally {
+            inflater.end();
         }
-
-        return SamlMessageUtil.deserialize(bytesOut.toByteArray());
     }
 
     /**
@@ -239,13 +259,14 @@ final class HttpRedirectBindingUtil {
             AggregatedHttpRequest req, String name,
             Map<String, SamlIdentityProviderConfig> idpConfigs,
             @Nullable SamlIdentityProviderConfig defaultIdpConfig,
-            boolean signatureRequired) {
+            boolean signatureRequired,
+            int maxInflatedMessageLength) {
         requireNonNull(req, "req");
         requireNonNull(name, "name");
         requireNonNull(idpConfigs, "idpConfigs");
 
         final SamlParameters parameters = new SamlParameters(req);
-        final T message = (T) fromDeflatedBase64(parameters.getFirstValue(name));
+        final T message = (T) fromDeflatedBase64(parameters.getFirstValue(name), maxInflatedMessageLength);
 
         final MessageContext messageContext = new MessageContext();
         messageContext.setMessage(message);

@@ -35,7 +35,9 @@ import static com.linecorp.armeria.server.saml.SamlMetadataServiceFunction.CONTE
 import static java.util.Objects.requireNonNull;
 import static net.shibboleth.shared.xml.SerializeSupport.nodeToString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
@@ -48,6 +50,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.zip.Deflater;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -107,12 +110,14 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@GenerateNativeImageTrace
 class SamlServiceProviderTest {
 
     private static final AtomicReference<MessageContext> messageContextHolder =
@@ -765,5 +770,76 @@ class SamlServiceProviderTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, path, MediaType.FORM_DATA,
                                                params.toQueryString());
         return client.execute(req).aggregate().join();
+    }
+
+    @Test
+    void shouldRejectDeflateBombAtTheRedirectEndpoint() {
+        // ~64 MiB of zeros compresses to a few KiB but would inflate far beyond the default 1 MiB ceiling.
+        // The request must be rejected (before signature validation) rather than inflated into the heap.
+        final String bomb = deflateToBase64(new byte[64 * 1024 * 1024]);
+        final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/saml/slo/redirect", MediaType.FORM_DATA,
+                                               QueryParams.of(SAML_REQUEST, bomb).toQueryString());
+        final AggregatedHttpResponse res = client.execute(req).aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void maxInflatedMessageLengthDefaultsToTheConstant() {
+        assertThat(newSpBuilder().build().maxInflatedMessageLength())
+                .isEqualTo(HttpRedirectBindingUtil.DEFAULT_MAX_INFLATED_MESSAGE_LENGTH);
+    }
+
+    @Test
+    void maxInflatedMessageLengthIsPropagatedFromTheBuilder() {
+        assertThat(newSpBuilder().maxInflatedMessageLength(4096).build().maxInflatedMessageLength())
+                .isEqualTo(4096);
+    }
+
+    @Test
+    void maxInflatedMessageLengthMustBePositive() {
+        assertThatThrownBy(() -> SamlServiceProvider.builder().maxInflatedMessageLength(0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> SamlServiceProvider.builder().maxInflatedMessageLength(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Returns a minimally-valid {@link SamlServiceProviderBuilder} with a single IdP, for exercising
+     * build-time configuration such as {@link SamlServiceProviderBuilder#maxInflatedMessageLength(int)}.
+     */
+    private static SamlServiceProviderBuilder newSpBuilder() {
+        final SamlServiceProviderBuilder builder =
+                SamlServiceProvider.builder()
+                                   .authorizer(new CookieBasedAuthorizer("test", "test"))
+                                   .entityId(spEntityId)
+                                   .hostname(spHostname)
+                                   .credentialResolver(spCredentialResolver)
+                                   .signatureAlgorithm(signatureAlgorithm)
+                                   .requestIdManager(requestIdManager);
+        builder.idp()
+               .entityId("http://idp.example.com/redirect")
+               .ssoEndpoint(ofHttpRedirect("http://idp.example.com/saml/sso/redirect"))
+               .sloResEndpoint(ofHttpRedirect("http://idp.example.com/saml/slo/redirect"))
+               .and();
+        return builder;
+    }
+
+    /**
+     * Compresses {@code raw} with raw DEFLATE (nowrap, matching {@code new Inflater(true)}) and returns the
+     * base64-encoded result, mirroring how an HTTP-Redirect binding message reaches the server.
+     */
+    private static String deflateToBase64(byte[] raw) {
+        final Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION, true);
+        deflater.setInput(raw);
+        deflater.finish();
+
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final byte[] buf = new byte[8192];
+        while (!deflater.finished()) {
+            final int n = deflater.deflate(buf);
+            out.write(buf, 0, n);
+        }
+        deflater.end();
+        return Base64.getEncoder().encodeToString(out.toByteArray());
     }
 }

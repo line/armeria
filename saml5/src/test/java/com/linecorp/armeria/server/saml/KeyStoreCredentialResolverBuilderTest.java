@@ -28,6 +28,9 @@ import java.security.KeyStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
+
+@GenerateNativeImageTrace
 public class KeyStoreCredentialResolverBuilderTest {
 
     @TempDir

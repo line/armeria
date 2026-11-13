@@ -64,6 +64,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
     private final SamlRequestIdManager requestIdManager;
     private final SamlSingleLogoutHandler sloHandler;
     private final boolean signatureRequired;
+    private final int maxInflatedMessageLength;
 
     SamlSingleLogoutFunction(SamlEndpoint endpoint, String entityId,
                              Credential signingCredential,
@@ -72,7 +73,8 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
                              @Nullable SamlIdentityProviderConfig defaultIdpConfig,
                              SamlRequestIdManager requestIdManager,
                              SamlSingleLogoutHandler sloHandler,
-                             boolean signatureRequired) {
+                             boolean signatureRequired,
+                             int maxInflatedMessageLength) {
         this.endpoint = endpoint;
         this.entityId = entityId;
         this.signingCredential = signingCredential;
@@ -82,6 +84,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
         this.requestIdManager = requestIdManager;
         this.sloHandler = sloHandler;
         this.signatureRequired = signatureRequired;
+        this.maxInflatedMessageLength = maxInflatedMessageLength;
     }
 
     @Override
@@ -92,7 +95,8 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
             if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
                 messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_REQUEST,
                                                                       idpConfigs, defaultIdpConfig,
-                                                                      signatureRequired);
+                                                                      signatureRequired,
+                                                                      maxInflatedMessageLength);
             } else {
                 messageContext = HttpPostBindingUtil.toSamlObject(req, SAML_REQUEST);
             }
