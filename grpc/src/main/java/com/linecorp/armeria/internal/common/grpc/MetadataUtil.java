@@ -67,9 +67,19 @@ public final class MetadataUtil {
             GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN
     );
 
+    // Response headers the server sets itself. The trailers of a trailers-only response carry them, so a
+    // service that relays such trailers would otherwise send them twice.
+    private static final Set<AsciiString> RESERVED_HEADERS = ImmutableSet.<AsciiString>builder()
+            .addAll(STRIPPED_HEADERS)
+            .add(HttpHeaderNames.CONTENT_TYPE,
+                 GrpcHeaderNames.GRPC_ENCODING,
+                 GrpcHeaderNames.GRPC_ACCEPT_ENCODING)
+            .build();
+
     /**
      * Copies the headers in the gRPC {@link Metadata} to the Armeria {@link HttpHeadersBuilder}. Headers will
-     * be added, without replacing any currently present in the {@link HttpHeaders}.
+     * be added, without replacing any currently present in the {@link HttpHeaders}. {@code content-type},
+     * {@code grpc-encoding} and {@code grpc-accept-encoding} are not copied because the transport sets them.
      */
     public static void fillHeaders(@Nullable Metadata metadata, HttpHeadersBuilder builder) {
         if (metadata == null || InternalMetadata.headerCount(metadata) == 0) {
@@ -82,7 +92,7 @@ public final class MetadataUtil {
         for (int i = 0; i < serializedMetadata.length; i += 2) {
             final AsciiString name = new AsciiString(serializedMetadata[i], false);
 
-            if (STRIPPED_HEADERS.contains(name)) {
+            if (RESERVED_HEADERS.contains(name)) {
                 continue;
             }
 
@@ -106,6 +116,19 @@ public final class MetadataUtil {
      * Copies the headers in the Armeria {@link HttpHeaders} into a gRPC {@link Metadata}.
      */
     public static Metadata copyFromHeaders(HttpHeaders headers) {
+        return toMetadata(headers, STRIPPED_HEADERS);
+    }
+
+    /**
+     * Copies the trailers of a gRPC response into a gRPC {@link Metadata}, leaving out
+     * {@code content-type}, {@code grpc-encoding} and {@code grpc-accept-encoding}, which a trailers-only
+     * response carries as part of its headers.
+     */
+    public static Metadata copyFromTrailers(HttpHeaders trailers) {
+        return toMetadata(trailers, RESERVED_HEADERS);
+    }
+
+    private static Metadata toMetadata(HttpHeaders headers, Set<AsciiString> strippedHeaders) {
         if (headers.isEmpty()) {
             return new Metadata();
         }
@@ -114,7 +137,7 @@ public final class MetadataUtil {
         for (Entry<AsciiString, String> entry : headers) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (STRIPPED_HEADERS.contains(name)) {
+            if (strippedHeaders.contains(name)) {
                 continue;
             }
 
@@ -131,7 +154,7 @@ public final class MetadataUtil {
         for (Entry<AsciiString, String> entry : headers) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (STRIPPED_HEADERS.contains(name)) {
+            if (strippedHeaders.contains(name)) {
                 continue;
             }
 

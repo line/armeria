@@ -43,6 +43,9 @@ class MetadataUtilTest {
     private static final Metadata.Key<String> STATUS_KEY =
             InternalMetadata.keyOf(":status", Metadata.ASCII_STRING_MARSHALLER);
 
+    private static final Metadata.Key<String> CONTENT_TYPE_KEY =
+            Metadata.Key.of("content-type", Metadata.ASCII_STRING_MARSHALLER);
+
     private static final Metadata.Key<String> TEST_ASCII_KEY =
             Metadata.Key.of("testAscii", Metadata.ASCII_STRING_MARSHALLER);
 
@@ -110,5 +113,55 @@ class MetadataUtilTest {
         assertThat(metadata.get(InternalStatus.CODE_KEY)).isNull();
         assertThat(metadata.get(InternalStatus.MESSAGE_KEY)).isNull();
         assertThat(metadata.get(THROWABLE_PROTO_METADATA_KEY)).isNull();
+        assertThat(metadata.get(CONTENT_TYPE_KEY)).isEqualTo("application/grpc+proto");
+    }
+
+    @Test
+    void fillHeadersSkipsReservedHeaders() {
+        final HttpHeadersBuilder headers =
+                ResponseHeaders.builder()
+                               .add(HttpHeaderNames.STATUS, HttpStatus.OK.codeAsText())
+                               .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
+                               .add(GrpcHeaderNames.GRPC_ENCODING, "identity")
+                               .add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip");
+
+        MetadataUtil.fillHeaders(reservedMetadata(), headers);
+
+        assertThat(headers.getAll(HttpHeaderNames.CONTENT_TYPE)).containsExactly("application/grpc+proto");
+        assertThat(headers.getAll(GrpcHeaderNames.GRPC_ENCODING)).containsExactly("identity");
+        assertThat(headers.getAll(GrpcHeaderNames.GRPC_ACCEPT_ENCODING)).containsExactly("gzip");
+        assertThat(headers.getAll(TEST_ASCII_KEY.originalName())).containsExactly("metadata_test_string");
+    }
+
+    @Test
+    void copyFromTrailersStripsReservedHeaders() {
+        final HttpHeaders trailers =
+                ResponseHeaders.builder()
+                               .endOfStream(true)
+                               .add(HttpHeaderNames.STATUS, HttpStatus.OK.codeAsText())
+                               .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
+                               .add(GrpcHeaderNames.GRPC_ENCODING, "identity")
+                               .add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip")
+                               .add(GrpcHeaderNames.GRPC_STATUS, "5")
+                               .add(TEST_ASCII_KEY.originalName(), "test_message")
+                               .build();
+
+        final Metadata metadata = MetadataUtil.copyFromTrailers(trailers);
+
+        assertThat(metadata.keys()).containsExactly(TEST_ASCII_KEY.name());
+        assertThat(metadata.get(TEST_ASCII_KEY)).isEqualTo("test_message");
+    }
+
+    private static Metadata reservedMetadata() {
+        final Metadata metadata = new Metadata();
+        metadata.put(TEST_ASCII_KEY, "metadata_test_string");
+        metadata.put(CONTENT_TYPE_KEY, "application/grpc+proto");
+        metadata.put(asciiKey("grpc-encoding"), "identity");
+        metadata.put(asciiKey("grpc-accept-encoding"), "gzip");
+        return metadata;
+    }
+
+    private static Metadata.Key<String> asciiKey(String name) {
+        return Metadata.Key.of(name, Metadata.ASCII_STRING_MARSHALLER);
     }
 }
