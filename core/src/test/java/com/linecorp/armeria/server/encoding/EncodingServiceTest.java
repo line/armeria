@@ -26,7 +26,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -107,5 +110,41 @@ class EncodingServiceTest {
         verify(mockDelegate, times(1)).serve(sctx, req);
         verify(customBrotliEncoderFactory, atLeastOnce()).encodingHeaderValue();
         verify(customBrotliEncoderFactory, times(1)).newEncoder(any(ByteBufOutputStream.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "application/json", "application/json; charset=utf-8",
+            "application/xml", "application/xml; charset=utf-8",
+            "application/javascript", "application/javascript; charset=utf-8"
+    })
+    void encodesDefaultContentTypesRegardlessOfCharset(String contentType) throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                 HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(req)
+                                                                .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                                .build();
+        final HttpService delegate = (ctx, unused) -> HttpResponse.of(
+                HttpStatus.OK, MediaType.parse(contentType), String.copyValueOf(new char[2048]));
+
+        final AggregatedHttpResponse res =
+                EncodingService.newDecorator().apply(delegate).serve(sctx, req).aggregate().get();
+
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+    }
+
+    @Test
+    void encodesOfJson() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                 HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(req)
+                                                                .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                                .build();
+        final HttpService delegate = (ctx, unused) -> HttpResponse.ofJson(new int[1024]);
+
+        final AggregatedHttpResponse res =
+                EncodingService.newDecorator().apply(delegate).serve(sctx, req).aggregate().get();
+
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
     }
 }
