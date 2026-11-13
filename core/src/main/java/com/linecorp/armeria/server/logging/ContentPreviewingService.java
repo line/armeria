@@ -33,12 +33,12 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServerOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
@@ -117,26 +117,14 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
                 requireNonNull(contentPreviewerFactory, "contentPreviewerFactory"));
     }
 
-    private final ContentPreviewerFactory contentPreviewerFactory;
-
-    private final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> requestPreviewSanitizer;
-    private final BiFunction<? super RequestContext, String,
-            ? extends @Nullable Object> responsePreviewSanitizer;
+    private final ContentPreview preview;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    ContentPreviewingService(HttpService delegate,
-                             ContentPreviewerFactory contentPreviewerFactory,
-                             BiFunction<? super RequestContext, String,
-                                     ? extends @Nullable Object> requestPreviewSanitizer,
-                             BiFunction<? super RequestContext, String,
-                                     ? extends @Nullable Object> responsePreviewSanitizer) {
+    ContentPreviewingService(HttpService delegate, ContentPreview preview) {
         super(delegate);
-        this.contentPreviewerFactory = contentPreviewerFactory;
-        this.requestPreviewSanitizer = requestPreviewSanitizer;
-        this.responsePreviewSanitizer = responsePreviewSanitizer;
+        this.preview = preview;
     }
 
     /**
@@ -144,7 +132,9 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      */
     @UnstableApi
     public ContentPreviewerFactory contentPreviewerFactory() {
-        return contentPreviewerFactory;
+        final ContentPreviewerFactory factory = preview.factory();
+        assert factory != null;
+        return factory;
     }
 
     /**
@@ -152,29 +142,27 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
      */
     @UnstableApi
     public BiFunction<? super RequestContext, String, ? extends @Nullable Object> responsePreviewSanitizer() {
-        return responsePreviewSanitizer;
+        return preview.responsePreviewSanitizer();
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (ctx.config().options().get(ServerOptions.CONTENT_PREVIEW)
+               .factory() != null) {
+            return unwrap().serve(ctx, req);
+        }
         final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
         if (Boolean.TRUE.equals(settingContentPreview)) {
             return unwrap().serve(ctx, req);
         }
         ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
-        if (!req.isEmpty()) {
-            final ContentPreviewer requestContentPreviewer =
-                    contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
-            req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
-        } else {
-            // Set empty String.
-            ctx.logBuilder().requestContentPreview("");
-        }
+        final ContentPreviewerFactory factory = contentPreviewerFactory();
+        req = setUpRequestContentPreviewer(ctx, req, factory, preview.requestPreviewSanitizer());
 
         try {
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
             final HttpResponse res = unwrap().serve(ctx, req);
-            return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+            return setUpResponseContentPreviewer(factory, ctx, res, preview.responsePreviewSanitizer());
         } catch (Throwable t) {
             ctx.logBuilder().responseContentPreview(null);
             return HttpResponse.ofFailure(t);

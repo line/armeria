@@ -59,6 +59,12 @@ abstract class AbstractServiceBindingBuilder<SELF extends AbstractServiceBinding
     }
 
     @Override
+    public <T> SELF option(ServerOption<T> option, T value) {
+        defaultServiceConfigSetters.option(option, value);
+        return self();
+    }
+
+    @Override
     public SELF requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }

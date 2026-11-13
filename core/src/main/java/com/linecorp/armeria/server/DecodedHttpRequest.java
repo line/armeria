@@ -54,7 +54,9 @@ interface DecodedHttpRequest extends HttpRequest {
             } else {
                 // A request that expects '100 Continue' is not aggregated. Otherwise, the service would never
                 // be invoked because the client waits for '100 Continue' before sending the content.
-                if (exchangeType.isRequestStreaming() || expectContinueHandler != null) {
+                // Decompression also needs a stream before aggregating the decoded content.
+                if (exchangeType.isRequestStreaming() || expectContinueHandler != null ||
+                    ServerRequestContent.decoderFactory(config.options(), headers) != null) {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,

@@ -257,8 +257,10 @@ class ContentPreviewingServiceTest {
         final ContentPreviewer contentPreviewer = contentPreviewer();
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final ContentPreviewerFactory factory = mock(ContentPreviewerFactory.class);
+        when(factory.requestContentPreviewer(any(), any())).thenReturn(contentPreviewer);
         final HttpRequest filteredRequest = ContentPreviewingUtil.setUpRequestContentPreviewer(
-                ctx, request, contentPreviewer, Functions.second());
+                ctx, request, factory, Functions.second());
         filteredRequest.subscribe(new CancelSubscriber());
 
         assertThat(ctx.log()
@@ -349,7 +351,7 @@ class ContentPreviewingServiceTest {
         assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
                 .isEqualTo("Hello Armeria!");
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
-        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.requestContentPreview()).isNull();
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
@@ -362,7 +364,7 @@ class ContentPreviewingServiceTest {
                 .isEqualTo("Hello Armeria!");
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
-        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+        assertThat(requestLog.responseContentPreview()).isNull();
     }
 
     @Test

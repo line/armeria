@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.encoding;
+package com.linecorp.armeria.internal.server;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -29,9 +29,9 @@ import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
  */
-final class HttpEncoders {
+public final class HttpEncoders {
     @Nullable
-    static StreamEncoderFactory determineEncoder(
+    public static StreamEncoderFactory determineEncoder(
             Map<String, StreamEncoderFactory> headerToEncoderFactory, RequestHeaders headers) {
         final String acceptEncoding = headers.get(HttpHeaderNames.ACCEPT_ENCODING);
         if (acceptEncoding == null) {

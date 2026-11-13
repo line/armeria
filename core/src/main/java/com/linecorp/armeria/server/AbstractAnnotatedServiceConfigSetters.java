@@ -180,6 +180,12 @@ abstract class AbstractAnnotatedServiceConfigSetters<SELF extends AbstractAnnota
     }
 
     @Override
+    public <T> SELF option(ServerOption<T> option, T value) {
+        defaultServiceConfigSetters.option(option, value);
+        return self();
+    }
+
+    @Override
     public SELF requestTimeout(Duration requestTimeout) {
         defaultServiceConfigSetters.requestTimeout(requestTimeout);
         return self();

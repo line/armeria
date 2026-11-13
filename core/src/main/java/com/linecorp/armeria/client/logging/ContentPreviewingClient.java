@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -145,15 +144,8 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
             return unwrap().execute(ctx, req);
         }
         ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
-        if (!req.isEmpty()) {
-            final ContentPreviewer requestContentPreviewer =
-                    contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
-            req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
-            ctx.updateRequest(req);
-        } else {
-            // Set empty String.
-            ctx.logBuilder().requestContentPreview("");
-        }
+        req = setUpRequestContentPreviewer(ctx, req, contentPreviewerFactory, requestPreviewSanitizer);
+        ctx.updateRequest(req);
 
         try {
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
