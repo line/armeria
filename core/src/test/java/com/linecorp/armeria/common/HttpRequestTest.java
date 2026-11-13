@@ -16,14 +16,21 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 import reactor.test.StepVerifier;
 
@@ -105,5 +112,52 @@ class HttpRequestTest {
                        data,
                        HttpHeaders.of("some-trailer", "value"));
         assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    void ofJson() {
+        final Map<String, String> content = Collections.singletonMap("key", "value");
+        final HttpRequest request = HttpRequest.ofJson(HttpMethod.POST, "/json", content);
+        assertThat(request.method()).isEqualTo(HttpMethod.POST);
+        assertThat(request.path()).isEqualTo("/json");
+        assertThat(request.headers().contentType()).isEqualTo(MediaType.JSON);
+
+        final AggregatedHttpRequest aggregated = request.aggregate().join();
+        assertThat(aggregated.contentUtf8()).isEqualTo("{\"key\":\"value\"}");
+    }
+
+    @Test
+    void ofJsonWithCustomMapper() {
+        final Map<String, String> content = Collections.singletonMap("key", "value");
+        final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+        final HttpRequest request = HttpRequest.ofJson(HttpMethod.PUT, "/json_custom", content, mapper);
+        assertThat(request.method()).isEqualTo(HttpMethod.PUT);
+        assertThat(request.path()).isEqualTo("/json_custom");
+        assertThat(request.headers().contentType()).isEqualTo(MediaType.JSON);
+
+        final AggregatedHttpRequest aggregated = request.aggregate().join();
+        assertThat(aggregated.contentUtf8()).isEqualTo("{\"key\":\"value\"}");
+    }
+
+    @Test
+    void ofJsonNullValidation() {
+        final Map<String, String> content = Collections.singletonMap("key", "value");
+        final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
+        assertThatThrownBy(() -> HttpRequest.ofJson(null, "/path", content))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> HttpRequest.ofJson(HttpMethod.POST, null, content))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> HttpRequest.ofJson(HttpMethod.POST, "/path", null))
+                .isInstanceOf(NullPointerException.class);
+
+        assertThatThrownBy(() -> HttpRequest.ofJson(null, "/path", content, mapper))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> HttpRequest.ofJson(HttpMethod.POST, null, content, mapper))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> HttpRequest.ofJson(HttpMethod.POST, "/path", null, mapper))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> HttpRequest.ofJson(HttpMethod.POST, "/path", content, null))
+                .isInstanceOf(NullPointerException.class);
     }
 }

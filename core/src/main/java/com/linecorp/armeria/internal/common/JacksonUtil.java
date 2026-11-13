@@ -72,6 +72,13 @@ public final class JacksonUtil {
         return mapper;
     }
 
+    /**
+     * Returns the default {@link ObjectMapper} instance.
+     */
+    public static ObjectMapper getDefaultObjectMapper() {
+        return INSTANCE;
+    }
+
     public static byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
         return INSTANCE.writeValueAsBytes(value);
     }
