@@ -91,7 +91,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulShutdownSupport.isShuttingDown() ||
+        return gracefulShutdownSupport.isTerminating() ||
                requestDecoder.goAwayHandler().receivedErrorGoAway() || keepAliveHandler().isClosing();
     }
 
@@ -153,6 +153,13 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (gracefulShutdownSupport.isTerminating()) {
+            // The graceful shutdown of the server is over. Close the active streams immediately
+            // instead of waiting for them. New streams are rejected by Netty after the GOAWAY.
+            closeActiveStreams();
+            super.close(ctx, promise);
+            return;
+        }
         if (keepAliveHandler().needsDisconnection()) {
             // Connection timed out or exceeded maximum number of requests.
             setGoAwayDebugMessage("max-age");

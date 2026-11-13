@@ -584,10 +584,11 @@ public final class Server implements ListenableAsyncCloseable {
         @Override
         protected CompletionStage<Void> doStop(@Nullable Void arg) {
             final CompletableFuture<Void> future = new CompletableFuture<>();
+            final long deadlineNanos = System.nanoTime() + config.gracefulShutdown().timeout().toNanos();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport == null ||
                 gracefulShutdownSupport.completedQuietPeriod()) {
-                doStop(future, null);
+                doStop(future, null, deadlineNanos);
                 return future;
             }
 
@@ -599,7 +600,7 @@ public final class Server implements ListenableAsyncCloseable {
             // Check every 100 ms for the server to have completed processing requests.
             final ScheduledFuture<?> quietPeriodFuture = gracefulShutdownExecutor.scheduleAtFixedRate(() -> {
                 if (gracefulShutdownSupport.completedQuietPeriod()) {
-                    doStop(future, gracefulShutdownExecutor);
+                    doStop(future, gracefulShutdownExecutor, deadlineNanos);
                 }
             }, 0, 100, TimeUnit.MILLISECONDS);
 
@@ -608,7 +609,7 @@ public final class Server implements ListenableAsyncCloseable {
             try {
                 gracefulShutdownExecutor.schedule(() -> {
                     quietPeriodFuture.cancel(false);
-                    doStop(future, gracefulShutdownExecutor);
+                    doStop(future, gracefulShutdownExecutor, deadlineNanos);
                 }, config.gracefulShutdown().timeout().toMillis(), TimeUnit.MILLISECONDS);
             } catch (RejectedExecutionException e) {
                 // Can be rejected if quiet period is complete already.
@@ -621,7 +622,9 @@ public final class Server implements ListenableAsyncCloseable {
          * Closes all channels and terminates all event loops.
          * <ol>
          *   <li>Closes all server channels so that we don't accept any more incoming connections.</li>
-         *   <li>Closes all accepted channels.</li>
+         *   <li>Lets all accepted channels stop accepting new requests and waits for them to close
+         *       until the graceful shutdown timeout.</li>
+         *   <li>Aborts the unfinished requests and closes all accepted channels.</li>
          *   <li>Shuts down the worker group if necessary.</li>
          *   <li>Shuts down the boss groups.</li>
          * </ol>
@@ -629,8 +632,8 @@ public final class Server implements ListenableAsyncCloseable {
          * even if other threads are daemon, because boss group threads are always non-daemon.
          */
         private void doStop(CompletableFuture<Void> future,
-                            @Nullable ExecutorService gracefulShutdownExecutor) {
-            // Graceful shutdown is over. Terminate the temporary executor we created at stop0(future).
+                            @Nullable ExecutorService gracefulShutdownExecutor, long deadlineNanos) {
+            // The quiet period is over. Terminate the temporary executor we created at stop0(future).
             if (gracefulShutdownExecutor != null) {
                 gracefulShutdownExecutor.shutdownNow();
             }
@@ -646,51 +649,101 @@ public final class Server implements ListenableAsyncCloseable {
                     lock.unlock();
                 }
 
-                shutdownServerHandlers().handle((unused3, unused4) -> {
-                    // Close all accepted sockets.
-                    ChannelUtil.close(connectionLimitingHandler.children()).handle((unused5, unused6) -> {
-                        // Shut down the worker group if necessary.
-                        final Future<?> workerShutdownFuture;
-                        if (config.shutdownWorkerGroupOnStop()) {
-                            workerShutdownFuture = config.workerGroup().shutdownGracefully();
-                        } else {
-                            workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-                        }
-
-                        workerShutdownFuture.addListener(unused7 -> {
-                            final Set<EventLoopGroup> bossGroups =
-                                    Server.this.serverChannels.stream()
-                                                              .map(ch -> ch.eventLoop().parent())
-                                                              .collect(toImmutableSet());
-
-                            // If started to shutdown before initializing a boss group,
-                            // complete the future immediately.
-                            if (bossGroups.isEmpty()) {
-                                finishDoStop(future);
-                                return;
-                            }
-
-                            // Shut down all boss groups and wait until they are terminated.
-                            final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
-                            bossGroups.forEach(bossGroup -> {
-                                bossGroup.shutdownGracefully();
-                                bossGroup.terminationFuture().addListener(unused8 -> {
-                                    if (remainingBossGroups.decrementAndGet() != 0) {
-                                        // There are more boss groups to terminate.
-                                        return;
-                                    }
-
-                                    // Boss groups have been terminated completely.
-                                    finishDoStop(future);
-                                });
-                            });
-                        });
-
-                        return null;
-                    });
+                handOverConnections(deadlineNanos).handle((unused3, unused4) -> {
+                    terminate(future);
                     return null;
                 });
 
+                return null;
+            });
+        }
+
+        /**
+         * Lets all accepted channels stop accepting new requests while completing the requests they
+         * have accepted already, so that a request received after the quiet period is not aborted.
+         * The returned future is completed when all channels are closed or the graceful shutdown timeout
+         * is reached.
+         */
+        private CompletableFuture<Void> handOverConnections(long deadlineNanos) {
+            final long remainingNanos = deadlineNanos - System.nanoTime();
+            if (remainingNanos <= 0) {
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            final Set<Channel> children = connectionLimitingHandler.children();
+            final List<CompletableFuture<Void>> closeFutures = new ArrayList<>(children.size());
+            for (Channel ch : children) {
+                final HttpServerHandler serverHandler = ch.pipeline().get(HttpServerHandler.class);
+                if (serverHandler != null) {
+                    closeFutures.add(serverHandler.handOver(ch));
+                }
+            }
+            if (closeFutures.isEmpty()) {
+                return UnmodifiableFuture.completedFuture(null);
+            }
+
+            // The future returned by handOver() will be always completed successfully.
+            final CompletableFuture<List<Void>> combined = CompletableFutures.allAsList(closeFutures);
+            final ScheduledFuture<?> timeoutFuture = config.workerGroup().schedule(
+                    () -> combined.complete(ImmutableList.of()), remainingNanos, TimeUnit.NANOSECONDS);
+            return combined.handle((unused1, unused2) -> {
+                timeoutFuture.cancel(false);
+                return null;
+            });
+        }
+
+        /**
+         * Ends the graceful shutdown: aborts the unfinished requests and closes all accepted channels,
+         * the worker group and the boss groups.
+         */
+        private void terminate(CompletableFuture<Void> future) {
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+            if (gracefulShutdownSupport != null) {
+                gracefulShutdownSupport.terminate();
+            }
+
+            shutdownServerHandlers().handle((unused3, unused4) -> {
+                // Close all accepted sockets.
+                ChannelUtil.close(connectionLimitingHandler.children()).handle((unused5, unused6) -> {
+                    // Shut down the worker group if necessary.
+                    final Future<?> workerShutdownFuture;
+                    if (config.shutdownWorkerGroupOnStop()) {
+                        workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                    } else {
+                        workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+                    }
+
+                    workerShutdownFuture.addListener(unused7 -> {
+                        final Set<EventLoopGroup> bossGroups =
+                                Server.this.serverChannels.stream()
+                                                          .map(ch -> ch.eventLoop().parent())
+                                                          .collect(toImmutableSet());
+
+                        // If started to shutdown before initializing a boss group,
+                        // complete the future immediately.
+                        if (bossGroups.isEmpty()) {
+                            finishDoStop(future);
+                            return;
+                        }
+
+                        // Shut down all boss groups and wait until they are terminated.
+                        final AtomicInteger remainingBossGroups = new AtomicInteger(bossGroups.size());
+                        bossGroups.forEach(bossGroup -> {
+                            bossGroup.shutdownGracefully();
+                            bossGroup.terminationFuture().addListener(unused8 -> {
+                                if (remainingBossGroups.decrementAndGet() != 0) {
+                                    // There are more boss groups to terminate.
+                                    return;
+                                }
+
+                                // Boss groups have been terminated completely.
+                                finishDoStop(future);
+                            });
+                        });
+                    });
+
+                    return null;
+                });
                 return null;
             });
         }
