@@ -170,6 +170,16 @@ public interface ServerConfig {
     long maxConnectionAgeMillis();
 
     /**
+     * Returns the jitter rate applied to the maximum allowed age of a connection.
+     *
+     * @see ServerBuilder#maxConnectionAgeJitterRate(double)
+     */
+    @UnstableApi
+    default double maxConnectionAgeJitterRate() {
+        return 0.0;
+    }
+
+    /**
      * Returns the graceful connection shutdown drain duration.
      */
     long connectionDrainDurationMicros();

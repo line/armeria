@@ -16,12 +16,39 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+
 public final class KeepAliveHandlerUtil {
+
+    private static final long MIN_JITTERED_MAX_CONNECTION_AGE_NANOS = TimeUnit.SECONDS.toNanos(1);
 
     public static boolean needsKeepAliveHandler(long idleTimeoutMillis, long pingIntervalMillis,
                                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
         return idleTimeoutMillis > 0 || pingIntervalMillis > 0 ||
                maxConnectionAgeMillis > 0 || maxNumRequestsPerConnection > 0;
+    }
+
+    public static double validateMaxConnectionAgeJitterRate(double maxConnectionAgeJitterRate) {
+        checkArgument(maxConnectionAgeJitterRate >= 0.0 && maxConnectionAgeJitterRate <= 1.0,
+                      "maxConnectionAgeJitterRate: %s (expected: >= 0.0 and <= 1.0)",
+                      maxConnectionAgeJitterRate);
+        return maxConnectionAgeJitterRate;
+    }
+
+    static long jitteredMaxConnectionAgeNanos(long maxConnectionAgeNanos, double jitterRate) {
+        if (maxConnectionAgeNanos <= 0 || jitterRate == 0) {
+            return maxConnectionAgeNanos;
+        }
+
+        final long jitteredLowerBound = (long) (maxConnectionAgeNanos * (1 - jitterRate));
+        final long lowerBound = Math.max(MIN_JITTERED_MAX_CONNECTION_AGE_NANOS, jitteredLowerBound);
+        if (lowerBound >= maxConnectionAgeNanos) {
+            return maxConnectionAgeNanos;
+        }
+        return ThreadLocalRandom.current().nextLong(lowerBound, maxConnectionAgeNanos);
     }
 
     private KeepAliveHandlerUtil() {}
