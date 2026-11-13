@@ -22,10 +22,17 @@ import static org.mockito.Mockito.mock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.test.StepVerifier;
 
@@ -33,6 +40,21 @@ class EmptyContentDecodedHttpRequestTest {
 
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.annotatedService(new AnnotatedService());
+        }
+    };
+
+    static class AnnotatedService {
+        @Get("/get")
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
 
     @Test
     void emptyContent() {
@@ -46,5 +68,20 @@ class EmptyContentDecodedHttpRequestTest {
                     .expectComplete()
                     .verify();
         assertThat(req.headers()).isEqualTo(headers);
+    }
+
+    @Test
+    void requestEndTimeNanosIsFasterThanResponseStartTimeNanos()
+            throws InterruptedException {
+        final WebClient webClient = server.webClient();
+
+        final AggregatedHttpResponse response = webClient.get("/get")
+                                                         .aggregate()
+                                                         .join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        final ServiceRequestContext sctx = server.requestContextCaptor().take();
+        final RequestLog log = sctx.log().whenComplete().join();
+        assertThat(log.requestEndTimeNanos()).isLessThan(log.responseStartTimeNanos());
     }
 }
