@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -315,6 +316,54 @@ final class HttpChannelPool implements AsyncCloseable {
             connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
         }
         return promise;
+    }
+
+    /**
+     * Makes a new connection for {@code key} with no request behind it, and runs {@code whenSettled}
+     * exactly once after that connection is in the pool or has failed. Requests that find no acquirable
+     * channel meanwhile piggyback on the attempt as on any pending acquisition. A connection attempt
+     * already in flight for {@code key} belongs to the request or the connection that started it, so this
+     * waits for that attempt to settle and then makes its own.
+     *
+     * <p>The attempt is bounded by the connect timeout and the session timeout that every connection
+     * attempt already has, so {@code whenSettled} always runs.
+     */
+    void connectSuccessor(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+                          PoolKey key, Runnable whenSettled) {
+        assert eventLoop.inEventLoop();
+        final ChannelAcquisitionFuture pending = getPendingAcquisition(desiredProtocol, key);
+        if (pending != null) {
+            pending.handle((unused1, unused2) -> {
+                connectSuccessor(desiredProtocol, serializationFormat, key, whenSettled);
+                return null;
+            });
+            return;
+        }
+        if (closeable.isClosing()) {
+            whenSettled.run();
+            return;
+        }
+
+        final ChannelAcquisitionFuture successor = new ChannelAcquisitionFuture();
+        successor.handle((pch, cause) -> {
+            try {
+                if (pch == null) {
+                    logger.debug("Failed to connect a successor for {}", key, cause);
+                } else if (pch.protocol().isMultiplex()) {
+                    HttpSession.get(pch.get()).decrementNumUnfinishedResponses();
+                } else {
+                    closeSuccessorThatFellBackToHttp1(pch);
+                }
+            } finally {
+                whenSettled.run();
+            }
+            return null;
+        });
+        connect(desiredProtocol, serializationFormat, key, successor, ClientConnectionTimings.builder());
+    }
+
+    private static void closeSuccessorThatFellBackToHttp1(PooledChannel successor) {
+        successor.get().close();
     }
 
     /**

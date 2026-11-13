@@ -242,6 +242,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 
+    protected void onMaxConnectionAgeExceeded(ChannelHandlerContext ctx, Runnable retire) {
+        retire.run();
+    }
+
     @Nullable
     protected final Future<?> shutdownFuture() {
         return shutdownFuture;
@@ -443,12 +447,22 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private final class MaxConnectionAgeExceededTask extends AbstractKeepAliveTask {
 
+        private boolean retired;
+
         MaxConnectionAgeExceededTask(ChannelHandlerContext ctx) {
             super(ctx);
         }
 
         @Override
         protected void run(ChannelHandlerContext ctx) {
+            onMaxConnectionAgeExceeded(ctx, () -> retire(ctx));
+        }
+
+        private void retire(ChannelHandlerContext ctx) {
+            if (retired || !ctx.channel().isOpen()) {
+                return;
+            }
+            retired = true;
             try {
                 isMaxConnectionAgeExceeded = true;
 
