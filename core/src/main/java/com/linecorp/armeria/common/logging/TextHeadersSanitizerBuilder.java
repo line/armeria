@@ -26,6 +26,6 @@ public final class TextHeadersSanitizerBuilder
      * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.
      */
     public HeadersSanitizer<String> build() {
-        return new TextHeadersSanitizer(sensitiveHeaders(), maskingFunction());
+        return new TextHeadersSanitizer(sensitiveHeaders(), maskingFunction(), headersMaskingFunction());
     }
 }

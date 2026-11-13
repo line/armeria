@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
@@ -41,10 +42,15 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
     private final HeaderMaskingFunction maskingFunction;
 
+    @Nullable
+    private final HeaderMaskingFunction headersMaskingFunction;
+
     TextHeadersSanitizer(Set<AsciiString> sensitiveHeaders,
-                         HeaderMaskingFunction maskingFunction) {
+                         HeaderMaskingFunction maskingFunction,
+                         @Nullable HeaderMaskingFunction headersMaskingFunction) {
         this.sensitiveHeaders = sensitiveHeaders;
         this.maskingFunction = maskingFunction;
+        this.headersMaskingFunction = headersMaskingFunction;
     }
 
     @Override
@@ -54,31 +60,34 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
         }
 
         final StringBuilder sb = new StringBuilder();
+        sb.append('[');
         if (headers.isEndOfStream()) {
-            sb.append("[EOS, ");
-        } else {
-            sb.append('[');
+            sb.append("EOS");
         }
 
-        maskHeaders(headers, sensitiveHeaders, maskingFunction,
-                    (header, values) -> sb.append(header).append('=')
-                                          .append(values.size() > 1 ?
-                                                  values.toString() : values.get(0)).append(", "));
+        maskHeaders(headers, sensitiveHeaders, maskingFunction, headersMaskingFunction, (header, values) -> {
+            if (sb.length() > 1) {
+                sb.append(", ");
+            }
+            sb.append(header).append('=').append(values.size() > 1 ? values.toString() : values.get(0));
+        });
 
-        sb.setCharAt(sb.length() - 2, ']');
-        return sb.substring(0, sb.length() - 1);
+        return sb.append(']').toString();
     }
 
     static void maskHeaders(
             HttpHeaders headers, Set<AsciiString> sensitiveHeaders,
             HeaderMaskingFunction maskingFunction,
+            @Nullable HeaderMaskingFunction headersMaskingFunction,
             BiConsumer<AsciiString, List<String>> consumer) {
         for (AsciiString headerName : headers.names()) {
             List<String> values = headers.getAll(headerName);
-            if (sensitiveHeaders.contains(headerName)) {
+            final HeaderMaskingFunction function = sensitiveHeaders.contains(headerName) ?
+                                                   maskingFunction : headersMaskingFunction;
+            if (function != null) {
                 // Mask the header values.
                 if (values.size() == 1) {
-                    final String masked = maskingFunction.mask(headerName, values.get(0));
+                    final String masked = function.mask(headerName, values.get(0));
                     if (masked == null) {
                         values = ImmutableList.of();
                     } else {
@@ -86,7 +95,7 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
                     }
                 } else {
                     values = values.stream()
-                                   .map(value -> maskingFunction.mask(headerName, value))
+                                   .map(value -> function.mask(headerName, value))
                                    .filter(Objects::nonNull)
                                    .collect(toImmutableList());
                 }
