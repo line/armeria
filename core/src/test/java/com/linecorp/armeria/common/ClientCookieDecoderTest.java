@@ -33,6 +33,7 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -40,6 +41,8 @@ import java.util.Iterator;
 import java.util.TimeZone;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.netty.handler.codec.DateFormatter;
 
@@ -312,6 +315,43 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(emptyPath);
         assertThat(cookie).isNotNull();
         assertThat(cookie.path()).isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "a=b; Domain=éxample.com",
+            "a=b; Domain=ex\u0001ample.com",
+            "a=b; Domain=example\u007f.com",
+            "a=b; Domain= ",
+            "a=b; Path=/é",
+            "a=b; Path=/a\u0001b",
+            "a=b; Path=/a\u007fb",
+            "a=b; Path= ",
+            "a=b; Domain=éxample.com; Domain=example.com",
+            "a=b; Path=/é; Path=/"
+    })
+    void testRejectInvalidAttribute(String cookieString) {
+        assertThat(Cookie.fromSetCookieHeader(cookieString)).isNull();
+        assertThat(Cookie.fromSetCookieHeader(false, cookieString)).isNull();
+    }
+
+    @Test
+    void testDecodingMultipleHeadersWithInvalidAttribute() {
+        final String[] cookieHeaders = { "first=1; Path=/", "invalid=2; Domain=éxample.com", "last=3" };
+        assertThat(Cookie.fromSetCookieHeaders(cookieHeaders)).extracting(Cookie::name)
+                                                            .containsExactlyInAnyOrder("first", "last");
+        final Collection<String> collectionHeaders = Arrays.asList(cookieHeaders);
+        assertThat(Cookie.fromSetCookieHeaders(collectionHeaders)).extracting(Cookie::name)
+                                                                .containsExactlyInAnyOrder("first", "last");
+        final Iterable<String> iterableHeaders = () -> collectionHeaders.iterator();
+        assertThat(Cookie.fromSetCookieHeaders(iterableHeaders)).extracting(Cookie::name)
+                                                              .containsExactlyInAnyOrder("first", "last");
+        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                                                       .add(HttpHeaderNames.SET_COOKIE, cookieHeaders[0])
+                                                       .add(HttpHeaderNames.SET_COOKIE, cookieHeaders[1])
+                                                       .add(HttpHeaderNames.SET_COOKIE, cookieHeaders[2])
+                                                       .build();
+        assertThat(headers.cookies()).extracting(Cookie::name).containsExactlyInAnyOrder("first", "last");
     }
 
     @Test
