@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides an executor interface which is used for potentially long-running tasks which may block I/O threads.
@@ -63,4 +64,10 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
     default ScheduledExecutorService unwrap() {
         return this;
     }
+
+    /**
+     * Returns the number of pending tasks submitted to this executor that have not yet completed.
+     */
+    @UnstableApi
+    int numPendingTasks();
 }
