@@ -235,7 +235,7 @@ class ContentPreviewingClientTest {
         }
 
         final RequestLog requestLog = ctx.log().whenComplete().join();
-        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.requestContentPreview()).isNull();
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
@@ -244,7 +244,7 @@ class ContentPreviewingClientTest {
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
-                                                           .requestPreviewSanitizer(FAILING_CONTENT_SANITIZER)
+                                                           .responsePreviewSanitizer(FAILING_CONTENT_SANITIZER)
                                                            .newDecorator())
                          .build()
                          .blocking();
@@ -260,7 +260,7 @@ class ContentPreviewingClientTest {
 
         final RequestLog requestLog = ctx.log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
-        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+        assertThat(requestLog.responseContentPreview()).isNull();
     }
 
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {

@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.ShuttingDownException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -542,7 +543,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 decreasePendingRequests();
                 increaseActiveRequests(isHttp1WebSocket);
                 if (!isHttp1WebSocket) {
-                    req = ServerRequestContent.prepare(reqCtx, req);
+                    final StreamDecoderFactory decoderFactory =
+                            ServerRequestContent.decoderFactory(reqCtx.config().options(), req.headers());
+                    req = ServerRequestContent.prepare(reqCtx, req, decoderFactory);
+                    if (decoderFactory != null && !reqCtx.exchangeType().isRequestStreaming()) {
+                        return HttpResponse.of(req.aggregate(reqCtx.eventLoop()).thenApply(aggregated -> {
+                            final HttpRequest aggregatedRequest = aggregated.toHttpRequest();
+                            reqCtx.updateRequest(aggregatedRequest);
+                            try (SafeCloseable ignored0 = reqCtx.push()) {
+                                return service.serve(reqCtx, aggregatedRequest);
+                            } catch (Exception cause) {
+                                aggregatedRequest.abort(cause);
+                                return HttpResponse.ofFailure(cause);
+                            }
+                        }));
+                    }
                 }
                 return service.serve(reqCtx, req);
             } catch (Throwable cause) {

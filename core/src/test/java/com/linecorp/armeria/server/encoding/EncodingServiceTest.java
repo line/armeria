@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -45,6 +46,17 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.buffer.ByteBufOutputStream;
 
 class EncodingServiceTest {
+
+    @Test
+    void rejectsDuplicateEncodings() {
+        assertThatThrownBy(() -> Compression.builder()
+                .encoderFactories(StreamEncoderFactories.GZIP, StreamEncoderFactories.GZIP).build())
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EncodingService.builder()
+                .encoderFactories(StreamEncoderFactories.GZIP, StreamEncoderFactories.GZIP)
+                .build((ctx, req) -> HttpResponse.of("content")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     void exchangeType() {

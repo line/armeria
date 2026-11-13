@@ -384,6 +384,8 @@ sb.route().get("/download")
 To sanitize previews, configure `ContentPreview.builder(factory).requestPreviewSanitizer(...)` or
 `responsePreviewSanitizer(...)`. If a previewer or sanitizer fails, the server continues handling the
 request and omits the affected preview. It does not log the unsanitized content.
+The `ContentPreviewingService` and `ContentPreviewingClient` decorators also omit previews when
+a previewer or sanitizer fails.
 
 The existing `ContentPreviewingService`, `EncodingService` and `DecodingService` decorators remain
 available. Prefer server options for these functions so that server-generated error responses use the

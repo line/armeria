@@ -68,7 +68,7 @@ public final class ServerOptions extends AbstractOptions<ServerOption<Object>, S
                     throw new IllegalArgumentException("duplicate content encoding in decoder factories");
                 }
                 return copy;
-            }, (oldValue, newValue) -> newValue);
+            });
 
     private static final ServerOptions EMPTY = new ServerOptions(ImmutableList.of());
 

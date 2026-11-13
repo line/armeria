@@ -19,9 +19,11 @@ package com.linecorp.armeria.server.encoding;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -50,23 +52,27 @@ public final class Compression {
         return DISABLED;
     }
 
-    private final List<StreamEncoderFactory> encoderFactories;
+    private final Map<String, StreamEncoderFactory> encoderFactories;
     private final Predicate<MediaType> encodableContentTypes;
     private final Predicate<? super RequestHeaders> encodableRequestHeaders;
     private final int minBytesToForceChunkedEncoding;
 
     Compression(List<StreamEncoderFactory> encoderFactories, Predicate<MediaType> encodableContentTypes,
                 Predicate<? super RequestHeaders> encodableRequestHeaders, int minBytesToForceChunkedEncoding) {
-        this.encoderFactories = ImmutableList.copyOf(encoderFactories);
+        final ImmutableMap.Builder<String, StreamEncoderFactory> builder = ImmutableMap.builder();
+        for (StreamEncoderFactory factory : encoderFactories) {
+            builder.put(factory.encodingHeaderValue(), factory);
+        }
+        this.encoderFactories = builder.buildOrThrow();
         this.encodableContentTypes = requireNonNull(encodableContentTypes, "encodableContentTypes");
         this.encodableRequestHeaders = requireNonNull(encodableRequestHeaders, "encodableRequestHeaders");
         this.minBytesToForceChunkedEncoding = minBytesToForceChunkedEncoding;
     }
 
     /**
-     * Returns the available encoders, or an empty list if compression is disabled.
+     * Returns the available encoders keyed by content encoding, or an empty map if compression is disabled.
      */
-    public List<StreamEncoderFactory> encoderFactories() {
+    public Map<String, StreamEncoderFactory> encoderFactories() {
         return encoderFactories;
     }
 

@@ -20,9 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -36,51 +33,43 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 public final class ContentPreviewingUtil {
-
-    private static final Logger logger = LoggerFactory.getLogger(ContentPreviewingUtil.class);
 
     /**
      * Sets up the request {@link ContentPreviewer} to set
      * {@link RequestLogBuilder#requestContentPreview(String)} when the preview is available.
      */
     public static HttpRequest setUpRequestContentPreviewer(
-            RequestContext ctx, HttpRequest req, ContentPreviewer requestContentPreviewer,
+            RequestContext ctx, HttpRequest req, ContentPreviewerFactory factory,
             BiFunction<? super RequestContext, String, ? extends @Nullable Object> contentSanitizer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(req, "req");
-        requireNonNull(requestContentPreviewer, "requestContentPreviewer");
+        requireNonNull(factory, "factory");
         requireNonNull(contentSanitizer, "contentSanitizer");
-        if (requestContentPreviewer.isDisabled()) {
+        if (req.isEmpty()) {
+            ctx.logBuilder().requestContentPreview("");
+            return req;
+        }
+        final HttpContentPreviewer previewer =
+                new HttpContentPreviewer(ctx, factory, req.headers(), true, contentSanitizer);
+        if (previewer.isDisabled()) {
+            previewer.finish();
             return req;
         }
 
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
         final FilteredHttpRequest filteredHttpRequest = new FilteredHttpRequest(req) {
             @Override
             protected HttpObject filter(HttpObject obj) {
                 if (obj instanceof HttpData) {
-                    requestContentPreviewer.onData((HttpData) obj);
+                    previewer.onData((HttpData) obj);
                 }
                 return obj;
             }
         };
         filteredHttpRequest.whenComplete().handle((unused, cause) -> {
-            @Nullable String produced = null;
-            try {
-                produced = requestContentPreviewer.produce();
-                if (produced != null) {
-                    produced = sanitize(contentSanitizer, ctx, produced);
-                }
-            } catch (Exception e) {
-                logger.warn("Unexpected exception while producing the request content preview. " +
-                            "previewer: {}", requestContentPreviewer, e);
-            }
-            logBuilder.requestContentPreview(produced);
+            previewer.finish();
             return null;
         });
         return filteredHttpRequest;
@@ -104,8 +93,9 @@ public final class ContentPreviewingUtil {
 
         private final ContentPreviewerFactory factory;
         private final RequestContext ctx;
+        private final BiFunction<? super RequestContext, String, ? extends @Nullable Object> contentSanitizer;
         @Nullable
-        ContentPreviewer responseContentPreviewer;
+        private HttpContentPreviewer responseContentPreviewer;
 
         protected ContentPreviewerHttpResponse(
                 HttpResponse delegate, ContentPreviewerFactory factory, RequestContext ctx,
@@ -113,27 +103,13 @@ public final class ContentPreviewingUtil {
             super(delegate);
             this.factory = factory;
             this.ctx = ctx;
+            this.contentSanitizer = contentSanitizer;
             whenComplete().handle((unused, cause) -> {
                 if (responseContentPreviewer == null) {
                     ctx.logBuilder().responseContentPreview(null);
                     return null;
                 }
-                if (!responseContentPreviewer.isDisabled()) {
-                    @Nullable String produced = null;
-                    try {
-                        produced = responseContentPreviewer.produce();
-                        if (produced != null) {
-                            produced = sanitize(contentSanitizer, ctx, produced);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("Unexpected exception while producing the response content preview. " +
-                                    "previewer: {}", responseContentPreviewer, e);
-                    }
-                    ctx.logBuilder().responseContentPreview(produced);
-                } else {
-                    // Call requestContentPreview(null) to make sure that the log is complete.
-                    ctx.logBuilder().responseContentPreview(null);
-                }
+                responseContentPreviewer.finish();
                 return null;
             });
         }
@@ -148,9 +124,10 @@ public final class ContentPreviewingUtil {
                 if (ArmeriaHttpUtil.isInformational(status)) {
                     return obj;
                 }
-                responseContentPreviewer = factory.responseContentPreviewer(ctx, resHeaders);
+                responseContentPreviewer =
+                        new HttpContentPreviewer(ctx, factory, resHeaders, false, contentSanitizer);
             } else if (obj instanceof HttpData) {
-                if (responseContentPreviewer != null && !responseContentPreviewer.isDisabled()) {
+                if (responseContentPreviewer != null) {
                     responseContentPreviewer.onData((HttpData) obj);
                 }
             }
@@ -159,13 +136,4 @@ public final class ContentPreviewingUtil {
     }
 
     private ContentPreviewingUtil() {}
-
-    @Nullable
-    private static String sanitize(
-            BiFunction<? super RequestContext, String,
-                    ? extends @Nullable Object> contentSanitizer,
-            RequestContext ctx, String produced) {
-        final Object sanitized = contentSanitizer.apply(ctx, produced);
-        return sanitized != null ? sanitized.toString() : "<sanitized>";
-    }
 }

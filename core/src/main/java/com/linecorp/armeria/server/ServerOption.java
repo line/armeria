@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -31,50 +29,13 @@ import com.linecorp.armeria.common.util.AbstractOption;
 @UnstableApi
 public final class ServerOption<T> extends AbstractOption<ServerOption<T>, ServerOptionValue<T>, T> {
 
-    /**
-     * Returns the all available {@link ServerOption}s.
-     */
-    public static Set<ServerOption<?>> allOptions() {
-        return allOptions(ServerOption.class);
+    static <T> ServerOption<T> define(String name, T defaultValue) {
+        return define(name, defaultValue, Function.identity());
     }
 
-    /**
-     * Returns the {@link ServerOption} with the specified {@code name}.
-     *
-     * @throws NoSuchElementException if there's no such option defined.
-     */
-    public static ServerOption<?> of(String name) {
-        return of(ServerOption.class, name);
-    }
-
-    /**
-     * Defines a new {@link ServerOption} of the specified name and default value.
-     *
-     * @param name the name of the option.
-     * @param defaultValue the default value of the option, which will be used when unspecified.
-     *
-     * @throws IllegalStateException if an option with the specified name exists already.
-     */
-    public static <T> ServerOption<T> define(String name, T defaultValue) {
-        return define(name, defaultValue, Function.identity(), (oldValue, newValue) -> newValue);
-    }
-
-    /**
-     * Defines a new {@link ServerOption} of the specified name, default value and merge function.
-     *
-     * @param name the name of the option.
-     * @param defaultValue the default value of the option, which will be used when unspecified.
-     * @param validator the {@link Function} which is used for validating and normalizing an option value.
-     * @param mergeFunction the {@link BiFunction} which is used for merging old and new option values.
-     *
-     * @throws IllegalStateException if an option with the specified name exists already.
-     */
-    public static <T> ServerOption<T> define(
-            String name,
-            T defaultValue,
-            Function<T, T> validator,
-            BiFunction<ServerOptionValue<T>, ServerOptionValue<T>, ServerOptionValue<T>> mergeFunction) {
-        return define(ServerOption.class, name, defaultValue, ServerOption::new, validator, mergeFunction);
+    static <T> ServerOption<T> define(String name, T defaultValue, Function<T, T> validator) {
+        return define(ServerOption.class, name, defaultValue, ServerOption::new, validator,
+                      (oldValue, newValue) -> newValue);
     }
 
     private ServerOption(

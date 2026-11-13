@@ -63,11 +63,15 @@ import com.linecorp.armeria.server.encoding.Compression;
 import com.linecorp.armeria.server.logging.ContentPreview;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.util.AttributeKey;
 
 class ServerContentOptionsTest {
     private static final String CONTENT = "hello server content options";
+    private static final AttributeKey<ByteBuf> RESPONSE_BUFFER =
+            AttributeKey.valueOf(ServerContentOptionsTest.class, "RESPONSE_BUFFER");
 
     private static final StreamEncoderFactory FAILING_ENCODER = new StreamEncoderFactory() {
         @Override
@@ -119,6 +123,10 @@ class ServerContentOptionsTest {
 
                     @Override
                     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+                        assertThat(ctx.exchangeType()).isEqualTo(type);
+                        if (!type.isRequestStreaming()) {
+                            assertThat(req.isOpen()).isFalse();
+                        }
                         if (req.path().endsWith("/error")) {
                             throw new IllegalStateException("service failed");
                         }
@@ -161,6 +169,21 @@ class ServerContentOptionsTest {
                           throw new IllegalStateException("compression predicate");
                       }).build())
               .build((ctx, req) -> HttpResponse.of("original"));
+            sb.route().get("/async-compression-failure")
+              .option(ServerOptions.COMPRESSION, Compression.builder()
+                      .encodableContentTypes(type -> {
+                          throw HttpResponseException.of(HttpResponse.of(
+                                  HttpStatus.SERVICE_UNAVAILABLE, MediaType.PLAIN_TEXT_UTF_8,
+                                  "compression failed"));
+                      }).build())
+              .build((ctx, req) -> {
+                  final ByteBuf buffer = ctx.alloc().buffer()
+                                            .writeBytes(CONTENT.getBytes(StandardCharsets.UTF_8));
+                  ctx.setAttr(RESPONSE_BUFFER, buffer);
+                  return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
+                                                            HttpHeaderNames.CONTENT_TYPE, "text/plain"),
+                                         HttpData.wrap(buffer));
+              });
             sb.service("/body-failure", (ctx, req) -> {
                 final HttpResponseWriter response = HttpResponse.streaming();
                 response.write(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, "text/plain"));
@@ -238,7 +261,11 @@ class ServerContentOptionsTest {
     @ParameterizedTest
     @EnumSource(ExchangeType.class)
     void errorResponseIsPreviewedAndCompressed(ExchangeType type) throws Exception {
-        final AggregatedHttpResponse response = get("/" + type + "/error");
+        final AggregatedHttpResponse response = server.blockingWebClient().execute(
+                RequestHeaders.of(HttpMethod.POST, "/" + type + "/error",
+                                  HttpHeaderNames.CONTENT_ENCODING, "gzip",
+                                  HttpHeaderNames.ACCEPT_ENCODING, "gzip"),
+                HttpData.wrap(gzip(CONTENT)));
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(gunzip(response)).isEqualTo("mapped error");
         assertThat(nextLog().responseContentPreview()).isEqualTo("mapped error");
@@ -327,6 +354,22 @@ class ServerContentOptionsTest {
         assertThat(nextLog().responseContentPreview()).isEqualTo(response.contentUtf8());
     }
 
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
+    void compressionFailureCancelsOriginalResponseAndCompletesReplacement(SessionProtocol protocol)
+            throws Exception {
+        final AggregatedHttpResponse response = WebClient.of(server.uri(protocol)).blocking()
+                .get("/async-compression-failure");
+        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.contentUtf8()).isEqualTo("compression failed");
+        final RequestLog log = nextLog();
+        assertThat(log.responseCause()).isNull();
+        assertThat(log.responseContentPreview()).isEqualTo("compression failed");
+        final ByteBuf buffer = log.context().attr(RESPONSE_BUFFER);
+        assertThat(buffer).isNotNull();
+        assertThat(buffer.refCnt()).isZero();
+    }
+
     @Test
     void preservesVaryAndDoesNotDoubleEncode() throws Exception {
         final AggregatedHttpResponse response = get("/vary");
@@ -393,8 +436,8 @@ class ServerContentOptionsTest {
                                                                     HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
     }
 
-    private static RequestLog nextLog() throws InterruptedException {
-        return server.requestContextCaptor().poll().log().whenComplete().join();
+    private static RequestLog nextLog() throws Exception {
+        return server.requestContextCaptor().poll().log().whenComplete().get(10, TimeUnit.SECONDS);
     }
 
     private static byte[] gzip(String content) throws Exception {

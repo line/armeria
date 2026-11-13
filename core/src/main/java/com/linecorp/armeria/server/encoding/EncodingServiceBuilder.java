@@ -129,11 +129,7 @@ public final class EncodingServiceBuilder {
      * Returns a newly-created {@link EncodingService} based on the properties of this builder.
      */
     public EncodingService build(HttpService delegate) {
-        final Compression compression = builder.build();
-        return new EncodingService(delegate, compression.encoderFactories(),
-                                   compression.encodableContentTypes(),
-                                   compression.encodableRequestHeaders(),
-                                   compression.minBytesToForceChunkedEncoding());
+        return new EncodingService(delegate, builder.build());
     }
 
     /**

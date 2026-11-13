@@ -45,11 +45,7 @@ interface DecodedHttpRequest extends HttpRequest {
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
-            final ExchangeType serviceExchangeType = service.exchangeType(routingCtx);
-            final ExchangeType exchangeType = ExchangeType.of(
-                    serviceExchangeType.isRequestStreaming() ||
-                    ServerRequestContent.decoderFactory(config.options(), headers) != null,
-                    serviceExchangeType.isResponseStreaming());
+            final ExchangeType exchangeType = service.exchangeType(routingCtx);
             if (endOfStream) {
                 assert expectContinueHandler == null;
                 return new EmptyContentDecodedHttpRequest(
@@ -58,7 +54,9 @@ interface DecodedHttpRequest extends HttpRequest {
             } else {
                 // A request that expects '100 Continue' is not aggregated. Otherwise, the service would never
                 // be invoked because the client waits for '100 Continue' before sending the content.
-                if (exchangeType.isRequestStreaming() || expectContinueHandler != null) {
+                // Decompression also needs a stream before aggregating the decoded content.
+                if (exchangeType.isRequestStreaming() || expectContinueHandler != null ||
+                    ServerRequestContent.decoderFactory(config.options(), headers) != null) {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,

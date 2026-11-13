@@ -240,14 +240,20 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
     }
 
     State setDone(boolean cancel) {
-        if (cancel && subscription != null && !isSubscriptionCompleted) {
-            isSubscriptionCompleted = true;
-            subscription.cancel();
+        if (cancel) {
+            cancelSubscription();
         }
         clearTimeout();
         final State oldState = state;
         state = State.DONE;
         return oldState;
+    }
+
+    final void cancelSubscription() {
+        if (subscription != null && !isSubscriptionCompleted) {
+            isSubscriptionCompleted = true;
+            subscription.cancel();
+        }
     }
 
     @Override

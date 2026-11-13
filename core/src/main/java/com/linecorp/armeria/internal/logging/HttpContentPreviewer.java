@@ -14,52 +14,61 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.logging;
+
+import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.server.logging.ContentPreview;
 
 /**
  * Collects a preview without allowing observer failures to affect an exchange.
  */
-final class HttpContentPreviewer {
+public final class HttpContentPreviewer {
     private static final Logger logger = LoggerFactory.getLogger(HttpContentPreviewer.class);
 
-    private final ServiceRequestContext ctx;
-    private final ContentPreview config;
+    private final RequestContext ctx;
+    private final BiFunction<? super RequestContext, String, ? extends @Nullable Object> sanitizer;
     private final boolean request;
     @Nullable
     private ContentPreviewer previewer;
     private boolean finished;
 
-    HttpContentPreviewer(ServiceRequestContext ctx, ContentPreview config,
-                         HttpHeaders headers, boolean request) {
+    public HttpContentPreviewer(
+            RequestContext ctx, ContentPreviewerFactory factory, HttpHeaders headers, boolean request,
+            BiFunction<? super RequestContext, String, ? extends @Nullable Object> sanitizer) {
         this.ctx = ctx;
-        this.config = config;
+        this.sanitizer = sanitizer;
         this.request = request;
         ctx.logBuilder().defer(request ? RequestLogProperty.REQUEST_CONTENT_PREVIEW
                                        : RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         try {
-            final ContentPreviewerFactory factory = config.factory();
-            assert factory != null;
             previewer = request ? factory.requestContentPreviewer(ctx, (RequestHeaders) headers)
                                 : factory.responseContentPreviewer(ctx, (ResponseHeaders) headers);
+            if (previewer.isDisabled()) {
+                previewer = null;
+            }
         } catch (Exception cause) {
+            previewer = null;
             logger.warn("Failed to create a content previewer", cause);
         }
     }
 
-    void onData(HttpData data) {
+    public boolean isDisabled() {
+        return previewer == null;
+    }
+
+    public void onData(HttpData data) {
         if (previewer == null) {
             return;
         }
@@ -73,7 +82,7 @@ final class HttpContentPreviewer {
         }
     }
 
-    void finish() {
+    public void finish() {
         if (finished) {
             return;
         }
@@ -83,8 +92,7 @@ final class HttpContentPreviewer {
             if (previewer != null && !previewer.isDisabled()) {
                 final String produced = previewer.produce();
                 if (produced != null) {
-                    final Object sanitized = request ? config.requestPreviewSanitizer().apply(ctx, produced)
-                                                     : config.responsePreviewSanitizer().apply(ctx, produced);
+                    final Object sanitized = sanitizer.apply(ctx, produced);
                     preview = sanitized != null ? sanitized.toString() : "<sanitized>";
                 }
             }

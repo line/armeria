@@ -63,8 +63,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
                         endOfStream);
             } catch (Exception cause) {
                 disableResponseCompression();
+                cancelSubscription();
                 onError(cause);
-                setDone(true);
                 return;
             }
             if (req.method() == HttpMethod.HEAD) {

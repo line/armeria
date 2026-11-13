@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -31,6 +29,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.logging.HttpContentPreviewer;
 import com.linecorp.armeria.internal.server.HttpEncoders;
 import com.linecorp.armeria.server.encoding.Compression;
 import com.linecorp.armeria.server.logging.ContentPreview;
@@ -61,8 +61,10 @@ final class ServerResponseContent {
     }
 
     ResponseHeaders prepareHeaders(ResponseHeaders headers, boolean endOfStream) {
-        if (previewConfig.factory() != null && !headers.contains(HttpHeaderNames.CONTENT_ENCODING)) {
-            previewer = new HttpContentPreviewer(ctx, previewConfig, headers, false);
+        final ContentPreviewerFactory previewerFactory = previewConfig.factory();
+        if (previewerFactory != null && !headers.contains(HttpHeaderNames.CONTENT_ENCODING)) {
+            previewer = new HttpContentPreviewer(ctx, previewerFactory, headers, false,
+                                                previewConfig.responsePreviewSanitizer());
         }
         if (compressionDisabled || endOfStream || ctx.method() == HttpMethod.HEAD ||
             headers.status().isContentAlwaysEmpty() || headers.status().code() == 206 ||
@@ -84,11 +86,8 @@ final class ServerResponseContent {
             headers.contentLength() < compression.minBytesToForceChunkedEncoding()) {
             return headers;
         }
-        final Map<String, StreamEncoderFactory> factories = new LinkedHashMap<>();
-        for (StreamEncoderFactory factory : compression.encoderFactories()) {
-            factories.put(factory.encodingHeaderValue(), factory);
-        }
-        final StreamEncoderFactory factory = HttpEncoders.determineEncoder(factories, ctx.request().headers());
+        final StreamEncoderFactory factory =
+                HttpEncoders.determineEncoder(compression.encoderFactories(), ctx.request().headers());
         if (factory == null) {
             return headers;
         }

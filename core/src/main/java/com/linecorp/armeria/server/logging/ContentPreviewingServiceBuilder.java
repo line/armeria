@@ -84,12 +84,7 @@ public final class ContentPreviewingServiceBuilder {
      * properties of this builder.
      */
     public ContentPreviewingService build(HttpService delegate) {
-        final ContentPreview preview = builder.build();
-        final ContentPreviewerFactory factory = preview.factory();
-        assert factory != null;
-        return new ContentPreviewingService(delegate, factory,
-                                            preview.requestPreviewSanitizer(),
-                                            preview.responsePreviewSanitizer());
+        return new ContentPreviewingService(delegate, builder.build());
     }
 
     /**
