@@ -27,7 +27,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -105,5 +111,33 @@ class ErrorHandlerOrElseTest {
                     "Server1", "Server2");
             handlerEvents.clear();
         }
+    }
+
+    @Test
+    void orElseDelegatesRenderStatus() {
+        final AggregatedHttpResponse rendered = AggregatedHttpResponse.of(HttpStatus.CONFLICT);
+        final ServiceErrorHandler declines = (ctx, cause) -> null;
+        final ServiceErrorHandler renders = new ServiceErrorHandler() {
+            @Nullable
+            @Override
+            public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+                return null;
+            }
+
+            @Override
+            public AggregatedHttpResponse renderStatus(ServiceRequestContext ctx,
+                                                       RequestHeaders headers,
+                                                       HttpStatus status,
+                                                       @Nullable String description,
+                                                       @Nullable Throwable cause) {
+                return rendered;
+            }
+        };
+
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(declines.orElse(renders)
+                           .renderStatus(ctx, ctx.request().headers(), HttpStatus.CONFLICT, null, null))
+                .isSameAs(rendered);
     }
 }
