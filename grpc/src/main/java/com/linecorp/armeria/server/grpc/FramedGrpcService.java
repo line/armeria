@@ -297,6 +297,13 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (timeout.isZero()) {
             return false;
         }
+        final long elapsedNanos = System.nanoTime() - ctx.log().partial().requestStartTimeNanos();
+        if (timeout.toNanos() <= elapsedNanos) {
+            // The deadline is already exhausted by the time the request spent in the server, so fail the
+            // request the same way a zero timeout does. Letting the scheduler cancel it instead aborts the
+            // request before a response has started, which a client sees as UNAVAILABLE.
+            return false;
+        }
         ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, timeout);
         return true;
     }
