@@ -322,6 +322,11 @@ class RequestMetricSupportTest {
     }
 
     private static ClientRequestContext setupClientRequestCtx(MeterRegistry registry) {
+        return setupClientRequestCtx(registry, SuccessFunction.ofDefault());
+    }
+
+    private static ClientRequestContext setupClientRequestCtx(MeterRegistry registry,
+                                                            SuccessFunction successFunction) {
         final ClientRequestContext ctx =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                     .meterRegistry(registry)
@@ -332,7 +337,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
+                                   successFunction, Flags.distributionStatisticConfig());
         return ctx;
     }
 
@@ -485,6 +490,25 @@ class RequestMetricSupportTest {
                                serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=200,method=POST," +
                                serviceTag + '}', 1.0);
+    }
+
+    @Test
+    void activeRequestsDecrementedWhenSuccessFunctionThrows() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry, (context, log) -> {
+            throw new IllegalStateException("Failed to determine request success");
+        });
+        ctx.logBuilder().name("FooService", "POST");
+
+        assertThat(measureAll(registry))
+                .containsEntry("foo.active.requests#value{method=POST,service=FooService}", 1.0);
+
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        ctx.logBuilder().endResponse();
+
+        assertThat(measureAll(registry))
+                .containsEntry("foo.active.requests#value{method=POST,service=FooService}", 0.0);
     }
 
     @Test

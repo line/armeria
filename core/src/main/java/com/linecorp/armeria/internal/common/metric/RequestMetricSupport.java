@@ -86,8 +86,12 @@ public final class RequestMetricSupport {
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction, distributionStatisticConfig);
-            activeRequestMetrics.decrement();
+            try {
+                onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
+                           distributionStatisticConfig);
+            } finally {
+                activeRequestMetrics.decrement();
+            }
         });
     }
 
