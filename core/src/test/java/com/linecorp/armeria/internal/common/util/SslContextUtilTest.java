@@ -27,6 +27,7 @@ import javax.net.ssl.SSLException;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientTlsSpec;
@@ -99,6 +100,129 @@ class SslContextUtilTest {
                              .allowUnsafeCiphers(true)
                              .build());
         ReferenceCountUtil.release(sslContext);
+    }
+
+    @Test
+    void tls13OnlyWithEssentialCipher() {
+        assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
+                .contains("TLSv1.3");
+
+        // When only TLS 1.3 is configured, TLS_AES_128_GCM_SHA256 is the essential cipher.
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .tlsCustomizer(builder -> {
+                                 builder.protocols("TLSv1.3");
+                                 builder.ciphers(ImmutableList.of("TLS_AES_128_GCM_SHA256"));
+                             })
+                             .build();
+        factory.closeAsync();
+    }
+
+    @Test
+    void tls13OnlyWithoutEssentialCipher() {
+        assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
+                .contains("TLSv1.3");
+
+        // When only TLS 1.3 is configured and TLS_AES_128_GCM_SHA256 is missing,
+        // it must throw an IllegalStateException mentioning the missing cipher.
+        assertThatThrownBy(() -> {
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsCustomizer(builder -> {
+                                     builder.protocols("TLSv1.3");
+                                     builder.ciphers(ImmutableList.of("TLS_AES_256_GCM_SHA384"));
+                                 })
+                                 .build();
+            factory.closeAsync();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_AES_128_GCM_SHA256 cipher suite enabled");
+    }
+
+    @Test
+    void tls13OnlyWithoutEssentialCipherAllowed() {
+        assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
+                .contains("TLSv1.3");
+
+        // When allowUnsafeCiphers is true, omitting the essential TLS 1.3 cipher
+        // should warn instead of throwing.
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .tlsAllowUnsafeCiphers()
+                             .tlsCustomizer(builder -> {
+                                 builder.protocols("TLSv1.3");
+                                 builder.ciphers(ImmutableList.of("TLS_AES_256_GCM_SHA384"));
+                             })
+                             .build();
+        factory.closeAsync();
+    }
+
+    @Test
+    void tls12OnlyWithoutEssentialCipher() {
+        // When only TLS 1.2 is configured without TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+        // it must throw an IllegalStateException mentioning the TLS 1.2 cipher.
+        assertThatThrownBy(() -> {
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsCustomizer(builder -> {
+                                     builder.protocols("TLSv1.2");
+                                     builder.ciphers(ImmutableList.of("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"));
+                                 })
+                                 .build();
+            factory.closeAsync();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+    }
+
+    @Test
+    void bothProtocolsWithoutTls12EssentialCipher() {
+        assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
+                .contains("TLSv1.3");
+
+        // When both TLS 1.2 and TLS 1.3 are enabled, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 is still required.
+        assertThatThrownBy(() -> {
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsCustomizer(builder -> {
+                                     builder.protocols("TLSv1.2", "TLSv1.3");
+                                     builder.ciphers(ImmutableList.of("TLS_AES_128_GCM_SHA256"));
+                                 })
+                                 .build();
+            factory.closeAsync();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+    }
+
+    @Test
+    void validateHttp2CiphersBothEssentialPresent() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_AES_128_GCM_SHA256",
+                                                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
+        SslContextUtil.validateHttp2Ciphers(ciphers, false, () -> {
+            throw new AssertionError("Supplier should not be called when both essential ciphers are present");
+        });
+    }
+
+    @Test
+    void validateHttp2CiphersTls13MissingEssentialCipher() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_AES_256_GCM_SHA384");
+        assertThatThrownBy(() -> SslContextUtil.validateHttp2Ciphers(ciphers, false,
+                                                                     () -> ImmutableSet.of("TLSv1.3")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TLS without the TLS_AES_128_GCM_SHA256 cipher suite enabled");
+    }
+
+    @Test
+    void validateHttp2CiphersTls13MissingEssentialCipherAllowed() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_AES_256_GCM_SHA384");
+        SslContextUtil.validateHttp2Ciphers(ciphers, true, () -> ImmutableSet.of("TLSv1.3"));
+    }
+
+    @Test
+    void validateHttp2CiphersTls12MissingEssentialCipher() {
+        final Set<String> ciphers = ImmutableSet.of("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384");
+        assertThatThrownBy(() -> SslContextUtil.validateHttp2Ciphers(ciphers, false,
+                                                                     () -> ImmutableSet.of("TLSv1.2")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
     }
 
     @Nullable
