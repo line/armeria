@@ -17,10 +17,12 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -49,6 +51,18 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
         return (MetricCollectingServiceBuilder) super.distributionStatisticConfig(distributionStatisticConfig);
     }
 
+    @UnstableApi
+    @Override
+    public MetricCollectingServiceBuilder maxCardinality(int maxCardinality) {
+        return (MetricCollectingServiceBuilder) super.maxCardinality(maxCardinality);
+    }
+
+    @UnstableApi
+    @Override
+    public MetricCollectingServiceBuilder maxCardinality(int maxCardinality, Duration idleTimeout) {
+        return (MetricCollectingServiceBuilder) super.maxCardinality(maxCardinality, idleTimeout);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
      * on the properties of this builder.
@@ -56,7 +70,8 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
     public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction(),
-                                           distributionStatisticConfig());
+                                           distributionStatisticConfig(), maxCardinality(),
+                                           metricIdleTimeout());
     }
 
     /**

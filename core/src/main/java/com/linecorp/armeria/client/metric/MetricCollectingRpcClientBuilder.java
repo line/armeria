@@ -17,11 +17,13 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -50,6 +52,18 @@ public final class MetricCollectingRpcClientBuilder extends AbstractMetricCollec
                 super.distributionStatisticConfig(distributionStatisticConfig);
     }
 
+    @UnstableApi
+    @Override
+    public MetricCollectingRpcClientBuilder maxCardinality(int maxCardinality) {
+        return (MetricCollectingRpcClientBuilder) super.maxCardinality(maxCardinality);
+    }
+
+    @UnstableApi
+    @Override
+    public MetricCollectingRpcClientBuilder maxCardinality(int maxCardinality, Duration idleTimeout) {
+        return (MetricCollectingRpcClientBuilder) super.maxCardinality(maxCardinality, idleTimeout);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingRpcClient} decorating {@link RpcClient} based
      * on the properties of this builder.
@@ -57,7 +71,8 @@ public final class MetricCollectingRpcClientBuilder extends AbstractMetricCollec
     public MetricCollectingRpcClient build(RpcClient delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction(), successFunction(),
-                                             distributionStatisticConfig());
+                                             distributionStatisticConfig(), maxCardinality(),
+                                             metricIdleTimeout());
     }
 
     /**

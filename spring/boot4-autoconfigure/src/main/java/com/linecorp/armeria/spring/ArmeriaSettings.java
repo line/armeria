@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -521,6 +522,21 @@ public class ArmeriaSettings {
     private boolean enableMetrics = true;
 
     /**
+     * The maximum number of distinct metric tag combinations allowed for request metrics.
+     * When this threshold is reached, metrics for new tag combinations will not be recorded.
+     * If not specified, no limit is enforced.
+     */
+    @Nullable
+    private Integer metricsMaxCardinality;
+
+    /**
+     * The idle timeout for evicting inactive metric tag combinations when {@link #metricsMaxCardinality}
+     * is set. If not specified, the default idle timeout is used.
+     */
+    @Nullable
+    private Duration metricsIdleTimeout;
+
+    /**
      * SSL configuration that the {@link Server} uses.
      */
     @Nullable
@@ -813,6 +829,42 @@ public class ArmeriaSettings {
      */
     public void setEnableMetrics(boolean enableMetrics) {
         this.enableMetrics = enableMetrics;
+    }
+
+    /**
+     * Returns the maximum number of distinct active request metric tag combinations allowed for
+     * request metrics, or {@code null} if no limit is enforced.
+     */
+    @UnstableApi
+    @Nullable
+    public Integer getMetricsMaxCardinality() {
+        return metricsMaxCardinality;
+    }
+
+    /**
+     * Sets the maximum number of distinct active request metric tag combinations allowed for request metrics.
+     * When this threshold is reached, metrics for new tag combinations will not be recorded.
+     */
+    @UnstableApi
+    public void setMetricsMaxCardinality(@Nullable Integer metricsMaxCardinality) {
+        this.metricsMaxCardinality = metricsMaxCardinality;
+    }
+
+    /**
+     * Returns the idle timeout for evicting inactive metric tag combinations.
+     */
+    @UnstableApi
+    @Nullable
+    public Duration getMetricsIdleTimeout() {
+        return metricsIdleTimeout;
+    }
+
+    /**
+     * Sets the idle timeout for evicting inactive metric tag combinations.
+     */
+    @UnstableApi
+    public void setMetricsIdleTimeout(@Nullable Duration metricsIdleTimeout) {
+        this.metricsIdleTimeout = metricsIdleTimeout;
     }
 
     /**
