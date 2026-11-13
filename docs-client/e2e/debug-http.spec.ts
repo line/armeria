@@ -206,6 +206,55 @@ test('keeps unsent HTTP inputs when opening and closing Debug', async ({
   await expect(headerInput(inline)).toHaveValue('{"x-draft":"dialog"}');
 });
 
+test('redacts sensitive headers in URL state and after refresh', async ({
+  page,
+}) => {
+  await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
+  const dialog = await openDebug(page);
+  const headers =
+    '{"Authorization":"Bearer super-secret","Test-Header":"custom-secret","x-custom":"visible"}';
+  await headerInput(dialog).fill(headers);
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === '/echo',
+  );
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+
+  const request = await requestPromise;
+  expect(request.headers().authorization).toBe('Bearer super-secret');
+  expect(request.headers()['test-header']).toBe('custom-secret');
+  expect(request.headers()['x-custom']).toBe('visible');
+  await expect(page).toHaveURL(/REDACTED/);
+  expect(page.url()).not.toContain('super-secret');
+  expect(page.url()).not.toContain('custom-secret');
+  await expect(headerInput(dialog)).toHaveValue(headers);
+
+  await page.reload();
+  await expect(headerInput(page.getByRole('dialog'))).toHaveValue(
+    /"Authorization": "REDACTED"[\s\S]*"Test-Header": "REDACTED"[\s\S]*"x-custom": "visible"/,
+  );
+});
+
+test('defaults to redacting authorization when settings fail', async ({
+  page,
+}) => {
+  await page.route('**/settings.json', async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: '{}',
+    });
+  });
+  await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
+  const dialog = await openDebug(page);
+  await headerInput(dialog).fill('{"Authorization":"Bearer fallback-secret"}');
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+
+  await expect(page).toHaveURL(/REDACTED/);
+  expect(page.url()).not.toContain('fallback-secret');
+});
+
 test('validates prefix, regex, and regex-with-prefix endpoint paths', async ({
   page,
 }) => {
