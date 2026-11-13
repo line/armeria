@@ -501,6 +501,40 @@ class PortBasedVirtualHostTest {
     }
 
     @Test
+    void actualPortAndVirtualHostResetAfterServerStop() {
+        final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
+        final Server server = Server.builder()
+                                    .port(port)
+                                    .virtualHost(port)
+                                    .service("/test", (ctx, req) -> HttpResponse.of("OK"))
+                                    .and()
+                                    .build();
+        final VirtualHost virtualHost = server.config().virtualHosts().stream()
+                                              .filter(v -> v.serverPort() == port)
+                                              .findFirst().orElseThrow(AssertionError::new);
+        final String hostnamePattern = virtualHost.hostnamePattern();
+        final String defaultHostname = virtualHost.defaultHostname();
+
+        try {
+            for (int i = 0; i < 2; i++) {
+                server.start().join();
+                assertThat(port.actualPort()).isPositive();
+                assertThat(virtualHost.hostnamePattern()).endsWith(":" + port.actualPort());
+                assertThat(virtualHost.defaultHostname()).endsWith(":" + port.actualPort());
+                assertThat(server.config().findVirtualHost("example.com", port.actualPort()))
+                        .isSameAs(virtualHost);
+
+                server.stop().join();
+                assertThat(port.actualPort()).isZero();
+                assertThat(virtualHost.hostnamePattern()).isEqualTo(hostnamePattern);
+                assertThat(virtualHost.defaultHostname()).isEqualTo(defaultHostname);
+            }
+        } finally {
+            server.close();
+        }
+    }
+
+    @Test
     void multipleRandomPortVirtualHosts() {
         final ServerPort port1 = new ServerPort(0, SessionProtocol.HTTP);
         final ServerPort port2 = new ServerPort(0, SessionProtocol.HTTP);
