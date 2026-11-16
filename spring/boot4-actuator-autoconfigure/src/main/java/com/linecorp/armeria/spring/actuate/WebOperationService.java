@@ -31,6 +31,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -65,6 +66,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.buffer.ByteBuf;
 
@@ -72,7 +75,7 @@ import io.netty.buffer.ByteBuf;
  * {@link HttpService} to handle a {@link WebOperation}. Mostly inspired by reactive implementation in
  * {@code AbstractWebFluxEndpointHandlerMapping}.
  */
-final class WebOperationService implements HttpService {
+final class WebOperationService implements TransientHttpService {
 
     private static final Pattern FILENAME_BAD_CHARS = Pattern.compile("['/\\\\?%*:|\"<> ]");
 
@@ -119,14 +122,22 @@ final class WebOperationService implements HttpService {
     private final StatusMapperWrapper statusMapper;
     private final boolean isServerNamespace;
     private final Map<String, Object> additionalArguments;
+    private final Set<TransientServiceOption> transientServiceOptions;
 
     WebOperationService(WebOperation operation, StatusMapperWrapper statusMapper,
                         boolean isServerNamespace, // management if it's false.
-                        Map<String, Object> additionalArguments) {
+                        Map<String, Object> additionalArguments,
+                        Set<TransientServiceOption> transientServiceOptions) {
         this.operation = operation;
         this.statusMapper = statusMapper;
         this.isServerNamespace = isServerNamespace;
         this.additionalArguments = additionalArguments;
+        this.transientServiceOptions = transientServiceOptions;
+    }
+
+    @Override
+    public Set<TransientServiceOption> transientServiceOptions() {
+        return transientServiceOptions;
     }
 
     @Override

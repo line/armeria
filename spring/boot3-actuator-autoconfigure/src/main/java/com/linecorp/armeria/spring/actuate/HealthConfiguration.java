@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration.actuatorTransientServiceOptions;
 import static com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration.addOperationService;
 import static com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration.corsServiceBuilder;
 import static com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration.getExposedInternalServicePort;
@@ -66,6 +67,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -79,14 +81,16 @@ class HealthConfiguration {
                                                 StatusMapperWrapper statusMapper, ServerBuilder sb,
                                                 Collection<ExposableWebEndpoint> endpoints,
                                                 List<Integer> exposedPorts,
-                                                @Nullable CorsServiceBuilder cors) {
+                                                @Nullable CorsServiceBuilder cors,
+                                                Set<TransientServiceOption> transientServiceOptions) {
         healthEndpointGroups.ifPresent(groups -> {
             if (!groups.getNames().isEmpty()) {
                 endpoints.stream()
                          .filter(endpoint -> endpoint.getEndpointId().equals(HealthEndpoint.ID))
                          .findFirst()
                          .ifPresent(endpoint -> addAdditionalPath(sb, exposedPorts, endpoint,
-                                                                  statusMapper, cors, groups));
+                                                                  statusMapper, cors, groups,
+                                                                  transientServiceOptions));
             }
         });
     }
@@ -108,7 +112,8 @@ class HealthConfiguration {
     static void addAdditionalPath(ServerBuilder sb, List<Integer> exposedPorts,
                                   ExposableWebEndpoint endpoint,
                                   StatusMapperWrapper statusMapper,
-                                  @Nullable CorsServiceBuilder cors, HealthEndpointGroups groups) {
+                                  @Nullable CorsServiceBuilder cors, HealthEndpointGroups groups,
+                                  Set<TransientServiceOption> transientServiceOptions) {
         for (WebOperation operation : endpoint.getOperations()) {
             final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
             final String matchAllRemainingPathSegmentsVariable =
@@ -130,13 +135,13 @@ class HealthConfiguration {
                     final Set<HealthEndpointGroup> additionalGroups = groups.getAllWithAdditionalPath(
                             WebServerNamespace.MANAGEMENT);
                     addAdditionalPath(sb, exposedPorts, statusMapper, operation, predicate, additionalGroups,
-                                      cors);
+                                      cors, transientServiceOptions);
                 }
 
                 final Set<HealthEndpointGroup> additionalGroups = groups.getAllWithAdditionalPath(
                         WebServerNamespace.SERVER);
                 addAdditionalPath(sb, ImmutableList.of(), statusMapper, operation, predicate, additionalGroups,
-                                  cors);
+                                  cors, transientServiceOptions);
             }
         }
     }
@@ -145,13 +150,15 @@ class HealthConfiguration {
                                   StatusMapperWrapper statusMapper, WebOperation operation,
                                   WebOperationRequestPredicate predicate,
                                   Set<HealthEndpointGroup> additionalGroups,
-                                  @Nullable CorsServiceBuilder cors) {
+                                  @Nullable CorsServiceBuilder cors,
+                                  Set<TransientServiceOption> transientServiceOptions) {
         for (HealthEndpointGroup group : additionalGroups) {
             final AdditionalHealthEndpointPath additionalPath = group.getAdditionalPath();
             if (additionalPath != null) {
                 final String path = additionalPath.getValue();
                 addOperationService(sb, exposedPorts, operation, statusMapper, predicate,
-                                    path, ImmutableMap.of("path", new String[] { path }), cors);
+                                    path, ImmutableMap.of("path", new String[] { path }), cors,
+                                    transientServiceOptions);
             }
         }
     }
@@ -216,7 +223,8 @@ class HealthConfiguration {
                                                          .filter(Objects::nonNull)
                                                          .collect(toImmutableList());
                 // We can add additional path for health endpoint groups only when server namespace exists.
-                addHealthEndpointgroups(healthEndpointGroups, statusMapper, sb, endpoints, exposedPorts, cors);
+                addHealthEndpointgroups(healthEndpointGroups, statusMapper, sb, endpoints, exposedPorts, cors,
+                                        actuatorTransientServiceOptions(armeriaSettings));
             }
         };
     }
