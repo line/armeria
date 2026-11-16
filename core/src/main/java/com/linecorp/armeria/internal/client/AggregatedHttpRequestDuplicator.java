@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.client;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
@@ -26,6 +28,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 public final class AggregatedHttpRequestDuplicator implements HttpRequestDuplicator {
 
     private final AggregatedHttpRequest request;
+    private boolean closed;
 
     public AggregatedHttpRequestDuplicator(AggregatedHttpRequest request) {
         this.request = request;
@@ -43,17 +46,25 @@ public final class AggregatedHttpRequestDuplicator implements HttpRequestDuplica
 
     @Override
     public HttpRequest duplicate(RequestHeaders newHeaders) {
-        HttpData content = request.content();
-        if (!content.isPooled()) {
-            return HttpRequest.of(newHeaders, content, request.trailers());
+        final HttpData content;
+        synchronized (this) {
+            checkState(!closed, "duplicator is closed.");
+            final HttpData originalContent = request.content();
+            content = originalContent.isPooled() ?
+                      HttpData.wrap(originalContent.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE))
+                                                : originalContent;
         }
-
-        content = HttpData.wrap(content.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
         return HttpRequest.of(newHeaders, content, request.trailers());
     }
 
     @Override
     public void close() {
+        synchronized (this) {
+            if (closed) {
+                return;
+            }
+            closed = true;
+        }
         request.content().close();
     }
 

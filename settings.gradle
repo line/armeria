@@ -272,6 +272,7 @@ includeWithFlags ':it:nio',                                    'java', 'relocate
 includeWithFlags ':it:no-unsafe',                              'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
+includeWithFlags ':it:retrofit2-kotlin',                       'java', 'relocate', 'kotlin'
 includeWithFlags ':it:server',                                 'java', 'relocate'
 includeWithFlags ':it:server-allow-semicolon',                 'java'
 includeWithFlags ':it:spring:boot4-athenz',                    'java17', 'relocate'

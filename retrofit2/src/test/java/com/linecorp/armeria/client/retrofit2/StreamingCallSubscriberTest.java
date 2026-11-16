@@ -19,14 +19,20 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.reactivestreams.Subscription;
 
@@ -44,6 +50,7 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Request;
 import okhttp3.Response;
+import okio.BufferedSource;
 
 class StreamingCallSubscriberTest {
 
@@ -143,7 +150,7 @@ class StreamingCallSubscriberTest {
     @Test
     void cancel() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(false);
-        when(armeriaCall.isCanceled()).thenReturn(false, false, true);
+        when(armeriaCall.isCanceled()).thenReturn(false);
 
         final ManualMockCallback callback = new ManualMockCallback();
         final StreamingCallSubscriber subscriber = new StreamingCallSubscriber(
@@ -151,6 +158,7 @@ class StreamingCallSubscriberTest {
                 MoreExecutors.directExecutor());
         subscriber.onSubscribe(subscription);
         subscriber.onNext(ResponseHeaders.of(200));
+        when(armeriaCall.isCanceled()).thenReturn(true);
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));
         subscriber.onComplete();
 
@@ -163,7 +171,7 @@ class StreamingCallSubscriberTest {
     @Test
     void cancel_duringReadingData() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(false);
-        when(armeriaCall.isCanceled()).thenReturn(false, false, false, true);
+        when(armeriaCall.isCanceled()).thenReturn(false);
 
         final ManualMockCallback callback = new ManualMockCallback();
         final StreamingCallSubscriber subscriber = new StreamingCallSubscriber(
@@ -172,6 +180,7 @@ class StreamingCallSubscriberTest {
         subscriber.onSubscribe(subscription);
         subscriber.onNext(ResponseHeaders.of(200));
         subscriber.onNext(HttpData.ofUtf8("{\"name\":"));
+        when(armeriaCall.isCanceled()).thenReturn(true);
         subscriber.onNext(HttpData.ofUtf8("\"foo\"}"));
         subscriber.onComplete();
 
@@ -181,6 +190,38 @@ class StreamingCallSubscriberTest {
         await().untilAsserted(() -> assertThat(callback.exception).isNull());
         await().untilAsserted(
                 () -> assertThatThrownBy(() -> callback.response.body().string()).hasMessage("closed"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void cancellationBeforeQueuedDeliveryClosesUnclaimedBody(boolean closeThrows) throws Exception {
+        final BlockingQueue<Runnable> deliveries = new ArrayBlockingQueue<>(1);
+        final ManualMockCallback callback = new ManualMockCallback();
+        final StreamingCallSubscriber subscriber = new StreamingCallSubscriber(
+                armeriaCall, callback, new Request.Builder().url("http://foo.com").build(), deliveries::add);
+        subscriber.onSubscribe(subscription);
+        subscriber.onNext(ResponseHeaders.of(200));
+        final BufferedSource content = mock(BufferedSource.class);
+        final IllegalStateException closeFailure = new IllegalStateException("close failed");
+        if (closeThrows) {
+            doThrow(closeFailure).when(content).close();
+        }
+        subscriber.safeOnResponse(content);
+        assertThat(callback.callbackCallingCount).isZero();
+        when(armeriaCall.isCanceled()).thenReturn(true);
+        subscriber.onError(new IOException("cancelled"));
+        final Runnable delivery = deliveries.poll(5, TimeUnit.SECONDS);
+        assertThat(delivery).isNotNull();
+        if (closeThrows) {
+            assertThatThrownBy(delivery::run).isSameAs(closeFailure);
+        } else {
+            delivery.run();
+        }
+        verify(content).close();
+        assertThat(callback.response).isNull();
+        assertThat(callback.exception).isInstanceOf(IOException.class);
+        assertThat(callback.callbackCallingCount).isEqualTo(1);
+        assertThat(deliveries).isEmpty();
     }
 
     @Test

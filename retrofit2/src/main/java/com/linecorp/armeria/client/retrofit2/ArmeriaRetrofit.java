@@ -32,6 +32,19 @@ import retrofit2.Retrofit;
 
 /**
  * Provides various ways to create a {@link Retrofit} which uses {@link WebClient} for sending requests.
+ *
+ * <p>Canceling a {@link retrofit2.Call} aborts its outstanding HTTP request, including retry and redirect
+ * attempts. This also applies when Retrofit forwards cancellation from a Kotlin suspend call or from
+ * {@link java.util.concurrent.CompletableFuture#cancel(boolean) CompletableFuture.cancel(true)}.
+ * For streaming responses, cancellation also aborts an ongoing response after it is delivered.
+ * Already buffered data may still be readable.
+ * Independent requests started by decorators or context customizers are not canceled with this call.
+ *
+ * <p>Interrupting a thread waiting in a synchronous {@link retrofit2.Call#execute()} cancels the
+ * underlying HTTP request and throws an {@link java.io.InterruptedIOException}. The thread's interrupt
+ * status is preserved. Request body encoding and response conversion must cooperate with interruption.
+ * For streaming responses, this guarantee ends when the raw response is handed to Retrofit; subsequent
+ * reads are the caller's responsibility.
  */
 public final class ArmeriaRetrofit {
 

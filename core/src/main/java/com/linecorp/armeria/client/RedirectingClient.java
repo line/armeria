@@ -19,6 +19,9 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowAllDomains;
 import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSameDomain;
+import static com.linecorp.armeria.internal.client.RequestCancellation.cancellationCause;
+import static com.linecorp.armeria.internal.client.RequestCancellation.registerRequestDuplicatorCancellation;
+import static com.linecorp.armeria.internal.client.RequestCancellation.registerStreamCancellation;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
 
 import java.util.Iterator;
@@ -60,6 +63,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.client.RequestCancellation;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.NetUtil;
@@ -141,8 +145,18 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
         final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
+        final RequestCancellation cancellation = RequestCancellation.get(ctx);
+        if (cancellation != null) {
+            if (!ctx.exchangeType().isRequestStreaming()) {
+                registerStreamCancellation(ctx, req);
+            }
+            registerStreamCancellation(ctx, res);
+            cancellation.onCancel(cause -> handleException(ctx, null, responseFuture, cause, true),
+                                  res.whenComplete());
+        }
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
+            registerRequestDuplicatorCancellation(ctx, reqDuplicator, redirectCtx.responseWhenComplete());
             execute0(ctx, redirectCtx, reqDuplicator, true);
         } else {
             req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
@@ -151,6 +165,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                        handleException(ctx, null, responseFuture, cause, true);
                    } else {
                        final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       registerRequestDuplicatorCancellation(ctx,
+                                                             reqDuplicator, redirectCtx.responseWhenComplete());
                        execute0(ctx, redirectCtx, reqDuplicator, true);
                    }
                    return null;
@@ -163,6 +179,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                           HttpRequestDuplicator reqDuplicator, boolean initialAttempt) {
         final CompletableFuture<Void> originalReqWhenComplete = redirectCtx.request().whenComplete();
         final CompletableFuture<HttpResponse> responseFuture = redirectCtx.responseFuture();
+        final Throwable cancellationCause = cancellationCause(ctx);
+        if (cancellationCause != null) {
+            handleException(ctx, reqDuplicator, responseFuture, cancellationCause, initialAttempt);
+            return;
+        }
         if (originalReqWhenComplete.isCompletedExceptionally()) {
             originalReqWhenComplete.exceptionally(cause -> {
                 handleException(ctx, reqDuplicator, responseFuture, cause, initialAttempt);
@@ -191,10 +212,26 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             // duplicate() may throw if the request body cannot be reproduced (see
             // HttpRequest.reproducible); fail the request instead of following the redirect.
             duplicateReq = reqDuplicator.duplicate();
+            registerStreamCancellation(ctx, duplicateReq);
+            final Throwable cause = cancellationCause(ctx);
+            if (cause != null) {
+                handleException(ctx, reqDuplicator, responseFuture, cause, initialAttempt);
+                return;
+            }
             derivedCtx = ClientUtil.newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, reqDuplicator, responseFuture, t, initialAttempt);
             return;
+        }
+
+        final RequestCancellation cancellation = RequestCancellation.get(ctx);
+        if (cancellation != null) {
+            cancellation.onCancel(derivedCtx::cancel, derivedCtx.log().whenComplete());
+            final Throwable cause = cancellation.cause();
+            if (cause != null) {
+                handleException(ctx, reqDuplicator, responseFuture, cause, initialAttempt);
+                return;
+            }
         }
 
         final HttpRequest req = derivedCtx.request();
@@ -202,7 +239,13 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause),
                                                           req, true);
+        registerStreamCancellation(ctx, response);
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
+            final Throwable causeBeforeHeaders = cancellationCause(ctx);
+            if (causeBeforeHeaders != null) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, causeBeforeHeaders);
+                return;
+            }
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 final Throwable cause = log.responseCause();
                 if (cause != null) {
@@ -267,9 +310,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 return;
             }
 
+            final Throwable causeBeforeRedirect = cancellationCause(ctx);
+            if (causeBeforeRedirect != null) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, causeBeforeRedirect);
+                return;
+            }
             final HttpRequestDuplicator newReqDuplicator =
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders,
                                      nextReqTarget.toString(), nextAuthority);
+            registerRequestDuplicatorCancellation(ctx, newReqDuplicator, redirectCtx.responseWhenComplete());
 
             try {
                 redirectCtx.validateRedirects(nextReqTarget,
@@ -432,7 +481,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                     CompletableFuture<HttpResponse> responseFuture,
                                     HttpResponse response) {
         ctx.logBuilder().endResponseWithLastChild();
-        responseFuture.complete(response);
+        if (!responseFuture.complete(response) && RequestCancellation.get(ctx) != null) {
+            response.abort();
+        }
         reqDuplicator.close();
     }
 
