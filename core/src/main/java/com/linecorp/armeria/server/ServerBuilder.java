@@ -1896,7 +1896,9 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
         final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
         requireNonNull(customizer, "customizer");
         customizer.accept(virtualHostBuilder);
-        virtualHostBuilders.add(virtualHostBuilder);
+        if (virtualHostBuilders.stream().noneMatch(builder -> builder == virtualHostBuilder)) {
+            virtualHostBuilders.add(virtualHostBuilder);
+        }
         return this;
     }
 
@@ -1908,7 +1910,9 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      */
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
         final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
-        virtualHostBuilders.add(virtualHostBuilder);
+        if (virtualHostBuilders.stream().noneMatch(builder -> builder == virtualHostBuilder)) {
+            virtualHostBuilders.add(virtualHostBuilder);
+        }
         return virtualHostBuilder;
     }
 
