@@ -243,6 +243,7 @@ includeWithFlags ':javadoc',                             'java', 'publish', 'no_
 // Unpublished Java projects
 includeWithFlags ':benchmarks:jmh',                            'java', 'kotlin'
 includeWithFlags ':benchmarks:ghz',                            'java'
+includeWithFlags ':fuzz',                                      'java'
 includeWithFlags ':it:builders',                               'java'
 includeWithFlags ':it:context-storage',                        'java'
 includeWithFlags ':it:context-propagation',                    'java'
