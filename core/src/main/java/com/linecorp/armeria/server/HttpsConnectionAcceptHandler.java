@@ -206,7 +206,14 @@ final class HttpsConnectionAcceptHandler extends SslClientHelloHandler<SslContex
             ctx.close();
             return;
         }
-        replaceHandler(ctx, sslContext);
+        try {
+            replaceHandler(ctx, sslContext);
+        } catch (Throwable t) {
+            ctx.fireUserEventTriggered(new SniCompletionEvent(sniHostname, t));
+            ctx.fireExceptionCaught(t);
+            ctx.close();
+            return;
+        }
         ctx.fireUserEventTriggered(new SniCompletionEvent(sniHostname));
     }
 
