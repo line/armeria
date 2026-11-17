@@ -28,6 +28,9 @@ import com.linecorp.armeria.common.athenz.AccessDeniedException;
  * If you want to add an Athenz token to the {@link RequestHeaders}, use {@link AthenzClient} instead of
  * this interface.
  *
+ * <p>Token loading times out 3 seconds after the response timeout configured on
+ * {@link ZtsBaseClient#webClient()}. A zero response timeout results in a 3-second loading timeout.
+ *
  * <p>This interface is useful when you want to manage the token yourself or use the token for other clients.
  * For example, you can use this interface to fetch a token and add it to the request headers of a Spring
  * {@code WebClient} or {@code RestTemplate}.

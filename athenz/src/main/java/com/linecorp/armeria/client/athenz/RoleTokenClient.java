@@ -54,6 +54,7 @@ final class RoleTokenClient implements AthenzTokenClient {
                                  .name("athenz-role-token/" + domainName + '/' + roleNamesString)
                                  .refreshIf(token -> remainingTimeSec(token) < refreshBeforeSec)
                                  .expireIf(token -> remainingTimeSec(token) == 0)
+                                 .loadTimeoutMillis(AthenzTokenClientBuilder.tokenLoadTimeoutMillis(webClient))
                                  .preload(preload)
                                  .build();
     }

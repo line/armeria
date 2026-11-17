@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -37,6 +39,7 @@ public final class AsyncLoaderBuilder<T> {
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     @Nullable
     private String name;
+    private Duration loadTimeout = Duration.ZERO;
     @Nullable
     private Duration expireAfterLoad;
     @Nullable
@@ -63,6 +66,32 @@ public final class AsyncLoaderBuilder<T> {
         requireNonNull(name, "name");
         this.name = name;
         return this;
+    }
+
+    /**
+     * Sets the timeout for the future returned by the loader function.
+     * If the future does not complete within the timeout, the load fails with a {@link TimeoutException},
+     * which is passed to the {@linkplain #exceptionHandler(BiFunction) exception handler} if set.
+     * The original future is not cancelled, but its late result is ignored.
+     * This timeout does not apply to the future returned by the exception handler.
+     * If not set or set to {@link Duration#ZERO}, the timeout is disabled.
+     */
+    public AsyncLoaderBuilder<T> loadTimeout(Duration loadTimeout) {
+        requireNonNull(loadTimeout, "loadTimeout");
+        checkArgument(!loadTimeout.isNegative(), "loadTimeout: %s (expected: >= 0)", loadTimeout);
+        this.loadTimeout = loadTimeout;
+        return this;
+    }
+
+    /**
+     * Sets the timeout in milliseconds for the future returned by the loader function.
+     * If not set or set to {@code 0}, the timeout is disabled.
+     *
+     * @see #loadTimeout(Duration)
+     */
+    public AsyncLoaderBuilder<T> loadTimeoutMillis(long loadTimeoutMillis) {
+        checkArgument(loadTimeoutMillis >= 0, "loadTimeoutMillis: %s (expected: >= 0)", loadTimeoutMillis);
+        return loadTimeout(Duration.ofMillis(loadTimeoutMillis));
     }
 
     /**
@@ -152,7 +181,8 @@ public final class AsyncLoaderBuilder<T> {
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
-        return new DefaultAsyncLoader<>(loader, name, expireAfterLoad, expireIf, refreshAfterLoad, refreshIf,
+        return new DefaultAsyncLoader<>(loader, name, loadTimeout, expireAfterLoad, expireIf,
+                                        refreshAfterLoad, refreshIf,
                                         preload, exceptionHandler);
     }
 }

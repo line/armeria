@@ -16,10 +16,15 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.math.LongMath.saturatedAdd;
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -47,6 +52,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private final Executor executor;
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     private final String name;
+    private final long loadTimeoutNanos;
     private final long expireAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> expireIf;
@@ -63,6 +69,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable String name,
+                       Duration loadTimeout,
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<? super T> expireIf,
                        @Nullable Duration refreshAfterLoad,
@@ -76,6 +83,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             name = "AsyncLoader-" + Integer.toHexString(System.identityHashCode(this));
         }
         this.name = name;
+        loadTimeoutNanos = saturatedAdd(TimeUnit.SECONDS.toNanos(loadTimeout.getSeconds()),
+                                        loadTimeout.getNano());
         expireAfterLoadNanos = expireAfterLoad != null ? expireAfterLoad.toNanos() : 0;
         this.expireIf = expireIf;
         refreshAfterLoadNanos = refreshAfterLoad != null ? refreshAfterLoad.toNanos() : 0;
@@ -128,7 +137,26 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     private void load(@Nullable T cache, CompletableFuture<T> future) {
         try {
-            loader.apply(cache).handleAsync((newValue, cause) -> {
+            CompletableFuture<T> loaderFuture =
+                    requireNonNull(loader.apply(cache), "loader.apply() returned null");
+            if (loadTimeoutNanos > 0 && !loaderFuture.isDone()) {
+                final CompletableFuture<T> timedFuture = new CompletableFuture<>();
+                final ScheduledFuture<?> timeoutFuture = CommonPools.workerGroup().next().schedule(
+                        () -> timedFuture.completeExceptionally(new TimeoutException(
+                                '[' + name + "] Load timed out after " + loadTimeoutNanos + " ns")),
+                        loadTimeoutNanos, TimeUnit.NANOSECONDS);
+                timedFuture.handle((unused, cause) -> timeoutFuture.cancel(false));
+                loaderFuture.handle((value, cause) -> {
+                    if (cause != null) {
+                        timedFuture.completeExceptionally(cause);
+                    } else {
+                        timedFuture.complete(value);
+                    }
+                    return null;
+                });
+                loaderFuture = timedFuture;
+            }
+            loaderFuture.handleAsync((newValue, cause) -> {
                 if (cause != null) {
                     cause = Exceptions.peel(cause);
                     handleException(cause, cache, future);

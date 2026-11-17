@@ -26,14 +26,147 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DefaultAsyncLoaderTest {
+
+    @Test
+    void loadTimeoutValidation() {
+        final AsyncLoaderBuilder<Object> builder = AsyncLoader.builder(unused -> new CompletableFuture<>());
+        assertThatThrownBy(() -> builder.loadTimeout(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder.loadTimeout(Duration.ofNanos(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder.loadTimeoutMillis(-1)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void loadTimeoutAcceptsLargeDuration() {
+        final CompletableFuture<Integer> source = new CompletableFuture<>();
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> source)
+                .loadTimeout(Duration.ofSeconds(Long.MAX_VALUE))
+                .build();
+        final CompletableFuture<Integer> future = loader.load();
+        source.complete(1);
+        assertThat(future.join()).isOne();
+    }
+
+    @Test
+    void loadTimeout() {
+        final AtomicInteger attempts = new AtomicInteger();
+        final CompletableFuture<Integer> stalled = new CompletableFuture<>();
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> {
+            if (attempts.incrementAndGet() == 1) {
+                return stalled;
+            }
+            return UnmodifiableFuture.completedFuture(2);
+        }).loadTimeoutMillis(100)
+          .build();
+
+        final CompletableFuture<Integer> first = loader.load();
+        assertThat(loader.load()).isSameAs(first);
+        assertThatThrownBy(() -> first.get(10, TimeUnit.SECONDS)).hasCauseInstanceOf(TimeoutException.class);
+        assertThat(stalled).isNotDone();
+        assertThat(loader.load().join()).isEqualTo(2);
+        stalled.complete(1);
+        assertThat(loader.load().join()).isEqualTo(2);
+        assertThat(attempts).hasValue(2);
+    }
+
+    @Test
+    void preloadTimeoutAndRetry() throws Exception {
+        final CompletableFuture<Integer> stalled = new CompletableFuture<>();
+        final CompletableFuture<Throwable> failure = new CompletableFuture<>();
+        final AtomicInteger attempts = new AtomicInteger();
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> {
+            return attempts.incrementAndGet() == 1 ? stalled : UnmodifiableFuture.completedFuture(2);
+        }).loadTimeoutMillis(100)
+          .exceptionHandler((cause, cache) -> {
+              failure.complete(cause);
+              return null;
+          })
+          .preload(true)
+          .build();
+
+        assertThat(failure.get(10, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
+        await().untilAsserted(() -> assertThat(loader.load().join()).isEqualTo(2));
+        stalled.complete(1);
+        assertThat(loader.load().join()).isEqualTo(2);
+        assertThat(attempts).hasValue(2);
+    }
+
+    @Test
+    void loadTimeoutHandlesUnmodifiableFuture() {
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(
+                unused -> UnmodifiableFuture.wrap(new CompletableFuture<Integer>()))
+                .loadTimeout(Duration.ofMillis(100))
+                .build();
+        assertThatThrownBy(() -> loader.load().get(10, TimeUnit.SECONDS))
+                .hasCauseInstanceOf(TimeoutException.class);
+    }
+
+    @Test
+    void loadTimeoutUsesExceptionHandler() {
+        final CompletableFuture<Integer> stalled = new CompletableFuture<>();
+        final AtomicReference<Throwable> failure = new AtomicReference<>();
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> stalled)
+                .loadTimeout(Duration.ofMillis(100))
+                .exceptionHandler((cause, cache) -> {
+                    failure.set(cause);
+                    return UnmodifiableFuture.completedFuture(3);
+                })
+                .build();
+        assertThat(loader.load().join()).isEqualTo(3);
+        assertThat(failure.get()).isInstanceOf(TimeoutException.class);
+        stalled.complete(1);
+        assertThat(loader.load().join()).isEqualTo(3);
+    }
+
+    @Test
+    void loadTimeoutPreservesCacheDuringRefresh() throws Exception {
+        final CompletableFuture<Integer> stalled = new CompletableFuture<>();
+        final AtomicInteger attempts = new AtomicInteger();
+        final AtomicReference<Throwable> failure = new AtomicReference<>();
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> {
+            final int attempt = attempts.incrementAndGet();
+            return attempt == 2 ? stalled : UnmodifiableFuture.completedFuture(attempt);
+        }).loadTimeoutMillis(100)
+          .refreshIf(value -> value == 1)
+          .exceptionHandler((cause, cache) -> {
+              failure.set(cause);
+              return null;
+          })
+          .build();
+        assertThat(loader.load().join()).isOne();
+        assertThat(loader.load().get(10, TimeUnit.SECONDS)).isOne();
+        await().untilAsserted(() -> assertThat(failure.get()).isInstanceOf(TimeoutException.class));
+        await().untilAsserted(() -> assertThat(loader.load().join()).isEqualTo(3));
+        stalled.complete(2);
+        assertThat(loader.load().join()).isEqualTo(3);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void loadTimeoutDisabled(boolean explicitlyDisabled) throws Exception {
+        final CompletableFuture<Integer> source = new CompletableFuture<>();
+        final AsyncLoaderBuilder<Integer> builder = AsyncLoader.builder(unused -> source);
+        if (explicitlyDisabled) {
+            builder.loadTimeoutMillis(1).loadTimeout(Duration.ZERO);
+        }
+        final AsyncLoader<Integer> loader = builder.build();
+        final CompletableFuture<Integer> future = loader.load();
+        await().during(Duration.ofMillis(200)).until(() -> !future.isDone());
+        source.complete(1);
+        assertThat(future.get(10, TimeUnit.SECONDS)).isOne();
+    }
 
     @Test
     void loader() {
