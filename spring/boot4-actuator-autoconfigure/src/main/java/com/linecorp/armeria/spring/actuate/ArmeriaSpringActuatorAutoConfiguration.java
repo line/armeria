@@ -33,12 +33,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.expose.EndpointExposure;
 import org.springframework.boot.actuate.autoconfigure.endpoint.expose.IncludeExcludeEndpointFilter;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
 import org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties;
+import org.springframework.boot.actuate.endpoint.ExposableEndpoint;
 import org.springframework.boot.actuate.endpoint.web.EndpointLinksResolver;
 import org.springframework.boot.actuate.endpoint.web.EndpointMapping;
 import org.springframework.boot.actuate.endpoint.web.EndpointMediaTypes;
@@ -48,6 +50,7 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
+import org.springframework.boot.actuate.endpoint.web.annotation.ControllerEndpointsSupplier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -155,9 +158,12 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                   EndpointExposure.WEB.getDefaultIncludes());
     }
 
+    // ControllerEndpointsSupplier is deprecated, but Spring Boot still lists controller endpoints in links.
+    @SuppressWarnings({ "deprecation", "removal" })
     @Bean
     ArmeriaServerConfigurator actuatorServerConfigurator(
             WebEndpointsSupplier endpointsSupplier,
+            ObjectProvider<ControllerEndpointsSupplier> controllerEndpointsSupplier,
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties,
             StatusMapperWrapper statusMapper,
@@ -183,6 +189,11 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
             final CorsServiceBuilder cors = corsServiceBuilder(corsProperties);
             final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
+            final ImmutableList.Builder<ExposableEndpoint<?>> linkableEndpointsBuilder =
+                    ImmutableList.<ExposableEndpoint<?>>builder().addAll(endpoints);
+            controllerEndpointsSupplier.ifAvailable(
+                    supplier -> linkableEndpointsBuilder.addAll(supplier.getEndpoints()));
+            final List<ExposableEndpoint<?>> linkableEndpoints = linkableEndpointsBuilder.build();
 
             final ImmutableList.Builder<Map.Entry<EndpointMapping, Integer>> endpointMappingBuilder =
                     ImmutableList.builder();
@@ -209,7 +220,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             }
             endpointMappingBuilder.build()
                                   .forEach(entry -> configureExposableWebEndpoint(sb, entry.getValue(),
-                                                                                  endpoints, statusMapper,
+                                                                                  endpoints, linkableEndpoints,
+                                                                                  statusMapper,
                                                                                   mediaTypes, entry.getKey(),
                                                                                   cors, properties));
 
@@ -221,6 +233,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static void configureExposableWebEndpoint(ServerBuilder sb, @Nullable Integer targetPort,
                                                       Collection<ExposableWebEndpoint> endpoints,
+                                                      List<ExposableEndpoint<?>> linkableEndpoints,
                                                       StatusMapperWrapper statusMapper,
                                                       EndpointMediaTypes mediaTypes,
                                                       EndpointMapping endpointMapping,
@@ -245,7 +258,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             );
             final HttpService linksService = (ctx, req) -> {
                 final Map<String, Link> links =
-                        new EndpointLinksResolver(endpoints).resolveLinks(req.path());
+                        new EndpointLinksResolver(linkableEndpoints).resolveLinks(req.path());
                 final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON);
                 return HttpResponse.ofJson(contentType, ImmutableMap.of("_links", links));
             };
