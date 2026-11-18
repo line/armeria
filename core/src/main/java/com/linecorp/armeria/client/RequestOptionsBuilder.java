@@ -141,6 +141,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     }
 
     @Override
+    @UnstableApi
     public RequestOptionsBuilder name(String name) {
         requireNonNull(name, "name");
         checkArgument(!name.isEmpty(), "name is empty.");
@@ -150,6 +151,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     }
 
     @Override
+    @UnstableApi
     public RequestOptionsBuilder name(String serviceName, String name) {
         requireNonNull(serviceName, "serviceName");
         checkArgument(!serviceName.isEmpty(), "serviceName is empty.");

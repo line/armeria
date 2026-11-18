@@ -103,12 +103,14 @@ final class DefaultRequestOptions implements RequestOptions {
 
     @Nullable
     @Override
+    @UnstableApi
     public String serviceName() {
         return serviceName;
     }
 
     @Nullable
     @Override
+    @UnstableApi
     public String name() {
         return name;
     }

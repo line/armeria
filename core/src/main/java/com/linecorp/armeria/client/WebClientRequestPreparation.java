@@ -395,12 +395,14 @@ public final class WebClientRequestPreparation
     }
 
     @Override
+    @UnstableApi
     public WebClientRequestPreparation name(String name) {
         requestOptionsBuilder().name(name);
         return this;
     }
 
     @Override
+    @UnstableApi
     public WebClientRequestPreparation name(String serviceName, String name) {
         requestOptionsBuilder().name(serviceName, name);
         return this;
