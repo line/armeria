@@ -42,6 +42,11 @@ import io.netty.channel.EventLoopGroup;
 interface ServiceConfigSetters<SELF extends ServiceConfigSetters<SELF>> {
 
     /**
+     * Sets an HTTP content processing option, overriding the enclosing virtual host's value.
+     */
+    <T> SELF option(ServerOption<T> option, T value);
+
+    /**
      * Sets the timeout of an HTTP request. If not set, the value set via
      * {@link VirtualHost#requestTimeoutMillis()} is used.
      *

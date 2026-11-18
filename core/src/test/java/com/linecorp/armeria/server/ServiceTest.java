@@ -70,7 +70,8 @@ public class ServiceTest {
                                   MultipartRemovalStrategy.ON_RESPONSE_COMPLETION, CommonPools.workerGroup(),
                                   ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(),
+                                  NOOP_CONTEXT_HOOK, ServerOptions.of());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

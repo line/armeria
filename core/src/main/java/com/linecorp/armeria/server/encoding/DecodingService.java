@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.internal.server.HttpDecodedRequest;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;

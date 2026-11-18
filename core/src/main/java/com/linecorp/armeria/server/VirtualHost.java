@@ -385,6 +385,17 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the default HTTP content processing options for services in this virtual host,
+     * including options inherited from the server.
+     *
+     * @see ServiceConfig#options()
+     */
+    @UnstableApi
+    public ServerOptions options() {
+        return fallbackServiceConfig.options();
+    }
+
+    /**
      * Returns the {@link Logger} which is used for writing access logs of this virtual host.
      */
     public Logger accessLogger() {

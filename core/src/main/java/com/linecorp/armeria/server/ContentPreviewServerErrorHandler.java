@@ -30,6 +30,10 @@ final class ContentPreviewServerErrorHandler implements DecoratingServerErrorHan
                                            ServiceRequestContext ctx, Throwable cause) {
         final HttpResponse res = delegate.onServiceException(ctx, cause);
 
+        if (ctx.config().options().get(ServerOptions.CONTENT_PREVIEW).factory() != null) {
+            return res;
+        }
+
         final ContentPreviewingService contentPreviewingService =
                 ctx.findService(ContentPreviewingService.class);
         if (contentPreviewingService == null) {

@@ -48,6 +48,8 @@ import io.netty.channel.EventLoopGroup;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBuilder> {
 
+    private ServerOptions serverOptions = ServerOptions.of();
+
     private final Route route;
     private final HttpService service;
 
@@ -105,6 +107,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
 
     void addMappedRoute(Route mappedRoute) {
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
+    }
+
+    @Override
+    public <T> ServiceConfigBuilder option(ServerOption<T> option, T value) {
+        serverOptions = ServerOptions.of(serverOptions, option.newValue(value));
+        return this;
     }
 
     @Override
@@ -352,7 +360,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
-                        String baseContextPath, Supplier<AutoCloseable> contextHook) {
+                        String baseContextPath, Supplier<AutoCloseable> contextHook,
+                        ServerOptions defaultServerOptions) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -391,7 +400,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
-                mergedContextHook);
+                mergedContextHook, ServerOptions.of(defaultServerOptions, serverOptions));
     }
 
     @Override

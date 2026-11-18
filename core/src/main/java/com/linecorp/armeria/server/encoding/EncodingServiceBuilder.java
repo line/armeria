@@ -16,16 +16,12 @@
 
 package com.linecorp.armeria.server.encoding;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,32 +38,7 @@ import com.linecorp.armeria.server.HttpService;
  */
 public final class EncodingServiceBuilder {
 
-    private static final Set<MediaType> defaultEncodableMediaTypsSet =
-            ImmutableSet.of(MediaType.ANY_TEXT_TYPE,
-                            MediaType.APPLICATION_XML_UTF_8,
-                            MediaType.JAVASCRIPT_UTF_8,
-                            MediaType.JSON_UTF_8);
-
-    // TODO(minwoox) consider this condition to align with the default text previewer.
-    private static final Predicate<MediaType> defaultEncodableContentTypePredicate =
-            contentType -> {
-                for (MediaType encodableMediaType : defaultEncodableMediaTypsSet) {
-                    if (contentType.belongsTo(encodableMediaType)) {
-                        return true;
-                    }
-                }
-                return false;
-            };
-
-    private static final int DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING = 1024;
-
-    private List<StreamEncoderFactory> encoderFactories = StreamEncoderFactory.all();
-
-    private Predicate<MediaType> encodableContentTypePredicate = defaultEncodableContentTypePredicate;
-
-    private Predicate<? super RequestHeaders> encodableRequestHeadersPredicate = headers -> true;
-
-    private int minBytesToForceChunkedAndEncoding = DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING;
+    private final CompressionBuilder builder = Compression.builder();
 
     EncodingServiceBuilder() {}
 
@@ -101,8 +72,7 @@ public final class EncodingServiceBuilder {
      */
     @UnstableApi
     public EncodingServiceBuilder encoderFactories(Iterable<? extends StreamEncoderFactory> encoderFactories) {
-        requireNonNull(encoderFactories, "encoderFactories");
-        this.encoderFactories = ImmutableList.copyOf(encoderFactories);
+        builder.encoderFactories(encoderFactories);
         return this;
     }
 
@@ -119,8 +89,8 @@ public final class EncodingServiceBuilder {
      * is encodable or not. It's encodable when the content type is one of the {@link MediaType}s.
      */
     public EncodingServiceBuilder encodableContentTypes(Iterable<MediaType> contentTypes) {
-        final List<MediaType> snapshot = ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes"));
-        return encodableContentTypes(mediaType -> snapshot.stream().anyMatch(mediaType::belongsTo));
+        builder.encodableContentTypes(contentTypes);
+        return this;
     }
 
     /**
@@ -129,8 +99,7 @@ public final class EncodingServiceBuilder {
      */
     public EncodingServiceBuilder encodableContentTypes(
             Predicate<MediaType> encodableContentTypePredicate) {
-        requireNonNull(encodableContentTypePredicate, "encodableContentTypePredicate");
-        this.encodableContentTypePredicate = encodableContentTypePredicate;
+        builder.encodableContentTypes(encodableContentTypePredicate);
         return this;
     }
 
@@ -141,8 +110,7 @@ public final class EncodingServiceBuilder {
      */
     public EncodingServiceBuilder encodableRequestHeaders(
             Predicate<? super RequestHeaders> encodableRequestHeadersPredicate) {
-        requireNonNull(encodableRequestHeadersPredicate, "encodableRequestHeadersPredicate");
-        this.encodableRequestHeadersPredicate = encodableRequestHeadersPredicate;
+        builder.encodableRequestHeaders(encodableRequestHeadersPredicate);
         return this;
     }
 
@@ -150,13 +118,10 @@ public final class EncodingServiceBuilder {
      * Sets the specified minimum length to force chunked encoding. The {@link HttpResponse} is encoded only
      * when the content is variable, which means the {@link ResponseHeaders} does not have
      * {@code "Content-Length"} header, or the length of the content exceeds the specified length.
-     * The default is {@value DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING}.
+     * The default is {@code 1024}.
      */
     public EncodingServiceBuilder minBytesToForceChunkedEncoding(int minBytesToForceChunkedAndEncoding) {
-        checkArgument(minBytesToForceChunkedAndEncoding > 0,
-                      "minBytesToForceChunkedAndEncoding: %s (expected: > 0)",
-                      minBytesToForceChunkedAndEncoding);
-        this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
+        builder.minBytesToForceChunkedEncoding(minBytesToForceChunkedAndEncoding);
         return this;
     }
 
@@ -164,9 +129,7 @@ public final class EncodingServiceBuilder {
      * Returns a newly-created {@link EncodingService} based on the properties of this builder.
      */
     public EncodingService build(HttpService delegate) {
-        return new EncodingService(delegate, encoderFactories, encodableContentTypePredicate,
-                                   encodableRequestHeadersPredicate,
-                                   minBytesToForceChunkedAndEncoding);
+        return new EncodingService(delegate, builder.build());
     }
 
     /**

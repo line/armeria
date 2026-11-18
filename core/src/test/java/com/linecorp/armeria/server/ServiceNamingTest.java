@@ -193,7 +193,8 @@ class ServiceNamingTest {
                                  MultipartRemovalStrategy.ON_RESPONSE_COMPLETION, CommonPools.workerGroup(),
                                  ImmutableList.of(), HttpHeaders.of(),
                                  routingCtx -> RequestId.of(1L),
-                                 ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+                                 ServerErrorHandler.ofDefault().asServiceErrorHandler(),
+                                  NOOP_CONTEXT_HOOK, ServerOptions.of());
     }
 
     private static final class NestedClass implements HttpService {

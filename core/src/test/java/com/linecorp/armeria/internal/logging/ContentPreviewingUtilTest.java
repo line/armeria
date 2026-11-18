@@ -17,15 +17,25 @@
 package com.linecorp.armeria.internal.logging;
 
 import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpRequestContentPreviewer;
+import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
@@ -46,11 +56,8 @@ class ContentPreviewingUtilTest {
         req.abort(new RuntimeException());
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
 
-        final ContentPreviewer contentPreviewer =
-                ContentPreviewerFactory.text(1024).requestContentPreviewer(ctx, req.headers());
-
         final HttpRequest filteredReq = setUpRequestContentPreviewer(ctx, req,
-                                                                     contentPreviewer,
+                                                                     ContentPreviewerFactory.text(1024),
                                                                      Functions.second());
         assertThat(ctx.logBuilder().isDeferred(RequestLogProperty.REQUEST_CONTENT_PREVIEW)).isTrue();
 
@@ -66,5 +73,48 @@ class ContentPreviewingUtilTest {
 
         final RequestLog log = ctx.log().whenComplete().join();
         assertThat(log.requestContentPreview()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(PreviewerFailure.class)
+    void previewerFailureDoesNotAffectContent(PreviewerFailure failure) {
+        final ContentPreviewerFactory factory = mock(ContentPreviewerFactory.class);
+        final ContentPreviewer previewer = mock(ContentPreviewer.class);
+        when(factory.requestContentPreviewer(any(), any())).thenReturn(previewer);
+        when(factory.responseContentPreviewer(any(), any())).thenReturn(previewer);
+        final IllegalStateException cause = new IllegalStateException("preview failed");
+        switch (failure) {
+            case FACTORY:
+                when(factory.requestContentPreviewer(any(), any())).thenThrow(cause);
+                when(factory.responseContentPreviewer(any(), any())).thenThrow(cause);
+                break;
+            case COLLECT:
+                doThrow(cause).when(previewer).onData(any());
+                break;
+            case PRODUCE:
+                when(previewer.produce()).thenThrow(cause);
+                break;
+        }
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),
+                                                HttpData.ofUtf8("request"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        assertThat(setUpRequestContentPreviewer(ctx, req, factory, Functions.second())
+                           .aggregate().join().contentUtf8()).isEqualTo("request");
+        assertThat(setUpResponseContentPreviewer(factory, ctx, HttpResponse.of("response"), Functions.second())
+                           .aggregate().join().contentUtf8()).isEqualTo("response");
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+        final RequestLog log = ctx.log().whenComplete().join();
+        assertThat(log.requestContentPreview()).isNull();
+        assertThat(log.responseContentPreview()).isNull();
+        if (failure != PreviewerFailure.PRODUCE) {
+            verify(previewer, never()).produce();
+        }
+    }
+
+    private enum PreviewerFailure {
+        FACTORY,
+        COLLECT,
+        PRODUCE
     }
 }

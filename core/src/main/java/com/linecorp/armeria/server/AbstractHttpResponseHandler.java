@@ -53,6 +53,8 @@ abstract class AbstractHttpResponseHandler {
     final DefaultServiceRequestContext reqCtx;
     final DecodedHttpRequest req;
 
+    @Nullable
+    private final ServerResponseContent responseContent;
     private final CompletableFuture<Void> completionFuture;
     private boolean isComplete;
 
@@ -65,6 +67,11 @@ abstract class AbstractHttpResponseHandler {
         this.reqCtx = reqCtx;
         this.req = req;
         this.completionFuture = completionFuture;
+        final ServerOptions options = reqCtx.config().options();
+        responseContent = !req.isHttp1WebSocket() &&
+                          (options.get(ServerOptions.CONTENT_PREVIEW).factory() != null ||
+                           !options.get(ServerOptions.COMPRESSION).encoderFactories().isEmpty()) ?
+                          new ServerResponseContent(reqCtx) : null;
     }
 
     /**
@@ -117,6 +124,9 @@ abstract class AbstractHttpResponseHandler {
             return false;
         }
         isComplete = true;
+        if (responseContent != null) {
+            responseContent.finish();
+        }
         if (cause == null) {
             completionFuture.complete(null);
         } else {
@@ -183,6 +193,15 @@ abstract class AbstractHttpResponseHandler {
                                                        reqCtx.config().defaultHeaders(),
                                                        config.isServerHeaderEnabled(),
                                                        config.isDateHeaderEnabled());
+        try {
+            headers = prepareResponseHeaders(headers,
+                                             res.content().isEmpty() || req.method() == HttpMethod.HEAD);
+        } catch (Exception cause) {
+            res.content().close();
+            disableResponseCompression();
+            logBuilder().responseCause(cause);
+            return writeAggregatedHttpResponse(internalServerErrorResponse);
+        }
         final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
         if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
             disconnectWhenFinished();
@@ -206,7 +225,8 @@ abstract class AbstractHttpResponseHandler {
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
         final boolean trailersEmpty = trailers.isEmpty();
 
-        if (reqCtx.sessionProtocol().isMultiplex() && !contentEmpty && headers.contentLength() == -1) {
+        if (reqCtx.sessionProtocol().isMultiplex() && !contentEmpty && headers.contentLength() == -1 &&
+            (responseContent == null || !responseContent.isEncoding())) {
             // If a trailers is set, a content-length is automatically removed by
             // `ArmeriaHttpUtil.setOrRemoveContentLength()` when creating `AggregatedHttpResponse`.
             // However, in HTTP/2, a content-length could be set with a trailers.
@@ -227,14 +247,60 @@ abstract class AbstractHttpResponseHandler {
                 responseEncoder.writeHeaders(id, streamId, headers, contentEmpty && trailersEmpty,
                                              trailersEmpty, method);
         if (!contentEmpty) {
-            logBuilder().increaseResponseLength(content);
-            future = responseEncoder.writeData(id, streamId, content, trailersEmpty);
+            future = writeResponseData(content, trailersEmpty);
+            if (future.isDone() && !future.isSuccess()) {
+                return future;
+            }
         }
         if (!trailersEmpty) {
             logBuilder().responseTrailers(trailers);
-            future = responseEncoder.writeTrailers(id, streamId, trailers);
+            future = writeResponseTrailers(trailers);
         }
         return future;
+    }
+
+    final ResponseHeaders prepareResponseHeaders(ResponseHeaders headers, boolean endOfStream) {
+        return responseContent != null ? responseContent.prepareHeaders(headers, endOfStream) : headers;
+    }
+
+    final void disableResponseCompression() {
+        if (responseContent != null) {
+            responseContent.disableCompression();
+        }
+    }
+
+    final ChannelFuture writeResponseData(HttpData data, boolean endOfStream) {
+        if (responseContent != null) {
+            try {
+                data = responseContent.process(data, endOfStream);
+            } catch (Exception cause) {
+                return ctx.newFailedFuture(cause);
+            }
+        }
+        logBuilder().increaseResponseLength(data);
+        return responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
+    }
+
+    final ChannelFuture writeResponseTrailers(HttpHeaders trailers) {
+        if (responseContent != null) {
+            final HttpData lastData;
+            try {
+                lastData = responseContent.finishEncoding();
+            } catch (Exception cause) {
+                return ctx.newFailedFuture(cause);
+            }
+            if (!lastData.isEmpty()) {
+                logBuilder().increaseResponseLength(lastData);
+                final ChannelFuture future =
+                        responseEncoder.writeData(req.id(), req.streamId(), lastData, false);
+                if (future.isDone() && !future.isSuccess()) {
+                    return future;
+                }
+            } else {
+                lastData.close();
+            }
+        }
+        return responseEncoder.writeTrailers(req.id(), req.streamId(), trailers);
     }
 
     final CompletableFuture<AggregatedHttpResponse> toAggregatedHttpResponse(HttpResponseException cause) {

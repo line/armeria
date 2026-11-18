@@ -16,23 +16,18 @@
 
 package com.linecorp.armeria.server.encoding;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.encoding.StreamEncoderFactory;
+import com.linecorp.armeria.internal.server.HttpEncoders;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -50,14 +45,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  */
 public final class EncodingService extends SimpleDecoratingHttpService {
 
-    private final Predicate<MediaType> encodableContentTypePredicate;
-    private final Predicate<? super RequestHeaders> encodableRequestHeadersPredicate;
-    private final long minBytesToForceChunkedAndEncoding;
-    /**
-     * Map from {@link HttpHeaderNames#ACCEPT_ENCODING} to the {@link StreamEncoderFactory} that will
-     * get used for that encoding.
-     */
-    private final Map<String, StreamEncoderFactory> encoderFactories;
+    private final Compression compression;
 
     /**
      * Returns a new {@link EncodingServiceBuilder}.
@@ -133,31 +121,9 @@ public final class EncodingService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance.
      */
-    EncodingService(HttpService delegate,
-                    Predicate<MediaType> encodableContentTypePredicate,
-                    Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
-                    long minBytesToForceChunkedAndEncoding
-    ) {
-        this(delegate, StreamEncoderFactory.all(), encodableContentTypePredicate,
-             encodableRequestHeadersPredicate, minBytesToForceChunkedAndEncoding);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    EncodingService(HttpService delegate,
-                    Iterable<? extends StreamEncoderFactory> encoderFactories,
-                    Predicate<MediaType> encodableContentTypePredicate,
-                    Predicate<? super RequestHeaders> encodableRequestHeadersPredicate,
-                    long minBytesToForceChunkedAndEncoding
-    ) {
+    EncodingService(HttpService delegate, Compression compression) {
         super(delegate);
-        this.encoderFactories = Streams.stream(encoderFactories)
-                                       .collect(toImmutableMap(StreamEncoderFactory::encodingHeaderValue,
-                                                               Function.identity()));
-        this.encodableContentTypePredicate = encodableContentTypePredicate;
-        this.encodableRequestHeadersPredicate = encodableRequestHeadersPredicate;
-        this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
+        this.compression = compression;
     }
 
     @Override
@@ -168,14 +134,13 @@ public final class EncodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final StreamEncoderFactory encoderFactory = HttpEncoders.determineEncoder(encoderFactories,
-                                                                                  req.headers()
-        );
+        final StreamEncoderFactory encoderFactory =
+                HttpEncoders.determineEncoder(compression.encoderFactories(), req.headers());
         final HttpResponse delegateResponse = unwrap().serve(ctx, req);
-        if (encoderFactory == null || !encodableRequestHeadersPredicate.test(req.headers())) {
+        if (encoderFactory == null || !compression.encodableRequestHeaders().test(req.headers())) {
             return delegateResponse;
         }
-        return new HttpEncodedResponse(delegateResponse, encoderFactory, encodableContentTypePredicate,
-                                       ctx.alloc(), minBytesToForceChunkedAndEncoding);
+        return new HttpEncodedResponse(delegateResponse, encoderFactory, compression.encodableContentTypes(),
+                                       ctx.alloc(), compression.minBytesToForceChunkedEncoding());
     }
 }

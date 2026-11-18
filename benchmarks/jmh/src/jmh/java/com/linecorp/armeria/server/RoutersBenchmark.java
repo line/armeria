@@ -83,7 +83,8 @@ public class RoutersBenchmark {
                                  SuccessFunction.always(), 0, multipartUploadsLocation,
                                  MultipartRemovalStrategy.ON_RESPONSE_COMPLETION,
                                  CommonPools.workerGroup(), ImmutableList.of(), HttpHeaders.of(),
-                                 ctx -> RequestId.random(), serviceErrorHandler, NOOP_CONTEXT_HOOK);
+                                 ctx -> RequestId.random(), serviceErrorHandler, NOOP_CONTEXT_HOOK,
+                                 ServerOptions.of());
     }
 
     @Benchmark
