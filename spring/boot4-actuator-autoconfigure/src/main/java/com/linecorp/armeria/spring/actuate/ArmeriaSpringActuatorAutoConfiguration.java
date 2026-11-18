@@ -68,10 +68,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.TransientServiceOptionsBuilder;
 import com.linecorp.armeria.internal.spring.InternalServiceIdUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
@@ -183,6 +186,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
             final CorsServiceBuilder cors = corsServiceBuilder(corsProperties);
             final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
+            final Set<TransientServiceOption> transientServiceOptions =
+                    actuatorTransientServiceOptions(armeriaSettings);
 
             final ImmutableList.Builder<Map.Entry<EndpointMapping, Integer>> endpointMappingBuilder =
                     ImmutableList.builder();
@@ -211,7 +216,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                   .forEach(entry -> configureExposableWebEndpoint(sb, entry.getValue(),
                                                                                   endpoints, statusMapper,
                                                                                   mediaTypes, entry.getKey(),
-                                                                                  cors, properties));
+                                                                                  cors, properties,
+                                                                                  transientServiceOptions));
 
             if (cors != null) {
                 sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
@@ -225,7 +231,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                                       EndpointMediaTypes mediaTypes,
                                                       EndpointMapping endpointMapping,
                                                       @Nullable CorsServiceBuilder cors,
-                                                      WebEndpointProperties properties) {
+                                                      WebEndpointProperties properties,
+                                                      Set<TransientServiceOption> transientServiceOptions) {
         final List<Integer> ports = targetPort == null ? ImmutableList.of() : ImmutableList.of(targetPort);
         endpoints.stream()
                  .flatMap(endpoint -> endpoint.getOperations().stream())
@@ -233,7 +240,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                      final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
                      final String path = endpointMapping.createSubPath(predicate.getPath());
                      addOperationService(sb, ports, operation, statusMapper,
-                                         predicate, path, ImmutableMap.of(), cors);
+                                         predicate, path, ImmutableMap.of(), cors, transientServiceOptions);
                  });
 
         if (StringUtils.hasText(endpointMapping.getPath()) && properties.getDiscovery().isEnabled()) {
@@ -249,12 +256,14 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON);
                 return HttpResponse.ofJson(contentType, ImmutableMap.of("_links", links));
             };
+            final HttpService transientLinksService =
+                    linksService.decorate(TransientHttpService.newDecorator(transientServiceOptions));
             if (targetPort == null) {
-                sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
+                sb.route().addRoute(route).defaultServiceName("LinksService").build(transientLinksService);
             } else {
                 sb.virtualHost(targetPort).route().addRoute(route)
                   .defaultServiceName("LinksService")
-                  .build(linksService);
+                  .build(transientLinksService);
             }
             if (cors != null) {
                 cors.route(endpointMapping.getPath());
@@ -307,6 +316,19 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             return null;
         }
         return internalServiceProperties.getPort();
+    }
+
+    static Set<TransientServiceOption> actuatorTransientServiceOptions(ArmeriaSettings armeriaSettings) {
+        final TransientServiceOptionsBuilder builder = new TransientServiceOptionsBuilder();
+        final InternalServiceProperties internalServiceProperties = armeriaSettings.getInternalServices();
+        if (internalServiceProperties != null) {
+            final List<TransientServiceOption> transientServiceOptions =
+                    internalServiceProperties.getActuatorTransientServiceOptions();
+            if (transientServiceOptions != null) {
+                builder.transientServiceOptions(transientServiceOptions);
+            }
+        }
+        return builder.build();
     }
 
     @Nullable
@@ -369,19 +391,22 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     static void addOperationService(ServerBuilder sb, List<Integer> exposedPorts,
                                     WebOperation operation, StatusMapperWrapper statusMapper,
                                     WebOperationRequestPredicate predicate, String path,
-                                    Map<String, Object> arguments, @Nullable CorsServiceBuilder cors) {
+                                    Map<String, Object> arguments, @Nullable CorsServiceBuilder cors,
+                                    Set<TransientServiceOption> transientServiceOptions) {
         if (cors != null) {
             cors.route(path);
         }
         final Route route = route(predicate.getHttpMethod().name(), path,
                                   predicate.getConsumes(), predicate.getProduces());
         if (exposedPorts.isEmpty()) {
-            sb.service(route, new WebOperationService(operation, statusMapper, true, arguments));
+            sb.service(route, new WebOperationService(operation, statusMapper, true, arguments,
+                                                      transientServiceOptions));
             return;
         }
         exposedPorts.forEach(port -> sb.virtualHost(port)
                                        .service(route, new WebOperationService(
-                                               operation, statusMapper, false, arguments)));
+                                               operation, statusMapper, false, arguments,
+                                               transientServiceOptions)));
     }
 
     private static Route route(

@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.spring.actuate;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -41,6 +44,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -54,6 +58,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
@@ -311,6 +317,11 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    void testTransientService() {
+        assertTransientServiceOptions(server, ImmutableSet.of(), "/internal/actuator");
+    }
+
     @Nested
     @SpringBootTest(classes = ArmeriaSpringActuatorAutoConfigurationCorsTest.TestConfiguration.class)
     @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
@@ -409,6 +420,42 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
             settableHealth.setUnhealthy();
             final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
             assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @SpringBootTest(
+            classes = ArmeriaSpringActuatorAutoConfigurationTransientServiceOptionsTest.TestConfiguration.class)
+    @ActiveProfiles({ "local", "autoConfTest", "autoConfTestTransientServiceOptions" })
+    @DirtiesContext
+    @Timeout(10)
+    static class ArmeriaSpringActuatorAutoConfigurationTransientServiceOptionsTest {
+
+        @SpringBootApplication
+        static class TestConfiguration {}
+
+        @Inject
+        private Server server;
+
+        @Test
+        void testTransientServiceOptions() {
+            assertTransientServiceOptions(server,
+                                          ImmutableSet.of(TransientServiceOption.WITH_METRIC_COLLECTION,
+                                                          TransientServiceOption.WITH_ACCESS_LOGGING),
+                                          "/internal/actuator", "/custom-health");
+        }
+    }
+
+    private static void assertTransientServiceOptions(Server server, Set<TransientServiceOption> expected,
+                                                      String... pathPrefixes) {
+        for (String pathPrefix : pathPrefixes) {
+            final List<ServiceConfig> serviceConfigs =
+                    server.serviceConfigs().stream()
+                          .filter(config -> config.route().patternString().startsWith(pathPrefix))
+                          .collect(toImmutableList());
+            assertThat(serviceConfigs).isNotEmpty();
+            for (ServiceConfig serviceConfig : serviceConfigs) {
+                assertThat(serviceConfig.transientServiceOptions()).isEqualTo(expected);
+            }
         }
     }
 
