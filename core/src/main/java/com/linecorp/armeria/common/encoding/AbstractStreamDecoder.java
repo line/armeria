@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.DecompressionException;
@@ -33,12 +36,14 @@ import io.netty.handler.codec.compression.DecompressionException;
 class AbstractStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
+    private final ByteBufAllocator alloc;
     private final int maxLength;
     private int decodedLength;
 
     protected AbstractStreamDecoder(ChannelHandler handler, ByteBufAllocator alloc, int maxLength) {
         decoder = new EmbeddedChannel(false, handler);
         decoder.config().setAllocator(alloc);
+        this.alloc = alloc;
         this.maxLength = maxLength;
     }
 
@@ -46,7 +51,9 @@ class AbstractStreamDecoder implements StreamDecoder {
     public HttpData decode(HttpData obj) {
         try {
             decoder.writeInbound(obj.byteBuf());
+            return fetchDecoderOutput();
         } catch (DecompressionException ex) {
+            decoder.releaseInbound();
             final String message = ex.getMessage();
             if (message != null && message.startsWith("Decompression buffer has reached maximum size:")) {
                 throw ContentTooLargeException.builder()
@@ -56,16 +63,23 @@ class AbstractStreamDecoder implements StreamDecoder {
             } else {
                 throw ex;
             }
+        } catch (Throwable t) {
+            decoder.releaseInbound();
+            throw t;
         }
-        return fetchDecoderOutput();
     }
 
     @Override
     public HttpData finish() {
-        if (decoder.finish()) {
-            return fetchDecoderOutput();
-        } else {
-            return HttpData.empty();
+        try {
+            if (decoder.finish()) {
+                return fetchDecoderOutput();
+            } else {
+                return HttpData.empty();
+            }
+        } catch (Throwable t) {
+            decoder.releaseInbound();
+            throw t;
         }
     }
 
@@ -77,25 +91,48 @@ class AbstractStreamDecoder implements StreamDecoder {
     // Mostly copied from netty's HttpContentDecoder.
     protected HttpData fetchDecoderOutput() {
         ByteBuf decoded = null;
-        for (;;) {
-            final ByteBuf buf = decoder.readInbound();
-            if (buf == null) {
-                break;
-            }
-            if (!buf.isReadable()) {
-                buf.release();
-                continue;
-            }
-            maybeCheckOverflow(decoded, buf);
-            if (decoded == null) {
-                decoded = buf;
-            } else {
-                try {
-                    decoded.writeBytes(buf);
-                } finally {
+        CompositeByteBuf composite = null;
+        try {
+            for (;;) {
+                final ByteBuf buf = decoder.readInbound();
+                if (buf == null) {
+                    break;
+                }
+                if (!buf.isReadable()) {
                     buf.release();
+                    continue;
+                }
+                maybeCheckOverflow(decoded, buf);
+                if (decoded == null) {
+                    decoded = buf;
+                } else if (composite != null) {
+                    try {
+                        composite.addComponent(true, buf);
+                    } catch (Throwable t) {
+                        composite.release();
+                        throw t;
+                    }
+                } else {
+                    try {
+                        composite = alloc.compositeBuffer();
+                    } catch (Throwable t) {
+                        decoded.release();
+                        buf.release();
+                        throw t;
+                    }
+
+                    try {
+                        composite.addComponents(true, ImmutableList.of(decoded, buf));
+                    } catch (Throwable t) {
+                        composite.release();
+                        throw t;
+                    }
+                    decoded = composite;
                 }
             }
+        } catch (Throwable t) {
+            decoder.releaseInbound();
+            throw t;
         }
 
         if (decoded == null) {
