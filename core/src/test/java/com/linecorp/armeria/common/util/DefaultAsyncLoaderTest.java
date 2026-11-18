@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,8 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import com.linecorp.armeria.common.CommonPools;
 
 class DefaultAsyncLoaderTest {
 
@@ -52,7 +55,7 @@ class DefaultAsyncLoaderTest {
     void loadTimeoutAcceptsLargeDuration() {
         final CompletableFuture<Integer> source = new CompletableFuture<>();
         final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> source)
-                .loadTimeout(Duration.ofSeconds(Long.MAX_VALUE))
+                .loadTimeout(Duration.ofMillis(Long.MAX_VALUE))
                 .build();
         final CompletableFuture<Integer> future = loader.load();
         source.complete(1);
@@ -74,7 +77,7 @@ class DefaultAsyncLoaderTest {
         final CompletableFuture<Integer> first = loader.load();
         assertThat(loader.load()).isSameAs(first);
         assertThatThrownBy(() -> first.get(10, TimeUnit.SECONDS)).hasCauseInstanceOf(TimeoutException.class);
-        assertThat(stalled).isNotDone();
+        await().untilAsserted(() -> assertThat(stalled).isCancelled());
         assertThat(loader.load().join()).isEqualTo(2);
         stalled.complete(1);
         assertThat(loader.load().join()).isEqualTo(2);
@@ -105,12 +108,65 @@ class DefaultAsyncLoaderTest {
 
     @Test
     void loadTimeoutHandlesUnmodifiableFuture() {
-        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(
-                unused -> UnmodifiableFuture.wrap(new CompletableFuture<Integer>()))
-                .loadTimeout(Duration.ofMillis(100))
-                .build();
+        final CompletableFuture<Integer> source = new CompletableFuture<>();
+        final AtomicInteger attempts = new AtomicInteger();
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> {
+            return attempts.incrementAndGet() == 1 ? UnmodifiableFuture.wrap(source)
+                                                  : UnmodifiableFuture.completedFuture(2);
+        }).loadTimeoutMillis(100)
+          .build();
         assertThatThrownBy(() -> loader.load().get(10, TimeUnit.SECONDS))
                 .hasCauseInstanceOf(TimeoutException.class);
+        assertThat(source).isNotDone();
+        assertThat(loader.load().join()).isEqualTo(2);
+        source.complete(1);
+        assertThat(loader.load().join()).isEqualTo(2);
+    }
+
+    @Test
+    void loadTimeoutIgnoresCancellationFailure() {
+        final AtomicBoolean cancellationAttempted = new AtomicBoolean();
+        final CompletableFuture<Integer> source = new CompletableFuture<Integer>() {
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                cancellationAttempted.set(true);
+                throw new UnsupportedOperationException("Cancellation is not supported");
+            }
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> source)
+                .loadTimeoutMillis(100)
+                .build();
+        assertThatThrownBy(() -> loader.load().get(10, TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(TimeoutException.class);
+        await().untilTrue(cancellationAttempted);
+        assertThat(source).isNotDone();
+    }
+
+    @Test
+    void loadTimeoutCancelsOutsideEventLoop() throws Exception {
+        final CompletableFuture<Thread> cancellationThread = new CompletableFuture<>();
+        final CompletableFuture<Void> releaseCancellation = new CompletableFuture<>();
+        final CompletableFuture<Integer> source = new CompletableFuture<Integer>() {
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                cancellationThread.complete(Thread.currentThread());
+                releaseCancellation.join();
+                return super.cancel(mayInterruptIfRunning);
+            }
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader.<Integer>builder(unused -> source)
+                .loadTimeoutMillis(100)
+                .build();
+        try {
+            assertThatThrownBy(() -> loader.load().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(TimeoutException.class);
+            final Thread thread = cancellationThread.get(10, TimeUnit.SECONDS);
+            assertThat(CommonPools.workerGroup()).noneMatch(eventLoop -> eventLoop.inEventLoop(thread));
+        } finally {
+            releaseCancellation.complete(null);
+        }
     }
 
     @Test

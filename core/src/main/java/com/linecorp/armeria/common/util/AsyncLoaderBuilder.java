@@ -39,7 +39,7 @@ public final class AsyncLoaderBuilder<T> {
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     @Nullable
     private String name;
-    private Duration loadTimeout = Duration.ZERO;
+    private long loadTimeoutMillis;
     @Nullable
     private Duration expireAfterLoad;
     @Nullable
@@ -72,15 +72,16 @@ public final class AsyncLoaderBuilder<T> {
      * Sets the timeout for the future returned by the loader function.
      * If the future does not complete within the timeout, the load fails with a {@link TimeoutException},
      * which is passed to the {@linkplain #exceptionHandler(BiFunction) exception handler} if set.
-     * The original future is not cancelled, but its late result is ignored.
+     * Cancellation of the loader future is attempted on timeout. A late result is ignored if cancellation
+     * is not supported.
      * This timeout does not apply to the future returned by the exception handler.
      * If not set or set to {@link Duration#ZERO}, the timeout is disabled.
+     * The duration is truncated to milliseconds, so positive durations below 1 millisecond disable the timeout.
      */
     public AsyncLoaderBuilder<T> loadTimeout(Duration loadTimeout) {
         requireNonNull(loadTimeout, "loadTimeout");
         checkArgument(!loadTimeout.isNegative(), "loadTimeout: %s (expected: >= 0)", loadTimeout);
-        this.loadTimeout = loadTimeout;
-        return this;
+        return loadTimeoutMillis(loadTimeout.toMillis());
     }
 
     /**
@@ -91,7 +92,8 @@ public final class AsyncLoaderBuilder<T> {
      */
     public AsyncLoaderBuilder<T> loadTimeoutMillis(long loadTimeoutMillis) {
         checkArgument(loadTimeoutMillis >= 0, "loadTimeoutMillis: %s (expected: >= 0)", loadTimeoutMillis);
-        return loadTimeout(Duration.ofMillis(loadTimeoutMillis));
+        this.loadTimeoutMillis = loadTimeoutMillis;
+        return this;
     }
 
     /**
@@ -181,7 +183,7 @@ public final class AsyncLoaderBuilder<T> {
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
-        return new DefaultAsyncLoader<>(loader, name, loadTimeout, expireAfterLoad, expireIf,
+        return new DefaultAsyncLoader<>(loader, name, loadTimeoutMillis, expireAfterLoad, expireIf,
                                         refreshAfterLoad, refreshIf,
                                         preload, exceptionHandler);
     }

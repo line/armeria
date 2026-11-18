@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import static com.google.common.math.LongMath.saturatedAdd;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -52,7 +51,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private final Executor executor;
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     private final String name;
-    private final long loadTimeoutNanos;
+    private final long loadTimeoutMillis;
     private final long expireAfterLoadNanos;
     @Nullable
     private final Predicate<? super T> expireIf;
@@ -69,7 +68,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable String name,
-                       Duration loadTimeout,
+                       long loadTimeoutMillis,
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<? super T> expireIf,
                        @Nullable Duration refreshAfterLoad,
@@ -83,8 +82,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             name = "AsyncLoader-" + Integer.toHexString(System.identityHashCode(this));
         }
         this.name = name;
-        loadTimeoutNanos = saturatedAdd(TimeUnit.SECONDS.toNanos(loadTimeout.getSeconds()),
-                                        loadTimeout.getNano());
+        this.loadTimeoutMillis = loadTimeoutMillis;
         expireAfterLoadNanos = expireAfterLoad != null ? expireAfterLoad.toNanos() : 0;
         this.expireIf = expireIf;
         refreshAfterLoadNanos = refreshAfterLoad != null ? refreshAfterLoad.toNanos() : 0;
@@ -159,25 +157,38 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     }
 
     private CompletableFuture<T> withTimeout(CompletableFuture<T> loaderFuture) {
-        if (loadTimeoutNanos == 0 || loaderFuture.isDone()) {
+        if (loadTimeoutMillis == 0 || loaderFuture.isDone()) {
             return loaderFuture;
         }
 
-        final CompletableFuture<T> timedFuture = new CompletableFuture<>();
-        final ScheduledFuture<?> timeoutFuture = CommonPools.workerGroup().next().schedule(
-                () -> timedFuture.completeExceptionally(new TimeoutException(
-                        '[' + name + "] Load timed out after " + loadTimeoutNanos + " ns")),
-                loadTimeoutNanos, TimeUnit.NANOSECONDS);
+        final CompletableFuture<T> resultFuture = new CompletableFuture<>();
+        final ScheduledFuture<?> timeoutTask = CommonPools.workerGroup().next().schedule(
+                () -> handleTimeout(loaderFuture, resultFuture),
+                loadTimeoutMillis, TimeUnit.MILLISECONDS);
         loaderFuture.handle((value, cause) -> {
-            timeoutFuture.cancel(false);
+            timeoutTask.cancel(false);
             if (cause != null) {
-                timedFuture.completeExceptionally(cause);
+                resultFuture.completeExceptionally(cause);
             } else {
-                timedFuture.complete(value);
+                resultFuture.complete(value);
             }
             return null;
         });
-        return timedFuture;
+        return resultFuture;
+    }
+
+    private void handleTimeout(CompletableFuture<T> loaderFuture, CompletableFuture<T> resultFuture) {
+        if (!resultFuture.completeExceptionally(new TimeoutException(
+                '[' + name + "] Load timed out after " + loadTimeoutMillis + " ms"))) {
+            return;
+        }
+        executor.execute(() -> {
+            try {
+                loaderFuture.cancel(true);
+            } catch (Exception e) {
+                logger.warn("[{}] Unexpected exception from loaderFuture.cancel()", name, e);
+            }
+        });
     }
 
     @Nonnull

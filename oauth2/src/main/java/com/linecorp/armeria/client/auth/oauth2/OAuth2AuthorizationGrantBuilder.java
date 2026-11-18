@@ -47,7 +47,7 @@ public final class OAuth2AuthorizationGrantBuilder {
     private static final Predicate<? super GrantedOAuth2AccessToken> DEFAULT_REFRESH_IF =
             toRefreshIf(DEFAULT_REFRESH_BEFORE);
     private boolean preload;
-    private Duration tokenLoadTimeout = Duration.ZERO;
+    private long tokenLoadTimeoutMillis;
 
     private static Predicate<? super GrantedOAuth2AccessToken> toRefreshIf(Duration refreshBefore) {
         return token -> !token.isValid(Instant.now().plus(refreshBefore));
@@ -166,13 +166,13 @@ public final class OAuth2AuthorizationGrantBuilder {
     /**
      * Sets the timeout for loading a new access token, including background refreshes and preloading.
      * If not set or set to {@link Duration#ZERO}, the timeout is disabled.
+     * The duration is truncated to milliseconds, so positive durations below 1 millisecond disable the timeout.
      */
     public OAuth2AuthorizationGrantBuilder tokenLoadTimeout(Duration tokenLoadTimeout) {
         requireNonNull(tokenLoadTimeout, "tokenLoadTimeout");
         checkArgument(!tokenLoadTimeout.isNegative(),
                       "tokenLoadTimeout: %s (expected: >= 0)", tokenLoadTimeout);
-        this.tokenLoadTimeout = tokenLoadTimeout;
-        return this;
+        return tokenLoadTimeoutMillis(tokenLoadTimeout.toMillis());
     }
 
     /**
@@ -180,7 +180,10 @@ public final class OAuth2AuthorizationGrantBuilder {
      * If not set or set to {@code 0}, the timeout is disabled.
      */
     public OAuth2AuthorizationGrantBuilder tokenLoadTimeoutMillis(long tokenLoadTimeoutMillis) {
-        return tokenLoadTimeout(Duration.ofMillis(tokenLoadTimeoutMillis));
+        checkArgument(tokenLoadTimeoutMillis >= 0,
+                      "tokenLoadTimeoutMillis: %s (expected: >= 0)", tokenLoadTimeoutMillis);
+        this.tokenLoadTimeoutMillis = tokenLoadTimeoutMillis;
+        return this;
     }
 
     /**
@@ -200,6 +203,6 @@ public final class OAuth2AuthorizationGrantBuilder {
         checkState(requestSupplier != null, "accessTokenRequest() is not set.");
         return new DefaultOAuth2AuthorizationGrant(
                 accessTokenEndpoint, accessTokenEndpointPath, requestSupplier, responseHandler, refreshIf,
-                fallbackTokenProvider, newTokenConsumer, tokenLoadTimeout, preload);
+                fallbackTokenProvider, newTokenConsumer, tokenLoadTimeoutMillis, preload);
     }
 }

@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -64,7 +63,7 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
             @Nullable Predicate<? super GrantedOAuth2AccessToken> refreshIf,
             @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
             @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer,
-            Duration tokenLoadTimeout, boolean preload) {
+            long tokenLoadTimeoutMillis, boolean preload) {
 
         oAuth2Endpoint = new OAuth2Endpoint<>(accessTokenEndpoint, accessTokenEndpointPath, responseHandler);
         this.requestSupplier = requestSupplier;
@@ -75,7 +74,7 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
                 AsyncLoader.builder(this::loadToken)
                            .name(name)
-                           .loadTimeout(tokenLoadTimeout)
+                           .loadTimeoutMillis(tokenLoadTimeoutMillis)
                            .expireIf(token -> !isValidToken(token))
                            .preload(preload);
         if (refreshIf != null) {
