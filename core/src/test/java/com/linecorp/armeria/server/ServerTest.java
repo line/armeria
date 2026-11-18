@@ -15,11 +15,11 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.DefaultServerConfig.DEFAULT_BOSS_GROUP_FACTORY;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,6 +35,9 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
@@ -57,9 +60,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
@@ -87,6 +93,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -244,6 +251,90 @@ class ServerTest {
                       .filter(predicate)
                       .count();
         assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2 })
+    void serverPortStartListenerFailureStopsStartingRemainingPorts(int failedPortIndex) throws Exception {
+        final List<ServerPort> ports = Arrays.asList(new ServerPort(0, SessionProtocol.HTTP),
+                                                   new ServerPort(0, SessionProtocol.HTTP),
+                                                   new ServerPort(0, SessionProtocol.HTTP));
+        final List<EventLoopGroup> bossGroups = new CopyOnWriteArrayList<>();
+        final ServerBuilder sb = Server.builder()
+                                       .service("/", (ctx, req) -> HttpResponse.of(200))
+                                       .bossGroupFactory(threadName -> {
+                                           final EventLoopGroup group =
+                                                   DEFAULT_BOSS_GROUP_FACTORY.apply(threadName);
+                                           bossGroups.add(group);
+                                           return group;
+                                       });
+        ports.forEach(sb::port);
+        ports.get(failedPortIndex).setActualPort(1);
+
+        final Server server = sb.build();
+        try {
+            assertThatThrownBy(() -> server.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("already set");
+            assertThat(bossGroups).hasSize(failedPortIndex + 1);
+            assertThat(server.activePorts()).isEmpty();
+            for (int i = 0; i < ports.size(); i++) {
+                assertThat(ports.get(i).actualPort()).isEqualTo(i == failedPortIndex ? 1 : 0);
+            }
+        } finally {
+            closeServerAfterStartupFailure(server, bossGroups);
+        }
+    }
+
+    @Test
+    void failedStartupDoesNotResetAnotherServersPort() throws Exception {
+        final ServerPort port = new ServerPort(0, SessionProtocol.HTTP);
+        final Server first = Server.builder().port(port)
+                                   .service("/", (ctx, req) -> HttpResponse.of("first")).build();
+        final Server second = Server.builder().port(port)
+                                    .service("/", (ctx, req) -> HttpResponse.of("second")).build();
+        try {
+            first.start().get(10, TimeUnit.SECONDS);
+            final int firstPort = port.actualPort();
+            assertThatThrownBy(() -> second.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
+            assertThat(port.actualPort()).isEqualTo(firstPort);
+            assertThat(WebClient.of("http://127.0.0.1:" + firstPort).get("/").aggregate()
+                                .get(10, TimeUnit.SECONDS).contentUtf8()).isEqualTo("first");
+
+            first.stop().get(10, TimeUnit.SECONDS);
+            assertThat(port.actualPort()).isZero();
+            second.start().get(10, TimeUnit.SECONDS);
+            final int secondPort = port.actualPort();
+            assertThatThrownBy(() -> first.start().get(10, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
+            assertThat(port.actualPort()).isEqualTo(secondPort);
+            assertThat(WebClient.of("http://127.0.0.1:" + secondPort).get("/").aggregate()
+                                .get(10, TimeUnit.SECONDS).contentUtf8()).isEqualTo("second");
+        } finally {
+            try {
+                second.closeAsync().get(10, TimeUnit.SECONDS);
+            } finally {
+                first.closeAsync().get(10, TimeUnit.SECONDS);
+            }
+        }
+    }
+
+    private static void closeServerAfterStartupFailure(Server server, List<EventLoopGroup> bossGroups)
+            throws Exception {
+        try {
+            server.closeAsync().get(10, TimeUnit.SECONDS);
+        } finally {
+            // A regression may leave startup pending or create a group after rollback has begun.
+            bossGroups.forEach(group -> group.shutdownGracefully(0, 0, TimeUnit.SECONDS));
+            // Recheck the list size after each group terminates in case a listener started another port.
+            for (int i = 0; i < bossGroups.size(); i++) {
+                bossGroups.get(i).shutdownGracefully(0, 0, TimeUnit.SECONDS).get(10, TimeUnit.SECONDS);
+            }
+        }
     }
 
     private static void testInvocation0(String path) throws IOException, ParseException {
@@ -410,43 +501,68 @@ class ServerTest {
 
     @Test
     void defaultStartStopExecutor() {
-        final Server server = ServerTest.server.server();
         final Queue<Thread> threads = new LinkedTransferQueue<>();
-        server.addListener(new ThreadRecordingServerListener(threads));
+        assertStartStopExecutorThreads(newStartStopServerBuilder(threads), threads, "startstop-support");
+    }
 
-        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+    private static void assertStartStopExecutorThreads(ServerBuilder serverBuilder, Queue<Thread> threads,
+                                                      String threadNamePrefix) {
+        final CountDownLatch startCallbackAttached = new CountDownLatch(1);
+        final CountDownLatch stopCallbackAttached = new CountDownLatch(1);
+        final ServerListener completionGate = new ServerListenerAdapter() {
+            @Override
+            public void serverStarted(Server server) throws InterruptedException {
+                assertThat(startCallbackAttached.await(10, TimeUnit.SECONDS))
+                        .as("start callback registered")
+                        .isTrue();
+            }
 
-        threads.forEach(t -> assertThat(t.getName()).startsWith("startstop-support"));
+            @Override
+            public void serverStopped(Server server) throws InterruptedException {
+                assertThat(stopCallbackAttached.await(10, TimeUnit.SECONDS))
+                        .as("stop callback registered")
+                        .isTrue();
+            }
+        };
+        final Server server = serverBuilder.serverListener(completionGate).build();
+        try {
+            final CompletableFuture<Thread> startFuture =
+                    server.start().thenApply(unused -> Thread.currentThread());
+            startCallbackAttached.countDown();
+            threads.add(startFuture.join());
+
+            final CompletableFuture<Thread> stopFuture =
+                    server.stop().thenApply(unused -> Thread.currentThread());
+            stopCallbackAttached.countDown();
+            threads.add(stopFuture.join());
+
+            assertThat(threads).hasSize(6);
+            threads.forEach(t -> assertThat(t.getName()).startsWith(threadNamePrefix));
+        } finally {
+            startCallbackAttached.countDown();
+            stopCallbackAttached.countDown();
+            server.close();
+        }
     }
 
     @Test
     void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-
-        final AtomicBoolean serverStarted = new AtomicBoolean();
-        final ThreadFactory factory = ThreadFactories.builder(prefix).taskFunction(task -> () -> {
-            await().untilFalse(serverStarted);
-            task.run();
-        }).build();
-
+        final ThreadFactory factory = ThreadFactories.builder(prefix).build();
         final ExecutorService executor = Executors.newSingleThreadExecutor(factory);
-        final Server server = Server.builder()
-                                    .startStopExecutor(executor)
-                                    .service("/", (ctx, req) -> HttpResponse.of(200))
-                                    .serverListener(new ThreadRecordingServerListener(threads))
-                                    .build();
+        try {
+            final ServerBuilder sb = newStartStopServerBuilder(threads).startStopExecutor(executor);
+            assertStartStopExecutorThreads(sb, threads, prefix);
+        } finally {
+            assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
+        }
+    }
 
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
-        serverStarted.set(true);
-
-        final CompletableFuture<Thread> stopFuture = server.stop().thenApply(
-                unused -> Thread.currentThread());
-        serverStarted.set(false);
-        threads.add(stopFuture.join());
-
-        threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
+    private static ServerBuilder newStartStopServerBuilder(Queue<Thread> threads) {
+        return Server.builder()
+                     .service("/", (ctx, req) -> HttpResponse.of(200))
+                     .serverListener(new ThreadRecordingServerListener(threads));
     }
 
     @Test
