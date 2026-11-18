@@ -45,11 +45,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -199,7 +201,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
     @VisibleForTesting
     final VirtualHostBuilder virtualHostTemplate = new VirtualHostBuilder(this, false);
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
-    private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final Set<VirtualHostBuilder> virtualHostBuilders = new LinkedHashSet<>();
 
     EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -1896,9 +1898,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
         final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
         requireNonNull(customizer, "customizer");
         customizer.accept(virtualHostBuilder);
-        if (virtualHostBuilders.stream().noneMatch(builder -> builder == virtualHostBuilder)) {
-            virtualHostBuilders.add(virtualHostBuilder);
-        }
+        virtualHostBuilders.add(virtualHostBuilder);
         return this;
     }
 
@@ -1910,9 +1910,7 @@ public final class ServerBuilder implements ConnectionLevelSetters, TlsSetters,
      */
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
         final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
-        if (virtualHostBuilders.stream().noneMatch(builder -> builder == virtualHostBuilder)) {
-            virtualHostBuilders.add(virtualHostBuilder);
-        }
+        virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
 
