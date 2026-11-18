@@ -180,16 +180,20 @@ public final class ArmeriaConfigurationUtil {
         }
 
         if (settings.isEnableMetrics()) {
-            if (!metricCollectingServiceConfigurators.isEmpty()) {
-                final MetricCollectingServiceBuilder builder = MetricCollectingService
-                        .builder(meterIdPrefixFunction);
-                for (MetricCollectingServiceConfigurator configurator : metricCollectingServiceConfigurators) {
-                    configurator.configure(builder);
+            final MetricCollectingServiceBuilder builder = MetricCollectingService
+                    .builder(meterIdPrefixFunction);
+            if (settings.getMetricsMaxCardinality() != null) {
+                if (settings.getMetricsIdleTimeout() != null) {
+                    builder.maxCardinality(settings.getMetricsMaxCardinality(),
+                                           settings.getMetricsIdleTimeout());
+                } else {
+                    builder.maxCardinality(settings.getMetricsMaxCardinality());
                 }
-                server.decorator(builder.newDecorator());
-            } else {
-                server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
             }
+            for (MetricCollectingServiceConfigurator configurator : metricCollectingServiceConfigurators) {
+                configurator.configure(builder);
+            }
+            server.decorator(builder.newDecorator());
 
             configureInternalService(server, InternalServiceId.METRICS, settings.getMetricsPath(),
                                      internalServices.metricsExpositionService(), internalPorts,
