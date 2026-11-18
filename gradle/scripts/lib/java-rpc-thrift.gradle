@@ -50,7 +50,10 @@ configure(projectsWithFlags('java')) {
                 includeDirs = [includeDirs]
             }
             includeDirs = project.files(includeDirs)
-            def javaOutputDir = project.file("${project.ext.genSrcDir}/${scope}/java")
+            def javaOutputDir = project.file("${project.ext.genSrcDir}/${scope}/javaThrift")
+            if (!sourceSet.java.srcDirs.contains(javaOutputDir)) {
+                sourceSet.java.srcDir javaOutputDir
+            }
             def jsonOutputDir = project.file("${project.ext.genSrcDir}/${scope}/resources")
             task.configure {
                 // configure inputs and outputs
