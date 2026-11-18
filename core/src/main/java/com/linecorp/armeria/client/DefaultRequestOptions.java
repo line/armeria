@@ -33,7 +33,7 @@ final class DefaultRequestOptions implements RequestOptions {
 
     static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, null,
                                                                          ImmutableMap.of(), null, null, null,
-                                                                         null);
+                                                                         null, null, null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
@@ -49,6 +49,10 @@ final class DefaultRequestOptions implements RequestOptions {
     private final ClientTlsSpec clientTlsSpec;
     @Nullable
     private final InetSocketAddress localBindAddress;
+    @Nullable
+    private final String serviceName;
+    @Nullable
+    private final String name;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
                           long maxResponseLength, @Nullable Long requestAutoAbortDelayMillis,
@@ -56,7 +60,8 @@ final class DefaultRequestOptions implements RequestOptions {
                           @Nullable ExchangeType exchangeType,
                           @Nullable ResponseTimeoutMode responseTimeoutMode,
                           @Nullable ClientTlsSpec clientTlsSpec,
-                          @Nullable InetSocketAddress localBindAddress) {
+                          @Nullable InetSocketAddress localBindAddress,
+                          @Nullable String serviceName, @Nullable String name) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
@@ -66,6 +71,8 @@ final class DefaultRequestOptions implements RequestOptions {
         this.responseTimeoutMode = responseTimeoutMode;
         this.clientTlsSpec = clientTlsSpec;
         this.localBindAddress = localBindAddress;
+        this.serviceName = serviceName;
+        this.name = name;
     }
 
     @Override
@@ -92,6 +99,18 @@ final class DefaultRequestOptions implements RequestOptions {
     @Override
     public Map<AttributeKey<?>, Object> attrs() {
         return attributeMap;
+    }
+
+    @Nullable
+    @Override
+    public String serviceName() {
+        return serviceName;
+    }
+
+    @Nullable
+    @Override
+    public String name() {
+        return name;
     }
 
     @Nullable
@@ -137,13 +156,16 @@ final class DefaultRequestOptions implements RequestOptions {
                exchangeType == that.exchangeType &&
                responseTimeoutMode == that.responseTimeoutMode &&
                Objects.equals(clientTlsSpec, that.clientTlsSpec) &&
-               Objects.equals(localBindAddress, that.localBindAddress);
+               Objects.equals(localBindAddress, that.localBindAddress) &&
+               Objects.equals(serviceName, that.serviceName) &&
+               Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
-                            attributeMap, exchangeType, responseTimeoutMode, clientTlsSpec, localBindAddress);
+                            attributeMap, exchangeType, responseTimeoutMode, clientTlsSpec, localBindAddress,
+                            serviceName, name);
     }
 
     @Override
@@ -158,6 +180,8 @@ final class DefaultRequestOptions implements RequestOptions {
                           .add("responseTimeoutMode", responseTimeoutMode)
                           .add("clientTlsSpec", clientTlsSpec)
                           .add("localBindAddress", localBindAddress)
+                          .add("serviceName", serviceName)
+                          .add("name", name)
                           .toString();
     }
 }
