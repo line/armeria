@@ -543,12 +543,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 increaseActiveRequests(isHttp1WebSocket);
                 return service.serve(reqCtx, req);
             } catch (Throwable cause) {
-                // No need to consume further since the response is ready.
-                if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
-                    req.abort(ResponseCompleteException.get());
-                } else {
-                    req.abort(cause);
-                }
+                // Do not abort the request here because aborting it from the service event loop
+                // races with Http2RequestDecoder.onDataRead() on the channel event loop.
+                // handleResponseComplete() will abort it after the response is sent.
                 return HttpResponse.ofFailure(cause);
             }
         }
