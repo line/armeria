@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
@@ -37,19 +38,23 @@ final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
     static final HeadersSanitizer<JsonNode> INSTANCE = new JsonHeadersSanitizerBuilder().build();
     private final Set<AsciiString> sensitiveHeaders;
     private final HeaderMaskingFunction maskingFunction;
+    @Nullable
+    private final HeaderMaskingFunction headersMaskingFunction;
     private final ObjectMapper objectMapper;
 
     JsonHeadersSanitizer(Set<AsciiString> sensitiveHeaders, HeaderMaskingFunction maskingFunction,
+                         @Nullable HeaderMaskingFunction headersMaskingFunction,
                          ObjectMapper objectMapper) {
         this.sensitiveHeaders = sensitiveHeaders;
         this.maskingFunction = maskingFunction;
+        this.headersMaskingFunction = headersMaskingFunction;
         this.objectMapper = objectMapper;
     }
 
     @Override
     public JsonNode sanitize(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
-        maskHeaders(headers, sensitiveHeaders, maskingFunction,
+        maskHeaders(headers, sensitiveHeaders, maskingFunction, headersMaskingFunction,
                     (header, values) -> result.put(header.toString(), values.size() > 1 ?
                                                                       values.toString() : values.get(0)));
 

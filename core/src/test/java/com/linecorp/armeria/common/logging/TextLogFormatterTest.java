@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -112,6 +113,208 @@ class TextLogFormatterTest {
         final Matcher matcher = Pattern.compile("set-cookie=(.*?)[,\\]]").matcher(responseLog);
         assertThat(matcher.find()).isTrue();
         assertThat(matcher.group(1)).isEqualTo("****");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void headersMaskingFunctionReceivesMaskedQueryParams(boolean removePath) {
+        final HeadersSanitizer<String> sanitizer =
+                HeadersSanitizer.builderForText()
+                                .headersMaskingFunction((name, value) -> {
+                                    assertThat(name.toString())
+                                            .isNotEqualTo(HttpHeaderNames.AUTHORIZATION.toString());
+                                    if (name.equals(HttpHeaderNames.PATH)) {
+                                        assertThat(value).isEqualTo("/search?token=****");
+                                        return removePath ? null : value + "&logged=true";
+                                    }
+                                    return name.contentEquals("x-token") ? "masked" : value;
+                                })
+                                .build();
+        final LogFormatter formatter = LogFormatter.builderForText()
+                                                   .maskQueryParams("token")
+                                                   .requestHeadersSanitizer(sanitizer)
+                                                   .build();
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/search?token=query-secret",
+                HttpHeaderNames.AUTHORIZATION, "auth-secret", "x-token", "header-secret"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        final String formatted = formatter.formatRequest(log);
+        assertThat(formatted).contains("authorization=****", "x-token=masked")
+                             .doesNotContain("query-secret", "auth-secret", "header-secret");
+        if (removePath) {
+            assertThat(formatted).doesNotContain(":path=");
+        } else {
+            assertThat(formatted).contains(":path=/search?token=****&logged=true");
+        }
+        assertThat(request.headers().path()).isEqualTo("/search?token=query-secret");
+    }
+
+    @Test
+    void maskQueryParams() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token", "ssn")
+                                                      .build();
+        final HttpRequest req = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.GET, "/v1/users?token=abcdef&page=1&ssn=1234",
+                                  HttpHeaderNames.COOKIE, "Armeria=awesome"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        final String requestLog = logFormatter.formatRequest(log);
+        assertThat(requestLog).contains(":path=/v1/users?token=****&page=1&ssn=****");
+        assertThat(requestLog).contains("cookie=****");
+        assertThat(requestLog).doesNotContain("abcdef", "1234");
+    }
+
+    @Test
+    void maskDuplicateQueryParams() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(HttpMethod.GET,
+                               "/search?token=first&token=&token=third&page=a%20b"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        final String requestLog = logFormatter.formatRequest(log);
+        assertThat(requestLog).contains(":path=/search?token=****&token=****&token=****&page=a+b");
+        assertThat(requestLog).doesNotContain("first", "third");
+    }
+
+    @Test
+    void preserveUnmaskedQueryComponents() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token", "token/id")
+                                                      .build();
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        log.requestHeaders(RequestHeaders.of(
+                HttpMethod.GET,
+                "/search?token=first&token%2Fid=second&page=a%20b&x=a%2Bb#fragment"));
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains(":path=/search?token=****&token%2Fid=****&page=a%20b&x=a%2Bb#fragment")
+                .doesNotContain("first", "second");
+    }
+
+    @Test
+    void doNotMaskFragmentThatContainsQueryDelimiter() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .requestHeadersSanitizer((ctx, headers) ->
+                                                              headers.get(HttpHeaderNames.PATH))
+                                                      .build();
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        log.requestHeaders(RequestHeaders.of(
+                HttpMethod.GET, "/search#fragment?token=value"));
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains("headers=/search#fragment?token=value")
+                .doesNotContain("****");
+    }
+
+    @Test
+    void useCustomQueryParamMaskingFunction() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .queryParamMaskingFunction(
+                                                              (name, value) -> name + '-' + value.length())
+                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(HttpMethod.GET, "/search?token=abcdef&page=1"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains(":path=/search?token=token-6&page=1");
+    }
+
+    @Test
+    void queryParamMaskingFunctionCanEncodeQueryParams() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .queryParamMaskingFunction(
+                                                              (name, value) -> QueryParams.of("x", "y")
+                                                                                          .toQueryString())
+                                                      .build();
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        log.requestHeaders(RequestHeaders.of(
+                HttpMethod.GET, "/search?page=1&token=secret#fragment"));
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains(":path=/search?page=1&token=x%3Dy#fragment]")
+                .doesNotContain("secret");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/search?token=abcdef, /search",
+            "/search?token=abcdef&page=1, /search?page=1",
+            "/search?page=1&token=abcdef&sort=asc, /search?page=1&sort=asc",
+            "/search?page=1&token=abcdef, /search?page=1",
+            "/search?token=abcdef#fragment, /search#fragment",
+            "/search?token=abcdef&page=1#fragment, /search?page=1#fragment"
+    })
+    void removeQueryParamWhenMaskingFunctionReturnsNull(String path, String maskedPath) {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .queryParamMaskingFunction((name, value) -> null)
+                                                      .build();
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        log.requestHeaders(RequestHeaders.of(HttpMethod.GET, path));
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains(":path=" + maskedPath + ']')
+                .doesNotContain("abcdef");
+    }
+
+    @Test
+    void customRequestHeadersSanitizerReceivesMaskedQueryParams() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .requestHeadersSanitizer((ctx, headers) ->
+                                                              headers.get(HttpHeaderNames.PATH))
+                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(HttpMethod.GET, "/search?token=abcdef&page=a%20b"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains("headers=/search?token=****&page=a+b");
+    }
+
+    @Test
+    void leavePathUnchangedWhenQueryParamDoesNotMatch() {
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .maskQueryParams("token")
+                                                      .requestHeadersSanitizer((ctx, headers) ->
+                                                              headers.get(HttpHeaderNames.PATH))
+                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(HttpMethod.GET, "/search?page"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+
+        assertThat(logFormatter.formatRequest(log))
+                .contains("headers=/search?page}")
+                .doesNotContain("headers=/search?page=");
     }
 
     @Test
