@@ -61,6 +61,7 @@ import {
   Version,
   Versions,
 } from '../../lib/versions';
+import { DocServiceSettings } from '../../lib/settings';
 import { SpecLoadingStatus } from '../../lib/types';
 import LoadingContainer from '../../components/LoadingContainer';
 
@@ -420,12 +421,14 @@ interface RouterServicesProps {
   versions: Versions | undefined;
   specification: Specification;
   jsonSchemas: any;
+  docServiceSettings: DocServiceSettings;
 }
 
 const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
   versions,
   specification,
   jsonSchemas,
+  docServiceSettings,
 }) => {
   return (
     <div>
@@ -449,6 +452,7 @@ const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
             {...p}
             specification={specification}
             jsonSchemas={jsonSchemas}
+            docServiceSettings={docServiceSettings}
           />
         )}
       />
@@ -484,6 +488,10 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [specLoadingStatus, setSpecLoadingStatus] = useState<SpecLoadingStatus>(
     SpecLoadingStatus.INITIALIZED,
   );
+  const [docServiceSettings, setDocServiceSettings] =
+    useState<DocServiceSettings>({
+      sensitiveHeaders: [],
+    });
   const [versions, setVersions] = useState<Versions | undefined>();
   const [openServices, toggleOpenService] = useReducer(
     (current: OpenServices, serviceName: string) => ({
@@ -530,6 +538,22 @@ const App: React.FunctionComponent<Props> = (props) => {
       } catch (e) {
         // Ignore the error and continue
         setJsonSchemas({});
+      }
+
+      try {
+        const settingsResponse = await fetch('settings.json');
+        if (!settingsResponse.ok) {
+          throw new Error(
+            `Failed to load settings: ${settingsResponse.status}`,
+          );
+        }
+        const settingsData: DocServiceSettings = await settingsResponse.json();
+        setDocServiceSettings({
+          sensitiveHeaders: settingsData.sensitiveHeaders ?? ['authorization'],
+        });
+      } catch (e) {
+        // Ignore the error and default to redacting the authorization header.
+        setDocServiceSettings({ sensitiveHeaders: ['authorization'] });
       }
 
       setSpecLoadingStatus(SpecLoadingStatus.SUCCESS);
@@ -707,6 +731,7 @@ const App: React.FunctionComponent<Props> = (props) => {
             versions={versions}
             specification={specification}
             jsonSchemas={jsonSchemas}
+            docServiceSettings={docServiceSettings}
           />
         </LoadingContainer>
       </main>

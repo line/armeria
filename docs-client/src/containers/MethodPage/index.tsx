@@ -33,6 +33,7 @@ import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 import { GRAPHQL_HTTP_MIME_TYPE } from '../../lib/transports/grahpql-http';
 import { TTEXT_MIME_TYPE } from '../../lib/transports/thrift';
 import { GRPC_UNFRAMED_MIME_TYPE } from '../../lib/transports/grpc-unframed';
+import { DocServiceSettings } from '../../lib/settings';
 import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
@@ -46,6 +47,7 @@ import ReturnType from './ReturnType';
 interface OwnProps {
   specification: Specification;
   jsonSchemas: any;
+  docServiceSettings: DocServiceSettings;
 }
 
 function getExampleHeaders(
@@ -277,6 +279,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           debugFormIsOpen={debugFormIsOpen}
           setDebugFormIsOpen={setDebugFormIsOpen}
           docServiceRoute={props.specification.getDocServiceRoute()}
+          sensitiveHeaders={props.docServiceSettings.sensitiveHeaders}
         />
       )}
     </>
