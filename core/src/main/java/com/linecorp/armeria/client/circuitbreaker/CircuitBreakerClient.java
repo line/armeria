@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -34,6 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.client.RequestCancellation;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 /**
@@ -216,9 +218,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
-     *
      * @deprecated Use {@link #newDecorator(CircuitBreakerMapping, CircuitBreakerRule)} with
-     *             {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
+     *     {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
      */
     @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -235,9 +236,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
-     *
      * @deprecated Use {@link #newDecorator(CircuitBreakerMapping, CircuitBreakerRuleWithContent)} with
-     *             {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
+     *     {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
      */
     @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -358,9 +358,17 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
 
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
                                                                         ctx.maxResponseLength());
+        final HttpResponse ruleResponse = duplicator.duplicate();
         final TruncatingHttpResponse truncatingHttpResponse =
-                new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
+                new TruncatingHttpResponse(ruleResponse, maxContentLength);
         final HttpResponse duplicate = duplicator.duplicate();
+        final RequestCancellation cancellation = RequestCancellation.get(ctx);
+        if (cancellation != null) {
+            cancellation.onCancel(cause -> {
+                ruleResponse.abort(cause);
+                duplicate.abort(cause);
+            }, CompletableFuture.allOf(ruleResponse.whenComplete(), duplicate.whenComplete()));
+        }
         duplicator.close();
 
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {

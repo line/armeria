@@ -174,12 +174,21 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
         }
         callbackCalled = true;
         callbackExecutor.execute(() -> {
+            final Response response = responseBuilder
+                    .body(ResponseBody.create(Strings.isNullOrEmpty(contentType) ?
+                                              null : MediaType.parse(contentType),
+                                              contentLength, content))
+                    .build();
+            if (armeriaCall.isCanceled()) {
+                try {
+                    response.close();
+                } finally {
+                    callback.onFailure(armeriaCall, newCancelledException());
+                }
+                return;
+            }
             try {
-                callback.onResponse(armeriaCall, responseBuilder
-                        .body(ResponseBody.create(Strings.isNullOrEmpty(contentType) ?
-                                                  null : MediaType.parse(contentType),
-                                                  contentLength, content))
-                        .build());
+                callback.onResponse(armeriaCall, response);
             } catch (IOException e) {
                 callback.onFailure(armeriaCall, e);
             }

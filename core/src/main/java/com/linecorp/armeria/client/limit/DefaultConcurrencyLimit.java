@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.client.RequestCancellation;
 
 /**
  * Concurrency settings that limits the concurrent number of active requests.
@@ -51,7 +52,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final int maxPendingAcquisitions;
     private final long timeoutMillis;
 
-    private final Queue<PendingAcquisition> pendingAcquisitions = new ConcurrentLinkedQueue<>();
+    private final Queue<Runnable> pendingAcquisitions = new ConcurrentLinkedQueue<>();
     private final AtomicLong numPendingAcquisitions = new AtomicLong();
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
@@ -90,12 +91,28 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             return noLimitFuture;
         }
 
+        final RequestCancellation cancellation = RequestCancellation.get(ctx);
+        if (cancellation != null) {
+            final Throwable cause = cancellation.cause();
+            if (cause != null) {
+                return UnmodifiableFuture.exceptionallyCompletedFuture(cause);
+            }
+        }
+
         if (pendingAcquisitions.isEmpty()) {
             // Because we don't do checking acquiredPermits and adding the queue at the same time,
             // this doesn't strictly guarantee FIFO.
             // However, the reversal happens within a reasonable window so it should be fine.
             if (acquiredPermits.incrementAndGet() <= maxConcurrency()) {
-                return UnmodifiableFuture.completedFuture(new Permit());
+                final Permit permit = new Permit();
+                if (cancellation != null) {
+                    final Throwable cause = cancellation.cause();
+                    if (cause != null) {
+                        permit.close();
+                        return UnmodifiableFuture.exceptionallyCompletedFuture(cause);
+                    }
+                }
+                return UnmodifiableFuture.completedFuture(permit);
             }
             acquiredPermits.decrementAndGet();
         }
@@ -109,8 +126,14 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
         }
 
         final CompletableFuture<SafeCloseable> future = new CompletableFuture<>();
-        final PendingAcquisition pendingAcquisition = new PendingAcquisition(ctx, future);
-        pendingAcquisitions.add(pendingAcquisition);
+        if (cancellation == null) {
+            pendingAcquisitions.add(new PendingAcquisition(ctx, future));
+        } else {
+            final CancellablePendingAcquisition pendingAcquisition =
+                    new CancellablePendingAcquisition(ctx, future);
+            pendingAcquisitions.add(pendingAcquisition);
+            pendingAcquisition.initialize(cancellation);
+        }
         // Call drain to check if there's available permits in the meantime.
         drain();
         return future;
@@ -124,7 +147,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             }
 
             if (acquiredPermits.compareAndSet(currentAcquiredPermits, currentAcquiredPermits + 1)) {
-                final PendingAcquisition task = pendingAcquisitions.poll();
+                final Runnable task = pendingAcquisitions.poll();
                 if (task == null) {
                     acquiredPermits.decrementAndGet();
                     if (!pendingAcquisitions.isEmpty()) {
@@ -192,6 +215,163 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             final Permit permit = new Permit();
             if (!future.complete(permit)) {
                 permit.close();
+            }
+        }
+    }
+
+    private enum AcquisitionState {
+        QUEUED,
+        GRANTING,
+        DONE
+    }
+
+    private final class CancellablePendingAcquisition implements Runnable {
+
+        private final ClientRequestContext ctx;
+        private final CompletableFuture<SafeCloseable> future;
+        // QUEUED owns one pending-count entry. Grant, timeout, and cancellation compete
+        // under this monitor; only the transition out of QUEUED decrements that count.
+        // GRANTING owns a reserved permit until event-loop handoff. DONE claims the
+        // terminal outcome before future completion.
+        private AcquisitionState state = AcquisitionState.QUEUED;
+        @Nullable
+        private Permit permit;
+        @Nullable
+        private volatile ScheduledFuture<?> timeoutFuture;
+        @Nullable
+        private volatile SafeCloseable cancellationRegistration;
+
+        CancellablePendingAcquisition(ClientRequestContext ctx, CompletableFuture<SafeCloseable> future) {
+            this.ctx = ctx;
+            this.future = future;
+        }
+
+        void initialize(RequestCancellation cancellation) {
+            final SafeCloseable registration = cancellation.onCancel(this::cancel);
+            cancellationRegistration = registration;
+            final boolean done;
+            final boolean queued;
+            // Immediate cancellation can finish before the registration field is assigned.
+            synchronized (this) {
+                done = state == AcquisitionState.DONE;
+                queued = state == AcquisitionState.QUEUED;
+            }
+            if (done) {
+                registration.close();
+            }
+            if (timeoutMillis == 0 || !queued) {
+                return;
+            }
+            try {
+                final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
+                        this::timeout, timeoutMillis, TimeUnit.MILLISECONDS);
+                this.timeoutFuture = timeoutFuture;
+                final boolean cancelTimeout;
+                synchronized (this) {
+                    cancelTimeout = state != AcquisitionState.QUEUED;
+                }
+                if (cancelTimeout) {
+                    timeoutFuture.cancel(false);
+                }
+            } catch (Throwable cause) {
+                cancel(cause);
+            }
+        }
+
+        @Override
+        public void run() {
+            synchronized (this) {
+                if (state != AcquisitionState.QUEUED) {
+                    // drain() reserved a permit before dequeuing this canceled or timed-out entry.
+                    // Its pending count is already removed, so return only the permit reservation.
+                    acquiredPermits.decrementAndGet();
+                    return;
+                }
+                state = AcquisitionState.GRANTING;
+                numPendingAcquisitions.decrementAndGet();
+                permit = new Permit();
+            }
+            cancelTimeout();
+            try {
+                final ContextAwareEventLoop eventLoop = ctx.eventLoop();
+                if (eventLoop.inEventLoop()) {
+                    try (SafeCloseable ignored = ctx.replace()) {
+                        completePermit();
+                    }
+                } else {
+                    eventLoop.execute(this::completePermit);
+                }
+            } catch (Throwable cause) {
+                cancel(cause);
+            }
+        }
+
+        private void completePermit() {
+            final Permit permit;
+            synchronized (this) {
+                if (state != AcquisitionState.GRANTING) {
+                    return;
+                }
+                // Claim DONE before completing the future so cancellation cannot release this permit.
+                // The local variable owns it until completion transfers it to the caller,
+                // or a failed completion releases it.
+                state = AcquisitionState.DONE;
+                permit = this.permit;
+                this.permit = null;
+            }
+            assert permit != null;
+            closeRegistration();
+            if (!future.complete(permit)) {
+                permit.close();
+            }
+        }
+
+        private void timeout() {
+            synchronized (this) {
+                if (state != AcquisitionState.QUEUED) {
+                    return;
+                }
+                state = AcquisitionState.DONE;
+                numPendingAcquisitions.decrementAndGet();
+            }
+            pendingAcquisitions.remove(this);
+            closeRegistration();
+            future.completeExceptionally(ConcurrencyLimitTimeoutException.get());
+        }
+
+        private void cancel(Throwable cause) {
+            final Permit permit;
+            synchronized (this) {
+                if (state == AcquisitionState.DONE) {
+                    return;
+                }
+                if (state == AcquisitionState.QUEUED) {
+                    numPendingAcquisitions.decrementAndGet();
+                }
+                state = AcquisitionState.DONE;
+                permit = this.permit;
+                this.permit = null;
+            }
+            pendingAcquisitions.remove(this);
+            cancelTimeout();
+            closeRegistration();
+            if (permit != null) {
+                permit.close();
+            }
+            future.completeExceptionally(cause);
+        }
+
+        private void cancelTimeout() {
+            final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+            if (timeoutFuture != null) {
+                timeoutFuture.cancel(false);
+            }
+        }
+
+        private void closeRegistration() {
+            final SafeCloseable cancellationRegistration = this.cancellationRegistration;
+            if (cancellationRegistration != null) {
+                cancellationRegistration.close();
             }
         }
     }

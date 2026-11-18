@@ -35,8 +35,10 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.client.RequestCancellation;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -151,24 +153,53 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected static void scheduleNextRetry(ClientRequestContext ctx,
                                             Consumer<? super Throwable> actionOnException,
                                             Runnable retryTask, long nextDelayMillis) {
+        final RequestCancellation cancellation = RequestCancellation.get(ctx);
+        if (cancellation != null) {
+            final Throwable cause = cancellation.cause();
+            if (cause != null) {
+                actionOnException.accept(cause);
+                return;
+            }
+        }
         try {
-            if (nextDelayMillis == 0) {
+            if (cancellation == null && nextDelayMillis == 0) {
                 ctx.eventLoop().execute(retryTask);
+                return;
+            }
+            final Runnable task;
+            if (cancellation == null) {
+                task = retryTask;
             } else {
-                @SuppressWarnings("unchecked")
-                final ScheduledFuture<Void> scheduledFuture = (ScheduledFuture<Void>) ctx
-                        .eventLoop().schedule(retryTask, nextDelayMillis, TimeUnit.MILLISECONDS);
-                scheduledFuture.addListener(future -> {
-                    if (future.isCancelled()) {
-                        // future is cancelled when the client factory is closed.
+                task = () -> {
+                    final Throwable cancellationCause = cancellation.cause();
+                    if (cancellationCause != null) {
+                        actionOnException.accept(cancellationCause);
+                    } else {
+                        retryTask.run();
+                    }
+                };
+            }
+            final ScheduledFuture<?> scheduledFuture =
+                    ctx.eventLoop().schedule(task, nextDelayMillis, TimeUnit.MILLISECONDS);
+            final SafeCloseable registration = cancellation != null ?
+                                               cancellation.onCancel(unused -> scheduledFuture.cancel(false))
+                                                                   : null;
+            scheduledFuture.addListener(future -> {
+                if (registration != null) {
+                    registration.close();
+                }
+                if (future.isCancelled()) {
+                    final Throwable cancellationCause = cancellation != null ? cancellation.cause() : null;
+                    if (cancellationCause != null) {
+                        actionOnException.accept(cancellationCause);
+                    } else {
                         actionOnException.accept(new IllegalStateException(
                                 ClientFactory.class.getSimpleName() + " has been closed."));
-                    } else if (future.cause() != null) {
-                        // Other unexpected exceptions.
-                        actionOnException.accept(future.cause());
                     }
-                });
-            }
+                } else if (future.cause() != null) {
+                    actionOnException.accept(future.cause());
+                }
+            });
         } catch (Throwable t) {
             actionOnException.accept(t);
         }
