@@ -106,21 +106,24 @@ ServerBuilder sb = Server.builder()
 
 ## Applying a policy to the specific paths
 
-To configure a policy to the specific paths, you can use `route()` methods in the
-[CorsServiceBuilder](type) and [ChainedCorsPolicyBuilder](type). They can help you to adjust the scope that
-a policy is applied to, e.g.
+To apply a [CorsService](type) to the specific paths, you can use `routeDecorator()` in the
+[ServerBuilder](type), e.g.
 
 ```java
 HttpService myService = (ctx, req) -> ...;
-Function<? super HttpService, CorsService> corsService =
-        CorsService.builder("http://example.com")
-                   // CORS policy will be applied for the path that starts with '/message/web/api/'.
-                   .route("prefix:/message/web/api/")
-                   .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                   .newDecorator();
-ServerBuilder sb = Server.builder()
-                         .service("/message", myService.decorate(corsService));
+ServerBuilder sb = Server.builder();
+sb.service("prefix:/message", myService);
+// CORS policy will be applied for the path that starts with '/message/web/api/'.
+sb.routeDecorator()
+  .pathPrefix("/message/web/api/")
+  .build(CorsService.builder("http://example.com")
+                    .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                    .newDecorator());
 ```
+
+If you need to apply different policies to different paths in a single [CorsService](type), you can use
+`route()` methods in the [ChainedCorsPolicyBuilder](type) and [CorsPolicyBuilder](type). The policies are
+visited in the configured order and the first matched one is applied.
 
 :::tip
 
