@@ -15,12 +15,18 @@
  */
 package com.linecorp.armeria.server.throttling;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -111,6 +117,59 @@ public abstract class ThrottlingStrategy<T extends Request> {
     public static <T extends Request> ThrottlingStrategy<T> rateLimiting(
             double requestsPerSecond, String name) {
         return new RateLimitingThrottlingStrategy<>(requestsPerSecond, name);
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on the
+     * number of pending tasks of the {@link BlockingTaskExecutor}.
+     *
+     * @param limit the maximum number of pending tasks this {@link ThrottlingStrategy} accepts
+     */
+    @UnstableApi
+    public static <T extends Request> ThrottlingStrategy<T> blockingTaskLimiting(int limit) {
+        return blockingTaskLimiting(limit, null);
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on the
+     * number of pending tasks of the {@link BlockingTaskExecutor}.
+     *
+     * @param limit the maximum number of pending tasks this {@link ThrottlingStrategy} accepts
+     * @param name the name of the {@link ThrottlingStrategy}
+     */
+    @UnstableApi
+    public static <T extends Request> ThrottlingStrategy<T> blockingTaskLimiting(
+            int limit, @Nullable String name) {
+        checkArgument(limit > 0, "limit: %s (expected: > 0)", limit);
+        return new BlockingTaskLimitingThrottlingStrategy<>(() -> limit, name);
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on the
+     * number of pending tasks of the {@link BlockingTaskExecutor}.
+     *
+     * @param limitSupplier the {@link IntSupplier} which indicates the maximum number of pending tasks
+     *                      this {@link ThrottlingStrategy} accepts
+     */
+    @UnstableApi
+    public static <T extends Request> ThrottlingStrategy<T> blockingTaskLimiting(
+            IntSupplier limitSupplier) {
+        return blockingTaskLimiting(limitSupplier, null);
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on the
+     * number of pending tasks of the {@link BlockingTaskExecutor}.
+     *
+     * @param limitSupplier the {@link IntSupplier} which indicates the maximum number of pending tasks
+     *                      this {@link ThrottlingStrategy} accepts
+     * @param name the name of the {@link ThrottlingStrategy}
+     */
+    @UnstableApi
+    public static <T extends Request> ThrottlingStrategy<T> blockingTaskLimiting(
+            IntSupplier limitSupplier, @Nullable String name) {
+        requireNonNull(limitSupplier, "limitSupplier");
+        return new BlockingTaskLimitingThrottlingStrategy<>(limitSupplier, name);
     }
 
     private final String name;
