@@ -22,6 +22,9 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpStatus;
@@ -47,6 +50,8 @@ import io.netty.util.AttributeKey;
  * Collects the metric data and stores it into the {@link MeterRegistry}.
  */
 public final class RequestMetricSupport {
+
+    private static final Logger logger = LoggerFactory.getLogger(RequestMetricSupport.class);
 
     /**
      * Sets up request metrics.
@@ -89,6 +94,9 @@ public final class RequestMetricSupport {
             try {
                 onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
                            distributionStatisticConfig);
+            } catch (Throwable t) {
+                logger.warn("{} Unexpected exception while collecting request metrics: ", ctx, t);
+                throw t;
             } finally {
                 activeRequestMetrics.decrement();
             }
