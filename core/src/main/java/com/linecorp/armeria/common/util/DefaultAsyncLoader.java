@@ -137,26 +137,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     private void load(@Nullable T cache, CompletableFuture<T> future) {
         try {
-            CompletableFuture<T> loaderFuture =
+            final CompletableFuture<T> loaderFuture =
                     requireNonNull(loader.apply(cache), "loader.apply() returned null");
-            if (loadTimeoutNanos > 0 && !loaderFuture.isDone()) {
-                final CompletableFuture<T> timedFuture = new CompletableFuture<>();
-                final ScheduledFuture<?> timeoutFuture = CommonPools.workerGroup().next().schedule(
-                        () -> timedFuture.completeExceptionally(new TimeoutException(
-                                '[' + name + "] Load timed out after " + loadTimeoutNanos + " ns")),
-                        loadTimeoutNanos, TimeUnit.NANOSECONDS);
-                timedFuture.handle((unused, cause) -> timeoutFuture.cancel(false));
-                loaderFuture.handle((value, cause) -> {
-                    if (cause != null) {
-                        timedFuture.completeExceptionally(cause);
-                    } else {
-                        timedFuture.complete(value);
-                    }
-                    return null;
-                });
-                loaderFuture = timedFuture;
-            }
-            loaderFuture.handleAsync((newValue, cause) -> {
+            withTimeout(loaderFuture).handleAsync((newValue, cause) -> {
                 if (cause != null) {
                     cause = Exceptions.peel(cause);
                     handleException(cause, cache, future);
@@ -173,6 +156,28 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             logger.warn("[{}] Unexpected exception from loader.apply()", name, e);
             handleException(e, cache, future);
         }
+    }
+
+    private CompletableFuture<T> withTimeout(CompletableFuture<T> loaderFuture) {
+        if (loadTimeoutNanos == 0 || loaderFuture.isDone()) {
+            return loaderFuture;
+        }
+
+        final CompletableFuture<T> timedFuture = new CompletableFuture<>();
+        final ScheduledFuture<?> timeoutFuture = CommonPools.workerGroup().next().schedule(
+                () -> timedFuture.completeExceptionally(new TimeoutException(
+                        '[' + name + "] Load timed out after " + loadTimeoutNanos + " ns")),
+                loadTimeoutNanos, TimeUnit.NANOSECONDS);
+        loaderFuture.handle((value, cause) -> {
+            timeoutFuture.cancel(false);
+            if (cause != null) {
+                timedFuture.completeExceptionally(cause);
+            } else {
+                timedFuture.complete(value);
+            }
+            return null;
+        });
+        return timedFuture;
     }
 
     @Nonnull
