@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 
@@ -25,17 +26,22 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHttpHealthChecker;
+import com.linecorp.armeria.xds.TransportSocketSnapshot;
+import com.linecorp.armeria.xds.internal.XdsEndpoint;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
@@ -50,25 +56,21 @@ final class XdsHealthCheckedEndpointGroupBuilder
 
     private final Cluster cluster;
     private final HttpHealthCheck httpHealthCheck;
+    private final TransportSocketSnapshot defaultTransportSocket;
     @Nullable
-    private final ClientTlsSpec healthCheckTlsSpec;
+    private final TransportSocketSnapshot criteriaTransportSocket;
     private final IntPredicate expectedStatuses;
 
     XdsHealthCheckedEndpointGroupBuilder(EndpointGroup delegate, Cluster cluster,
                                          HttpHealthCheck httpHealthCheck,
-                                         @Nullable ClientTlsSpec healthCheckTlsSpec) {
+                                         TransportSocketSnapshot defaultTransportSocket,
+                                         @Nullable TransportSocketSnapshot criteriaTransportSocket) {
         super(delegate);
         this.cluster = cluster;
         this.httpHealthCheck = httpHealthCheck;
         expectedStatuses = toExpectedStatuses(httpHealthCheck);
-        this.healthCheckTlsSpec = healthCheckTlsSpec;
-        if (healthCheckTlsSpec != null) {
-            final ClientTlsSpec tlsSpec = healthCheckTlsSpec;
-            withClientOptions(opts -> opts.decorator((delegate1, ctx, req) -> {
-                ctx.setClientTlsSpec(tlsSpec);
-                return delegate1.execute(ctx, req);
-            }));
-        }
+        this.defaultTransportSocket = defaultTransportSocket;
+        this.criteriaTransportSocket = criteriaTransportSocket;
     }
 
     @Override
@@ -83,13 +85,34 @@ final class XdsHealthCheckedEndpointGroupBuilder
             final String path = httpHealthCheck.getPath();
             final String host = Strings.emptyToNull(httpHealthCheck.getHost());
 
+            final ClientTlsSpec tlsSpec = healthCheckTlsSpec(ctx.originalEndpoint());
+            final HealthCheckerContext checkerCtx =
+                    tlsSpec != null ? new TlsSpecHealthCheckerContext(ctx, tlsSpec) : ctx;
             final DefaultHttpHealthChecker checker =
-                    new DefaultHttpHealthChecker(ctx, endpoint(healthCheckConfig, ctx.originalEndpoint()),
+                    new DefaultHttpHealthChecker(checkerCtx,
+                                                 endpoint(healthCheckConfig, ctx.originalEndpoint()),
                                                  path, httpMethod(httpHealthCheck) == HttpMethod.GET,
                                                  SessionProtocol.HTTP, host, expectedStatuses);
             checker.start();
             return checker;
         };
+    }
+
+    /**
+     * Returns the {@link ClientTlsSpec} for health checking the specified endpoint. As in Envoy,
+     * {@code transport_socket_match_criteria} supersedes the transport socket matched by the endpoint's
+     * metadata, which in turn supersedes the cluster's transport socket.
+     */
+    @Nullable
+    private ClientTlsSpec healthCheckTlsSpec(Endpoint endpoint) {
+        if (criteriaTransportSocket != null) {
+            return criteriaTransportSocket.clientTlsSpec();
+        }
+        final XdsEndpoint xdsEndpoint = XdsEndpoint.get(endpoint);
+        final TransportSocketSnapshot endpointTransportSocket =
+                xdsEndpoint != null ? xdsEndpoint.transportSocket() : null;
+        return endpointTransportSocket != null ? endpointTransportSocket.clientTlsSpec()
+                                               : defaultTransportSocket.clientTlsSpec();
     }
 
     private static HttpMethod httpMethod(HttpHealthCheck httpHealthCheck) {
@@ -134,5 +157,63 @@ final class XdsHealthCheckedEndpointGroupBuilder
             return endpoint.withHost(addr.getSocketAddress().getAddress());
         }
         return endpoint;
+    }
+
+    private static final class TlsSpecHealthCheckerContext implements HealthCheckerContext {
+
+        private final HealthCheckerContext delegate;
+        private final ClientOptions clientOptions;
+
+        TlsSpecHealthCheckerContext(HealthCheckerContext delegate, ClientTlsSpec tlsSpec) {
+            this.delegate = delegate;
+            clientOptions = delegate.clientOptions().toBuilder()
+                                    .decorator((client, ctx, req) -> {
+                                        ctx.setClientTlsSpec(tlsSpec);
+                                        return client.execute(ctx, req);
+                                    })
+                                    .build();
+        }
+
+        @Override
+        public Endpoint endpoint() {
+            return delegate.endpoint();
+        }
+
+        @Override
+        public Endpoint originalEndpoint() {
+            return delegate.originalEndpoint();
+        }
+
+        @Override
+        public SessionProtocol protocol() {
+            return delegate.protocol();
+        }
+
+        @Override
+        public ClientOptions clientOptions() {
+            return clientOptions;
+        }
+
+        @Override
+        public ScheduledExecutorService executor() {
+            return delegate.executor();
+        }
+
+        @Override
+        public long nextDelayMillis() {
+            return delegate.nextDelayMillis();
+        }
+
+        @Override
+        @Deprecated
+        public void updateHealth(double health) {
+            delegate.updateHealth(health);
+        }
+
+        @Override
+        public void updateHealth(double health, @Nullable ClientRequestContext ctx,
+                                 @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
+            delegate.updateHealth(health, ctx, headers, cause);
+        }
     }
 }
