@@ -596,6 +596,25 @@ const jsonSchemas = {
         properties: {
           name: { type: 'string', description: 'Person to greet' },
           count: { type: 'integer', description: 'Greeting count' },
+          items: {
+            type: 'array',
+            items: { $ref: '#/$defs/models/example.GrpcItem' },
+          },
+          tags: { type: 'array', items: { type: 'string' } },
+          items_by_id: {
+            type: 'object',
+            additionalProperties: { $ref: '#/$defs/models/example.GrpcItem' },
+          },
+        },
+      },
+      'example.GrpcItem': {
+        type: 'object',
+        properties: {
+          item_label: { type: 'string' },
+          children: {
+            type: 'array',
+            items: { $ref: '#/$defs/models/example.GrpcItem' },
+          },
         },
       },
       'example.ThriftRequest': {
