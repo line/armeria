@@ -104,16 +104,20 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Sets the task function for new threads. Use this method to set additional work before or after
-     * the {@link Runnable} is run. For example:
+     * Sets a function that wraps the {@link Runnable} of each new worker thread. The wrapper runs once
+     * per worker thread and should invoke the worker's {@link Runnable} to process its submitted tasks.
+     *
+     * <p>The wrapper can initialize thread-local state when the worker starts and clean it up when it exits.
      * <pre>{@code
-     * BlockingTaskExecutor.builder("thread-prefix")
-     *                     .taskFunction(task -> {
-     *                         return () -> {
-     *                             // Add something to do before task is run
-     *                             task.run();
-     *                             // Add something to do after task is run
-     *                          };
+     * BlockingTaskExecutor.builder()
+     *                     .threadNamePrefix("thread-prefix")
+     *                     .taskFunction(worker -> () -> {
+     *                         // Initialize state for this worker.
+     *                         try {
+     *                             worker.run();
+     *                         } finally {
+     *                             // Clean up after this worker.
+     *                         }
      *                     })
      *                     .build();
      * }</pre>
