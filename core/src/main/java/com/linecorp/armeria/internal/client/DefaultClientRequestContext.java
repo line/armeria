@@ -295,6 +295,16 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
+        final String name = requestOptions.name();
+        if (name != null) {
+            final String serviceName = requestOptions.serviceName();
+            if (serviceName != null) {
+                log.name(serviceName, name);
+            } else {
+                log.name(name);
+            }
+        }
+
         if (responseCancellationScheduler == null) {
             long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
             if (responseTimeoutMillis < 0) {

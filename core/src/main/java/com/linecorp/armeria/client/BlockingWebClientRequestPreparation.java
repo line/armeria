@@ -359,6 +359,18 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation name(String name) {
+        delegate.name(name);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation name(String serviceName, String name) {
+        delegate.name(serviceName, name);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation get(String path) {
         delegate.get(path);
         return this;
