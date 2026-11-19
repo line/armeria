@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
@@ -33,6 +34,14 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Server;
 
 class ScheduledHealthCheckerTest {
+    @Test
+    void rejectsSubMillisecondFallbackTtl() {
+        assertThatThrownBy(() -> HealthChecker.of(CompletableFuture::new, Duration.ofNanos(500_000)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("fallbackTtl");
+        assertThat(HealthChecker.of(CompletableFuture::new, Duration.ofMillis(1))).isNotNull();
+    }
+
     @Test
     void stopSchedulingAfterStop() throws InterruptedException {
         final AtomicInteger invokedCount = new AtomicInteger();

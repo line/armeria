@@ -53,7 +53,7 @@ public interface HealthChecker {
      *                      with null result or failing.
      * @param fallbackTtl   The amount of delay between each health check if the previous health
      *                      check failed unexpectedly so it's not possible to determine how long
-     *                      we have to wait until the next health check.
+     *                      we have to wait until the next health check. Must be at least one millisecond.
      *
      * @see #of(Supplier, Duration, EventExecutor)
      */
@@ -77,15 +77,15 @@ public interface HealthChecker {
      *                      with null result or failing.
      * @param fallbackTtl   The amount of delay between each health check if the previous health
      *                      check failed unexpectedly so it's not possible to determine how long
-     *                      we have to wait until the next health check.
+     *                      we have to wait until the next health check. Must be at least one millisecond.
      * @param eventExecutor The {@link EventExecutor} that will invoke the specified {@code healthChecker}.
      */
     @UnstableApi
     static ListenableHealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                                       Duration fallbackTtl, EventExecutor eventExecutor) {
         requireNonNull(fallbackTtl, "fallbackTtl");
-        checkArgument(!fallbackTtl.isNegative() && !fallbackTtl.isZero(), "fallbackTtl: %s (expected: > 0)",
-                      fallbackTtl);
+        checkArgument(fallbackTtl.compareTo(Duration.ofMillis(1)) >= 0,
+                      "fallbackTtl: %s (expected: >= 1ms)", fallbackTtl);
         return new ScheduledHealthChecker(requireNonNull(healthChecker, "healthChecker"),
                                           fallbackTtl,
                                           requireNonNull(eventExecutor, "eventExecutor"));
