@@ -237,6 +237,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const responseCache = useRef<Record<string, ResponseData>>({});
+  const latestRequestByMethod = useRef(new Map<string, symbol>());
   const currentMethodId = useRef(method.id);
   const isMounted = useRef(true);
   currentMethodId.current = method.id;
@@ -480,6 +481,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
       const headersText = params.get('headers');
       const headers = headersText ? JSON.parse(headersText) : {};
       const requestMethodId = method.id;
+      const requestToken = Symbol(requestMethodId);
+      const latestRequests = latestRequestByMethod.current;
+      latestRequests.set(requestMethodId, requestToken);
+      const isLatestRequest = () =>
+        latestRequests.get(requestMethodId) === requestToken;
 
       try {
         const debugResponseData = await transport.send(
@@ -490,7 +496,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
           executedEndpointPath,
           queries,
         );
-        if (!isMounted.current) {
+        if (!isMounted.current || !isLatestRequest()) {
           return;
         }
         if (currentMethodId.current === requestMethodId) {
@@ -498,8 +504,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
         }
         responseCache.current[requestMethodId] = debugResponseData;
       } catch (e) {
-        if (isMounted.current && currentMethodId.current === requestMethodId) {
+        if (
+          isMounted.current &&
+          isLatestRequest() &&
+          currentMethodId.current === requestMethodId
+        ) {
           setResponseData(errorResponseData(e));
+        }
+      } finally {
+        if (isLatestRequest()) {
+          latestRequests.delete(requestMethodId);
         }
       }
     },

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-import { Locator } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 
 import {
   chooseSelect,
@@ -44,6 +44,54 @@ function headerInput(dialog: Locator) {
 
 function responseButtons(dialog: Locator) {
   return dialog.locator('button:has(svg)');
+}
+
+function responseBody(dialog: Locator) {
+  return dialog
+    .getByText('Response Body:', { exact: true })
+    .locator('xpath=following-sibling::pre[1]');
+}
+
+async function observeDebugResponse(page: Page, path: string, body?: string) {
+  await page.addInitScript(
+    ({ requestPath, requestBody }) => {
+      const send = window.fetch.bind(window);
+      const markSettled = () => {
+        // Wait for the browser to process the result even when it leaves the UI unchanged.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.documentElement.dataset.debugResponseSettled = 'true';
+          });
+        });
+      };
+      window.fetch = async (input, init) => {
+        const url = new URL(
+          input instanceof Request ? input.url : input,
+          window.location.href,
+        );
+        if (
+          url.pathname !== requestPath ||
+          (requestBody !== undefined && init?.body !== requestBody)
+        ) {
+          return send(input, init);
+        }
+        try {
+          const response = await send(input, init);
+          const readText = response.text.bind(response);
+          response.text = async () => {
+            const text = await readText();
+            markSettled();
+            return text;
+          };
+          return response;
+        } catch (error) {
+          markSettled();
+          throw error;
+        }
+      };
+    },
+    { requestPath: path, requestBody: body },
+  );
 }
 
 test('sends an exact GET and exposes response, clipboard, clear, and URL state', async ({
@@ -329,9 +377,10 @@ test('keeps malformed JSON readable and restores cached responses', async ({
   await expect(dialog).toContainText('not valid json');
 });
 
-test('does not show a response completed for a previous method', async ({
+test('caches an earlier method response when a different method is submitted', async ({
   page,
 }) => {
+  await observeDebugResponse(page, '/hello');
   let releaseResponse: () => void = () => {};
   const responseReleased = new Promise<void>((resolve) => {
     releaseResponse = resolve;
@@ -340,16 +389,11 @@ test('does not show a response completed for a previous method', async ({
   const requestObserved = new Promise<void>((resolve) => {
     markRequestObserved = resolve;
   });
-  let markResponseCompleted: () => void = () => {};
-  const responseCompleted = new Promise<void>((resolve) => {
-    markResponseCompleted = resolve;
-  });
   await page.route('**/hello', async (route) => {
     const response = await route.fetch();
     markRequestObserved();
     await responseReleased;
     await route.fulfill({ response });
-    markResponseCompleted();
   });
 
   await gotoMethod(page, 'example.HttpService', 'hello', 'GET');
@@ -362,9 +406,20 @@ test('does not show a response completed for a previous method', async ({
   await goTo.fill('HttpService#text');
   await goTo.press('Enter');
   dialog = await openDebug(page);
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  await expect(responseBody(dialog)).toHaveText('plain response');
+
   releaseResponse();
-  await responseCompleted;
-  await expect(dialog.getByText('Response Body:')).toHaveCount(0);
+  await page.waitForFunction(
+    () => document.documentElement.dataset.debugResponseSettled === 'true',
+  );
+  await expect(responseBody(dialog)).toHaveText('plain response');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+
+  await goTo.fill('HttpService#hello');
+  await goTo.press('Enter');
+  dialog = await openDebug(page);
+  await expect(responseBody(dialog)).toContainText('"message": "hello"');
 });
 
 test('does not show a request failure from a previous method', async ({
@@ -403,6 +458,88 @@ test('does not show a request failure from a previous method', async ({
   await failedRequest;
   await expect(dialog.getByText('Response Body:')).toHaveCount(0);
 });
+
+for (const earlierOutcome of ['HTTP response', 'network error']) {
+  test(`keeps the latest response when an earlier ${earlierOutcome} arrives`, async ({
+    page,
+  }, testInfo) => {
+    const path = '/echo/response-order';
+    const earlierBody = '{"name":"Earlier request"}';
+    const latestBody = '{"name":"Latest request"}';
+    await observeDebugResponse(page, path, earlierBody);
+
+    if (earlierOutcome === 'network error') {
+      expectRequestFailure(testInfo, path);
+      expectConsoleError(testInfo, 'Failed to load resource: net::ERR_FAILED');
+    }
+    let releaseEarlier: () => void = () => {};
+    const earlierReleased = new Promise<void>((resolve) => {
+      releaseEarlier = resolve;
+    });
+    let observeEarlier: () => void = () => {};
+    const earlierObserved = new Promise<void>((resolve) => {
+      observeEarlier = resolve;
+    });
+    await page.route(`**${path}`, async (route) => {
+      if (route.request().postData() !== earlierBody) {
+        await route.continue();
+        return;
+      }
+      const response =
+        earlierOutcome === 'HTTP response' ? await route.fetch() : undefined;
+      observeEarlier();
+      await earlierReleased;
+      if (response) {
+        await route.fulfill({ response });
+      } else {
+        await route.abort('failed');
+      }
+    });
+
+    await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
+    let dialog = await openDebug(page);
+    const editor = dialog.locator('.monaco-editor');
+    const submit = dialog.getByRole('button', { name: 'Submit' });
+    await textInputs(dialog).first().fill(path);
+    try {
+      await setMonacoValue(editor, earlierBody);
+      await submit.click();
+      await earlierObserved;
+
+      await setMonacoValue(editor, latestBody);
+      await submit.click();
+      await expect(responseBody(dialog)).toContainText(
+        '"name": "Latest request"',
+      );
+
+      releaseEarlier();
+      await page.waitForFunction(
+        () => document.documentElement.dataset.debugResponseSettled === 'true',
+      );
+      await expect
+        .soft(responseBody(dialog))
+        .toContainText('"name": "Latest request"');
+      const sharedRequest = new URLSearchParams(
+        new URL(page.url()).hash.split('?')[1],
+      );
+      expect(sharedRequest.get('request_body')).toBe(latestBody);
+      await dialog.getByRole('button', { name: 'Close' }).click();
+
+      const goTo = page.getByPlaceholder('Go to ...');
+      await goTo.fill('HttpService#text');
+      await goTo.press('Enter');
+      await expect(page.getByText('HttpService.text()')).toBeVisible();
+      await goTo.fill('HttpService#echo');
+      await goTo.press('Enter');
+      dialog = await openDebug(page);
+      await expect(responseBody(dialog)).toContainText(
+        '"name": "Latest request"',
+      );
+    } finally {
+      releaseEarlier();
+    }
+  });
+}
 
 test('keeps request edits made while a response is pending', async ({
   page,
