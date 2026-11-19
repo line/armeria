@@ -61,6 +61,8 @@ class NullableValueClassTest {
         "/plain, ok",
         "/nullable, missing",
         "/nullable?id=7, 7",
+        "/nullable-raw, missing",
+        "/nullable-raw?id=7, 7",
         "/sync-nullable, missing",
         "/sync-nullable?id=7, 7",
         "/ordinary-nullable, missing",
@@ -117,6 +119,21 @@ class NullableValueClassTest {
         }
     }
 
+    /** Returns the underlying Int so the coroutine bridge must box it as an Id. */
+    class RawIdConverter : RequestConverterFunction {
+        override fun convertRequest(
+            ctx: ServiceRequestContext,
+            request: AggregatedHttpRequest,
+            expectedResultType: Class<*>,
+            expectedParameterizedResultType: ParameterizedType?,
+        ): Any? {
+            if (expectedResultType == Id::class.java) {
+                return ctx.queryParam("id")?.toInt()
+            }
+            return RequestConverterFunction.fallthrough()
+        }
+    }
+
     class StringConverter : RequestConverterFunction {
         override fun convertRequest(
             ctx: ServiceRequestContext,
@@ -136,6 +153,10 @@ class NullableValueClassTest {
         @Get("/nullable")
         @RequestConverter(IdConverter::class)
         suspend fun nullable(id: Id?) = id?.value?.toString() ?: "missing"
+
+        @Get("/nullable-raw")
+        @RequestConverter(RawIdConverter::class)
+        suspend fun nullableRaw(id: Id?) = id?.value?.toString() ?: "missing"
 
         @Get("/sync-nullable")
         @RequestConverter(IdConverter::class)

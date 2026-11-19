@@ -109,7 +109,7 @@ private fun toArgMap(
                     if (classifier is KClass<*> &&
                         classifier.isValue &&
                         !classifier.java.isInstance(args[index]) &&
-                        !(args[index] == null && parameter.type.isMarkedNullable)
+                        !(parameter.type.isMarkedNullable && args[index] == null)
                     ) {
                         val methods =
                             ReflectionUtils.getAllMethods(
