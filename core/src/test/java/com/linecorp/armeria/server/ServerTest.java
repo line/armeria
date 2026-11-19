@@ -219,11 +219,12 @@ class ServerTest {
         };
 
         // When one port is open, there should be only one boss group thread.
-        final long oldNumBossThreads =
+        final long[] originalBossThreadIds =
                 Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
                       .filter(predicate)
-                      .count();
-        assertThat(oldNumBossThreads).isOne();
+                      .mapToLong(ThreadInfo::getThreadId)
+                      .toArray();
+        assertThat(originalBossThreadIds).hasSize(1);
 
         // Attempt to start another server at the same port.
         final Server serverAtSamePort =
@@ -238,12 +239,19 @@ class ServerTest {
                 .hasCauseInstanceOf(ServerPortBindException.class)
                 .hasRootCauseInstanceOf(IOException.class);
 
-        // A failed bind attempt must not leave a dangling boss group thread.
-        final long numBossThreads =
-                Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
-                      .filter(predicate)
-                      .count();
-        assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
+        final ServerBootstrap bootstrap = serverAtSamePort.serverBootstrap;
+        assertThat(bootstrap).isNotNull();
+        assertThat(bootstrap.config().group().terminationFuture().isSuccess()).isTrue();
+
+        // The termination future can complete before the Java thread has exited.
+        await().untilAsserted(() -> {
+            final long[] bossThreadIds =
+                    Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
+                          .filter(predicate)
+                          .mapToLong(ThreadInfo::getThreadId)
+                          .toArray();
+            assertThat(bossThreadIds).containsExactly(originalBossThreadIds);
+        });
     }
 
     private static void testInvocation0(String path) throws IOException, ParseException {
