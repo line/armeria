@@ -100,7 +100,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
-    private final boolean replaceConnectionOnMaxAge;
+    private final long connectionReplacementLeadTimeMillis;
     private final int maxNumRequestsPerConnection;
     private final boolean useHttp2Preface;
     private final boolean useHttp2WithoutAlpn;
@@ -186,7 +186,7 @@ final class HttpClientFactory implements ClientFactory {
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
-        replaceConnectionOnMaxAge = options.replaceConnectionOnMaxAge();
+        connectionReplacementLeadTimeMillis = options.connectionReplacementLeadTimeMillis();
         maxNumRequestsPerConnection = options.maxNumRequestsPerConnection();
         channelPipelineCustomizer = options.channelPipelineCustomizer();
         this.autoCloseConnectionPoolListener = autoCloseConnectionPoolListener;
@@ -267,8 +267,8 @@ final class HttpClientFactory implements ClientFactory {
         return maxConnectionAgeMillis;
     }
 
-    boolean replaceConnectionOnMaxAge() {
-        return replaceConnectionOnMaxAge;
+    long connectionReplacementLeadTimeMillis() {
+        return connectionReplacementLeadTimeMillis;
     }
 
     int maxNumRequestsPerConnection() {

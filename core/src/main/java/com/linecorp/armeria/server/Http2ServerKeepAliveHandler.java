@@ -30,7 +30,8 @@ final class Http2ServerKeepAliveHandler extends Http2KeepAliveHandler {
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
         super(channel, frameWriter, "server", keepAliveTimer,
-              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
+              /* replacementLeadTimeMillis(client-only) */ 0, maxNumRequestsPerConnection,
               keepAliveOnPing, ConnectionEventListener.NOOP);
     }
 

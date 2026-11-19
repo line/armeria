@@ -867,20 +867,25 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets whether an HTTP/2 connection that reached its max connection age keeps serving requests until
-     * a new connection to the same endpoint is established or fails to connect, so that the max age
-     * rotation does not make a request wait for a new connection. The old connection is closed once its
-     * new connection is ready. The connections to an endpoint are replaced one after another, so the old
-     * connection may outlive its max age by the time it takes to establish a new connection for each
-     * connection to that endpoint. Only a connection that served at least one request is replaced, so that
-     * an endpoint that stopped receiving requests is not kept connected forever. HTTP/1 and WebSocket
-     * connections are always closed at their max age.
-     * This option has no effect unless {@link #maxConnectionAgeMillis(long)} is set, and is disabled by
-     * default.
+     * Sets the maximum allowed age of a connection for keep-alive, and how a connection is replaced before
+     * it reaches that age.
+     *
+     * <pre>{@code
+     * ClientFactory.builder()
+     *              .maxConnectionAge(MaxConnectionAgeConfig.builder(Duration.ofHours(1))
+     *                                                      .replacementLeadTime(Duration.ofSeconds(5))
+     *                                                      .build())
+     *              .build();
+     * }</pre>
+     *
+     * @see MaxConnectionAgeConfigBuilder
      */
     @UnstableApi
-    public ClientFactoryBuilder replaceConnectionOnMaxAge(boolean replaceConnectionOnMaxAge) {
-        option(ClientFactoryOptions.REPLACE_CONNECTION_ON_MAX_AGE, replaceConnectionOnMaxAge);
+    public ClientFactoryBuilder maxConnectionAge(MaxConnectionAgeConfig maxConnectionAgeConfig) {
+        requireNonNull(maxConnectionAgeConfig, "maxConnectionAgeConfig");
+        maxConnectionAgeMillis(maxConnectionAgeConfig.maxConnectionAgeMillis());
+        option(ClientFactoryOptions.CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS,
+               maxConnectionAgeConfig.replacementLeadTimeMillis());
         return this;
     }
 

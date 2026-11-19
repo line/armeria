@@ -28,12 +28,12 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
                                 long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
-                                boolean keepAliveOnPing) {
+                                long maxConnectionAgeMillis, long replacementLeadTimeMillis,
+                                int maxNumRequestsPerConnection, boolean keepAliveOnPing) {
 
         super(channel, frameWriter, "client", keepAliveTimer,
-              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-              keepAliveOnPing, ConnectionEventListener.get(channel));
+              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, replacementLeadTimeMillis,
+              maxNumRequestsPerConnection, keepAliveOnPing, ConnectionEventListener.get(channel));
     }
 
     @Override
@@ -42,7 +42,10 @@ final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     }
 
     @Override
-    protected void onMaxConnectionAgeExceeded(ChannelHandlerContext ctx, Runnable retire) {
-        ctx.pipeline().get(HttpSessionHandler.class).retireAfterSuccessor(retire);
+    protected void onMaxConnectionAgeApproaching(ChannelHandlerContext ctx) {
+        final HttpSessionHandler sessionHandler = ctx.pipeline().get(HttpSessionHandler.class);
+        if (sessionHandler != null) {
+            sessionHandler.connectReplacement();
+        }
     }
 }

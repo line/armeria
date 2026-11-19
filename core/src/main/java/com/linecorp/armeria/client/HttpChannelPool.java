@@ -319,51 +319,52 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     /**
-     * Makes a new connection for {@code key} with no request behind it, and runs {@code whenSettled}
-     * exactly once after that connection is in the pool or has failed. Requests that find no acquirable
-     * channel meanwhile piggyback on the attempt as on any pending acquisition. A connection attempt
-     * already in flight for {@code key} belongs to the request or the connection that started it, so this
-     * waits for that attempt to settle and then makes its own.
-     *
-     * <p>The attempt is bounded by the connect timeout and the session timeout that every connection
-     * attempt already has, so {@code whenSettled} always runs.
+     * Opens a new connection for {@code key} with no request behind it, so that requests move to it before
+     * an existing connection reaches its max age. Requests that find no acquirable channel meanwhile
+     * piggyback on the attempt as on any pending acquisition. For HTTP/2, a connection attempt already in
+     * progress for {@code key} is shared instead of opening another connection.
      */
-    void connectSuccessor(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                          PoolKey key, Runnable whenSettled) {
+    void connectReplacement(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+                            PoolKey key, boolean isMultiplex) {
         assert eventLoop.inEventLoop();
-        final ChannelAcquisitionFuture pending = getPendingAcquisition(desiredProtocol, key);
-        if (pending != null) {
-            pending.handle((unused1, unused2) -> {
-                connectSuccessor(desiredProtocol, serializationFormat, key, whenSettled);
-                return null;
-            });
+        if (closeable.isClosing()) {
             return;
         }
-        if (closeable.isClosing()) {
-            whenSettled.run();
+        if (isMultiplex && hasPendingMultiplexAcquisition(desiredProtocol, key)) {
             return;
         }
 
-        final ChannelAcquisitionFuture successor = new ChannelAcquisitionFuture();
-        successor.handle((pch, cause) -> {
-            try {
-                if (pch == null) {
-                    logger.debug("Failed to connect a successor for {}", key, cause);
-                } else if (pch.protocol().isMultiplex()) {
-                    HttpSession.get(pch.get()).decrementNumUnfinishedResponses();
-                } else {
-                    closeSuccessorThatFellBackToHttp1(pch);
-                }
-            } finally {
-                whenSettled.run();
+        final ChannelAcquisitionFuture promise = new ChannelAcquisitionFuture();
+        promise.handle((pch, cause) -> {
+            if (pch == null) {
+                logger.debug("Failed to open a replacement connection for {}", key, cause);
+                return null;
+            }
+            // A new connection reserves a response for the request that opened it, but a replacement has
+            // no such request.
+            HttpSession.get(pch.get()).decrementNumUnfinishedResponses();
+            if (!pch.protocol().isMultiplex()) {
+                // An HTTP/1 connection enters the pool when it is released.
+                pch.release();
             }
             return null;
         });
-        connect(desiredProtocol, serializationFormat, key, successor, ClientConnectionTimings.builder());
+        connect(desiredProtocol, serializationFormat, key, promise, ClientConnectionTimings.builder());
     }
 
-    private static void closeSuccessorThatFellBackToHttp1(PooledChannel successor) {
-        successor.get().close();
+    private boolean hasPendingMultiplexAcquisition(SessionProtocol desiredProtocol, PoolKey key) {
+        if (getPendingAcquisition(desiredProtocol, key) != null) {
+            return true;
+        }
+        // getPendingAcquisition() finds an H2 or H2C attempt for HTTPS or HTTP, but not the reverse.
+        switch (desiredProtocol) {
+            case H2:
+                return pendingAcquisitions[SessionProtocol.HTTPS.ordinal()].get(key) != null;
+            case H2C:
+                return pendingAcquisitions[SessionProtocol.HTTP.ordinal()].get(key) != null;
+            default:
+                return false;
+        }
     }
 
     /**

@@ -78,6 +78,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final long maxConnectionAgeNanos;
     private boolean isMaxConnectionAgeExceeded;
 
+    @Nullable
+    private ScheduledFuture<?> replacementFuture;
+    private final long replacementLeadTimeNanos;
+    private boolean hasSentRequest;
+    private long lastRequestTimeNanos;
+
     private boolean isInitialized;
     private boolean closed;
     private boolean disconnectWhenFinished;
@@ -90,7 +96,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
+                                       long maxConnectionAgeMillis, long replacementLeadTimeMillis,
+                                       long maxNumRequestsPerConnection,
                                        boolean keepAliveOnPing, ConnectionEventListener listener) {
         this.channel = channel;
         this.name = name;
@@ -116,6 +123,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             maxConnectionAgeNanos = 0;
         } else {
             maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
+        }
+
+        if (maxConnectionAgeNanos == 0 || replacementLeadTimeMillis <= 0) {
+            replacementLeadTimeNanos = 0;
+        } else {
+            replacementLeadTimeNanos = TimeUnit.MILLISECONDS.toNanos(replacementLeadTimeMillis);
         }
     }
 
@@ -146,6 +159,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         if (maxConnectionAgeNanos > 0) {
             maxConnectionAgeFuture = executor().schedule(new MaxConnectionAgeExceededTask(ctx),
                                                          maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
+            if (replacementLeadTimeNanos > 0) {
+                // A max age shorter than the lead time replaces the connection right away.
+                final long delayNanos = Math.max(0, maxConnectionAgeNanos - replacementLeadTimeNanos);
+                replacementFuture = executor().schedule(new ReplacementTask(ctx),
+                                                        delayNanos, TimeUnit.NANOSECONDS);
+            }
         }
     }
 
@@ -168,6 +187,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         if (maxConnectionAgeFuture != null) {
             maxConnectionAgeFuture.cancel(false);
             maxConnectionAgeFuture = null;
+        }
+        if (replacementFuture != null) {
+            replacementFuture.cancel(false);
+            replacementFuture = null;
         }
         pingState = PingState.SHUTDOWN;
         isMaxConnectionAgeExceeded = true;
@@ -230,6 +253,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final void increaseNumRequests() {
+        if (replacementLeadTimeNanos > 0) {
+            hasSentRequest = true;
+            lastRequestTimeNanos = System.nanoTime();
+        }
         if (maxNumRequestsPerConnection == 0) {
             return;
         }
@@ -242,9 +269,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
 
-    protected void onMaxConnectionAgeExceeded(ChannelHandlerContext ctx, Runnable retire) {
-        retire.run();
-    }
+    /**
+     * Invoked when this connection is {@code replacementLeadTimeMillis} away from its max age and is still in
+     * use, so that a replacement connection can be opened before this one retires.
+     */
+    protected void onMaxConnectionAgeApproaching(ChannelHandlerContext ctx) {}
 
     @Nullable
     protected final Future<?> shutdownFuture() {
@@ -447,22 +476,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private final class MaxConnectionAgeExceededTask extends AbstractKeepAliveTask {
 
-        private boolean retired;
-
         MaxConnectionAgeExceededTask(ChannelHandlerContext ctx) {
             super(ctx);
         }
 
         @Override
         protected void run(ChannelHandlerContext ctx) {
-            onMaxConnectionAgeExceeded(ctx, () -> retire(ctx));
-        }
-
-        private void retire(ChannelHandlerContext ctx) {
-            if (retired || !ctx.channel().isOpen()) {
-                return;
-            }
-            retired = true;
             try {
                 isMaxConnectionAgeExceeded = true;
 
@@ -485,6 +504,42 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             } catch (Exception e) {
                 logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
             }
+        }
+    }
+
+    private final class ReplacementTask extends AbstractKeepAliveTask {
+
+        ReplacementTask(ChannelHandlerContext ctx) {
+            super(ctx);
+        }
+
+        @Override
+        protected void run(ChannelHandlerContext ctx) {
+            replacementFuture = null;
+            if (!isInUse(ctx)) {
+                // Leave an idle connection to close at its max age, so that an endpoint without traffic
+                // is not kept connected forever.
+                return;
+            }
+            try {
+                onMaxConnectionAgeApproaching(ctx);
+            } catch (Exception e) {
+                logger.warn("Unexpected error occurred while replacing a connection approaching the max age",
+                            e);
+            }
+        }
+
+        private boolean isInUse(ChannelHandlerContext ctx) {
+            if (hasRequestsInProgress(ctx)) {
+                return true;
+            }
+            if (!hasSentRequest) {
+                return false;
+            }
+            // PINGs do not count, so a connection kept open only by PINGs is not replaced.
+            final long recentNanos = connectionIdleTimeNanos > 0 ? connectionIdleTimeNanos
+                                                                 : replacementLeadTimeNanos;
+            return System.nanoTime() - lastRequestTimeNanos <= recentNanos;
         }
     }
 }

@@ -284,6 +284,20 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         return serializationFormat == SerializationFormat.WS;
     }
 
+    /**
+     * Opens a new connection to the same endpoint, so that requests move to it before this connection
+     * reaches its max age.
+     */
+    void connectReplacement() {
+        assert channel.eventLoop().inEventLoop();
+        // A WebSocket connection is never shared, so its replacement would never be used.
+        if (isWebSocket() || !isAcquirable()) {
+            return;
+        }
+        assert protocol != null;
+        channelPool.connectReplacement(desiredProtocol, serializationFormat, poolKey, protocol.isMultiplex());
+    }
+
     @Override
     public void decrementNumUnfinishedResponses() {
         assert responseDecoder != null;
@@ -293,20 +307,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public int incrementAndGetNumRequestsSent() {
         return ++numRequestsSent;
-    }
-
-    void retireAfterSuccessor(Runnable retire) {
-        assert channel.eventLoop().inEventLoop();
-        if (!isWorthReplacing()) {
-            retire.run();
-            return;
-        }
-        channelPool.connectSuccessor(desiredProtocol, serializationFormat, poolKey, retire);
-    }
-
-    private boolean isWorthReplacing() {
-        return clientFactory.replaceConnectionOnMaxAge() && !isWebSocket() && numRequestsSent > 0 &&
-               isAcquirable();
     }
 
     private boolean handleEarlyCancellation(ClientRequestContext ctx, HttpRequest req,

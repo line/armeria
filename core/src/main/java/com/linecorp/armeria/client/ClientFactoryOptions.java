@@ -245,20 +245,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
     /**
-     * Whether an HTTP/2 connection that reached its max connection age keeps serving requests until
-     * a new connection to the same endpoint is established or fails to connect, so that the max age
-     * rotation does not make a request wait for a new connection. The old connection is closed once its
-     * new connection is ready. The connections to an endpoint are replaced one after another, so the old
-     * connection may outlive its max age by the time it takes to establish a new connection for each
-     * connection to that endpoint. Only a connection that served at least one request is replaced, so that
-     * an endpoint that stopped receiving requests is not kept connected forever. HTTP/1 and WebSocket
-     * connections are always closed at their max age.
-     * This option has no effect unless {@link #MAX_CONNECTION_AGE_MILLIS} is set, and is disabled by
-     * default.
+     * How long before a connection reaches its max age the client opens a replacement connection to the same
+     * endpoint, in milliseconds. {@code 0}, the default, disables the replacement.
+     *
+     * @see MaxConnectionAgeConfigBuilder#replacementLeadTimeMillis(long)
      */
     @UnstableApi
-    public static final ClientFactoryOption<Boolean> REPLACE_CONNECTION_ON_MAX_AGE =
-            ClientFactoryOption.define("REPLACE_CONNECTION_ON_MAX_AGE", false);
+    public static final ClientFactoryOption<Long> CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS =
+            ClientFactoryOption.define("CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS", 0L);
 
     /**
      * The {@link OutlierDetection} which is used to detect unhealthy connections.
@@ -624,14 +618,14 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns whether an HTTP/2 connection that reached its max age keeps serving requests until a new
-     * connection to the same endpoint is established.
+     * Returns how long before a connection reaches its max age the client opens a replacement connection to
+     * the same endpoint, in milliseconds. {@code 0} means the replacement is disabled.
      *
-     * @see #REPLACE_CONNECTION_ON_MAX_AGE
+     * @see #CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS
      */
     @UnstableApi
-    public boolean replaceConnectionOnMaxAge() {
-        return get(REPLACE_CONNECTION_ON_MAX_AGE);
+    public long connectionReplacementLeadTimeMillis() {
+        return get(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS);
     }
 
     /**
