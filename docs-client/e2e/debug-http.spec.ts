@@ -313,6 +313,43 @@ test('uses the selected endpoint MIME type for form data', async ({
     .toContain(`-H 'content-type: ${explicitType}'`);
 });
 
+test('preserves declared NDJSON record boundaries in submissions and curl', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const sentBodies: (Buffer | null)[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/consume/ndjson')) {
+      sentBodies.push(request.postDataBuffer());
+    }
+  });
+  await gotoMethod(page, 'example.HttpService', 'consume', 'POST');
+  const dialog = await openDebug(page);
+  const mimeType = 'application/ndjson; charset=utf-8';
+  const body = '{"id":1}\n{"id":2}\n';
+  const expectedBytes = Buffer.from(body);
+
+  await textInputs(dialog).first().fill('/consume/ndjson');
+  await setMonacoValue(dialog.locator('.monaco-editor'), body);
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  await expect(dialog).toContainText(`"contentType": "${mimeType}"`);
+  expect(sentBodies).toEqual([expectedBytes]);
+
+  await page.reload();
+  await expect(dialog.locator('.monaco-editor .view-lines')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  await expect(dialog).toContainText(`"contentType": "${mimeType}"`);
+  expect(sentBodies).toEqual([expectedBytes, expectedBytes]);
+
+  await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain(`--data-raw '${body}'`);
+  const curl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(curl).toContain(`-H 'content-type: ${mimeType}'`);
+});
+
 test('supports streaming JSON bodies and rejects primitive header values', async ({
   page,
 }) => {

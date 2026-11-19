@@ -125,7 +125,9 @@ export function isValidJsonMimeType(applicationType: string | null) {
   if (!applicationType) {
     return false;
   }
+  const mimeType = applicationType.split(';', 1)[0].trim().toLowerCase();
   const isStreamingJson =
+    mimeType === 'application/ndjson' ||
     ['x-ndjson', 'json-seq'].filter(
       (type) => applicationType.indexOf(type) >= 0,
     ).length > 0;

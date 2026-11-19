@@ -131,8 +131,14 @@ const httpMethods = [
           'application/x-www-form-urlencoded',
         ],
       }),
+      endpoint('exact:/consume/ndjson', 'application/ndjson; charset=utf-8', {
+        availableMimeTypes: [
+          annotatedHttpMimeType,
+          'application/ndjson; charset=utf-8',
+        ],
+      }),
     ],
-    examplePaths: ['/consume/text', '/consume/form'],
+    examplePaths: ['/consume/text', '/consume/form', '/consume/ndjson'],
   }),
   method(httpServiceName, 'empty', 'GET', {
     returnTypeSignature: 'void',
@@ -691,7 +697,11 @@ async function handleApi(request, response, requestUrl) {
     );
     return true;
   }
-  if (pathname === '/consume/text' || pathname === '/consume/form') {
+  if (
+    pathname === '/consume/text' ||
+    pathname === '/consume/form' ||
+    pathname === '/consume/ndjson'
+  ) {
     sendJson(response, {
       body: await readBody(request),
       contentType: request.headers['content-type'],
