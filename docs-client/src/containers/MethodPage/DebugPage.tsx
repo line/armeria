@@ -61,6 +61,7 @@ import {
   ServiceType,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import { getAnnotatedRequestContentType } from '../../lib/transports/annotated-http';
 import { Transport } from '../../lib/transports/transport';
 import { ResponseData, SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
@@ -202,6 +203,10 @@ const usesJsonRequestBody = (
   contentType: string | null,
 ): boolean =>
   serviceType !== ServiceType.HTTP || isValidJsonMimeType(contentType);
+
+// Minify JSON without parsing to preserve numeric precision.
+const serializeRequestBody = (body: string, asJson: boolean): string =>
+  asJson ? jsonMinify(body) || '{}' : body;
 
 const getRequestBody = (
   method: Method,
@@ -434,14 +439,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       )}'`;
 
       const headers = parseRequestHeaders(additionalHeaders);
-      if (
-        !headers.has('content-type') &&
-        (serviceType !== ServiceType.HTTP || useRequestBody)
-      ) {
-        headers.set(
-          'content-type',
-          transport.getDefaultRequestMimeType(endpoint),
-        );
+      const hasExplicitContentType = headers.has('content-type');
+      const editorMimeType = transport.getDefaultRequestMimeType(endpoint);
+      if (!hasExplicitContentType) {
+        const contentType =
+          serviceType === ServiceType.HTTP
+            ? getAnnotatedRequestContentType(method, endpoint, useRequestBody)
+            : editorMimeType;
+        if (contentType) {
+          headers.set('content-type', contentType);
+        }
       }
       if (process.env.WEBPACK_DEV === 'true' && !headers.has(docServiceDebug)) {
         headers.set(docServiceDebug, 'true');
@@ -457,10 +464,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
         validateJsonObject(exportedRequestBody, 'request body');
       }
 
+      // Match submission when a JSON editor body is sent with the implicit text type.
+      const minifyImplicitTextBody =
+        useRequestBody &&
+        !hasExplicitContentType &&
+        !isJsonBody &&
+        usesJsonRequestBody(serviceType, editorMimeType);
       const body = transport.getCurlBody(
         endpoint,
         method,
-        escapeSingleQuote(exportedRequestBody),
+        escapeSingleQuote(
+          serializeRequestBody(exportedRequestBody, minifyImplicitTextBody),
+        ),
       );
 
       const headerOptions: string[] = [];
@@ -614,13 +629,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
         const contentType =
           parseRequestHeaders(params.get('headers')).get('content-type') ??
           transport.getDefaultRequestMimeType(endpoint);
-        // Minify JSON without parsing to preserve numeric precision.
-        // Use an empty object when jsonMinify returns an empty string.
         params.set(
           'request_body',
-          usesJsonRequestBody(serviceType, contentType)
-            ? jsonMinify(submittedRequestBody) || '{}'
-            : submittedRequestBody,
+          serializeRequestBody(
+            submittedRequestBody,
+            usesJsonRequestBody(serviceType, contentType),
+          ),
         );
       }
     } catch (e) {

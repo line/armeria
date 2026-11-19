@@ -20,6 +20,26 @@ import { isValidJsonMimeType, validateJsonObject } from '../json-util';
 
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
+export function getAnnotatedRequestContentType(
+  method: Method,
+  endpoint: Endpoint,
+  hasBody: boolean,
+): string | undefined {
+  const defaultsToJson =
+    method.httpMethod === 'POST' ||
+    method.httpMethod === 'PUT' ||
+    method.httpMethod === 'PATCH' ||
+    method.httpMethod === 'QUERY';
+  if (!hasBody && !defaultsToJson) {
+    return undefined;
+  }
+  // Fetch uses text/plain for a string body with no explicit content type.
+  return (
+    endpoint.defaultMimeType ??
+    (defaultsToJson ? ANNOTATED_HTTP_MIME_TYPE : 'text/plain;charset=UTF-8')
+  );
+}
+
 export default class AnnotatedHttpTransport extends Transport {
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === ANNOTATED_HTTP_MIME_TYPE;
@@ -96,14 +116,13 @@ export default class AnnotatedHttpTransport extends Transport {
     const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
-    if (
-      method.httpMethod === 'POST' ||
-      method.httpMethod === 'PUT' ||
-      method.httpMethod === 'PATCH' ||
-      method.httpMethod === 'QUERY' ||
-      (bodyJson !== undefined && endpoint.defaultMimeType)
-    ) {
-      hdrs.set('content-type', this.getDefaultRequestMimeType(endpoint));
+    const contentType = getAnnotatedRequestContentType(
+      method,
+      endpoint,
+      bodyJson !== undefined,
+    );
+    if (contentType) {
+      hdrs.set('content-type', contentType);
     }
 
     for (const [name, value] of Object.entries(headers)) {

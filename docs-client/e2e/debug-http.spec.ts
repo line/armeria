@@ -772,6 +772,53 @@ test('renders and sends a QUERY request with a body and content type', async ({
   await expect(dialog).toContainText('"value": "browser"');
 });
 
+test('exports the submitted content type of a DELETE without a declared MIME type', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await gotoMethod(page, 'example.HttpService', 'delete', 'DELETE');
+
+  const dialog = await openDebug(page);
+  const editor = dialog.locator('.monaco-editor');
+  await setMonacoValue(editor, '{"reason"  :  "duplicate"}');
+  const request = page.waitForRequest((candidate) =>
+    candidate.url().endsWith('/verbs/delete'),
+  );
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  const sentRequest = await request;
+  const contentType = sentRequest.headers()['content-type'];
+  expect(contentType).toBe('text/plain;charset=UTF-8');
+  const submittedBody = sentRequest.postData();
+  expect(submittedBody).toBe('{"reason":"duplicate"}');
+
+  await page.reload();
+  await expect(editor.locator('.view-lines')).toContainText('"reason":');
+  await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain(`-H 'content-type: ${contentType}'`);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+    `--data-raw '${submittedBody}'`,
+  );
+
+  const rawBody = 'remove   duplicate item';
+  await headerInput(dialog).fill(
+    JSON.stringify({ 'Content-Type': contentType }),
+  );
+  await setMonacoValue(editor, rawBody);
+  const manualRequest = page.waitForRequest((candidate) =>
+    candidate.url().endsWith('/verbs/delete'),
+  );
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  expect((await manualRequest).postData()).toBe(rawBody);
+
+  await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain(`--data-raw '${rawBody}'`);
+});
+
 for (const item of [
   { method: 'options', verb: 'OPTIONS', body: null },
   { method: 'head', verb: 'HEAD', body: null },

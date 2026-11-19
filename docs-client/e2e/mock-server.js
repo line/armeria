@@ -172,7 +172,11 @@ const httpMethods = [
     exampleRequests: ['{"verb":"QUERY"}'],
   }),
   method(httpServiceName, 'delete', 'DELETE', {
-    endpoints: [endpoint('exact:/verbs/delete', annotatedHttpMimeType)],
+    endpoints: [
+      endpoint('exact:/verbs/delete', undefined, {
+        availableMimeTypes: [annotatedHttpMimeType],
+      }),
+    ],
     exampleRequests: ['{"verb":"DELETE"}'],
   }),
   method(httpServiceName, 'trace', 'TRACE', {
