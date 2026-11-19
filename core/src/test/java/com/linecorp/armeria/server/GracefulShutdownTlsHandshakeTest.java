@@ -202,6 +202,8 @@ class GracefulShutdownTlsHandshakeTest {
         public void close() throws IOException {
             serverSocket.close();
             sockets.forEach(HandshakeHoldingProxy::closeQuietly);
+            // Unblock the forwarding tasks if the test failed before releasing the proxy.
+            release();
             executor.shutdownNow();
         }
     }
