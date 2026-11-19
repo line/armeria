@@ -392,6 +392,42 @@ const specification = {
           typeSignature: 'int',
           descriptionInfo: none('Greeting count.'),
         },
+        {
+          name: 'items',
+          location: 'BODY',
+          requirement: 'OPTIONAL',
+          typeSignature: 'repeated<example.GrpcItem>',
+        },
+        {
+          name: 'tags',
+          location: 'BODY',
+          requirement: 'OPTIONAL',
+          typeSignature: 'repeated<string>',
+        },
+        {
+          name: 'items_by_id',
+          location: 'BODY',
+          requirement: 'OPTIONAL',
+          typeSignature: 'map<string, example.GrpcItem>',
+        },
+      ],
+    },
+    {
+      name: 'example.GrpcItem',
+      descriptionInfo: none('An item in the gRPC request.'),
+      fields: [
+        {
+          name: 'item_label',
+          location: 'UNSPECIFIED',
+          requirement: 'OPTIONAL',
+          typeSignature: 'string',
+        },
+        {
+          name: 'children',
+          location: 'UNSPECIFIED',
+          requirement: 'OPTIONAL',
+          typeSignature: 'repeated<example.GrpcItem>',
+        },
       ],
     },
     {

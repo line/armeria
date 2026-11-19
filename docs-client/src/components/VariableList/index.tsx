@@ -14,6 +14,7 @@
  * under the License.
  */
 
+import IconButton from '@material-ui/core/IconButton';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -80,6 +81,19 @@ const indentString = (indent: number, s: string): string => {
   return `${'\xa0'.repeat(indent)}${s}`;
 };
 
+const getChildFields = (
+  variable: Variable,
+  specification: Specification,
+): Variable[] | undefined => {
+  if (variable.childFieldInfos) {
+    return variable.childFieldInfos;
+  }
+  const repeated = /^repeated<([^<>]+)>$/.exec(variable.typeSignature);
+  return repeated
+    ? specification.getStructByName(repeated[1])?.fields
+    : undefined;
+};
+
 const formatRequirement = (s: string): string => {
   const lowerCase = s.toLowerCase();
   if (lowerCase === 'unspecified') {
@@ -104,13 +118,27 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
 
   const [expanded, toggleExpanded] = useReducer((value) => !value, false);
 
-  const hasChildren =
-    variable.childFieldInfos && variable.childFieldInfos.length > 0;
+  const childFields = getChildFields(variable, specification);
+  const hasChildren = childFields !== undefined && childFields.length > 0;
+  const hasRepeatedChildren =
+    hasChildren && variable.childFieldInfos === undefined;
+  // Repeated messages may be recursive, so mount their child rows on demand.
+  const renderChildren = hasChildren && (!hasRepeatedChildren || expanded);
+  const ExpandIcon = expanded ? ExpandLess : ExpandMore;
 
   return (
     <>
       <TableRow
-        onClick={toggleExpanded}
+        onClick={(event) => {
+          if (
+            hasRepeatedChildren &&
+            event.target instanceof Element &&
+            event.target.closest('a')
+          ) {
+            return;
+          }
+          toggleExpanded();
+        }}
         className={hidden ? styles.hidden : ''}
       >
         <TableCell>
@@ -138,18 +166,34 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
         </TableCell>
         {hasChildren && (
           <TableCell className={styles.expand}>
-            {expanded ? <ExpandLess /> : <ExpandMore />}
+            {hasRepeatedChildren ? (
+              <IconButton
+                size="small"
+                aria-expanded={expanded}
+                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${
+                  variable.name
+                }`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleExpanded();
+                }}
+              >
+                <ExpandIcon />
+              </IconButton>
+            ) : (
+              <ExpandIcon />
+            )}
           </TableCell>
         )}
       </TableRow>
-      {hasChildren && (
+      {renderChildren && (
         // TODO(minwoox) fix circular usage of FieldInfo and FieldInfos
         // eslint-disable-next-line @typescript-eslint/no-use-before-define
         <FieldInfos
           hasLocation={hasLocation}
           hidden={hidden || !expanded}
           indent={indent + 2}
-          variables={variable.childFieldInfos!}
+          variables={childFields}
           specification={specification}
           title={title}
         />
@@ -206,8 +250,7 @@ const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
 
 export default ({ title, variables, specification }: Props) => {
   const hasBean = variables.some(
-    (variable) =>
-      !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
+    (variable) => !!getChildFields(variable, specification)?.length,
   );
 
   const hasLocation = variables.some(

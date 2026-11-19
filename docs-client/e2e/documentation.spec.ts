@@ -78,6 +78,62 @@ test('renders nested parameters, plain descriptions, and type links', async ({
   await expect(page.getByText('Nested request details.')).toBeVisible();
 });
 
+test('expands repeated gRPC message fields one level at a time', async ({
+  page,
+}) => {
+  await gotoMethod(page, 'example.GrpcService', 'greet', 'POST');
+  const methodUrl = page.url();
+  const parameters = page
+    .getByRole('heading', { name: 'Parameters', exact: true })
+    .locator('xpath=..');
+  const itemLabels = parameters.getByText('item_label', { exact: true });
+
+  await parameters.getByRole('cell', { name: 'request', exact: true }).click();
+  await parameters.getByRole('cell', { name: 'tags', exact: true }).click();
+  await parameters
+    .getByRole('cell', { name: 'items_by_id', exact: true })
+    .click();
+  await expect(itemLabels).toHaveCount(0);
+
+  const expandItems = parameters.getByRole('button', {
+    name: 'Expand items',
+    exact: true,
+  });
+  await expect(expandItems).toHaveAttribute('aria-expanded', 'false');
+  await expandItems.press('Enter');
+  await expect(
+    parameters.getByRole('button', { name: 'Collapse items', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  await expect(itemLabels).toHaveCount(1);
+  const typeLink = parameters.getByRole('link', { name: 'GrpcItem' }).first();
+  const typeUrl = /\/structs\/example\.GrpcItem$/;
+  await expect(typeLink).toHaveAttribute('href', typeUrl);
+  const [typePage] = await Promise.all([
+    page.context().waitForEvent('page'),
+    typeLink.click({ modifiers: ['ControlOrMeta'] }),
+  ]);
+  await expect(typePage).toHaveURL(typeUrl);
+  await typePage.close();
+  await expect(
+    parameters.getByRole('button', { name: 'Collapse items', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  await expect(itemLabels).toBeVisible();
+
+  const children = parameters.getByRole('cell', {
+    name: 'children',
+    exact: true,
+  });
+  await expect(children).toHaveCount(1);
+  await children.click();
+  await expect(itemLabels).toHaveCount(2);
+  await expect(children).toHaveCount(2);
+
+  await children.first().click();
+  await expect(itemLabels).toHaveCount(1);
+  await expect(page).toHaveURL(methodUrl);
+  await expect(page.getByRole('button', { name: 'Debug' })).toBeVisible();
+});
+
 test('renders enum, empty types, and exception pages', async ({ page }) => {
   await page.goto('/docs/#/enums/example.State');
   await expect(
