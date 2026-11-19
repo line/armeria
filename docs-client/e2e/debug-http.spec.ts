@@ -98,6 +98,13 @@ test('sends an exact GET and exposes response, clipboard, clear, and URL state',
   const origin = await page.evaluate(() => window.location.origin);
   expect(curl).toContain(`'${origin}/hello'`);
   expect(curl).toContain('doc-service-debug: true');
+  expect(curl).not.toContain('content-type:');
+
+  await headerInput(dialog).fill('{"Content-Type":"text/plain"}');
+  await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("-H 'content-type: text/plain'");
 
   await responseButtons(dialog).nth(1).click();
   await expect(dialog.getByText('Response Body:')).toHaveCount(0);
@@ -172,6 +179,7 @@ test('sends path, query, headers, body, and injected headers in a POST', async (
   const curl = await page.evaluate(() => navigator.clipboard.readText());
   expect(curl).toContain('/echo/browser?page=2&sort=id');
   expect(curl).toContain('x-custom: value');
+  expect(curl).toContain(" -d '");
   expect(curl).toMatch(/"name":\s*"browser"/);
 
   await dialog.getByRole('button', { name: 'Close' }).click();
@@ -265,6 +273,44 @@ test('selects among exact endpoints and rejects an unsupported path', async ({
   await textInputs(dialog).first().fill('/multi/b');
   await dialog.getByRole('button', { name: 'Submit' }).click();
   await expect(dialog).toContainText('"path": "/multi/b"');
+});
+
+test('uses the selected endpoint MIME type for form data', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await gotoMethod(page, 'example.HttpService', 'consume', 'POST');
+
+  const dialog = await openDebug(page);
+  const formType = 'application/x-www-form-urlencoded';
+  const body = 'first_name=Jane+Doe&message=a%2Bb%26c';
+  await textInputs(dialog).first().fill('/consume/form');
+  await setMonacoValue(dialog.locator('.monaco-editor'), body);
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  await expect(dialog).toContainText(`"contentType": "${formType}"`);
+  await expect(dialog).toContainText(`"body": "${body}"`);
+
+  await page.reload();
+  await expect(dialog.locator('.monaco-editor .view-lines')).toContainText(
+    body,
+  );
+  await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
+  const curl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(curl).toContain('/consume/form');
+  expect(curl).toContain(`-H 'content-type: ${formType}'`);
+  expect(curl).toContain(`--data-raw '${body}'`);
+
+  const explicitType = `${formType}; charset=utf-8`;
+  await headerInput(dialog).fill(
+    JSON.stringify({ 'Content-Type': explicitType }),
+  );
+  await dialog.getByRole('button', { name: 'Submit' }).click();
+  await expect(dialog).toContainText(`"contentType": "${explicitType}"`);
+  await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain(`-H 'content-type: ${explicitType}'`);
 });
 
 test('supports streaming JSON bodies and rejects primitive header values', async ({

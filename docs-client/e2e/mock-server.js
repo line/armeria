@@ -120,6 +120,20 @@ const httpMethods = [
     ],
     examplePaths: ['/multi/a', '/multi/b'],
   }),
+  method(httpServiceName, 'consume', 'POST', {
+    endpoints: [
+      endpoint('exact:/consume/text', 'text/plain', {
+        availableMimeTypes: [annotatedHttpMimeType, 'text/plain'],
+      }),
+      endpoint('exact:/consume/form', 'application/x-www-form-urlencoded', {
+        availableMimeTypes: [
+          annotatedHttpMimeType,
+          'application/x-www-form-urlencoded',
+        ],
+      }),
+    ],
+    examplePaths: ['/consume/text', '/consume/form'],
+  }),
   method(httpServiceName, 'empty', 'GET', {
     returnTypeSignature: 'void',
     endpoints: [endpoint('exact:/empty', annotatedHttpMimeType)],
@@ -671,6 +685,13 @@ async function handleApi(request, response, requestUrl) {
       200,
       { 'content-type': 'application/json; charset=utf-8' },
     );
+    return true;
+  }
+  if (pathname === '/consume/text' || pathname === '/consume/form') {
+    sendJson(response, {
+      body: await readBody(request),
+      contentType: request.headers['content-type'],
+    });
     return true;
   }
   if (pathname === '/empty' || pathname === '/verbs/head') {

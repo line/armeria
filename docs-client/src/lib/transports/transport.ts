@@ -24,6 +24,11 @@ export abstract class Transport {
 
   public abstract getDebugMimeType(): string;
 
+  public getDefaultRequestMimeType(endpoint?: Endpoint): string;
+  public getDefaultRequestMimeType(): string {
+    return this.getDebugMimeType();
+  }
+
   private toHeaderLines(headers: Headers): string[] {
     const headerLines: string[] = [];
     headers.forEach((value, name) => {

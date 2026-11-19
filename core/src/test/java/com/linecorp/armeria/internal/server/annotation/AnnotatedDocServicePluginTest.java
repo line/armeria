@@ -229,9 +229,33 @@ class AnnotatedDocServicePluginTest {
                             .build());
     }
 
+    @Test
+    void singleConcreteConsumeTypeIsTheDefaultMimeType() {
+        final Route route = Route.builder().path("/form")
+                                 .methods(HttpMethod.POST)
+                                 .consumes(MediaType.FORM_DATA)
+                                 .build();
+        final EndpointInfo endpoint = endpointInfo(route, "*");
+
+        assertThat(endpoint.defaultMimeType()).isEqualTo(MediaType.FORM_DATA);
+        assertThat(endpoint.availableMimeTypes()).containsExactlyInAnyOrder(MediaType.FORM_DATA,
+                                                                            MediaType.JSON_UTF_8);
+    }
+
+    @Test
+    void omitsDefaultMimeTypeWithoutASingleConcreteConsumeType() {
+        final RouteBuilder builder = Route.builder().path("/form").methods(HttpMethod.POST);
+
+        assertThat(endpointInfo(builder.build(), "*").defaultMimeType()).isNull();
+        assertThat(endpointInfo(builder.consumes(MediaType.ANY_TEXT_TYPE).build(), "*")
+                           .defaultMimeType()).isNull();
+        assertThat(endpointInfo(builder.consumes(MediaType.FORM_DATA, MediaType.PLAIN_TEXT_UTF_8)
+                                       .build(), "*").defaultMimeType()).isNull();
+    }
+
     private static Route withMethodAndTypes(RouteBuilder builder) {
         return builder.methods(HttpMethod.GET)
-                      .consumes(MediaType.PLAIN_TEXT_UTF_8)
+                      .consumes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                       .produces(MediaType.JSON_UTF_8)
                       .build();
     }

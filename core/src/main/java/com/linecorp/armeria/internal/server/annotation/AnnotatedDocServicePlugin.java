@@ -189,8 +189,14 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
         final EndpointInfoBuilder builder = endpointInfoBuilder(route, hostnamePattern);
-        builder.availableMimeTypes(availableMimeTypes(route));
-        return builder.build();
+        final Set<MediaType> consumeTypes = route.consumes();
+        if (consumeTypes.size() == 1) {
+            final MediaType consumeType = consumeTypes.iterator().next();
+            if (!consumeType.hasWildcard()) {
+                builder.defaultMimeType(consumeType);
+            }
+        }
+        return builder.availableMimeTypes(availableMimeTypes(consumeTypes)).build();
     }
 
     public static EndpointInfoBuilder endpointInfoBuilder(Route route, String hostnamePattern) {
@@ -221,9 +227,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         return builder;
     }
 
-    private static Set<MediaType> availableMimeTypes(Route route) {
+    private static Set<MediaType> availableMimeTypes(Set<MediaType> consumeTypes) {
         final ImmutableSet.Builder<MediaType> builder = ImmutableSet.builder();
-        final Set<MediaType> consumeTypes = route.consumes();
         builder.addAll(consumeTypes);
         if (!consumeTypes.contains(MediaType.JSON_UTF_8)) {
             builder.add(MediaType.JSON_UTF_8);

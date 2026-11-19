@@ -29,6 +29,10 @@ export default class AnnotatedHttpTransport extends Transport {
     return ANNOTATED_HTTP_MIME_TYPE;
   }
 
+  public getDefaultRequestMimeType(endpoint?: Endpoint): string {
+    return endpoint?.defaultMimeType ?? this.getDebugMimeType();
+  }
+
   protected validatePath(endpoint: Endpoint, path: string): { error?: string } {
     const regexPathPrefix = endpoint.regexPathPrefix;
     const originalPath = endpoint.pathMapping;
@@ -89,24 +93,24 @@ export default class AnnotatedHttpTransport extends Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<Response> {
-    const endpoint = this.getDebugMimeTypeEndpoint(method);
+    const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
     if (
       method.httpMethod === 'POST' ||
       method.httpMethod === 'PUT' ||
       method.httpMethod === 'PATCH' ||
-      method.httpMethod === 'QUERY'
+      method.httpMethod === 'QUERY' ||
+      (bodyJson !== undefined && endpoint.defaultMimeType)
     ) {
-      // Set content-type only for methods that usually have a body.
-      hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
+      hdrs.set('content-type', this.getDefaultRequestMimeType(endpoint));
     }
 
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }
 
-    // Validate requestBody only if the content-type hasn't been overwritten and if it's not an empty string.
+    // Validate non-empty bodies only when the effective content type is JSON.
     if (
       isValidJsonMimeType(hdrs.get('content-type')) &&
       bodyJson &&

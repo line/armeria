@@ -47,8 +47,13 @@ import Alert from '@material-ui/lab/Alert';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
-import { jsonPrettify, validateJsonObject } from '../../lib/json-util';
 import {
+  isValidJsonMimeType,
+  jsonPrettify,
+  validateJsonObject,
+} from '../../lib/json-util';
+import {
+  Endpoint,
   extractUrlPath,
   Method,
   Route,
@@ -56,6 +61,7 @@ import {
   ServiceType,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import { Transport } from '../../lib/transports/transport';
 import { ResponseData, SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
 import useGraphqlDebugState from './useGraphqlDebugState';
@@ -181,17 +187,53 @@ const ResponseStatusBar: React.FC<{
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
+const parseRequestHeaders = (serialized: string | null): Headers => {
+  const headers = new Headers();
+  if (serialized) {
+    Object.entries(JSON.parse(serialized)).forEach(([name, value]) => {
+      headers.set(name, String(value));
+    });
+  }
+  return headers;
+};
+
+const usesJsonRequestBody = (
+  serviceType: ServiceType,
+  contentType: string | null,
+): boolean =>
+  serviceType !== ServiceType.HTTP || isValidJsonMimeType(contentType);
+
 const getRequestBody = (
   method: Method,
+  transport: Transport,
+  serviceType: ServiceType,
   useRequestBody: boolean,
-  search: string,
+  exactPathMapping: boolean,
+  params: URLSearchParams,
 ): string => {
-  const params = new URLSearchParams(search);
-  const urlRequestBody =
-    useRequestBody && params.has('request_body')
-      ? jsonPrettify(params.get('request_body')!)
-      : '';
-  return urlRequestBody || method.exampleRequests[0] || '';
+  const urlRequestBody = useRequestBody ? params.get('request_body') : null;
+  if (urlRequestBody === null) {
+    return method.exampleRequests[0] || '';
+  }
+
+  let contentType = null;
+  if (serviceType === ServiceType.HTTP) {
+    const endpointPath = exactPathMapping
+      ? undefined
+      : params.get('endpoint_path') || undefined;
+    const endpoint = transport.findDebugMimeTypeEndpoint(method, endpointPath);
+    contentType = transport.getDefaultRequestMimeType(endpoint);
+    try {
+      const headers = parseRequestHeaders(params.get('headers'));
+      contentType = headers.get('content-type') ?? contentType;
+    } catch {
+      // Keep links with invalid headers editable.
+    }
+  }
+
+  return usesJsonRequestBody(serviceType, contentType)
+    ? jsonPrettify(urlRequestBody) || method.exampleRequests[0] || ''
+    : urlRequestBody;
 };
 
 const errorResponseData = (error: unknown): ResponseData => ({
@@ -222,10 +264,17 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const debugFormSearchParams = new URLSearchParams(location.search);
   debugFormSearchParams.delete('debug_form_is_open');
   const debugFormSearch = debugFormSearchParams.toString();
+  const transport = TRANSPORTS.getDebugTransport(method);
+  if (!transport) {
+    throw new Error("This method doesn't have a debug transport.");
+  }
   const initialRequestBody = getRequestBody(
     method,
+    transport,
+    serviceType,
     useRequestBody,
-    debugFormSearch,
+    exactPathMapping,
+    debugFormSearchParams,
   );
   const [requestBody, setRequestBody] = useState(initialRequestBody);
   const [additionalQueries, setAdditionalQueries] = useState('');
@@ -249,11 +298,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   );
 
   const classes = useStyles();
-
-  const transport = TRANSPORTS.getDebugTransport(method);
-  if (!transport) {
-    throw new Error("This method doesn't have a debug transport.");
-  }
 
   const {
     editorState: graphqlEditorState,
@@ -348,10 +392,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
         serviceType === ServiceType.GRAPHQL
           ? serializeGraphqlRequestBody()
           : requestBody;
-      if (useRequestBody) {
-        validateJsonObject(exportedRequestBody, 'request body');
-      }
-
       if (additionalHeaders) {
         validateJsonObject(additionalHeaders, 'headers');
       }
@@ -393,35 +433,46 @@ const DebugPage: React.FunctionComponent<Props> = ({
         host + parseServerRootPath(docServiceRoute) + mappedPath,
       )}'`;
 
+      const headers = parseRequestHeaders(additionalHeaders);
+      if (
+        !headers.has('content-type') &&
+        (serviceType !== ServiceType.HTTP || useRequestBody)
+      ) {
+        headers.set(
+          'content-type',
+          transport.getDefaultRequestMimeType(endpoint),
+        );
+      }
+      if (process.env.WEBPACK_DEV === 'true' && !headers.has(docServiceDebug)) {
+        headers.set(docServiceDebug, 'true');
+      }
+      if (serviceType === ServiceType.GRAPHQL && !headers.has('accept')) {
+        headers.set('accept', 'application/json');
+      }
+      const isJsonBody = usesJsonRequestBody(
+        serviceType,
+        headers.get('content-type'),
+      );
+      if (useRequestBody && isJsonBody) {
+        validateJsonObject(exportedRequestBody, 'request body');
+      }
+
       const body = transport.getCurlBody(
         endpoint,
         method,
         escapeSingleQuote(exportedRequestBody),
       );
 
-      const headers = new Headers();
-      headers.set('content-type', transport.getDebugMimeType());
-      if (process.env.WEBPACK_DEV === 'true') {
-        headers.set(docServiceDebug, 'true');
-      }
-      if (serviceType === ServiceType.GRAPHQL) {
-        headers.set('accept', 'application/json');
-      }
-      if (additionalHeaders) {
-        const entries = Object.entries(JSON.parse(additionalHeaders));
-        entries.forEach(([key, value]) => {
-          headers.set(key, String(value));
-        });
-      }
-
       const headerOptions: string[] = [];
       headers.forEach((value, key) => {
-        headerOptions.push(`-H '${key}: ${value}'`);
+        const header = escapeSingleQuote(`${key}: ${value}`);
+        headerOptions.push(`-H '${header}'`);
       });
 
+      const bodyOption = isJsonBody ? '-d' : '--data-raw';
       const curlCommand =
         `curl -X${httpMethod} ${headerOptions.join(' ')} ${uri}` +
-        `${useRequestBody ? ` -d '${body}'` : ''}`;
+        `${useRequestBody ? ` ${bodyOption} '${body}'` : ''}`;
 
       copyTextToClipboard(curlCommand);
       showSnackbar('The curl command has been copied to the clipboard.');
@@ -461,7 +512,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       let executedRequestBody;
       if (useRequestBody) {
         executedRequestBody = params.get('request_body');
-        if (!executedRequestBody) {
+        if (executedRequestBody === null) {
           return;
         }
       }
@@ -519,26 +570,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const params = new URLSearchParams(location.search);
 
     try {
-      if (useRequestBody) {
-        // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
-        // See: https://github.com/line/armeria/issues/273
-
-        // For some reason jsonMinify minifies {} as empty string, so work around it.
-        const submittedRequestBody =
-          serviceType === ServiceType.GRAPHQL
-            ? serializeGraphqlRequestBody()
-            : requestBody;
-        params.set('request_body', jsonMinify(submittedRequestBody) || '{}');
-      }
-
+      let endpoint: Endpoint | undefined;
       if (serviceType === ServiceType.HTTP) {
+        endpoint = transport.getDebugMimeTypeEndpoint(
+          method,
+          exactPathMapping ? undefined : additionalPath,
+        );
         if (queries) {
           params.set('queries', queries);
         } else {
           params.delete('queries');
         }
         if (!exactPathMapping) {
-          transport.getDebugMimeTypeEndpoint(method, additionalPath);
           params.set('endpoint_path', additionalPath);
         }
       } else if (additionalPath.length > 0) {
@@ -561,6 +604,24 @@ const DebugPage: React.FunctionComponent<Props> = ({
         }
       } else {
         params.delete('headers');
+      }
+
+      if (useRequestBody) {
+        const submittedRequestBody =
+          serviceType === ServiceType.GRAPHQL
+            ? serializeGraphqlRequestBody()
+            : requestBody;
+        const contentType =
+          parseRequestHeaders(params.get('headers')).get('content-type') ??
+          transport.getDefaultRequestMimeType(endpoint);
+        // Minify JSON without parsing to preserve numeric precision.
+        // Use an empty object when jsonMinify returns an empty string.
+        params.set(
+          'request_body',
+          usesJsonRequestBody(serviceType, contentType)
+            ? jsonMinify(submittedRequestBody) || '{}'
+            : submittedRequestBody,
+        );
       }
     } catch (e) {
       setResponseData(errorResponseData(e));

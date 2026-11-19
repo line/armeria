@@ -72,6 +72,7 @@ test('offers JSON schema completion and sends a Thrift JSON request', async ({
   await dialog.getByRole('button', { name: 'Copy as a curl command' }).click();
   const curl = await page.evaluate(() => navigator.clipboard.readText());
   expect(curl).toContain('application/x-thrift; protocol=TTEXT');
+  expect(curl).toContain(" -d '");
   expect(curl).toContain('ExampleService:greet');
 });
 

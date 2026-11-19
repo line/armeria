@@ -33,7 +33,7 @@ export interface Param {
 export interface Endpoint {
   hostnamePattern: string;
   pathMapping: string;
-  defaultMimeType: string;
+  defaultMimeType?: string | null;
   availableMimeTypes: string[];
   regexPathPrefix?: string;
   fragment?: string;
