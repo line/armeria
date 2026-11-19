@@ -21,6 +21,8 @@ import { RouteComponentProps } from 'react-router-dom';
 import Button from '@material-ui/core/Button';
 import { Launch } from '@material-ui/icons';
 import Grid from '@material-ui/core/Grid';
+import Link from '@material-ui/core/Link';
+import Alert from '@material-ui/lab/Alert';
 import {
   Method,
   Service,
@@ -117,6 +119,8 @@ function isSingleExactPathMapping(method: Method): boolean {
   );
 }
 
+const framedGrpcMimeType = /^application\/grpc(?:-web(?:-text)?)?(?:[+;]|$)/i;
+
 const requestBodyAllowedHttpMethods: string[] = [
   'POST',
   'PUT',
@@ -169,6 +173,9 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     return <>Not found.</>;
   }
   const debugTransport = TRANSPORTS.getDebugTransport(method);
+  const endpointMimeTypes = debugTransport
+    ? []
+    : TRANSPORTS.getEndpointMimeTypes(method);
 
   let serviceType: ServiceType = ServiceType.UNKNOWN;
 
@@ -227,6 +234,40 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           </Button>
         )}
       </Grid>
+      {!debugTransport && (
+        <Alert severity="info" role="note" style={{ overflowWrap: 'anywhere' }}>
+          <Typography variant="body2">
+            Debug requires a supported MIME type.
+          </Typography>
+          <Typography variant="body2">
+            <strong>Endpoint MIME types</strong>{' '}
+            {endpointMimeTypes.length > 0 ? (
+              <code>{endpointMimeTypes.join(', ')}</code>
+            ) : (
+              'None advertised'
+            )}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Supported MIME types</strong>{' '}
+            <code>{TRANSPORTS.getSupportedMimeTypes().join(', ')}</code>
+          </Typography>
+          {endpointMimeTypes.some((mimeType) =>
+            framedGrpcMimeType.test(mimeType),
+          ) && (
+            <Typography variant="body2">
+              For unary gRPC methods, see how to{' '}
+              <Link
+                href="https://armeria.dev/docs/server/grpc/#unframed-requests"
+                rel="noreferrer"
+                target="_blank"
+              >
+                enable unframed requests
+              </Link>
+              .
+            </Typography>
+          )}
+        </Alert>
+      )}
       {methodDescriptionInfo?.docString && (
         <Section>
           <Description descriptionInfo={methodDescriptionInfo} />

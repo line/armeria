@@ -22,34 +22,38 @@ import ThriftTransport from './thrift';
 import { Transport } from './transport';
 import GraphqlHttpTransport from './grahpql-http';
 
-const grpcUnframedTransport = new GrpcUnframedTransport();
-const thriftTransport = new ThriftTransport();
-const annotatedHttpTransport = new AnnotatedHttpTransport();
-const graphqlHttpTransport = new GraphqlHttpTransport();
+const debugTransports: Transport[] = [
+  new GrpcUnframedTransport(),
+  new ThriftTransport(),
+  new AnnotatedHttpTransport(),
+  new GraphqlHttpTransport(),
+];
 
 export class Transports {
   public getDebugTransport(method: Method): Transport | undefined {
+    for (const mimeType of this.getEndpointMimeTypes(method)) {
+      const transport = debugTransports.find((candidate) =>
+        candidate.supportsMimeType(mimeType),
+      );
+      if (transport) {
+        return transport;
+      }
+    }
+    return undefined;
+  }
+
+  public getEndpointMimeTypes(method: Method): string[] {
     const mimeTypes = new Set<string>();
     for (const endpoint of method.endpoints) {
       endpoint.availableMimeTypes.forEach((mimeType) =>
         mimeTypes.add(mimeType),
       );
     }
-    for (const mimeType of mimeTypes) {
-      if (grpcUnframedTransport.supportsMimeType(mimeType)) {
-        return grpcUnframedTransport;
-      }
-      if (thriftTransport.supportsMimeType(mimeType)) {
-        return thriftTransport;
-      }
-      if (annotatedHttpTransport.supportsMimeType(mimeType)) {
-        return annotatedHttpTransport;
-      }
-      if (graphqlHttpTransport.supportsMimeType(mimeType)) {
-        return graphqlHttpTransport;
-      }
-    }
-    return undefined;
+    return [...mimeTypes];
+  }
+
+  public getSupportedMimeTypes(): string[] {
+    return debugTransports.map((transport) => transport.getDebugMimeType());
   }
 }
 

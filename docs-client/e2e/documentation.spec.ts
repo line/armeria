@@ -14,6 +14,7 @@
  * under the License.
  */
 
+import type { SpecificationData } from '../src/lib/specification';
 import { gotoMethod } from './helpers';
 import { expect, test } from './test-fixture';
 
@@ -111,7 +112,7 @@ test('renders Mermaid again after route changes', async ({ page }) => {
   await expect(page.locator('.mermaid svg')).toBeVisible();
 });
 
-test('renders regex endpoints and hides Debug for unsupported transports', async ({
+test('explains unavailable debugging and keeps the Debug button for supported transports', async ({
   page,
 }) => {
   await gotoMethod(page, 'example.HttpService', 'regexWithPrefix', 'GET');
@@ -122,9 +123,81 @@ test('renders regex endpoints and hides Debug for unsupported transports', async
     }),
   ).toBeVisible();
 
+  const debugButton = page.getByRole('button', { name: 'Debug' });
+  const notice = page.getByRole('note');
+  await expect(debugButton).toBeVisible();
+  await expect(notice).toHaveCount(0);
+
   await gotoMethod(page, 'example.HttpService', 'trace', 'TRACE');
-  await expect(page.getByRole('button', { name: 'Debug' })).toHaveCount(0);
+  await expect(debugButton).toHaveCount(0);
+  await expect(
+    notice.getByText('Debug requires a supported MIME type.', { exact: true }),
+  ).toBeVisible();
 
   await gotoMethod(page, 'example.StaticService', 'download', 'GET');
+  await expect(debugButton).toHaveCount(0);
+  await expect(
+    notice.getByText('Endpoint MIME types', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    notice.getByText('Supported MIME types', { exact: true }),
+  ).toBeVisible();
+  const mimeTypes = notice.locator('code');
+  await expect(mimeTypes).toHaveText([
+    'application/octet-stream',
+    [
+      'application/json; charset=utf-8; protocol=gRPC',
+      'application/x-thrift; protocol=TTEXT',
+      'application/json; charset=utf-8',
+      'application/graphql+json',
+    ].join(', '),
+  ]);
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  const rightmostMimeType = await mimeTypes.evaluateAll((elements) =>
+    Math.max(
+      ...elements.flatMap((element) =>
+        Array.from(element.getClientRects(), (rect) => rect.right),
+      ),
+    ),
+  );
+  expect(rightmostMimeType).toBeGreaterThan(0);
+  expect(rightmostMimeType).toBeLessThanOrEqual(360);
+  await expect(notice.getByRole('link')).toHaveCount(0);
+});
+
+test('links to unframed requests for a framed gRPC method', async ({
+  page,
+}) => {
+  await page.route('**/docs/specification.json', async (route) => {
+    const response = await route.fetch();
+    const specification: SpecificationData = await response.json();
+    const grpcMethod = specification.services
+      .find((service) => service.name === 'example.GrpcService')
+      ?.methods.find((method) => method.name === 'greet');
+    if (grpcMethod) {
+      grpcMethod.endpoints = grpcMethod.endpoints.map((endpoint) => ({
+        ...endpoint,
+        defaultMimeType: 'application/grpc+proto',
+        availableMimeTypes: [
+          'application/grpc+proto',
+          'application/grpc-web+proto',
+        ],
+      }));
+    }
+    await route.fulfill({ response, json: specification });
+  });
+
+  await gotoMethod(page, 'example.GrpcService', 'greet', 'POST');
   await expect(page.getByRole('button', { name: 'Debug' })).toHaveCount(0);
+  const notice = page.getByRole('note');
+  await expect(notice.locator('code').first()).toHaveText(
+    'application/grpc+proto, application/grpc-web+proto',
+  );
+  await expect(
+    notice.getByRole('link', { name: 'enable unframed requests' }),
+  ).toHaveAttribute(
+    'href',
+    'https://armeria.dev/docs/server/grpc/#unframed-requests',
+  );
 });
