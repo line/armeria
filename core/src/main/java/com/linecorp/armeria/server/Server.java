@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -62,6 +63,7 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -71,6 +73,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.server.websocket.WebSocketService;
@@ -460,10 +463,33 @@ public final class Server implements ListenableAsyncCloseable {
         return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
+    private static final class PendingResponsesMetrics {
+
+        private static final MeterIdPrefix METER_ID = new MeterIdPrefix("armeria.server.pending.responses");
+
+        static Runnable register(MeterRegistry registry, GracefulShutdownSupport support) {
+            final PendingResponsesMetrics metrics = MicrometerUtil.register(
+                    registry, METER_ID, PendingResponsesMetrics.class,
+                    (unusedRegistry, unusedId) -> new PendingResponsesMetrics());
+            registry.gauge(METER_ID.name(), metrics, PendingResponsesMetrics::pendingResponses);
+            metrics.supports.add(support);
+            return () -> metrics.supports.remove(support);
+        }
+
+        private final Set<GracefulShutdownSupport> supports = new CopyOnWriteArraySet<>();
+
+        private long pendingResponses() {
+            return supports.stream().mapToLong(GracefulShutdownSupport::pendingResponses).sum();
+        }
+    }
+
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable
         private volatile GracefulShutdownSupport gracefulShutdownSupport;
+
+        @Nullable
+        private volatile Runnable removePendingResponsesMetrics;
 
         ServerStartStopSupport(Executor startStopExecutor) {
             super(startStopExecutor);
@@ -576,18 +602,31 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            // Move to ServerMetrics.
-            config.meterRegistry().gauge("armeria.server.pending.responses", gracefulShutdownSupport,
-                                         GracefulShutdownSupport::pendingResponses);
+            removePendingResponsesMetrics =
+                    PendingResponsesMetrics.register(config.meterRegistry(), gracefulShutdownSupport);
         }
 
         @Override
         protected CompletionStage<Void> doStop(@Nullable Void arg) {
+            final Runnable removeMetrics = removePendingResponsesMetrics;
+            removePendingResponsesMetrics = null;
+            if (removeMetrics == null) {
+                return stopServer();
+            }
+            try {
+                return stopServer().whenComplete((unused, cause) -> removeMetrics.run());
+            } catch (RuntimeException | Error cause) {
+                removeMetrics.run();
+                throw cause;
+            }
+        }
+
+        private CompletableFuture<Void> stopServer() {
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport == null ||
                 gracefulShutdownSupport.completedQuietPeriod()) {
-                doStop(future, null);
+                stopServer(future, null);
                 return future;
             }
 
@@ -599,7 +638,7 @@ public final class Server implements ListenableAsyncCloseable {
             // Check every 100 ms for the server to have completed processing requests.
             final ScheduledFuture<?> quietPeriodFuture = gracefulShutdownExecutor.scheduleAtFixedRate(() -> {
                 if (gracefulShutdownSupport.completedQuietPeriod()) {
-                    doStop(future, gracefulShutdownExecutor);
+                    stopServer(future, gracefulShutdownExecutor);
                 }
             }, 0, 100, TimeUnit.MILLISECONDS);
 
@@ -608,7 +647,7 @@ public final class Server implements ListenableAsyncCloseable {
             try {
                 gracefulShutdownExecutor.schedule(() -> {
                     quietPeriodFuture.cancel(false);
-                    doStop(future, gracefulShutdownExecutor);
+                    stopServer(future, gracefulShutdownExecutor);
                 }, config.gracefulShutdown().timeout().toMillis(), TimeUnit.MILLISECONDS);
             } catch (RejectedExecutionException e) {
                 // Can be rejected if quiet period is complete already.
@@ -628,8 +667,8 @@ public final class Server implements ListenableAsyncCloseable {
          * Note that we terminate the boss groups lastly so that the JVM does not terminate itself
          * even if other threads are daemon, because boss group threads are always non-daemon.
          */
-        private void doStop(CompletableFuture<Void> future,
-                            @Nullable ExecutorService gracefulShutdownExecutor) {
+        private void stopServer(CompletableFuture<Void> future,
+                                @Nullable ExecutorService gracefulShutdownExecutor) {
             // Graceful shutdown is over. Terminate the temporary executor we created at stop0(future).
             if (gracefulShutdownExecutor != null) {
                 gracefulShutdownExecutor.shutdownNow();
