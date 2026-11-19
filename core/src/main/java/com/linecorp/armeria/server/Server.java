@@ -670,19 +670,27 @@ public final class Server implements ListenableAsyncCloseable {
                 return UnmodifiableFuture.completedFuture(false);
             }
 
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+            if (gracefulShutdownSupport != null) {
+                // Let the channels which are not ready to serve requests yet, e.g. negotiating TLS,
+                // be handed over when they become ready.
+                gracefulShutdownSupport.startHandover();
+            }
+
             final Set<Channel> children = connectionLimitingHandler.children();
             final List<CompletableFuture<Void>> closeFutures = new ArrayList<>(children.size());
             for (Channel ch : children) {
+                closeFutures.add(UnmodifiableFuture.fromNetty(ch.closeFuture()));
                 final HttpServerHandler serverHandler = ch.pipeline().get(HttpServerHandler.class);
                 if (serverHandler != null) {
-                    closeFutures.add(serverHandler.handOver(ch));
+                    serverHandler.handOver(ch);
                 }
             }
             if (closeFutures.isEmpty()) {
                 return UnmodifiableFuture.completedFuture(true);
             }
 
-            // The future returned by handOver() will be always completed successfully.
+            // The close futures will be always completed successfully.
             final CompletableFuture<Boolean> closedAll =
                     CompletableFutures.allAsList(closeFutures).thenApply(unused -> true);
             final ScheduledFuture<?> timeoutFuture = config.workerGroup().schedule(

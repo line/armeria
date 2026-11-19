@@ -67,7 +67,6 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
@@ -214,6 +213,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        if (gracefulShutdownSupport.isHandingOver()) {
+            // The connection was not ready when the handover started, e.g. it was negotiating TLS.
+            handOver(ctx.channel());
+        }
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         cleanup(ctx.channel(), false, null);
     }
@@ -221,9 +228,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     /**
      * Stops accepting new requests on the connection while letting the unfinished requests complete.
      * For HTTP/2, this sends GOAWAY frames, so that the requests sent before the client receives them are
-     * still served. The returned future is completed when the connection is closed.
+     * still served. The connection is closed when the unfinished requests complete.
      */
-    CompletableFuture<Void> handOver(Channel channel) {
+    void handOver(Channel channel) {
         channel.eventLoop().execute(() -> {
             if (!channel.isActive()) {
                 return;
@@ -237,7 +244,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 channel.pipeline().fireUserEventTriggered(InitiateConnectionShutdown.of());
             }
         });
-        return UnmodifiableFuture.fromNetty(channel.closeFuture());
     }
 
     CompletableFuture<Void> shutdown(Channel channel) {
@@ -378,6 +384,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final int initialWindow = config.http2InitialConnectionWindowSize();
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
+        }
+
+        if (gracefulShutdownSupport.isHandingOver()) {
+            // The connection has been upgraded to HTTP/2 after the handover started.
+            handOver(ctx.channel());
         }
     }
 
