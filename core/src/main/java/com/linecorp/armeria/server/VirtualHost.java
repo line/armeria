@@ -84,10 +84,6 @@ public final class VirtualHost {
     @Nullable
     private final ServerPort serverPort;
     @Nullable
-    private volatile String cachedDefaultHostname;
-    @Nullable
-    private volatile String cachedHostnamePattern;
-    @Nullable
     private final SslContext sslContext;
     @Nullable
     private final ServerTlsSpec serverTlsSpec;
@@ -303,19 +299,7 @@ public final class VirtualHost {
      * Returns the name of the default host.
      */
     public String defaultHostname() {
-        if (serverPort != null) {
-            String cached = cachedDefaultHostname;
-            if (cached != null) {
-                return cached;
-            }
-            final int actualPort = serverPort.actualPort();
-            if (actualPort > 0) {
-                cached = originalDefaultHostname + ':' + actualPort;
-                cachedDefaultHostname = cached;
-                return cached;
-            }
-        }
-        return defaultHostname;
+        return hostnameWithActualPort(defaultHostname);
     }
 
     /**
@@ -323,19 +307,17 @@ public final class VirtualHost {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
-        if (serverPort != null) {
-            String cached = cachedHostnamePattern;
-            if (cached != null) {
-                return cached;
-            }
+        return hostnameWithActualPort(hostnamePattern);
+    }
+
+    private String hostnameWithActualPort(String hostname) {
+        if (port == 0 && serverPort != null) {
             final int actualPort = serverPort.actualPort();
             if (actualPort > 0) {
-                cached = originalHostnamePattern + ':' + actualPort;
-                cachedHostnamePattern = cached;
-                return cached;
+                return hostname + ':' + actualPort;
             }
         }
-        return hostnamePattern;
+        return hostname;
     }
 
     /**

@@ -462,6 +462,8 @@ public final class Server implements ListenableAsyncCloseable {
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
+        private boolean hasAttemptedStart;
+
         @Nullable
         private volatile GracefulShutdownSupport gracefulShutdownSupport;
 
@@ -479,10 +481,15 @@ public final class Server implements ListenableAsyncCloseable {
                                                        config().blockingTaskExecutor());
             }
 
+            final List<ServerPort> ports = config().ports();
+            if (hasAttemptedStart) {
+                // The configured ports are reused on restarts and after failed binds.
+                ports.forEach(ServerPort::resetActualPort);
+            }
+            hasAttemptedStart = true;
+
             // Initialize the server sockets asynchronously.
             final CompletableFuture<Void> future = new CompletableFuture<>();
-            final List<ServerPort> ports = config().ports();
-
             final Iterator<ServerPort> it = ports.iterator();
             assert it.hasNext();
 
