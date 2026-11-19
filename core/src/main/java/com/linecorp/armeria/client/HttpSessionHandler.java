@@ -159,18 +159,25 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             outlierRule = null;
         }
 
-        if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
-            scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
-        } else {
-            // A session timeout for a proxied connection may be scheduled when ProxyConnectionEvent is
-            // received.
-        }
+        scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
     }
 
     private void scheduleSessionTimeout(Channel channel, Promise<Channel> sessionPromise,
                                         int connectionTimeoutMillis, SessionProtocol desiredProtocol) {
-        assert sessionTimeoutFuture == null : "sessionTimeoutFuture is scheduled already.";
+        if (sessionTimeoutFuture != null) {
+            sessionTimeoutFuture.cancel(false);
+        }
+        if (sessionPromise.isDone()) {
+            return;
+        }
         sessionTimeoutFuture = channel.eventLoop().schedule(() -> {
+            if (poolKey.proxyConfig.proxyType().isForwardProxy() && proxyDestinationAddress == null) {
+                if (tryFailProxySessionPromise(new ProxyConnectException(
+                        "proxy connection timed out. (channel: " + channel + ')'))) {
+                    channel.close();
+                }
+                return;
+            }
             if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
                     desiredProtocol,
                     "connection established, but session creation timed out. (channel: " + channel + ')'))) {
@@ -531,6 +538,17 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
     }
 
+    private boolean tryFailProxySessionPromise(Throwable cause) {
+        if (sessionPromise.isDone()) {
+            return false;
+        }
+        final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
+        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
+        channelPool.maybeHandleProxyFailure(protocol, poolKey, wrapped);
+        tryFailSessionPromise(wrapped);
+        return true;
+    }
+
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         isAcquirable = false;
@@ -566,10 +584,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         if (cause instanceof ProxyConnectException) {
-            final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
-            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
-            channelPool.maybeHandleProxyFailure(protocol, poolKey, wrapped);
-            tryFailSessionPromise(wrapped);
+            tryFailProxySessionPromise(cause);
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));
