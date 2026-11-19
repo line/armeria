@@ -63,4 +63,9 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
     default ScheduledExecutorService unwrap() {
         return this;
     }
+
+    /**
+     * Returns the count of pended tasks.
+     */
+    int numPendingTasks();
 }
