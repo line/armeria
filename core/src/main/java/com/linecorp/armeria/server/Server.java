@@ -649,8 +649,8 @@ public final class Server implements ListenableAsyncCloseable {
                     lock.unlock();
                 }
 
-                handOverConnections(deadlineNanos).handle((unused3, unused4) -> {
-                    terminate(future);
+                handOverConnections(deadlineNanos).handle((closedAll, unused3) -> {
+                    terminate(future, Boolean.TRUE.equals(closedAll));
                     return null;
                 });
 
@@ -661,13 +661,13 @@ public final class Server implements ListenableAsyncCloseable {
         /**
          * Lets all accepted channels stop accepting new requests while completing the requests they
          * have accepted already, so that a request received after the quiet period is not aborted.
-         * The returned future is completed when all channels are closed or the graceful shutdown timeout
-         * is reached.
+         * The returned future is completed with {@code true} when all channels are closed, or with
+         * {@code false} when the graceful shutdown timeout is reached.
          */
-        private CompletableFuture<Void> handOverConnections(long deadlineNanos) {
+        private CompletableFuture<Boolean> handOverConnections(long deadlineNanos) {
             final long remainingNanos = deadlineNanos - System.nanoTime();
             if (remainingNanos <= 0) {
-                return UnmodifiableFuture.completedFuture(null);
+                return UnmodifiableFuture.completedFuture(false);
             }
 
             final Set<Channel> children = connectionLimitingHandler.children();
@@ -679,30 +679,31 @@ public final class Server implements ListenableAsyncCloseable {
                 }
             }
             if (closeFutures.isEmpty()) {
-                return UnmodifiableFuture.completedFuture(null);
+                return UnmodifiableFuture.completedFuture(true);
             }
 
             // The future returned by handOver() will be always completed successfully.
-            final CompletableFuture<List<Void>> combined = CompletableFutures.allAsList(closeFutures);
+            final CompletableFuture<Boolean> closedAll =
+                    CompletableFutures.allAsList(closeFutures).thenApply(unused -> true);
             final ScheduledFuture<?> timeoutFuture = config.workerGroup().schedule(
-                    () -> combined.complete(ImmutableList.of()), remainingNanos, TimeUnit.NANOSECONDS);
-            return combined.handle((unused1, unused2) -> {
-                timeoutFuture.cancel(false);
-                return null;
-            });
+                    () -> closedAll.complete(false), remainingNanos, TimeUnit.NANOSECONDS);
+            return closedAll.whenComplete((unused1, unused2) -> timeoutFuture.cancel(false));
         }
 
         /**
          * Ends the graceful shutdown: aborts the unfinished requests and closes all accepted channels,
          * the worker group and the boss groups.
          */
-        private void terminate(CompletableFuture<Void> future) {
+        private void terminate(CompletableFuture<Void> future, boolean closedAll) {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport != null) {
                 gracefulShutdownSupport.terminate();
             }
 
-            shutdownServerHandlers().handle((unused3, unused4) -> {
+            // There are no unfinished requests to abort if all channels have been closed by the handover.
+            final CompletableFuture<Void> shutdownFuture =
+                    closedAll ? UnmodifiableFuture.completedFuture(null) : shutdownServerHandlers();
+            shutdownFuture.handle((unused3, unused4) -> {
                 // Close all accepted sockets.
                 ChannelUtil.close(connectionLimitingHandler.children()).handle((unused5, unused6) -> {
                     // Shut down the worker group if necessary.
