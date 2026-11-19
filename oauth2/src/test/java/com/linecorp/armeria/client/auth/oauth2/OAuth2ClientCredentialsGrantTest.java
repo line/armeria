@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -43,8 +45,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
+import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.auth.oauth2.MockOAuth2ClientCredentialsService;
 import com.linecorp.armeria.internal.server.auth.oauth2.MockOAuth2IntrospectionService;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -132,6 +136,39 @@ class OAuth2ClientCredentialsGrantTest {
                        ).build(SERVICE));
         }
     };
+
+    @Test
+    void tokenLoadTimeoutAndRetry() throws Exception {
+        final CompletableFuture<GrantedOAuth2AccessToken> stalled = new CompletableFuture<>();
+        final AtomicInteger attempts = new AtomicInteger();
+        final OAuth2AuthorizationGrant grant = OAuth2AuthorizationGrant
+                .builder(WebClient.of(authServer.httpUri()), "/token/client/")
+                .accessTokenRequest(AccessTokenRequest.ofClientCredentials("test_client", "client_secret"))
+                .fallbackTokenProvider(() -> attempts.incrementAndGet() == 1 ? stalled
+                        : UnmodifiableFuture.completedFuture(TOKEN.grantedToken()))
+                .tokenLoadTimeoutMillis(100)
+                .build();
+
+        assertThatThrownBy(() -> grant.getAccessToken().toCompletableFuture().get(10, TimeUnit.SECONDS))
+                .hasCauseInstanceOf(TimeoutException.class);
+        assertThat(grant.getAccessToken().toCompletableFuture().get(10, TimeUnit.SECONDS))
+                .isSameAs(TOKEN.grantedToken());
+        stalled.complete(GrantedOAuth2AccessToken.builder("late-token").build());
+        assertThat(grant.getAccessToken().toCompletableFuture().get(10, TimeUnit.SECONDS))
+                .isSameAs(TOKEN.grantedToken());
+        assertThat(attempts).hasValue(2);
+    }
+
+    @Test
+    void tokenLoadTimeoutValidation() {
+        final OAuth2AuthorizationGrantBuilder builder = OAuth2AuthorizationGrant.builder(
+                WebClient.of(authServer.httpUri()), "/token/client/");
+        assertThatThrownBy(() -> builder.tokenLoadTimeout(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> builder.tokenLoadTimeout(Duration.ofNanos(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> builder.tokenLoadTimeoutMillis(-1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @ValueSource(booleans = { true, false })
     @ParameterizedTest

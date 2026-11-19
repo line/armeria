@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.athenz;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.math.LongMath.saturatedAdd;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -24,6 +25,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -32,6 +34,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class AthenzTokenClientBuilder implements TokenClientSetters<AthenzTokenClientBuilder> {
+
+    private static final long TOKEN_LOAD_TIMEOUT_BUFFER_MILLIS = 3000;
 
     private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(10);
 
@@ -46,6 +50,10 @@ public final class AthenzTokenClientBuilder implements TokenClientSetters<Athenz
 
     AthenzTokenClientBuilder(ZtsBaseClient ztsBaseClient) {
         this.ztsBaseClient = ztsBaseClient;
+    }
+
+    static long tokenLoadTimeoutMillis(WebClient webClient) {
+        return saturatedAdd(webClient.options().responseTimeoutMillis(), TOKEN_LOAD_TIMEOUT_BUFFER_MILLIS);
     }
 
     /**

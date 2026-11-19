@@ -44,6 +44,7 @@ import io.micrometer.core.instrument.Timer;
  *
  * <p>The acquired token is cached and automatically refreshed before it expires based on the specified
  * duration. If not specified, the default refresh duration is 10 minutes before the token expires.
+ * See {@link AthenzTokenClient} for the token loading timeout.
  *
  * <p>Example:
  * <pre>{@code
