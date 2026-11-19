@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
 
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.EventLoopGroup;
@@ -38,6 +39,25 @@ class EventLoopMetricsTest {
     @RegisterExtension
     static EventLoopGroupExtension eventLoopGroup =
             new EventLoopGroupExtension(2, ThreadFactories.newThreadFactory("block-me", false));
+
+    @Test
+    void closingOneBinderKeepsSharedEventLoopMetrics() {
+        final MeterRegistry registry = new SimpleMeterRegistry();
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("shared");
+        final EventLoopGroup workers = eventLoopGroup.get();
+        final Gauge workerCount;
+        try (CloseableMeterBinder first = MoreMeterBinders.eventLoopMetrics(workers, idPrefix)) {
+            first.bindTo(registry);
+            workerCount = registry.get("shared.event.loop.workers").gauge();
+            try (CloseableMeterBinder second = MoreMeterBinders.eventLoopMetrics(workers, idPrefix)) {
+                second.bindTo(registry);
+                assertThat(workerCount.value()).isEqualTo(2.0);
+            }
+
+            assertThat(workerCount.value()).isEqualTo(2.0);
+        }
+        assertThat(workerCount.value()).isZero();
+    }
 
     private class BlockMe extends CountDownLatch implements Runnable {
 

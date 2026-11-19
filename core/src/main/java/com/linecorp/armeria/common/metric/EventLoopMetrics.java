@@ -18,8 +18,8 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.Iterators;
 
@@ -66,7 +66,7 @@ public final class EventLoopMetrics extends AbstractCloseableMeterBinder {
      * An actual implementation of {@link EventLoopMetrics}.
      */
     static final class Self {
-        private final Set<EventLoopGroup> registry = ConcurrentHashMap.newKeySet(2);
+        private final ConcurrentMap<EventLoopGroup, Integer> registrations = new ConcurrentHashMap<>(2);
 
         Self(MeterRegistry parent, MeterIdPrefix idPrefix) {
 
@@ -78,19 +78,19 @@ public final class EventLoopMetrics extends AbstractCloseableMeterBinder {
         }
 
         void add(EventLoopGroup eventLoopGroup) {
-            registry.add(eventLoopGroup);
+            registrations.merge(eventLoopGroup, 1, Integer::sum);
         }
 
         void remove(EventLoopGroup eventLoopGroup) {
-            registry.remove(eventLoopGroup);
+            registrations.computeIfPresent(eventLoopGroup, (unused, count) -> count == 1 ? null : count - 1);
         }
 
         double numWorkers() {
             int result = 0;
-            for (EventLoopGroup group : registry) {
+            for (EventLoopGroup group : registrations.keySet()) {
                 // Purge event loop groups that were shutdown.
                 if (group.isShutdown()) {
-                    registry.remove(group);
+                    registrations.remove(group);
                     continue;
                 }
                 result += Iterators.size(group.iterator());
@@ -100,10 +100,10 @@ public final class EventLoopMetrics extends AbstractCloseableMeterBinder {
 
         double pendingTasks() {
             int result = 0;
-            for (EventLoopGroup group : registry) {
+            for (EventLoopGroup group : registrations.keySet()) {
                 // Purge event loop groups that were shutdown.
                 if (group.isShutdown()) {
-                    remove(group);
+                    registrations.remove(group);
                     continue;
                 }
                 for (EventExecutor eventLoop : group) {
