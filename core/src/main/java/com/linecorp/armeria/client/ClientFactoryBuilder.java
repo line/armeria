@@ -867,6 +867,29 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the maximum allowed age of a connection for keep-alive, and how a connection is replaced before
+     * it reaches that age.
+     *
+     * <pre>{@code
+     * ClientFactory.builder()
+     *              .maxConnectionAge(MaxConnectionAgeConfig.builder(Duration.ofHours(1))
+     *                                                      .replacementLeadTime(Duration.ofSeconds(5))
+     *                                                      .build())
+     *              .build();
+     * }</pre>
+     *
+     * @see MaxConnectionAgeConfigBuilder
+     */
+    @UnstableApi
+    public ClientFactoryBuilder maxConnectionAge(MaxConnectionAgeConfig maxConnectionAgeConfig) {
+        requireNonNull(maxConnectionAgeConfig, "maxConnectionAgeConfig");
+        maxConnectionAgeMillis(maxConnectionAgeConfig.maxConnectionAgeMillis());
+        option(ClientFactoryOptions.CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS,
+               maxConnectionAgeConfig.replacementLeadTimeMillis());
+        return this;
+    }
+
+    /**
      * Sets the maximum allowed number of requests that can be sent through one connection.
      * This option is disabled by default, which means unlimited.
      *

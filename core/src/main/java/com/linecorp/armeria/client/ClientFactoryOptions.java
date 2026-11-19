@@ -245,6 +245,16 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
     /**
+     * How long before a connection reaches its max age the client opens a replacement connection to the same
+     * endpoint, in milliseconds. {@code 0}, the default, disables the replacement.
+     *
+     * @see MaxConnectionAgeConfigBuilder#replacementLeadTimeMillis(long)
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Long> CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS =
+            ClientFactoryOption.define("CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS", 0L);
+
+    /**
      * The {@link OutlierDetection} which is used to detect unhealthy connections.
      * If an unhealthy connection is detected, it is disabled and a new connection will be created.
      * This option is disabled by default.
@@ -605,6 +615,17 @@ public final class ClientFactoryOptions
      */
     public long maxConnectionAgeMillis() {
         return get(MAX_CONNECTION_AGE_MILLIS);
+    }
+
+    /**
+     * Returns how long before a connection reaches its max age the client opens a replacement connection to
+     * the same endpoint, in milliseconds. {@code 0} means the replacement is disabled.
+     *
+     * @see #CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS
+     */
+    @UnstableApi
+    public long connectionReplacementLeadTimeMillis() {
+        return get(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS);
     }
 
     /**

@@ -30,8 +30,8 @@ final class Http1ServerKeepAliveHandler extends Http1KeepAliveHandler {
                                 long idleTimeoutMillis, long maxConnectionAgeMillis,
                                 int maxNumRequestsPerConnection) {
         super(channel, "server", keepAliveTimer, idleTimeoutMillis, /* pingIntervalMillis(unsupported) */ 0,
-              maxConnectionAgeMillis, maxNumRequestsPerConnection, false,
-              ConnectionEventListener.NOOP);
+              maxConnectionAgeMillis, /* replacementLeadTimeMillis(client-only) */ 0,
+              maxNumRequestsPerConnection, false, ConnectionEventListener.NOOP);
     }
 
     @Override

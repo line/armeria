@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -315,6 +316,55 @@ final class HttpChannelPool implements AsyncCloseable {
             connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
         }
         return promise;
+    }
+
+    /**
+     * Opens a new connection for {@code key} with no request behind it, so that requests move to it before
+     * an existing connection reaches its max age. Requests that find no acquirable channel meanwhile
+     * piggyback on the attempt as on any pending acquisition. For HTTP/2, a connection attempt already in
+     * progress for {@code key} is shared instead of opening another connection.
+     */
+    void connectReplacement(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+                            PoolKey key, boolean isMultiplex) {
+        assert eventLoop.inEventLoop();
+        if (closeable.isClosing()) {
+            return;
+        }
+        if (isMultiplex && hasPendingMultiplexAcquisition(desiredProtocol, key)) {
+            return;
+        }
+
+        final ChannelAcquisitionFuture promise = new ChannelAcquisitionFuture();
+        promise.handle((pch, cause) -> {
+            if (pch == null) {
+                logger.debug("Failed to open a replacement connection for {}", key, cause);
+                return null;
+            }
+            // A new connection reserves a response for the request that opened it, but a replacement has
+            // no such request.
+            HttpSession.get(pch.get()).decrementNumUnfinishedResponses();
+            if (!pch.protocol().isMultiplex()) {
+                // An HTTP/1 connection enters the pool when it is released.
+                pch.release();
+            }
+            return null;
+        });
+        connect(desiredProtocol, serializationFormat, key, promise, ClientConnectionTimings.builder());
+    }
+
+    private boolean hasPendingMultiplexAcquisition(SessionProtocol desiredProtocol, PoolKey key) {
+        if (getPendingAcquisition(desiredProtocol, key) != null) {
+            return true;
+        }
+        // getPendingAcquisition() finds an H2 or H2C attempt for HTTPS or HTTP, but not the reverse.
+        switch (desiredProtocol) {
+            case H2:
+                return pendingAcquisitions[SessionProtocol.HTTPS.ordinal()].get(key) != null;
+            case H2C:
+                return pendingAcquisitions[SessionProtocol.HTTP.ordinal()].get(key) != null;
+            default:
+                return false;
+        }
     }
 
     /**

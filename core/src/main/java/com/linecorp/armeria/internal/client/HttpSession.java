@@ -71,6 +71,9 @@ public interface HttpSession {
         }
 
         @Override
+        public void decrementNumUnfinishedResponses() {}
+
+        @Override
         public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                            HttpRequest req, DecodedHttpResponse res) {
             res.close(ClosedSessionException.get());
@@ -156,6 +159,8 @@ public interface HttpSession {
     boolean hasUnfinishedResponses();
 
     boolean incrementNumUnfinishedResponses();
+
+    void decrementNumUnfinishedResponses();
 
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                 HttpRequest req, DecodedHttpResponse res);
