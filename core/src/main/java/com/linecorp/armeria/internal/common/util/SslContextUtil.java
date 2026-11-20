@@ -72,10 +72,12 @@ public final class SslContextUtil {
             ImmutableSet.of(ApplicationProtocolNames.HTTP_1_1);
     public static final Consumer<? super SslContextBuilder> DEFAULT_NOOP_CUSTOMIZER = ignored -> {};
 
+    private static final String ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13 = "TLS_AES_128_GCM_SHA256";
+
     // OpenSSL's default enabled TLSv1.3 ciphers as documented at https://wiki.openssl.org/index.php/TLS1.3
     private static final List<String> TLS_V13_CIPHERS = ImmutableList.of("TLS_AES_256_GCM_SHA384",
                                                                          "TLS_CHACHA20_POLY1305_SHA256",
-                                                                         "TLS_AES_128_GCM_SHA256");
+                                                                         ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13);
 
     public static final Set<String> DEFAULT_CIPHERS = ImmutableSet.<String>builder()
                                                                   .addAll(TLS_V13_CIPHERS)
@@ -88,11 +90,15 @@ public final class SslContextUtil {
     private static final String MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE =
             "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_CIPHER_SUITE +
             " cipher suite enabled. It must be enabled for proper HTTP/2 support.";
+    private static final String MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE =
+            "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13 +
+            " cipher suite enabled. It must be enabled for proper HTTP/2 support.";
     private static final ImmutableSet<String> tlsVersion23 = ImmutableSet.of("TLSv1.3", "TLSv1.2");
     private static final ImmutableSet<String> tlsVersion2 = ImmutableSet.of("TLSv1.2");
 
     private static boolean warnedUnsupportedProtocols;
     private static boolean warnedMissingEssentialCipherSuite;
+    private static boolean warnedMissingEssentialCipherSuiteTls13;
     private static boolean warnedBadCipherSuite;
 
     public static SslContext toSslContext(ClientTlsSpec clientTlsSpec) {
@@ -101,12 +107,11 @@ public final class SslContextUtil {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(clientTlsSpec);
-                validateSslContext(clientTlsSpec.allowUnsafeCiphers(), sslContext);
+                return maybeWrap(sslContext, clientTlsSpec.allowUnsafeCiphers());
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
                 return Exceptions.throwUnsafely(e);
             }
-            return sslContext;
         });
     }
 
@@ -116,13 +121,24 @@ public final class SslContextUtil {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(serverTlsSpec);
-                validateSslContext(serverTlsSpec.allowUnsafeCiphers(), sslContext);
+                return maybeWrap(sslContext, serverTlsSpec.allowUnsafeCiphers());
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
                 return Exceptions.throwUnsafely(e);
             }
-            return sslContext;
         });
+    }
+
+    private static SslContext maybeWrap(SslContext sslContext, boolean allowUnsafeCiphers) {
+        final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
+        checkState(!ciphers.isEmpty(),
+                   "SSLContext has no cipher suites enabled. " +
+                   "You must specify at least one cipher suite.");
+        if (sslContext.applicationProtocolNegotiator().protocols()
+                      .contains(ApplicationProtocolNames.HTTP_2)) {
+            return Http2CipherValidatingSslContext.of(sslContext, allowUnsafeCiphers);
+        }
+        return sslContext;
     }
 
     private static SslContext toSslContext0(ClientTlsSpec clientTlsSpec) throws Exception {
@@ -175,16 +191,6 @@ public final class SslContextUtil {
         return filtered;
     }
 
-    private static void validateSslContext(boolean tlsAllowUnsafeCiphers, SslContext sslContext) {
-        final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
-        checkState(!ciphers.isEmpty(),
-                   "SSLContext has no cipher suites enabled. " +
-                   "You must specify at least one cipher suite.");
-        if (sslContext.applicationProtocolNegotiator().protocols().contains(ApplicationProtocolNames.HTTP_2)) {
-            validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers);
-        }
-    }
-
     public static void checkVersionsSupported(Set<String> protocols, SslProvider provider) {
         checkArgument(!protocols.isEmpty(), "protocols cannot be empty");
         final Set<String> supportedTlsVersions = supportedTlsVersions(provider);
@@ -202,15 +208,30 @@ public final class SslContextUtil {
         }
     }
 
-    static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers) {
-        if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
-            if (tlsAllowUnsafeCiphers) {
-                if (!warnedMissingEssentialCipherSuite) {
-                    warnedMissingEssentialCipherSuite = true;
-                    logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+    static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers,
+                                     Set<String> tlsProtocols) {
+        final boolean tls13Only = tlsProtocols.contains("TLSv1.3") && !tlsProtocols.contains("TLSv1.2");
+        if (tls13Only) {
+            if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13)) {
+                if (tlsAllowUnsafeCiphers) {
+                    if (!warnedMissingEssentialCipherSuiteTls13) {
+                        warnedMissingEssentialCipherSuiteTls13 = true;
+                        logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
+                    }
+                } else {
+                    throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
                 }
-            } else {
-                throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+            }
+        } else {
+            if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
+                if (tlsAllowUnsafeCiphers) {
+                    if (!warnedMissingEssentialCipherSuite) {
+                        warnedMissingEssentialCipherSuite = true;
+                        logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+                    }
+                } else {
+                    throw new IllegalStateException(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
+                }
             }
         }
 
