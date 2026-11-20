@@ -60,8 +60,6 @@ final class BootstrapSslContexts {
         try {
             http1OnlySslCtx = sslContextFactory.getOrCreate(http1OnlyTlsSpec);
             sslCtx = sslContextFactory.getOrCreate(defaultTlsSpec);
-            // Eagerly validate the HTTP/2 SSL context using a temporary engine so that
-            // configuration failures are surfaced fail-fast at ClientFactory build time.
             SSLEngine engine = null;
             try {
                 engine = sslCtx.newEngine(ByteBufAllocator.DEFAULT);

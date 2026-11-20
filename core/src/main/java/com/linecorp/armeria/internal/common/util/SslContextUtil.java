@@ -25,7 +25,6 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -73,10 +72,12 @@ public final class SslContextUtil {
             ImmutableSet.of(ApplicationProtocolNames.HTTP_1_1);
     public static final Consumer<? super SslContextBuilder> DEFAULT_NOOP_CUSTOMIZER = ignored -> {};
 
+    private static final String ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13 = "TLS_AES_128_GCM_SHA256";
+
     // OpenSSL's default enabled TLSv1.3 ciphers as documented at https://wiki.openssl.org/index.php/TLS1.3
     private static final List<String> TLS_V13_CIPHERS = ImmutableList.of("TLS_AES_256_GCM_SHA384",
                                                                          "TLS_CHACHA20_POLY1305_SHA256",
-                                                                         "TLS_AES_128_GCM_SHA256");
+                                                                         ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13);
 
     public static final Set<String> DEFAULT_CIPHERS = ImmutableSet.<String>builder()
                                                                   .addAll(TLS_V13_CIPHERS)
@@ -86,7 +87,6 @@ public final class SslContextUtil {
     public static final List<String> DEFAULT_PROTOCOLS = ImmutableList.of("TLSv1.3", "TLSv1.2");
 
     private static final String ESSENTIAL_HTTP2_CIPHER_SUITE = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
-    private static final String ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13 = "TLS_AES_128_GCM_SHA256";
     private static final String MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE =
             "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_CIPHER_SUITE +
             " cipher suite enabled. It must be enabled for proper HTTP/2 support.";
@@ -97,9 +97,9 @@ public final class SslContextUtil {
     private static final ImmutableSet<String> tlsVersion2 = ImmutableSet.of("TLSv1.2");
 
     private static boolean warnedUnsupportedProtocols;
-    private static final AtomicBoolean warnedMissingEssentialCipherSuite = new AtomicBoolean();
-    private static final AtomicBoolean warnedMissingEssentialCipherSuiteTls13 = new AtomicBoolean();
-    private static final AtomicBoolean warnedBadCipherSuite = new AtomicBoolean();
+    private static boolean warnedMissingEssentialCipherSuite;
+    private static boolean warnedMissingEssentialCipherSuiteTls13;
+    private static boolean warnedBadCipherSuite;
 
     public static SslContext toSslContext(ClientTlsSpec clientTlsSpec) {
         checkArgument(!clientTlsSpec.alpnProtocols().isEmpty(), "Specify at least one ALPN protocol.");
@@ -107,16 +107,7 @@ public final class SslContextUtil {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(clientTlsSpec);
-                final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
-                checkState(!ciphers.isEmpty(),
-                           "SSLContext has no cipher suites enabled. " +
-                           "You must specify at least one cipher suite.");
-                if (sslContext.applicationProtocolNegotiator().protocols()
-                              .contains(ApplicationProtocolNames.HTTP_2)) {
-                    return Http2CipherValidatingSslContext.of(sslContext,
-                                                              clientTlsSpec.allowUnsafeCiphers());
-                }
-                return sslContext;
+                return maybeWrap(sslContext, clientTlsSpec.allowUnsafeCiphers());
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
                 return Exceptions.throwUnsafely(e);
@@ -130,21 +121,24 @@ public final class SslContextUtil {
             SslContext sslContext = null;
             try {
                 sslContext = toSslContext0(serverTlsSpec);
-                final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
-                checkState(!ciphers.isEmpty(),
-                           "SSLContext has no cipher suites enabled. " +
-                           "You must specify at least one cipher suite.");
-                if (sslContext.applicationProtocolNegotiator().protocols()
-                              .contains(ApplicationProtocolNames.HTTP_2)) {
-                    return Http2CipherValidatingSslContext.of(sslContext,
-                                                              serverTlsSpec.allowUnsafeCiphers());
-                }
-                return sslContext;
+                return maybeWrap(sslContext, serverTlsSpec.allowUnsafeCiphers());
             } catch (Exception e) {
                 ReferenceCountUtil.release(sslContext);
                 return Exceptions.throwUnsafely(e);
             }
         });
+    }
+
+    private static SslContext maybeWrap(SslContext sslContext, boolean allowUnsafeCiphers) {
+        final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
+        checkState(!ciphers.isEmpty(),
+                   "SSLContext has no cipher suites enabled. " +
+                   "You must specify at least one cipher suite.");
+        if (sslContext.applicationProtocolNegotiator().protocols()
+                      .contains(ApplicationProtocolNames.HTTP_2)) {
+            return Http2CipherValidatingSslContext.of(sslContext, allowUnsafeCiphers);
+        }
+        return sslContext;
     }
 
     private static SslContext toSslContext0(ClientTlsSpec clientTlsSpec) throws Exception {
@@ -216,16 +210,12 @@ public final class SslContextUtil {
 
     static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers,
                                      Set<String> tlsProtocols) {
-        // When only TLS 1.3 is enabled, the mandatory HTTP/2 cipher suite from RFC 7540
-        // (TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) is not applicable because it is a TLS 1.2 cipher.
-        // Instead, TLS 1.3 requires TLS_AES_128_GCM_SHA256 (RFC 8446).
-        // If TLS 1.2 is enabled (either alone or alongside TLS 1.3), we still enforce
-        // the TLS 1.2 essential cipher suite for backwards compatibility.
         final boolean tls13Only = tlsProtocols.contains("TLSv1.3") && !tlsProtocols.contains("TLSv1.2");
         if (tls13Only) {
             if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE_TLS13)) {
                 if (tlsAllowUnsafeCiphers) {
-                    if (warnedMissingEssentialCipherSuiteTls13.compareAndSet(false, true)) {
+                    if (!warnedMissingEssentialCipherSuiteTls13) {
+                        warnedMissingEssentialCipherSuiteTls13 = true;
                         logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_TLS13_MESSAGE);
                     }
                 } else {
@@ -235,7 +225,8 @@ public final class SslContextUtil {
         } else {
             if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
                 if (tlsAllowUnsafeCiphers) {
-                    if (warnedMissingEssentialCipherSuite.compareAndSet(false, true)) {
+                    if (!warnedMissingEssentialCipherSuite) {
+                        warnedMissingEssentialCipherSuite = true;
                         logger.warn(MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE);
                     }
                 } else {
@@ -247,7 +238,8 @@ public final class SslContextUtil {
         for (String cipher : ciphers) {
             if (BAD_HTTP2_CIPHERS.contains(cipher)) {
                 if (tlsAllowUnsafeCiphers) {
-                    if (warnedBadCipherSuite.compareAndSet(false, true)) {
+                    if (!warnedBadCipherSuite) {
+                        warnedBadCipherSuite = true;
                         logger.warn(badCipherSuiteMessage(cipher));
                     }
                     break;

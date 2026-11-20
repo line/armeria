@@ -283,8 +283,7 @@ class ServerTlsProviderIntegrationTest {
                                                            .build();
                 ReferenceCountUtil.release(sslCtx);
                 return cipher;
-            } catch (Exception e) {
-                // Cipher not supported by the underlying TLS provider
+            } catch (Exception ignored) {
             }
         }
         return null;

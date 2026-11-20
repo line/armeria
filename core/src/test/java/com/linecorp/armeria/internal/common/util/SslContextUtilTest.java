@@ -126,7 +126,6 @@ class SslContextUtilTest {
         assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
                 .contains("TLSv1.3");
 
-        // When only TLS 1.3 is configured, TLS_AES_128_GCM_SHA256 is the essential cipher.
         final ClientFactory factory =
                 ClientFactory.builder()
                              .tlsCustomizer(builder -> {
@@ -142,8 +141,6 @@ class SslContextUtilTest {
         assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
                 .contains("TLSv1.3");
 
-        // When only TLS 1.3 is configured and TLS_AES_128_GCM_SHA256 is missing,
-        // it must throw an IllegalStateException mentioning the missing cipher.
         assertThatThrownBy(() -> {
             final ClientFactory factory =
                     ClientFactory.builder()
@@ -162,8 +159,6 @@ class SslContextUtilTest {
         assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
                 .contains("TLSv1.3");
 
-        // When allowUnsafeCiphers is true, omitting the essential TLS 1.3 cipher
-        // should warn instead of throwing.
         final ClientFactory factory =
                 ClientFactory.builder()
                              .tlsAllowUnsafeCiphers()
@@ -177,8 +172,6 @@ class SslContextUtilTest {
 
     @Test
     void tls12OnlyWithoutEssentialCipher() {
-        // When only TLS 1.2 is configured without TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-        // it must throw an IllegalStateException mentioning the TLS 1.2 cipher.
         assertThatThrownBy(() -> {
             final ClientFactory factory =
                     ClientFactory.builder()
@@ -197,7 +190,6 @@ class SslContextUtilTest {
         assumeThat(SslContextUtil.supportedTlsVersions(Flags.tlsEngineType().sslProvider()))
                 .contains("TLSv1.3");
 
-        // When both TLS 1.2 and TLS 1.3 are enabled, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 is still required.
         assertThatThrownBy(() -> {
             final ClientFactory factory =
                     ClientFactory.builder()
@@ -246,7 +238,6 @@ class SslContextUtilTest {
                              .ciphers(BAD_HTTP2_CIPHERS)
                              .build());
         try {
-            // Validation should not run in toSslContext, but when newEngine is called
             assertThatThrownBy(() -> {
                 final SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
                 ReferenceCountUtil.release(engine);
@@ -288,14 +279,12 @@ class SslContextUtilTest {
                              .ciphers(BAD_HTTP2_CIPHERS)
                              .build());
         try {
-            // First newEngine fails validation
             assertThatThrownBy(() -> {
                 final SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
                 ReferenceCountUtil.release(engine);
             }).isInstanceOf(IllegalStateException.class)
               .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
 
-            // Subsequent newEngine must also fail (not silently pass)
             assertThatThrownBy(() -> {
                 final SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
                 ReferenceCountUtil.release(engine);
@@ -322,12 +311,10 @@ class SslContextUtilTest {
                              .ciphers(BAD_HTTP2_CIPHERS)
                              .build());
         try {
-            // First newHandler call fails HTTP/2 cipher validation
             assertThatThrownBy(() -> sslContext.newHandler(ByteBufAllocator.DEFAULT))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
 
-            // Subsequent newHandler calls must continue to throw
             assertThatThrownBy(() -> sslContext.newHandler(ByteBufAllocator.DEFAULT))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
@@ -344,7 +331,6 @@ class SslContextUtilTest {
         }
         final Set<String> supported = SslContextUtil.supportedTlsVersions(engineType.sslProvider());
 
-        // TLS 1.3-only with essential cipher
         if (supported.contains("TLSv1.3")) {
             final ClientFactory factory =
                     ClientFactory.builder()
@@ -357,7 +343,6 @@ class SslContextUtilTest {
             factory.closeAsync();
         }
 
-        // TLS 1.3-only without essential cipher
         if (supported.contains("TLSv1.3")) {
             assertThatThrownBy(() -> {
                 final ClientFactory factory =
@@ -373,7 +358,6 @@ class SslContextUtilTest {
               .hasMessageContaining("TLS without the TLS_AES_128_GCM_SHA256 cipher suite enabled");
         }
 
-        // TLS 1.2-only without essential cipher
         assertThatThrownBy(() -> {
             final ClientFactory factory =
                     ClientFactory.builder()
@@ -387,7 +371,6 @@ class SslContextUtilTest {
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
 
-        // Both protocols without TLS 1.2 essential cipher
         if (supported.contains("TLSv1.3")) {
             assertThatThrownBy(() -> {
                 final ClientFactory factory =

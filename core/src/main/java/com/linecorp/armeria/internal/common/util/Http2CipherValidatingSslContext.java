@@ -29,10 +29,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
-/**
- * A {@link DelegatingSslContext} that validates HTTP/2 cipher requirements on {@link SSLEngine} creation.
- * This avoids allocating a dedicated, temporary {@link SSLEngine} during SSL context construction.
- */
 class Http2CipherValidatingSslContext extends DelegatingSslContext {
 
     static SslContext of(SslContext delegate, boolean tlsAllowUnsafeCiphers) {
@@ -44,7 +40,7 @@ class Http2CipherValidatingSslContext extends DelegatingSslContext {
 
     private final Set<String> ciphers;
     private final boolean tlsAllowUnsafeCiphers;
-    private volatile boolean validated;
+    private boolean validated;
 
     Http2CipherValidatingSslContext(SslContext delegate, boolean tlsAllowUnsafeCiphers) {
         super(delegate);
@@ -56,8 +52,6 @@ class Http2CipherValidatingSslContext extends DelegatingSslContext {
     protected void initEngine(SSLEngine engine) {
         if (!validated) {
             validate(engine);
-            // Mark validated only after a successful check so that a failure re-executes
-            // on subsequent engine creations and keeps throwing.
             validated = true;
         }
     }
@@ -67,17 +61,11 @@ class Http2CipherValidatingSslContext extends DelegatingSslContext {
             final Set<String> enabledProtocols = ImmutableSet.copyOf(engine.getEnabledProtocols());
             SslContextUtil.validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers, enabledProtocols);
         } catch (Throwable t) {
-            // Netty does not release newly created engines if initEngine throws, which would
-            // leak native memory for reference-counted engines (such as OpenSSL engines).
             ReferenceCountUtil.safeRelease(engine);
             Exceptions.throwUnsafely(t);
         }
     }
 
-    /**
-     * An {@link Http2CipherValidatingSslContext} that forwards {@link ReferenceCounted} operations
-     * to the underlying reference-counted delegate (e.g. ReferenceCountedOpenSslContext).
-     */
     private static final class ReferenceCountedHttp2CipherValidatingSslContext
             extends Http2CipherValidatingSslContext implements ReferenceCounted {
 
