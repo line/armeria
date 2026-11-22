@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -195,6 +196,7 @@ public final class AuthServiceBuilder {
      * if a handler is specified via {@link #onFailure(AuthFailureHandler)} or if an {@link Authorizer}
      * returns an {@link AuthorizationStatus} which has its own {@link AuthFailureHandler}.
      */
+    @UnstableApi
     public AuthServiceBuilder realm(String realm) {
         this.realm = requireNonNull(realm, "realm");
         return this;

@@ -25,10 +25,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.HttpService;
@@ -237,7 +239,13 @@ class AuthServiceRealmTest {
 
     @Test
     void challengeOnException() {
-        final AggregatedHttpResponse res = get("/exception");
+        // The authorizer is invoked only when a token is extracted, so send well-formed credentials.
+        final AggregatedHttpResponse res =
+                WebClient.builder(server.httpUri())
+                         .auth(AuthToken.ofBasic("brown", "cony"))
+                         .build()
+                         .blocking()
+                         .get("/exception");
         assertThat(res.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(res.headers().getAll(HttpHeaderNames.WWW_AUTHENTICATE))
                 .containsExactly("Basic realm=\"My Service\", charset=\"UTF-8\"");
