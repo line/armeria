@@ -239,11 +239,14 @@ class ServerTest {
                 .hasRootCauseInstanceOf(IOException.class);
 
         // A failed bind attempt must not leave a dangling boss group thread.
-        final long numBossThreads =
-                Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
-                      .filter(predicate)
-                      .count();
-        assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
+        // Netty completes the termination future before the boss thread exits, so wait for it.
+        await().untilAsserted(() -> {
+            final long numBossThreads =
+                    Arrays.stream(ManagementFactory.getThreadMXBean().dumpAllThreads(false, false))
+                          .filter(predicate)
+                          .count();
+            assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
+        });
     }
 
     private static void testInvocation0(String path) throws IOException, ParseException {
