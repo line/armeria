@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
@@ -161,6 +162,9 @@ class AuthServiceRealmTest {
     void noChallengeWithoutRealm() {
         final AggregatedHttpResponse res = get("/no-realm");
         assertThat(res.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        // Same response as before: a plain-text body.
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo(HttpStatus.UNAUTHORIZED.toHttpData().toStringUtf8());
         assertThat(res.headers().getAll(HttpHeaderNames.WWW_AUTHENTICATE)).isEmpty();
     }
 
@@ -168,6 +172,8 @@ class AuthServiceRealmTest {
     void basicChallenge() {
         final AggregatedHttpResponse res = get("/basic");
         assertThat(res.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo(HttpStatus.UNAUTHORIZED.toHttpData().toStringUtf8());
         assertThat(res.headers().getAll(HttpHeaderNames.WWW_AUTHENTICATE))
                 .containsExactly("Basic realm=\"My Service\", charset=\"UTF-8\"");
     }

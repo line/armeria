@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
@@ -255,20 +256,26 @@ public final class AuthServiceBuilder {
         if (failureHandler != null) {
             return failureHandler;
         }
-        final ResponseHeaders headers = unauthorizedHeaders(realm, ImmutableSet.copyOf(schemes));
+        final ResponseHeaders challenges = challenges(realm, ImmutableSet.copyOf(schemes));
         return (delegate, ctx, req, cause) -> {
             if (cause != null) {
                 AuthService.logger.warn("Unexpected exception during authorization.", cause);
             }
-            return HttpResponse.of(headers);
+            if (challenges == null) {
+                return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+            }
+            // Same body as HttpResponse.of(HttpStatus.UNAUTHORIZED) but with the challenges.
+            return HttpResponse.of(challenges, HttpStatus.UNAUTHORIZED.toHttpData());
         };
     }
 
-    private static ResponseHeaders unauthorizedHeaders(@Nullable String realm, Set<String> schemes) {
+    @Nullable
+    private static ResponseHeaders challenges(@Nullable String realm, Set<String> schemes) {
         if (realm == null || schemes.isEmpty()) {
-            return ResponseHeaders.of(HttpStatus.UNAUTHORIZED);
+            return null;
         }
         final ResponseHeadersBuilder builder = ResponseHeaders.builder(HttpStatus.UNAUTHORIZED);
+        builder.contentType(MediaType.PLAIN_TEXT_UTF_8);
         final String quotedRealm = '"' + realm.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
         for (String scheme : schemes) {
             final String challenge = scheme + " realm=" + quotedRealm;
