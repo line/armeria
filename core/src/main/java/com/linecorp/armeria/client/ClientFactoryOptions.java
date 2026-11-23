@@ -246,7 +246,9 @@ public final class ClientFactoryOptions
 
     /**
      * How long before a connection reaches its max age the client opens a replacement connection to the same
-     * endpoint, in milliseconds. {@code 0}, the default, disables the replacement.
+     * endpoint, in milliseconds. {@code 0}, the default, disables the replacement. It must not be greater
+     * than {@link #MAX_CONNECTION_AGE_MILLIS} unless the max age is disabled, or
+     * {@link ClientFactoryBuilder#build()} fails.
      *
      * @see MaxConnectionAgeConfigBuilder#replacementLeadTimeMillis(long)
      */

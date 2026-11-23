@@ -1133,6 +1133,14 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
+        // Check the final pair, because maxConnectionAgeMillis() or option() may change either value after
+        // maxConnectionAge(MaxConnectionAgeConfig) validated it. The lead time has no effect without a max
+        // age.
+        final long leadTimeMillis = newOptions.connectionReplacementLeadTimeMillis();
+        checkState(leadTimeMillis >= 0 &&
+                   (maxConnectionAgeMillis == 0 || leadTimeMillis <= maxConnectionAgeMillis),
+                   "connectionReplacementLeadTimeMillis: %s (expected: >= 0 and <= maxConnectionAgeMillis " +
+                   "(%s))", leadTimeMillis, maxConnectionAgeMillis);
         long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
         final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =

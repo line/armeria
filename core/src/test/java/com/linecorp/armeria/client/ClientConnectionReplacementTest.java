@@ -121,19 +121,28 @@ class ClientConnectionReplacementTest {
                         new SlowConnectHandler(2 * MAX_CONNECTION_AGE_MILLIS))));
         try (ClientFactory factory = builder.build()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(factory).build();
-            while (connections.closed() == 0) {
+            // Keep the connection busy until it closes, but no longer than the max age plus a tolerance.
+            final long deadlineNanos =
+                    System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(MAX_CONNECTION_AGE_MILLIS + 3000);
+            while (connections.closed() == 0 && System.nanoTime() < deadlineNanos) {
                 assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
                 Thread.sleep(20);
             }
+            assertThat(connections.closed()).as("the old connection must close at its max age").isOne();
 
             await().untilAsserted(() -> assertThat(connections.opened()).isEqualTo(2));
             final List<ConnectionEvent> events = connections.events();
-            final int first = events.get(0).localPort;
+            final ConnectionEvent firstOpened = events.get(0);
+            final ConnectionEvent firstClosed = events.get(1);
             final int replacement = events.get(2).localPort;
             assertThat(events)
                     .extracting(ConnectionEvent::toString)
-                    .as("the old connection closes at its max age without waiting for its replacement")
-                    .startsWith("opened " + first, "closed " + first, "opened " + replacement);
+                    .as("the old connection closes without waiting for its replacement")
+                    .startsWith("opened " + firstOpened.localPort, "closed " + firstOpened.localPort,
+                                "opened " + replacement);
+            assertThat(TimeUnit.NANOSECONDS.toMillis(firstClosed.nanoTime - firstOpened.nanoTime))
+                    .as("the old connection closes at its max age")
+                    .isBetween(MAX_CONNECTION_AGE_MILLIS - 500, MAX_CONNECTION_AGE_MILLIS + 1000);
         }
     }
 
@@ -314,6 +323,7 @@ class ClientConnectionReplacementTest {
 
         final boolean open;
         final int localPort;
+        final long nanoTime = System.nanoTime();
 
         ConnectionEvent(boolean open, int localPort) {
             this.open = open;

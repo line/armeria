@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientFactoryOptions.CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -59,6 +60,43 @@ class MaxConnectionAgeConfigTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> MaxConnectionAgeConfig.builder(1000).replacementLeadTimeMillis(-1))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsLeadTimeLongerThanTheFinalMaxAge() {
+        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
+                                                                    .replacementLeadTimeMillis(10_000)
+                                                                    .build();
+        // A later setter shortens the max age below the lead time.
+        assertThatThrownBy(() -> ClientFactory.builder()
+                                              .maxConnectionAge(config)
+                                              .maxConnectionAgeMillis(5000)
+                                              .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("connectionReplacementLeadTimeMillis");
+        // The option is set directly.
+        assertThatThrownBy(() -> ClientFactory.builder()
+                                              .maxConnectionAgeMillis(5000)
+                                              .option(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS, 10_000L)
+                                              .build())
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> ClientFactory.builder()
+                                              .option(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS, -1L)
+                                              .build())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void allowsLeadTimeWhenTheMaxAgeIsDisabledLater() {
+        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
+                                                                    .replacementLeadTimeMillis(10_000)
+                                                                    .build();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .maxConnectionAge(config)
+                                                  .maxConnectionAgeMillis(0)
+                                                  .build()) {
+            assertThat(factory.options().maxConnectionAgeMillis()).isZero();
+        }
     }
 
     @Test
