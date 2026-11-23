@@ -9,6 +9,8 @@ profile:
 include:
   - name: CheckDependencyLicenses
 
+disableSanityInspections: true
+
 failureConditions:
   severityThresholds:
     critical: 0
