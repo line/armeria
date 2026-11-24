@@ -42,14 +42,17 @@ final class RouteClusterFactory {
     private final Map<String, Any> routeFilterConfigs;
     @Nullable
     private final ClientDecoration retryDecoration;
+    private final RequestHeadersMutationChain mutationChain;
 
     RouteClusterFactory(SubscriptionContext context, HcmContext hcmContext,
                         Map<String, Any> routeFilterConfigs,
-                        @Nullable ClientDecoration retryDecoration) {
+                        @Nullable ClientDecoration retryDecoration,
+                        RequestHeadersMutationChain mutationChain) {
         this.context = context;
         this.hcmContext = hcmContext;
         this.routeFilterConfigs = routeFilterConfigs;
         this.retryDecoration = retryDecoration;
+        this.mutationChain = mutationChain;
     }
 
     SnapshotStream<RouteClusterResolver> resolve(Route route) {
@@ -66,6 +69,8 @@ final class RouteClusterFactory {
     private SnapshotStream<RouteClusterResolver> resolveCluster(RouteAction routeAction) {
         final String clusterName = routeAction.getCluster();
         final Metadata routeMetadataMatch = routeAction.getMetadataMatch();
+        final RequestHeadersMutator requestHeadersMutator =
+                computeFinalMutator(mutationChain, routeAction.getHostRewriteLiteral());
         final SnapshotStream<ClusterSnapshot> clusterStream =
                 w -> context.clusterManager().register(clusterName, context, w);
         final SnapshotStream<ClientDecoration> downstreamStream = hcmContext.downstream(routeFilterConfigs);
@@ -73,8 +78,9 @@ final class RouteClusterFactory {
         return SnapshotStream.combineLatest(
                 clusterStream, downstreamStream, upstreamStream,
                 (cs, down, up) -> {
-                    return RouteClusterResolver.ofSingle(new DefaultRouteCluster(cs, routeMetadataMatch,
-                                                                                 retryDecoration, down, up));
+                    return RouteClusterResolver.ofSingle(
+                            new DefaultRouteCluster(cs, routeMetadataMatch, requestHeadersMutator,
+                                                    retryDecoration, down, up));
                 });
     }
 
@@ -90,6 +96,11 @@ final class RouteClusterFactory {
             final int weight = clusterWeight.getWeight().getValue();
             checkArgument(weight > 0, "weighted cluster '%s' has a weight of 0", name);
             final Metadata mergedMetadata = mergeMetadata(routeMetadataMatch, clusterWeight.getMetadataMatch());
+            final RequestHeadersMutation wcMutation = RequestHeadersMutation.of(
+                    clusterWeight.getRequestHeadersToAddList(), clusterWeight.getRequestHeadersToRemoveList());
+            final RequestHeadersMutator requestHeadersMutator =
+                    computeFinalMutator(mutationChain, wcMutation, clusterWeight.getHostRewriteLiteral(),
+                                        routeAction.getHostRewriteLiteral());
             final SnapshotStream<ClusterSnapshot> clusterStream =
                     w -> context.clusterManager().register(name, context, w);
 
@@ -103,11 +114,31 @@ final class RouteClusterFactory {
                     clusterStream, downstreamStream, upstreamStream,
                     (clusterSnapshot, downstreamFilters, upstreamFilter) -> {
                         return new WeightedClusterSnapshot(clusterSnapshot, weight, mergedMetadata,
+                                                           requestHeadersMutator,
                                                            retryDecoration, downstreamFilters, upstreamFilter);
                     }));
         }
 
         return SnapshotStream.combineNLatest(wcStreams).map(RouteClusterResolver::ofWeighted);
+    }
+
+    private static RequestHeadersMutator computeFinalMutator(RequestHeadersMutationChain mutationChain,
+                                                             RequestHeadersMutation wcMutation,
+                                                             String weightedClusterHost, String routeHost) {
+        final String host = routeHost.isEmpty() ? weightedClusterHost : routeHost;
+        mutationChain = mutationChain.append(wcMutation);
+        return computeFinalMutator(mutationChain, host);
+    }
+
+    private static RequestHeadersMutator computeFinalMutator(RequestHeadersMutator base, String host) {
+        if (host.isEmpty()) {
+            return base;
+        }
+        return new CompositeRequestHeadersMutator(base, hostRewrite(host));
+    }
+
+    private static RequestHeadersMutator hostRewrite(String host) {
+        return headers -> headers.toBuilder().authority(host).build();
     }
 
     /**

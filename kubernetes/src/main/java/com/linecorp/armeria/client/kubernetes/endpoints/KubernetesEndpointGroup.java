@@ -884,9 +884,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         closed = true;
         closeResources();
         if (autoClose) {
-            client.close();
+            worker.execute(() -> {
+                try {
+                    client.close();
+                } finally {
+                    super.doCloseAsync(future);
+                }
+            });
+        } else {
+            super.doCloseAsync(future);
         }
-        super.doCloseAsync(future);
     }
 
     private void closeResources() {

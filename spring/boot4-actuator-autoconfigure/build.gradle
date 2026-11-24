@@ -36,6 +36,7 @@ SpringBuildUtil.copyMainSources(project(":spring:boot4-autoconfigure"), project)
     include '**/ArmeriaSettings.java'
     include '**/AthenzConfig.java'
     include '**/InternalServiceId.java'
+    include '**/InternalServiceIdUtil.java'
     include '**/SpringDependencyInjector.java'
     include '**/Ssl.java'
 }

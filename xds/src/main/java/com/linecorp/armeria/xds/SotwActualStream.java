@@ -52,7 +52,6 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     private final Node node;
 
     private final Map<XdsType, String> noncesMap = new EnumMap<>(XdsType.class);
-    private final Map<XdsType, String> lastAckedVersions = new EnumMap<>(XdsType.class);
     private boolean completed;
 
     SotwActualStream(SotwDiscoveryStub stub, AdsXdsStream owner,
@@ -72,14 +71,14 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
 
     void ackResponse(XdsType type, String versionInfo, String nonce) {
         noncesMap.put(type, nonce);
-        lastAckedVersions.put(type, versionInfo);
+        owner.lastAckedVersions().put(type, versionInfo);
         sendDiscoveryRequest(type, versionInfo, stateCoordinator().interestedResources(type),
                              nonce, null);
     }
 
     void nackResponse(XdsType type, String nonce, String errorDetail) {
         noncesMap.put(type, nonce);
-        eventLoop.schedule(() -> sendDiscoveryRequest(type, lastAckedVersions.get(type),
+        eventLoop.schedule(() -> sendDiscoveryRequest(type, owner.lastAckedVersions().get(type),
                                                       stateCoordinator().interestedResources(type), nonce,
                                                       errorDetail),
                            NACK_BACKOFF_MILLIS, TimeUnit.MILLISECONDS);
@@ -100,7 +99,7 @@ final class SotwActualStream implements StreamObserver<DiscoveryResponse>, AdsXd
     }
 
     private void sendDiscoveryRequest(XdsType type) {
-        sendDiscoveryRequest(type, lastAckedVersions.get(type),
+        sendDiscoveryRequest(type, owner.lastAckedVersions().get(type),
                              stateCoordinator().interestedResources(type), noncesMap.get(type), null);
     }
 

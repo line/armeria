@@ -31,6 +31,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
@@ -127,6 +129,19 @@ class UnaryServerCallTest {
         // messageRead is always called from the event loop.
         call.onRequestMessage(new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0), true);
         verify(listener, never()).onMessage(any());
+    }
+
+    @Test
+    void messageReadAfterCancellation() {
+        res.abort();
+        await().untilAsserted(() -> verify(listener).onCancel());
+
+        final ByteBuf buf = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(buf, 0), true);
+
+        verify(listener, never()).onMessage(any());
+        verify(listener, never()).onHalfClose();
+        assertThat(buf.refCnt()).isZero();
     }
 
     @Test
@@ -364,6 +379,12 @@ class UnaryServerCallTest {
             HttpResponse response,
             CompletableFuture<HttpResponse> resFuture,
             boolean unsafeWrapRequestBuffers) {
+        return newServerCall(response, resFuture, ctx, unsafeWrapRequestBuffers, null);
+    }
+
+    private static UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(
+            HttpResponse response, CompletableFuture<HttpResponse> resFuture,
+            ServiceRequestContext ctx, boolean unsafeWrapRequestBuffers, @Nullable Executor blockingExecutor) {
         return new UnaryServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
@@ -382,7 +403,7 @@ class UnaryServerCallTest {
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
                 exceptionHandler,
-                /* blockingExecutor */ null,
+                blockingExecutor,
                 /* autoCompress */ false,
                 /* useMethodMarshaller */ false,
                 /* enableEnvoyHttp1Bridge */ false);

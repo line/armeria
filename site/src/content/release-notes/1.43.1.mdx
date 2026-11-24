@@ -1,0 +1,33 @@
+---
+date: 2026-11-19
+---
+
+# v1.43.1
+
+## 🛠️ Bug fixes
+
+- HTTPS requests no longer hang indefinitely when a proxy disconnects during CONNECT
+  negotiation. #7140
+- Custom HTTP status responses now render correctly when [ServiceErrorHandler](type)s are
+  composed, instead of unexpectedly returning `500 Internal Server Error`. #7133
+- [EncodingService](type) now preserves existing `Vary` header values when compressing
+  responses, allowing shared caches to select the correct response variant. #7122
+- [EncodingService](type) now compresses JSON responses without a `charset` parameter by
+  default. This also applies to XML and JavaScript responses. #7121
+- [QueryParams](type) now replaces invalid four-byte UTF-8 sequences with `U+FFFD` when
+  parsing query strings, instead of producing unpaired surrogates. #7091
+- [WebSocketClient](type) no longer logs handshake validation failures as unexpected
+  exceptions at `WARN` level. #5420 #7082
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  '0x1306e6d',
+  'havefunatcode',
+  'ikhoon',
+  'jrhee17',
+  'kdomo',
+  'minwoox',
+  'sh-cho',
+  'trustin'
+]} />

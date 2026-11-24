@@ -56,6 +56,8 @@ public final class CoreBlockHoundIntegration implements BlockHoundIntegration {
                                          "parse");
         builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
         builder.allowBlockingCallsInside("io.netty.handler.codec.compression.Brotli", "<clinit>");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess",
+                                         "<clinit>");
 
         // a lock is held temporarily when adding workers
         builder.allowBlockingCallsInside("java.util.concurrent.ThreadPoolExecutor", "addWorker");

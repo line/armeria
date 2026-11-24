@@ -135,7 +135,7 @@ class OverriddenBuilderMethodsReturnTypeTest {
                 .setScanners(new SubTypesScanner())
                 .setMetadataAdapter(new JavaReflectionAdapter());
         final Reflections reflections = new Reflections(configuration);
-        return reflections.getStore().get(SubTypesScanner.class.getSimpleName()).values();
+        return reflections.getStore().values(SubTypesScanner.class.getSimpleName());
     }
 
     private static List<Method> overriddenMethods(Class<?> clazz) {

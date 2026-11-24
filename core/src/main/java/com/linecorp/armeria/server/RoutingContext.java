@@ -219,6 +219,33 @@ public interface RoutingContext {
     }
 
     /**
+     * Marks route selection as uncacheable because it depends on values that are not part of the route
+     * cache key, such as query parameters or arbitrary headers. This method must be called before
+     * evaluating such a condition, even if the condition rejects the route.
+     *
+     * <p>The mark is shared with contexts derived using {@link #withPath(String)} or
+     * {@link #withMethod(HttpMethod)} and cannot be cleared.
+     *
+     * <p>The default implementation does nothing and {@link #isRouteSelectionCacheable()} returns
+     * {@code false}, disabling route selection caching for implementations that do not track this state.
+     */
+    @UnstableApi
+    default void markRouteSelectionUncacheable() {}
+
+    /**
+     * Returns whether route selection may be cached. Once {@link #markRouteSelectionUncacheable()} is
+     * called, this method must return {@code false} for this context and its derived contexts.
+     * This state does not affect the context's equality or hash code.
+     *
+     * <p>The default implementation returns {@code false}. Implementations may return {@code true}
+     * initially if they also implement {@link #markRouteSelectionUncacheable()} to track the mark.
+     */
+    @UnstableApi
+    default boolean isRouteSelectionCacheable() {
+        return false;
+    }
+
+    /**
      * Returns {@code true} if a {@linkplain Routed routing result} is set.
      */
     @UnstableApi

@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
@@ -269,6 +270,25 @@ class ArmeriaMessageDeframerTest {
     }
 
     @Test
+    void deframe_compressedExactlyAtTheLimit() {
+        final byte[] payload = new byte[MAX_MESSAGE_SIZE];
+        final byte[] frame = GrpcTestUtil.compressedFrame(Unpooled.wrappedBuffer(payload));
+        final StreamMessage<DeframedMessage> deframed =
+                newDeframedStreamMessage(newStreamMessage(frame), false);
+
+        StepVerifier.create(deframed)
+                    .expectNextMatches(message -> {
+                        try (InputStream stream = message.stream()) {
+                            assertThat(ByteStreams.toByteArray(stream)).isEqualTo(payload);
+                        } catch (IOException e) {
+                            Exceptions.throwUnsafely(e);
+                        }
+                        return true;
+                    })
+                    .verifyComplete();
+    }
+
+    @Test
     void deframe_tooLargeUncompressed() {
         final SimpleRequest request = SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()
@@ -307,7 +327,12 @@ class ArmeriaMessageDeframerTest {
                     .expectNextMatches(message -> {
                         try (InputStream stream = message.stream()) {
                             assertThatThrownBy(() -> ByteStreams.toByteArray(stream))
-                                    .isInstanceOf(ArmeriaStatusException.class);
+                                    .isInstanceOfSatisfying(ArmeriaStatusException.class, cause -> {
+                                        assertThat(cause.getCode()).isEqualTo(StatusCodes.RESOURCE_EXHAUSTED);
+                                        assertThat(cause).hasMessageContaining(
+                                                "Compressed frame exceeds maximum frame size: " +
+                                                MAX_MESSAGE_SIZE + ". Bytes read: ");
+                                    });
                         } catch (IOException e) {
                             Exceptions.throwUnsafely(e);
                         }

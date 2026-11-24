@@ -948,6 +948,12 @@ public final class HttpHeaderNames {
     public static final AsciiString CDN_LOOP = create("CDN-Loop");
 
     /**
+     * The HTTP <a href="https://googlechrome.github.io/OriginTrials/#header">{@code
+     * on-prefetch-activation}</a> header field name.
+     */
+    public static final AsciiString ON_PREFETCH_ACTIVATION = create("on-prefetch-activation");
+
+    /**
      * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-form-factors">{@code
      * Sec-CH-UA-Form-Factors}</a> header field name.
      */

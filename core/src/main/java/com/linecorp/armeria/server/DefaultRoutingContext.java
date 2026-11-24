@@ -65,6 +65,8 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     private Routed<ServiceConfig> result;
 
+    private boolean routeSelectionCacheable = true;
+
     private final int hashCode;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
@@ -169,6 +171,16 @@ final class DefaultRoutingContext implements RoutingContext {
     @Override
     public HttpStatusException deferredStatusException() {
         return deferredCause;
+    }
+
+    @Override
+    public void markRouteSelectionUncacheable() {
+        routeSelectionCacheable = false;
+    }
+
+    @Override
+    public boolean isRouteSelectionCacheable() {
+        return routeSelectionCacheable;
     }
 
     @Override

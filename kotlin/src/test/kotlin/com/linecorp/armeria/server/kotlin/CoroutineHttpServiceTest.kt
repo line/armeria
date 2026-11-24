@@ -16,17 +16,22 @@
 
 package com.linecorp.armeria.server.kotlin
 
+import com.linecorp.armeria.common.HttpHeaderNames
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.server.Route
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class CoroutineHttpServiceTest {
     companion object {
@@ -47,6 +52,27 @@ class CoroutineHttpServiceTest {
                                 CoroutineName("my-coroutine-name")
                             },
                         )
+
+                    val decorator = CoroutineContextService.newDecorator { CoroutineName("my-coroutine-name") }
+                    sb
+                        .coroutineService("/ext") { _, _ ->
+                            assertContextPropagation()
+                            delay(1)
+                            HttpResponse.of("ext")
+                        }.coroutineService(Route.builder().path("/ext-route").build()) { _, _ ->
+                            assertContextPropagation()
+                            HttpResponse.of("ext-route")
+                        }.coroutineServiceUnder("/ext-prefix") { ctx, _ ->
+                            assertContextPropagation()
+                            HttpResponse.of(ctx.mappedPath())
+                        }.decorator(decorator)
+
+                    sb
+                        .virtualHost("foo.com")
+                        .coroutineService("/vhost") { _, _ ->
+                            assertContextPropagation()
+                            HttpResponse.of("vhost")
+                        }.decorator(decorator)
                 }
             }
 
@@ -63,4 +89,29 @@ class CoroutineHttpServiceTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK)
             assertThat(response.contentUtf8()).isEqualTo("hello world")
         }
+
+    @ParameterizedTest
+    @CsvSource(
+        "/ext, ext",
+        "/ext-route, ext-route",
+        "/ext-prefix/foo, /foo",
+    )
+    fun `Should serve services bound via coroutineService extensions`(
+        path: String,
+        expected: String,
+    ) {
+        val response = server.blockingWebClient().get(path)
+        assertThat(response.status()).isEqualTo(HttpStatus.OK)
+        assertThat(response.contentUtf8()).isEqualTo(expected)
+    }
+
+    @Test
+    fun `Should serve service bound via VirtualHostBuilder coroutineService`() {
+        val response =
+            server
+                .blockingWebClient { it.addHeader(HttpHeaderNames.AUTHORITY, "foo.com:${server.httpPort()}") }
+                .get("/vhost")
+        assertThat(response.status()).isEqualTo(HttpStatus.OK)
+        assertThat(response.contentUtf8()).isEqualTo("vhost")
+    }
 }

@@ -18,6 +18,10 @@ package com.linecorp.armeria.internal.common.thrift;
 
 import static java.util.Objects.requireNonNull;
 
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TProtocolException;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
@@ -31,6 +35,13 @@ abstract class AbstractTByteBufTransport extends TTransport {
 
     protected AbstractTByteBufTransport(ByteBuf buf) {
         this.buf = requireNonNull(buf, "buf");
+    }
+
+    // Also implements 'TTransport.checkReadBytesAvailable()' in Thrift 0.14.0+.
+    public final void checkReadBytesAvailable(long numBytes) throws TTransportException {
+        if (numBytes > buf.readableBytes()) {
+            throw new ReadBytesNotAvailableException(numBytes);
+        }
     }
 
     @Override
@@ -104,5 +115,75 @@ abstract class AbstractTByteBufTransport extends TTransport {
     @Override
     public void consumeBuffer(int len) {
         buf.skipBytes(len);
+    }
+
+    public TBinaryProtocol newBinaryProtocol(int maxStringLength, int maxContainerLength) {
+        // Thrift 0.14.0+ checks field lengths through the transport's 'checkReadBytesAvailable()' hook.
+        return new TBinaryProtocol(this, maxStringLength, maxContainerLength, false, true);
+    }
+
+    public TCompactProtocol newCompactProtocol(int maxStringLength, int maxContainerLength) {
+        return new TCompactProtocol(this, maxStringLength, maxContainerLength);
+    }
+
+    // Decodes the length as 'TBinaryProtocol.readI32()' does, without consuming the prefix.
+    final void checkBinaryReadLength(int maxStringLength) throws TException {
+        if (buf.readableBytes() < Integer.BYTES) {
+            return;
+        }
+
+        final int size = buf.getInt(buf.readerIndex());
+
+        if (size > buf.readableBytes() - Integer.BYTES) {
+            throw new ReadBytesNotAvailableException(size);
+        }
+
+        checkLength(size, maxStringLength);
+    }
+
+    // Mirrors the private 'TCompactProtocol.readVarint32()' method without consuming the prefix.
+    final void checkCompactReadLength(int maxStringLength) throws TException {
+        int size = 0;
+        int shift = 0;
+
+        for (int i = buf.readerIndex(); i < buf.writerIndex(); i++, shift += 7) {
+            final byte b = buf.getByte(i);
+            // Preserve upstream handling of varints longer than five bytes.
+            size |= (b & 0x7f) << shift;
+
+            if ((b & 0x80) == 0) {
+                if (size > buf.writerIndex() - i - 1) {
+                    throw new ReadBytesNotAvailableException(size);
+                }
+
+                checkLength(size, maxStringLength);
+                return;
+            }
+        }
+
+        throw new ReadBytesNotAvailableException(1);
+    }
+
+    static void checkLength(int size, int maxLength) throws TProtocolException {
+        if (maxLength > 0 && size > maxLength) {
+            throw new TProtocolException(TProtocolException.SIZE_LIMIT,
+                                         "Length exceeded max allowed: " + size);
+        }
+    }
+
+    static final class ReadBytesNotAvailableException extends TTransportException {
+
+        private static final long serialVersionUID = 8309037250242214731L;
+
+        private final long requestedBytes;
+
+        ReadBytesNotAvailableException(long requestedBytes) {
+            super("unexpected end of frame");
+            this.requestedBytes = requestedBytes;
+        }
+
+        long requestedBytes() {
+            return requestedBytes;
+        }
     }
 }

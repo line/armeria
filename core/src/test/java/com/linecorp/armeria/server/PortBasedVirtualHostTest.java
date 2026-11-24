@@ -38,28 +38,28 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class PortBasedVirtualHostTest {
 
-    private static int normalServerPort;
-    private static int virtualHostPort;
+    private static ServerPort normalServerPort;
+    private static ServerPort virtualHostPort;
     private static int fooHostPort;
 
     @RegisterExtension
     static ServerExtension serverWithPortMapping = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected int numAttemptsOnStartupFailure() {
+            return 5;
+        }
 
-            try (ServerSocket ss = new ServerSocket(0)) {
-                normalServerPort = ss.getLocalPort();
-            }
-            try (ServerSocket ss = new ServerSocket(0)) {
-                virtualHostPort = ss.getLocalPort();
-            }
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            normalServerPort = new ServerPort(0, SessionProtocol.HTTP);
+            virtualHostPort = new ServerPort(0, SessionProtocol.HTTP);
             try (ServerSocket ss = new ServerSocket(0)) {
                 fooHostPort = ss.getLocalPort();
             }
 
-            sb.http(normalServerPort)
-              .http(virtualHostPort)
-              .http(fooHostPort)
+            sb.http(fooHostPort)
+              .port(normalServerPort)
+              .port(virtualHostPort)
               .virtualHost("foo.com:" + fooHostPort)
               .service("/foo", (ctx, req) -> HttpResponse.of("foo with port"))
               .and()
@@ -78,8 +78,17 @@ class PortBasedVirtualHostTest {
     };
 
     @Test
+    void portsAreDistinct() {
+        assertThat(serverWithPortMapping.server().activePorts()).hasSize(3);
+        assertThat(normalServerPort.actualPort()).isPositive()
+                                                .isNotEqualTo(virtualHostPort.actualPort())
+                                                .isNotEqualTo(fooHostPort);
+        assertThat(virtualHostPort.actualPort()).isPositive().isNotEqualTo(fooHostPort);
+    }
+
+    @Test
     void testNormalPort() {
-        final WebClient client = WebClient.of("http://127.0.0.1:" + normalServerPort);
+        final WebClient client = WebClient.of("http://127.0.0.1:" + normalServerPort.actualPort());
         AggregatedHttpResponse response = client.get("/normal").aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("normal");
 
@@ -92,7 +101,7 @@ class PortBasedVirtualHostTest {
 
     @Test
     void testManagedPort() {
-        final WebClient client = WebClient.of("http://127.0.0.1:" + virtualHostPort);
+        final WebClient client = WebClient.of("http://127.0.0.1:" + virtualHostPort.actualPort());
         AggregatedHttpResponse response = client.get("/normal").aggregate().join();
         // Fallback to default virtual host
         assertThat(response.contentUtf8()).isEqualTo("normal");
@@ -139,7 +148,7 @@ class PortBasedVirtualHostTest {
                                                           unused -> MockAddressResolverGroup.localhost())
                                                   .build()) {
 
-            final WebClient client = WebClient.builder("http://foo.com:" + normalServerPort)
+            final WebClient client = WebClient.builder("http://foo.com:" + normalServerPort.actualPort())
                                               .factory(factory)
                                               .build();
             AggregatedHttpResponse response = client.get("/normal").aggregate().join();

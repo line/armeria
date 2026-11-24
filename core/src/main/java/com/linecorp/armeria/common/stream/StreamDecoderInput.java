@@ -57,7 +57,7 @@ public interface StreamDecoderInput extends SafeCloseable {
      * @throws IllegalStateException if the {@link #readableBytes()} is less than {@code 2} bytes.
      */
     default int readUnsignedShort() {
-        return (readByte() & 0xFF) << 8 | readByte();
+        return (readByte() & 0xFF) << 8 | (readByte() & 0xFF);
     }
 
     /**

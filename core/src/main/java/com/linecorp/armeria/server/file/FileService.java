@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
 
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
@@ -135,7 +137,7 @@ public final class FileService extends AbstractHttpService {
     private final FileServiceConfig config;
 
     @Nullable
-    private final Cache<PathAndEncoding, AggregatedHttpFile> cache;
+    private final Cache<PathAndEncoding, CachedHttpFile> cache;
 
     FileService(FileServiceConfig config) {
         this.config = requireNonNull(config, "config");
@@ -147,15 +149,13 @@ public final class FileService extends AbstractHttpService {
         }
     }
 
-    private static Cache<PathAndEncoding, AggregatedHttpFile> newCache(String cacheSpec) {
+    private static Cache<PathAndEncoding, CachedHttpFile> newCache(String cacheSpec) {
         final Caffeine<Object, Object> b = Caffeine.from(cacheSpec);
         b.recordStats()
-         .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
+         .removalListener((RemovalListener<PathAndEncoding, CachedHttpFile>) (key, value, cause) -> {
              if (value != null) {
-                 final HttpData data = value.content();
-                 if (data != null) {
-                     data.close();
-                 }
+                 // The cache is no longer an owner. A request still serving the entry keeps it alive.
+                 value.release();
              }
          });
         return b.build();
@@ -322,7 +322,7 @@ public final class FileService extends AbstractHttpService {
                                                        contentEncoding, config.headers(),
                                                        config.mediaTypeResolver());
 
-        return uncachedFile.readAttributes(readExecutor).thenApply(uncachedAttrs -> {
+        return uncachedFile.readAttributes(readExecutor).thenCompose(uncachedAttrs -> {
             if (cache == null) {
                 if (uncachedAttrs != null) {
                     if (decompress && encoding != null) {
@@ -330,45 +330,73 @@ public final class FileService extends AbstractHttpService {
                         final MediaType contentType =
                                 config.mediaTypeResolver()
                                       .guessFromPath(path, contentEncoding);
-                        return new DecompressingHttpFile(uncachedFile, encoding, contentType);
+                        return UnmodifiableFuture.completedFuture(
+                                new DecompressingHttpFile(uncachedFile, encoding, contentType));
                     } else {
-                        return uncachedFile;
+                        return UnmodifiableFuture.completedFuture(uncachedFile);
                     }
                 }
-                return null;
+                return UnmodifiableFuture.completedFuture(null);
             }
 
             final PathAndEncoding pathAndEncoding = new PathAndEncoding(path, contentEncoding);
             if (uncachedAttrs == null) {
                 // Non-existent file. Invalidate the cache just in case it existed before.
                 cache.invalidate(pathAndEncoding);
-                return null;
+                return UnmodifiableFuture.completedFuture(null);
             }
 
             if (uncachedAttrs.length() > config.maxCacheEntrySizeBytes()) {
                 // Invalidate the cache just in case the file was small previously.
                 cache.invalidate(pathAndEncoding);
-                return uncachedFile;
+                return UnmodifiableFuture.completedFuture(uncachedFile);
             }
 
-            @Nullable
-            final AggregatedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
-            if (cachedFile == null) {
-                // Cache miss. Add a new entry to the cache.
-                return cache(ctx, pathAndEncoding, uncachedFile, encoding, decompress);
-            }
+            return getOrCache(ctx, encoding, decompress, uncachedAttrs, pathAndEncoding,
+                              uncachedFile).handle((file, cause) -> {
+                if (cause != null) {
+                    logger.warn("{} Failed to cache a file: {}", ctx, uncachedFile, Exceptions.peel(cause));
+                    return uncachedFile;
+                }
+                if (file instanceof CachedHttpFile) {
+                    // Give up the ownership 'getOrCache()' handed to this request.
+                    ctx.log().whenComplete().thenRun(((CachedHttpFile) file)::release);
+                } else {
+                    // A decompressed file that grew beyond the cache limit is owned only by this request.
+                    final HttpData content = file.content();
+                    if (content != null) {
+                        ctx.log().whenComplete().thenRun(content::close);
+                    }
+                }
+                return file.toHttpFile();
+            });
+        });
+    }
 
+    private CompletableFuture<AggregatedHttpFile> getOrCache(ServiceRequestContext ctx,
+                                                             @Nullable ContentEncoding encoding,
+                                                             boolean decompress,
+                                                             HttpFileAttributes uncachedAttrs,
+                                                             PathAndEncoding pathAndEncoding,
+                                                             HttpFile uncachedFile) {
+        assert cache != null;
+        final CachedHttpFile cachedFile = cache.getIfPresent(pathAndEncoding);
+        if (cachedFile != null) {
             final HttpFileAttributes cachedAttrs = cachedFile.attributes();
             assert cachedAttrs != null;
-            if (cachedAttrs.equals(uncachedAttrs)) {
+            if (!cachedAttrs.equals(uncachedAttrs)) {
+                // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
+                cache.invalidate(pathAndEncoding);
+            } else if (cachedFile.tryRetain()) {
                 // Cache hit, and the cached file is up-to-date.
-                return cachedFile.toHttpFile();
+                return UnmodifiableFuture.completedFuture(cachedFile);
             }
+            // Otherwise the entry was evicted and released after the lookup above, which
+            // means it is gone from the cache already.
+        }
 
-            // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
-            cache.invalidate(pathAndEncoding);
-            return cache(ctx, pathAndEncoding, uncachedFile, encoding, decompress);
-        });
+        // Cache miss. Add a new entry to the cache.
+        return cache(ctx, pathAndEncoding, uncachedFile, encoding, decompress);
     }
 
     private CompletableFuture<@Nullable HttpFile> findFileWithIndexPath(
@@ -435,15 +463,15 @@ public final class FileService extends AbstractHttpService {
         });
     }
 
-    private HttpFile cache(ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile uncachedFile,
-                           @Nullable ContentEncoding encoding, boolean decompress) {
+    private CompletableFuture<AggregatedHttpFile> cache(
+            ServiceRequestContext ctx, PathAndEncoding pathAndEncoding, HttpFile uncachedFile,
+            @Nullable ContentEncoding encoding, boolean decompress) {
 
         assert cache != null;
-
         final Executor executor = ctx.blockingTaskExecutor();
         final ByteBufAllocator alloc = ctx.alloc();
 
-        return HttpFile.from(uncachedFile.aggregateWithPooledObjects(executor, alloc).thenApply(aggregated -> {
+        return uncachedFile.aggregateWithPooledObjects(executor, alloc).thenApply(aggregated -> {
             if (decompress && encoding != null) {
                 assert aggregated instanceof HttpDataFile;
                 aggregated = decompress((HttpDataFile) aggregated, encoding, alloc);
@@ -452,16 +480,15 @@ public final class FileService extends AbstractHttpService {
                 if (attrs.length() > config.maxCacheEntrySizeBytes()) {
                     // Invalidate the cache just in case the file was small previously.
                     cache.invalidate(pathAndEncoding);
-                    return aggregated.toHttpFile();
+                    return aggregated;
                 }
             }
 
-            cache.put(pathAndEncoding, aggregated);
-            return aggregated.toHttpFile();
-        }).exceptionally(cause -> {
-            logger.warn("{} Failed to cache a file: {}", ctx, uncachedFile, Exceptions.peel(cause));
-            return uncachedFile;
-        }));
+            // Owned by the cache it is published into and by the request it is returned to.
+            final CachedHttpFile cachedHttpFile = new CachedHttpFile(aggregated);
+            cache.put(pathAndEncoding, cachedHttpFile);
+            return cachedHttpFile;
+        });
     }
 
     private static HttpDataFile decompress(HttpDataFile compressed, ContentEncoding encoding,
@@ -607,6 +634,74 @@ public final class FileService extends AbstractHttpService {
         @Override
         public int hashCode() {
             return path.hashCode() * 31 + Objects.hashCode(contentEncoding);
+        }
+    }
+
+    private static final class CachedHttpFile implements AggregatedHttpFile {
+
+        private final AggregatedHttpFile delegate;
+        // The number of owners that still need the content, each of which calls 'release()' once:
+        //  - the cache, when the entry is evicted or replaced (see the removal listener)
+        //  - every request serving the entry, when its request log completes
+        // A new entry starts at 2 because 'cache()' publishes it and serves it at the same time.
+        // Reaching 0 closes the content for good, as 'tryRetain()' never raises the count back up.
+        private long refCnt = 2;
+
+        private CachedHttpFile(AggregatedHttpFile delegate) {
+            this.delegate = delegate;
+        }
+
+        // Returns false if the content was closed between the cache lookup and this call, in which
+        // case the caller has to fall back to a fresh entry.
+        synchronized boolean tryRetain() {
+            if (refCnt == 0) {
+                return false;
+            }
+            refCnt++;
+            return true;
+        }
+
+        synchronized void release() {
+            if (refCnt == 0) {
+                throw new IllegalStateException("released already");
+            }
+            if (--refCnt == 0) {
+                final HttpData content = delegate.content();
+                if (content != null) {
+                    content.close();
+                }
+            }
+        }
+
+        @Nullable
+        @Override
+        public HttpFileAttributes attributes() {
+            return delegate.attributes();
+        }
+
+        @Nullable
+        @Override
+        public ResponseHeaders headers() {
+            return delegate.headers();
+        }
+
+        @Nullable
+        @Override
+        public HttpData content() {
+            return delegate.content();
+        }
+
+        @Override
+        public HttpFile toHttpFile() {
+            return delegate.toHttpFile();
+        }
+
+        @Override
+        public synchronized String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("delegate", delegate)
+                              .add("refCnt", refCnt)
+                              .toString();
         }
     }
 }

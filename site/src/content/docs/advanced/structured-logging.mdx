@@ -13,7 +13,7 @@ retrieving the information collected during request life cycle in a machine-frie
 | <div style={{width: '13rem'}}>Property</div> | Description                                                                                                                                                                                                                                                                                              |
 | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `requestStartTimeMicros`                     | when the request processing started, in microseconds since the epoch (01-Jan-1970 00:00:00 UTC)                                                                                                                                                                                                          |
-| `requestDurationNanos`                       | the duration took to process the request completely                                                                                                                                                                                                                                                      |
+| `requestDurationNanos`                       | the duration took to process the request completely, including the connection acquisition on the client side                                                                                                                                                                                             |
 | `requestLength`                              | the byte length of the request content                                                                                                                                                                                                                                                                   |
 | `requestCause`                               | the cause of request processing failure (if any)                                                                                                                                                                                                                                                         |
 | `sessionProtocol`                            | the protocol of the connection (e.g. `H2C`)                                                                                                                                                                                                                                                              |
@@ -76,26 +76,27 @@ the [ResponseHeaders](type) is sent before the service receives the [HttpRequest
              Sending ResponseHeaders before the service fully receives the request
 ```
 
-On the other hand, `totalDurationNanos` of the client-side contains
+On the other hand, both `requestDurationNanos` and `totalDurationNanos` of the client-side contain
 [connectionAcquisitionDuration](/docs/advanced/structured-logging#client-connection-timing-properties),
 because a client may have to establish a new connection or acquire an existing connection from
-the connection pool before sending a request:
+the connection pool before sending a request. Use `requestFirstBytesTransferredTimeNanos` if you need
+the time when the client started to send [RequestHeaders](type):
 
 ```bob-svg
 
-   +------------------------------------------------------------------------------------------+
-   |<------------------------------------totalDurationNanos---------------------------------->|
-   +---------------------------+--------------------------------------------------------------+
-   |<--connectionAcquisition-->|
-   +---------------------------+  +--------------------------+
-                                  |<--requestDurationNanos-->|
-                                  +--------------------------+    +---------------------------+
-                                  ^                          ^    |<--responseDurationNanos-->|
-                                  :                          :    +---------------------------+
-                                  :                          :    ^                           ^
-                   Sending RequestHeaders   Sending the last frame:                           :
-                                                                  :                           :
-                                              Received ResponseHeaders  Received the last chunk
+   +----------------------------------------------------------------------------------------+
+   |<----------------------------------totalDurationNanos---------------------------------->|
+   +--------------------------------------------------------+-------------------------------+
+   |<-----------------requestDurationNanos----------------->|
+   +---------------------------+----------------------------+
+   |<--connectionAcquisition-->|                                +---------------------------+
+   +---------------------------+                                |<--responseDurationNanos-->|
+   ^                           ^                            ^   +---------------------------+
+   :                           :                            :   ^                           ^
+   :                           :                            :   :                           :
+Request started   Sending RequestHeaders  Sending the last frame:                           :
+                                                                :                           :
+                                                    Received ResponseHeaders     Received the last chunk
 ```
 
 :::tip
@@ -108,21 +109,20 @@ In the client-side, the response timeout scheduler starts by the first of the fo
 ```bob-svg
 
  +-------------------------------------------------------------------------------+
- |<-------------------------totalDurationNanos---------------------------------->|
- +----------------+--------------------------------------------------------------+
- |<--connection-->|
- +----------------+  +--------------------------+
-                     |<--requestDurationNanos-->|
-                     +--------------------------+    +---------------------------+
-                                                ^    |<--responseDurationNanos-->|
+ |<-----------------------------totalDurationNanos------------------------------>|
+ +----------------------------------------------+--------------------------------+
+ |<------------requestDurationNanos------------>|
+ +----------------+-----------------------------+
+ |<--connection-->|                                  +---------------------------+
+ +----------------+                             ^    |<--responseDurationNanos-->|
                                                 :    +---------------------------+
-                                 Response timeout scheduler starts
+                               Response timeout scheduler starts
                                       :
                                       v
-                     +------------------------------------------+
-                     |<----------requestDurationNanos---------->|
-                     +------------------------------------------+----------------+
-                                      |<-----------responseDurationNanos-------->|
+ +----------------------------------------------------------+
+ |<------------------requestDurationNanos------------------>|
+ +------------------------------------+---------------------+--------------------+
+                                      |<---------responseDurationNanos---------->|
                                       +------------------------------------------+
 
 ```

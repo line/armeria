@@ -95,7 +95,8 @@ export default class AnnotatedHttpTransport extends Transport {
     if (
       method.httpMethod === 'POST' ||
       method.httpMethod === 'PUT' ||
-      method.httpMethod === 'PATCH'
+      method.httpMethod === 'PATCH' ||
+      method.httpMethod === 'QUERY'
     ) {
       // Set content-type only for methods that usually have a body.
       hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);

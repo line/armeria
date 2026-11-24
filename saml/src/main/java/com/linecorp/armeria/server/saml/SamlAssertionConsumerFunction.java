@@ -72,6 +72,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
     private final SamlRequestIdManager requestIdManager;
     private final SamlSingleSignOnHandler ssoHandler;
     private final boolean signatureRequired;
+    private final int maxInflatedMessageLength;
     private final SamlAssertionIdCache assertionIdCache;
 
     SamlAssertionConsumerFunction(SamlAssertionConsumerConfig cfg, String entityId,
@@ -80,6 +81,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                                   SamlRequestIdManager requestIdManager,
                                   SamlSingleSignOnHandler ssoHandler,
                                   boolean signatureRequired,
+                                  int maxInflatedMessageLength,
                                   SamlAssertionIdCache assertionIdCache) {
         this.cfg = cfg;
         this.entityId = entityId;
@@ -88,6 +90,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         this.requestIdManager = requestIdManager;
         this.ssoHandler = ssoHandler;
         this.signatureRequired = signatureRequired;
+        this.maxInflatedMessageLength = maxInflatedMessageLength;
         this.assertionIdCache = assertionIdCache;
     }
 
@@ -101,7 +104,8 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             if (bindingProtocol == SamlBindingProtocol.HTTP_REDIRECT) {
                 messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_RESPONSE,
                                                                       idpConfigs, defaultIdpConfig,
-                                                                      signatureRequired);
+                                                                      signatureRequired,
+                                                                      maxInflatedMessageLength);
             } else {
                 messageContext = HttpPostBindingUtil.toSamlObject(req, SAML_RESPONSE);
             }

@@ -219,7 +219,7 @@ public class HttpServerNestedContextPathTest {
         TEST_URLS.put("/api/d3/e3/prefix-test/\"?\"",
                       StatusCodeAndBody.of(HttpStatus.OK, "200 OK"));
         TEST_URLS.put("/api/d3/e3/prefix-test/.\\",
-                      StatusCodeAndBody.of(HttpStatus.OK, "200 OK"));
+                      StatusCodeAndBody.of(HttpStatus.BAD_REQUEST, "ignore body"));
 
         TEST_URLS.put("/api/d3/e3/prefix-test/..",
                       StatusCodeAndBody.of(HttpStatus.BAD_REQUEST, "ignore body"));
@@ -326,7 +326,7 @@ public class HttpServerNestedContextPathTest {
         VIRTUAL_HOST_TEST_URLS.put("/k2/q2/prefix-match/\"?\"",
                                    StatusCodeAndBody.of(HttpStatus.OK, "200 OK"));
         VIRTUAL_HOST_TEST_URLS.put("/k2/q2/prefix-match/.\\",
-                                   StatusCodeAndBody.of(HttpStatus.OK, "200 OK"));
+                                   StatusCodeAndBody.of(HttpStatus.BAD_REQUEST, "ignore body"));
 
         VIRTUAL_HOST_TEST_URLS.put("/k2/q2/prefix-match/..",
                                    StatusCodeAndBody.of(HttpStatus.BAD_REQUEST, "ignore body"));

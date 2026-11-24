@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
@@ -23,8 +24,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
@@ -46,6 +51,8 @@ import com.linecorp.armeria.server.ServerBuilder;
  * A delegate that has common testing methods of {@link Server}.
  */
 public abstract class ServerRuleDelegate {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerRuleDelegate.class);
 
     private final AtomicReference<Server> server = new AtomicReference<>();
     private final boolean autoStart;
@@ -93,18 +100,44 @@ public abstract class ServerRuleDelegate {
             return oldServer;
         }
 
-        final ServerBuilder sb = Server.builder();
-        try {
-            configure(sb);
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to configure a Server", e);
+        final int numAttempts = numAttemptsOnStartupFailure();
+        checkArgument(numAttempts > 0, "numAttemptsOnStartupFailure: %s (expected: > 0)", numAttempts);
+        for (int attempt = 1;; attempt++) {
+            final ServerBuilder sb = Server.builder();
+            try {
+                configure(sb);
+            } catch (Exception e) {
+                throw new IllegalStateException("failed to configure a Server", e);
+            }
+
+            final Server server = sb.build();
+            try {
+                server.start().join();
+            } catch (CompletionException e) {
+                try {
+                    server.stop().join();
+                } catch (Exception stopCause) {
+                    e.addSuppressed(stopCause);
+                    throw e;
+                }
+                if (attempt == numAttempts) {
+                    throw e;
+                }
+                logger.warn("Failed to start a Server (attempt {}/{}). Retrying.", attempt, numAttempts, e);
+                continue;
+            }
+
+            this.server.set(server);
+            return server;
         }
+    }
 
-        final Server server = sb.build();
-        server.start().join();
-
-        this.server.set(server);
-        return server;
+    /**
+     * Returns the maximum number of startup attempts, including the initial attempt.
+     * Returns {@code 1} by default.
+     */
+    public int numAttemptsOnStartupFailure() {
+        return 1;
     }
 
     /**

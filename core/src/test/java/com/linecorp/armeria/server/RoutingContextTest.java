@@ -122,6 +122,36 @@ class RoutingContextTest {
         assertThat(ctx2.hashCode()).isEqualTo(ctx3.hashCode());
     }
 
+    @Test
+    void routeSelectionMarkIsSharedByDerivedContexts() {
+        final RoutingContext original = create("/items");
+        final RoutingContext wrapper = new RoutingContextWrapper(original);
+        final RoutingContext withPath = wrapper.withPath("/other");
+        final RoutingContext withMethod = wrapper.withMethod(HttpMethod.POST);
+        final RoutingContext nested = withPath.withMethod(HttpMethod.PUT).withPath("/nested");
+
+        assertThat(original.isRouteSelectionCacheable()).isTrue();
+        nested.markRouteSelectionUncacheable();
+        assertThat(original.isRouteSelectionCacheable()).isFalse();
+        assertThat(wrapper.isRouteSelectionCacheable()).isFalse();
+        assertThat(withPath.isRouteSelectionCacheable()).isFalse();
+        assertThat(withMethod.isRouteSelectionCacheable()).isFalse();
+        original.markRouteSelectionUncacheable();
+        assertThat(nested.isRouteSelectionCacheable()).isFalse();
+        assertThat(create(original.virtualHost(), "/items", null).isRouteSelectionCacheable()).isTrue();
+    }
+
+    @Test
+    void routeSelectionMarkDoesNotChangeCacheKey() {
+        final VirtualHost virtualHost = virtualHost();
+        final RoutingContext marked = create(virtualHost, "/items", null);
+        final RoutingContext other = create(virtualHost, "/items", "itemIds=123");
+        final int hashCode = marked.hashCode();
+        marked.markRouteSelectionUncacheable();
+        assertThat(marked).isEqualTo(other);
+        assertThat(marked.hashCode()).isEqualTo(hashCode).isEqualTo(other.hashCode());
+    }
+
     static RoutingContext create(String path) {
         return create(path, null);
     }

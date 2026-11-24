@@ -15,7 +15,7 @@
  */
 
 import Typography from '@material-ui/core/Typography';
-import React, { SetStateAction } from 'react';
+import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
 import Button from '@material-ui/core/Button';
@@ -33,6 +33,7 @@ import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 import { GRAPHQL_HTTP_MIME_TYPE } from '../../lib/transports/grahpql-http';
 import { TTEXT_MIME_TYPE } from '../../lib/transports/thrift';
 import { GRPC_UNFRAMED_MIME_TYPE } from '../../lib/transports/grpc-unframed';
+import { DocServiceSettings } from '../../lib/settings';
 import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
@@ -46,6 +47,7 @@ import ReturnType from './ReturnType';
 interface OwnProps {
   specification: Specification;
   jsonSchemas: any;
+  docServiceSettings: DocServiceSettings;
 }
 
 function getExampleHeaders(
@@ -122,6 +124,7 @@ const requestBodyAllowedHttpMethods: string[] = [
   'PUT',
   'PATCH',
   'DELETE',
+  'QUERY',
 ];
 
 function needsToUseRequestBody(httpMethod: string) {
@@ -136,36 +139,26 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
-  const [debugFormIsOpen, setDebugFormIsOpenState] = React.useState(false);
-
   const { location, history } = props;
-  const setDebugFormIsOpen: React.Dispatch<SetStateAction<boolean>> =
-    React.useCallback(
-      (value) => {
-        const valueToSet =
-          value instanceof Function ? value(debugFormIsOpen) : value;
-        const urlParams = new URLSearchParams(location.search);
-        if (valueToSet === true) {
-          urlParams.set('debug_form_is_open', `${valueToSet}`);
-        } else {
-          urlParams.delete('debug_form_is_open');
-        }
+  const debugFormIsOpen =
+    new URLSearchParams(location.search).get('debug_form_is_open') === 'true';
+  const setDebugFormIsOpen = React.useCallback(
+    (open: boolean) => {
+      const urlParams = new URLSearchParams(location.search);
+      if (open) {
+        urlParams.set('debug_form_is_open', 'true');
+      } else {
+        urlParams.delete('debug_form_is_open');
+      }
 
-        const serializedParams = `?${urlParams.toString()}`;
-        if (serializedParams !== location.search) {
-          history.push(`${location.pathname}${serializedParams}`);
-        }
-
-        return setDebugFormIsOpenState(valueToSet);
-      },
-      [
-        debugFormIsOpen,
-        setDebugFormIsOpenState,
-        history,
-        location.search,
-        location.pathname,
-      ],
-    );
+      const serializedSearch = urlParams.toString();
+      const serializedParams = serializedSearch ? `?${serializedSearch}` : '';
+      if (serializedParams !== location.search) {
+        history.push(`${location.pathname}${serializedParams}`);
+      }
+    },
+    [history, location.search, location.pathname],
+  );
 
   const params = props.match.params;
   const service = props.specification.getServiceByName(params.serviceName);
@@ -286,6 +279,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           debugFormIsOpen={debugFormIsOpen}
           setDebugFormIsOpen={setDebugFormIsOpen}
           docServiceRoute={props.specification.getDocServiceRoute()}
+          sensitiveHeaders={props.docServiceSettings.sensitiveHeaders}
         />
       )}
     </>

@@ -34,7 +34,12 @@ import MenuIcon from '@material-ui/icons/Menu';
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { hot } from 'react-hot-loader/root';
-import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
+import {
+  Redirect,
+  Route,
+  RouteComponentProps,
+  withRouter,
+} from 'react-router-dom';
 
 import EnumPage from '../EnumPage';
 import HomePage from '../HomePage';
@@ -56,6 +61,7 @@ import {
   Version,
   Versions,
 } from '../../lib/versions';
+import { DocServiceSettings } from '../../lib/settings';
 import { SpecLoadingStatus } from '../../lib/types';
 import LoadingContainer from '../../components/LoadingContainer';
 
@@ -138,6 +144,12 @@ const useStyles = makeStyles((theme: Theme) =>
     },
     httpMethodTrace: {
       background: '#5d12ec',
+    },
+    httpMethodQuery: {
+      background: '#0f9d8f',
+    },
+    httpMethodUnknown: {
+      background: '#757575',
     },
     mainHeader: {
       textDecoration: 'none',
@@ -409,12 +421,14 @@ interface RouterServicesProps {
   versions: Versions | undefined;
   specification: Specification;
   jsonSchemas: any;
+  docServiceSettings: DocServiceSettings;
 }
 
 const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
   versions,
   specification,
   jsonSchemas,
+  docServiceSettings,
 }) => {
   return (
     <div>
@@ -438,6 +452,7 @@ const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
             {...p}
             specification={specification}
             jsonSchemas={jsonSchemas}
+            docServiceSettings={docServiceSettings}
           />
         )}
       />
@@ -473,6 +488,10 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [specLoadingStatus, setSpecLoadingStatus] = useState<SpecLoadingStatus>(
     SpecLoadingStatus.INITIALIZED,
   );
+  const [docServiceSettings, setDocServiceSettings] =
+    useState<DocServiceSettings>({
+      sensitiveHeaders: [],
+    });
   const [versions, setVersions] = useState<Versions | undefined>();
   const [openServices, toggleOpenService] = useReducer(
     (current: OpenServices, serviceName: string) => ({
@@ -519,6 +538,22 @@ const App: React.FunctionComponent<Props> = (props) => {
       } catch (e) {
         // Ignore the error and continue
         setJsonSchemas({});
+      }
+
+      try {
+        const settingsResponse = await fetch('settings.json');
+        if (!settingsResponse.ok) {
+          throw new Error(
+            `Failed to load settings: ${settingsResponse.status}`,
+          );
+        }
+        const settingsData: DocServiceSettings = await settingsResponse.json();
+        setDocServiceSettings({
+          sensitiveHeaders: settingsData.sensitiveHeaders ?? ['authorization'],
+        });
+      } catch (e) {
+        // Ignore the error and default to redacting the authorization header.
+        setDocServiceSettings({ sensitiveHeaders: ['authorization'] });
       }
 
       setSpecLoadingStatus(SpecLoadingStatus.SUCCESS);
@@ -583,9 +618,13 @@ const App: React.FunctionComponent<Props> = (props) => {
       if (httpMethod === 'TRACE') {
         methodClass = classes.httpMethodTrace;
       }
+      if (httpMethod === 'QUERY') {
+        methodClass = classes.httpMethodQuery;
+      }
 
       if (methodClass === undefined) {
-        throw new Error(`unsupported http method: ${httpMethod}`);
+        // Use a neutral color instead of failing to render the whole page.
+        methodClass = classes.httpMethodUnknown;
       }
       return `${classes.httpMethodCommon} ${methodClass}`;
     },
@@ -597,16 +636,14 @@ const App: React.FunctionComponent<Props> = (props) => {
     const redirectPath = `/methods${pathname.substring(
       pathname.indexOf('/', 2),
     )}`;
-    props.history.push(`${redirectPath}${search || ''}`);
-    return null;
+    return <Redirect to={`${redirectPath}${search || ''}`} />;
   }
   if (pathname.startsWith('/namedType')) {
     const name = pathname.substring(pathname.indexOf('/', 2) + 1);
     const redirectBase = specification.getStructByName(name)
       ? '/structs/'
       : '/enums/';
-    props.history.push(`${redirectBase}${name}${search || ''}`);
-    return null;
+    return <Redirect to={`${redirectBase}${name}${search || ''}`} />;
   }
 
   return (
@@ -694,6 +731,7 @@ const App: React.FunctionComponent<Props> = (props) => {
             versions={versions}
             specification={specification}
             jsonSchemas={jsonSchemas}
+            docServiceSettings={docServiceSettings}
           />
         </LoadingContainer>
       </main>

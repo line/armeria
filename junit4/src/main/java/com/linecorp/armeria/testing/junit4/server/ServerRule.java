@@ -62,6 +62,11 @@ public abstract class ServerRule extends ExternalResource {
     protected ServerRule(boolean autoStart) {
         delegate = new ServerRuleDelegate(autoStart) {
             @Override
+            public int numAttemptsOnStartupFailure() {
+                return ServerRule.this.numAttemptsOnStartupFailure();
+            }
+
+            @Override
             public void configure(ServerBuilder sb) throws Exception {
                 ServerRule.this.configure(sb);
             }
@@ -110,6 +115,18 @@ public abstract class ServerRule extends ExternalResource {
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
     protected abstract void configure(ServerBuilder sb) throws Exception;
+
+    /**
+     * Returns the maximum number of startup attempts, including the initial attempt. Returns {@code 1}
+     * by default. Each retry calls {@link #configure(ServerBuilder)} with a new builder.
+     * Configuration and build failures are not retried.
+     *
+     * @return a positive number of startup attempts
+     */
+    @UnstableApi
+    protected int numAttemptsOnStartupFailure() {
+        return 1;
+    }
 
     /**
      * Configures the {@link WebClient} with the given {@link WebClientBuilder}.

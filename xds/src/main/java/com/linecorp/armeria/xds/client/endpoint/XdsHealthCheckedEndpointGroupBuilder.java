@@ -16,19 +16,23 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntPredicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientTlsSpec;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHttpHealthChecker;
@@ -37,6 +41,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
 import io.envoyproxy.envoy.config.endpoint.v3.Endpoint.HealthCheckConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
+import io.envoyproxy.envoy.type.v3.Int64Range;
 
 final class XdsHealthCheckedEndpointGroupBuilder
         extends AbstractHealthCheckedEndpointGroupBuilder<XdsHealthCheckedEndpointGroupBuilder> {
@@ -45,12 +50,25 @@ final class XdsHealthCheckedEndpointGroupBuilder
 
     private final Cluster cluster;
     private final HttpHealthCheck httpHealthCheck;
+    @Nullable
+    private final ClientTlsSpec healthCheckTlsSpec;
+    private final IntPredicate expectedStatuses;
 
     XdsHealthCheckedEndpointGroupBuilder(EndpointGroup delegate, Cluster cluster,
-                                         HttpHealthCheck httpHealthCheck) {
+                                         HttpHealthCheck httpHealthCheck,
+                                         @Nullable ClientTlsSpec healthCheckTlsSpec) {
         super(delegate);
         this.cluster = cluster;
         this.httpHealthCheck = httpHealthCheck;
+        expectedStatuses = toExpectedStatuses(httpHealthCheck);
+        this.healthCheckTlsSpec = healthCheckTlsSpec;
+        if (healthCheckTlsSpec != null) {
+            final ClientTlsSpec tlsSpec = healthCheckTlsSpec;
+            withClientOptions(opts -> opts.decorator((delegate1, ctx, req) -> {
+                ctx.setClientTlsSpec(tlsSpec);
+                return delegate1.execute(ctx, req);
+            }));
+        }
     }
 
     @Override
@@ -68,7 +86,7 @@ final class XdsHealthCheckedEndpointGroupBuilder
             final DefaultHttpHealthChecker checker =
                     new DefaultHttpHealthChecker(ctx, endpoint(healthCheckConfig, ctx.originalEndpoint()),
                                                  path, httpMethod(httpHealthCheck) == HttpMethod.GET,
-                                                 protocol(cluster), host);
+                                                 SessionProtocol.HTTP, host, expectedStatuses);
             checker.start();
             return checker;
         };
@@ -84,14 +102,20 @@ final class XdsHealthCheckedEndpointGroupBuilder
         return method;
     }
 
-    private static SessionProtocol protocol(Cluster cluster) {
-        // Not using httpHealthCheck.getCodecClientType() because
-        // HTTP[S] covers both HTTP/1 and HTTP/2.
-        if (EndpointUtil.isTls(cluster)) {
-            return SessionProtocol.HTTPS;
-        } else {
-            return SessionProtocol.HTTP;
+    private static IntPredicate toExpectedStatuses(HttpHealthCheck httpHealthCheck) {
+        final List<Int64Range> ranges = httpHealthCheck.getExpectedStatusesList();
+        if (ranges.isEmpty()) {
+            // Envoy default: 200 only
+            return statusCode -> statusCode == 200;
         }
+        return statusCode -> {
+            for (Int64Range range : ranges) {
+                if (statusCode >= range.getStart() && statusCode < range.getEnd()) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     private static Endpoint endpoint(HealthCheckConfig healthCheckConfig, Endpoint endpoint) {

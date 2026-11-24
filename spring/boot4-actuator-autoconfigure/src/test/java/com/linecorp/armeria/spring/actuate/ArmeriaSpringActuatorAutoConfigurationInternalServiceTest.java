@@ -39,10 +39,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
 import com.linecorp.armeria.spring.InternalServices;
+import com.linecorp.armeria.spring.RetryableArmeriaServerGracefulShutdownLifecycle;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
 
 import jakarta.inject.Inject;
@@ -355,6 +357,42 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     }
 
     @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "excludeInternalServices" })
+    @DirtiesContext
+    @EnableTestMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(30)
+    static class ExcludeInternalServicesTest {
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeExcludedInternalServicesToAllPorts() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.ALL);
+            assertThat(settings.getInternalServices().getExclude()).containsExactly(InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int internalServiceStatus = internalServicePort.getPort() == port ? 200 : 404;
+                      assertActuatorStatus(port, 200);
+                      assertStatus(port, settings.getHealthCheckPath(), 200);
+
+                      assertStatus(port, settings.getMetricsPath(), internalServiceStatus);
+                      assertStatus(port, settings.getDocsPath(), internalServiceStatus);
+                  });
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "managementLocalhostTest" })
     @DirtiesContext
     @EnableTestMetrics
@@ -362,12 +400,19 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(30)
     static class ManagementLocalhostTest {
+        @Inject
+        private ArmeriaServerSmartLifecycle lifecycle;
         @LocalManagementPort
         private Integer actuatorPort;
         @Inject
         private ArmeriaSettings settings;
         @Inject
         private InternalServices internalServices;
+
+        @Test
+        void usesRetryableServerLifecycle() {
+            assertThat(lifecycle).isInstanceOf(RetryableArmeriaServerGracefulShutdownLifecycle.class);
+        }
 
         @Test
         void bindToLocalhost() throws Exception {

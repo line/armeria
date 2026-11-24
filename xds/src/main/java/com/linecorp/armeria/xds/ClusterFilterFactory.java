@@ -28,21 +28,17 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.PreClient;
 import com.linecorp.armeria.client.PreClientRequestContext;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.RpcPreprocessor;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 import com.linecorp.armeria.xds.client.endpoint.XdsLoadBalancer;
 import com.linecorp.armeria.xds.internal.DelegatingHttpClient;
-import com.linecorp.armeria.xds.internal.DelegatingRpcClient;
 import com.linecorp.armeria.xds.internal.XdsCommonUtil;
 import com.linecorp.armeria.xds.internal.XdsEndpoint;
 
@@ -66,13 +62,10 @@ final class ClusterFilterFactory {
     static final ClientDecoration DECORATION =
             ClientDecoration.builder()
                             .add(ClusterFilterFactory::applyHttpClusterSettings)
-                            .addRpc(ClusterFilterFactory::applyRpcClusterSettings)
                             .build();
 
     private static final HttpClient CLUSTER_ONLY_HTTP_CLIENT =
             DECORATION.decorate(DelegatingHttpClient.of());
-    private static final RpcClient CLUSTER_ONLY_RPC_CLIENT =
-            DECORATION.rpcDecorate(DelegatingRpcClient.of());
 
     private final XdsEndpointGroup endpointGroup;
     private final SessionProtocol sessionProtocol;
@@ -109,15 +102,9 @@ final class ClusterFilterFactory {
         if (ctxExt != null) {
             final HttpClient httpClient = routeCluster != null ?
                                           routeCluster.httpClient() : CLUSTER_ONLY_HTTP_CLIENT;
-            final RpcClient rpcClient = routeCluster != null ?
-                                        routeCluster.rpcClient() : CLUSTER_ONLY_RPC_CLIENT;
             ctxExt.httpClientCustomizer(actualClient -> {
                 DelegatingHttpClient.setDelegate(ctx, actualClient);
                 return httpClient;
-            });
-            ctxExt.rpcClientCustomizer(actualClient -> {
-                DelegatingRpcClient.setDelegate(ctx, actualClient);
-                return rpcClient;
             });
         }
         return delegate.execute(ctx, req);
@@ -127,12 +114,6 @@ final class ClusterFilterFactory {
 
     private static HttpResponse applyHttpClusterSettings(
             HttpClient delegate, ClientRequestContext ctx, HttpRequest req) throws Exception {
-        applyClusterSettings(ctx);
-        return delegate.execute(ctx, req);
-    }
-
-    private static RpcResponse applyRpcClusterSettings(
-            RpcClient delegate, ClientRequestContext ctx, RpcRequest req) throws Exception {
         applyClusterSettings(ctx);
         return delegate.execute(ctx, req);
     }

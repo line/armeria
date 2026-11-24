@@ -17,7 +17,6 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.core.v3.Metadata;
@@ -45,7 +44,7 @@ public interface RouteCluster {
     HttpClient httpClient();
 
     /**
-     * Returns the pre-built {@link RpcClient} chain for this route.
+     * Returns the {@link RequestHeadersMutator} for mutating request headers.
      */
-    RpcClient rpcClient();
+    RequestHeadersMutator requestHeadersMutator();
 }

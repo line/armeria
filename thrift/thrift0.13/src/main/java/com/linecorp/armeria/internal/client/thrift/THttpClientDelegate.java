@@ -235,14 +235,10 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         }
 
         final ByteBuf buf = content.byteBuf();
-        // Optionally checks the message length before calling `readMessageBegin()` because
-        // Thrift 0.9.x and 0.10.x does not support a correct length validation of `readMessageBegin()` for
-        // some `TProtocol`s.
-        ThriftProtocolUtil.maybeCheckMessageLength(serializationFormat, buf, maxStringLength);
-
         final TTransport inputTransport = new TByteBufTransport(buf);
         final TProtocol inputProtocol = getResponseProtocol(ctx, inputTransport);
-        final TMessage header = inputProtocol.readMessageBegin();
+        final TMessage header = ThriftProtocolUtil.readMessageBegin(inputProtocol, serializationFormat,
+                                                                    buf, maxStringLength);
         final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);
         if (appEx != null) {
             handleException(ctx, reply, new ThriftReply(header, appEx), appEx);

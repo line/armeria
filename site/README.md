@@ -32,6 +32,42 @@ Note that you can also use your local `npm` or `node` installation,
 although you'll have to run `../gradlew generateSiteSources` to generate the `.json`
 files into the `gen-src` directory at least once.
 
+### E2E tests
+
+After generating `gen-src` and installing dependencies as described above:
+
+```console
+$ npx playwright install chromium
+$ npm run build
+$ npm run test:e2e
+```
+
+Playwright starts a local server for the production build and tests desktop and mobile Chromium.
+Algolia search and Mailchimp subscription responses are mocked. Third-party embeds and analytics requests are blocked.
+The tests verify the website's integration with these services, not their availability. Coverage includes:
+
+- Documentation navigation and heading anchors
+- Build-tool tabs and synchronized examples
+- Code copying to the clipboard
+- Search results and document selection
+- Search recovery after empty results or connection failure
+- Desktop search keyboard shortcuts
+- Blog language switching and article navigation
+- Newsletter validation and successful subscription
+- Subscription loading and duplicate submission prevention
+- Subscription rejection, retry and network timeout
+- Legacy documentation redirects
+- Newsletter redirects
+- Release-note redirects
+- Theme persistence
+- Cookie consent persistence
+- Mobile navigation
+- 404 recovery
+
+Failures save screenshots and traces under `build/playwright/results`.
+Unexpected browser exceptions fail each test. The connection-failure test expects exactly one Algolia `RetryError`.
+The site CI job runs these tests after building the website and uploads failure artifacts.
+
 ### Checking for dependency updates
 
 Use [npm-check-updates](https://www.npmjs.com/package/npm-check-updates)

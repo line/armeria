@@ -40,7 +40,7 @@ final class AutoIndex {
 
     static HttpData listingToHtml(String dirPath, String mappedDirPath, List<String> listing) {
         final Escaper htmlEscaper = HtmlEscapers.htmlEscaper();
-        final Escaper urlEscaper = UrlEscapers.urlFragmentEscaper();
+        final Escaper pathEscaper = UrlEscapers.urlPathSegmentEscaper();
         final String escapedDirPath = htmlEscaper.escape(dirPath);
         final StringBuilder buf = new StringBuilder(listing.size() * 64);
         buf.append(PART1);
@@ -54,16 +54,18 @@ final class AutoIndex {
             buf.append("<li class=\"directory parent\"><a href=\"../\">../</a></li>\n");
         }
         for (String name : listing) {
+            final boolean isDir = name.charAt(name.length() - 1) == '/';
             buf.append("<li class=\"");
-            if (name.charAt(name.length() - 1) == '/') {
-                buf.append("directory");
-            } else {
-                buf.append("file");
+            buf.append(isDir ? "directory" : "file");
+            // Prefix with './' so that a name like 'javascript:...' is not interpreted as a URI scheme.
+            buf.append("\"><a href=\"./");
+            buf.append(htmlEscaper.escape(
+                    pathEscaper.escape(isDir ? name.substring(0, name.length() - 1) : name)));
+            if (isDir) {
+                buf.append('/');
             }
-            buf.append("\"><a href=\"");
-            buf.append(urlEscaper.escape(name));
             buf.append("\">");
-            buf.append(name);
+            buf.append(htmlEscaper.escape(name));
             buf.append("</a></li>\n");
         }
         buf.append(PART5);

@@ -32,14 +32,14 @@ final class ZlibStreamDecoder extends AbstractStreamDecoder {
             SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", false);
 
     ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc, int maxLength) {
-        super(newZlibDecoder(zlibWrapper, maxLength), alloc, maxLength);
+        super(newZlibDecoder(zlibWrapper), alloc, maxLength);
     }
 
-    private static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper, int maxLength) {
+    private static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder(wrapper, maxLength);
+            return new JZlibDecoder(wrapper, 0);
         } else {
-            return new JdkZlibDecoder(wrapper, true, maxLength);
+            return new JdkZlibDecoder(wrapper, true, 0);
         }
     }
 }

@@ -1,0 +1,129 @@
+# OAuth 2.0 client
+
+Armeria can obtain an access token and attach it to outgoing requests as an
+[OAuth2Client](type) decorator. The token grant API lives in the `armeria-oauth2` module.
+
+## Supported grants
+
+The client implements the following token requests:
+
+- [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749) [Client Credentials](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)
+  via [AccessTokenRequest#ofClientCredentials(String,String)](type)
+- [RFC 6749](https://datatracker.ietf.org/doc/html/rfc6749) [Resource Owner Password Credentials](https://datatracker.ietf.org/doc/html/rfc6749#section-4.3)
+  via [AccessTokenRequest#ofResourceOwnerPassword(String,String)](type).
+  Legacy compatibility only; [RFC 9700 §2.4](https://datatracker.ietf.org/doc/html/rfc9700#section-2.4)
+  says this grant MUST NOT be used for new deployments.
+- [RFC 7523](https://datatracker.ietf.org/doc/html/rfc7523) JSON Web Token (JWT) bearer assertions
+  via [AccessTokenRequest#ofJsonWebToken(String)](type)
+
+## Dependency
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-oauth2' },
+  ]}
+/>
+
+## A basic client
+
+Build an [OAuth2AuthorizationGrant](type) against the authorization server's token endpoint, then
+decorate the resource [WebClient](type):
+
+```java
+import java.time.Duration;
+
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.auth.oauth2.AccessTokenRequest;
+import com.linecorp.armeria.client.auth.oauth2.OAuth2AuthorizationGrant;
+import com.linecorp.armeria.client.auth.oauth2.OAuth2Client;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+
+WebClient authClient = WebClient.of("https://auth.example.com/");
+AccessTokenRequest accessTokenRequest =
+        AccessTokenRequest.ofClientCredentials("client_id", "client_secret");
+OAuth2AuthorizationGrant grant =
+        OAuth2AuthorizationGrant.builder(authClient, "/token")
+                                .accessTokenRequest(accessTokenRequest)
+                                .build();
+
+WebClient client = WebClient.builder("https://api.example.com/")
+                            .decorator(OAuth2Client.newDecorator(grant))
+                            .build();
+
+AggregatedHttpResponse res = client.get("/resource").aggregate().join();
+```
+
+[OAuth2Client](type) loads a token from the grant and sets the `Authorization` header on each
+request. The first token is fetched lazily unless you call `preload(true)` on the grant builder.
+
+Password and JWT grants use the same builder with a different [AccessTokenRequest](type):
+
+```java
+AccessTokenRequest passwordRequest =
+        AccessTokenRequest.ofResourceOwnerPassword("username", "password");
+AccessTokenRequest jwtRequest =
+        AccessTokenRequest.ofJsonWebToken(signedJwt);
+```
+
+## Refresh and token hooks
+
+Use [OAuth2AuthorizationGrantBuilder](type) when you need to refresh earlier, persist tokens, or
+fetch one at build time:
+
+```java
+OAuth2AuthorizationGrant grant =
+        OAuth2AuthorizationGrant.builder(authClient, "/token")
+                                .accessTokenRequest(accessTokenRequest)
+                                .refreshBefore(Duration.ofMinutes(5))
+                                .fallbackTokenProvider(() -> loadStoredToken())
+                                .newTokenConsumer(token -> storeToken(token))
+                                .preload(true)
+                                .build();
+```
+
+- `refreshBefore` — refresh this far before the token expires. The default is one minute.
+- `fallbackTokenProvider` — tried before the first token request and after a failed issue or refresh.
+- `newTokenConsumer` — invoked whenever a new token is issued, so you can store it for the fallback.
+- `preload(true)` — request a token when `build()` returns instead of on the first resource call.
+
+## Retry and circuit breaker
+
+The token [WebClient](type) is a normal client. Decorate it if the authorization server should be
+retried or short-circuited independently of the resource client:
+
+```java
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
+
+CircuitBreakerRule cbRule = CircuitBreakerRule.builder()
+                                              .onServerErrorStatus()
+                                              .onException()
+                                              .thenFailure();
+WebClient authClient =
+        WebClient.builder("https://auth.example.com/")
+                 .decorator(RetryingClient.newDecorator(RetryRule.failsafe()))
+                 .decorator(CircuitBreakerClient.builder(cbRule).newDecorator())
+                 .build();
+
+OAuth2AuthorizationGrant grant =
+        OAuth2AuthorizationGrant.builder(authClient, "/token")
+                                .accessTokenRequest(accessTokenRequest)
+                                .build();
+```
+
+See [Automatic retry](/docs/client/retry) and [Circuit breaker](/docs/client/circuit-breaker) for
+the full options.
+
+You can also decorate the resource client. Add [RetryingClient](type) after [OAuth2Client](type) so
+a failed token fetch can be retried with the resource request:
+
+```java
+WebClient client =
+        WebClient.builder("https://api.example.com/")
+                 .decorator(OAuth2Client.newDecorator(grant))
+                 .decorator(RetryingClient.newDecorator(RetryRule.failsafe()))
+                 .build();
+```

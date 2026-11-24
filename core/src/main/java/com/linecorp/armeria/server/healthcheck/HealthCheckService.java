@@ -416,16 +416,14 @@ public final class HealthCheckService implements TransientHttpService {
             case HEAD:
             case GET:
                 return newResponse(method, isHealthy);
-            case CONNECT:
-            case DELETE:
-            case OPTIONS:
-            case TRACE:
+            case POST:
+            case PUT:
+            case PATCH:
+                // Only these methods can update the healthiness.
+                break;
+            default:
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
-
-        assert method == HttpMethod.POST ||
-               method == HttpMethod.PUT ||
-               method == HttpMethod.PATCH;
 
         if (updateHandler == null) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);

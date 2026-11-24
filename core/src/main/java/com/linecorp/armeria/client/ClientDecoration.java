@@ -21,6 +21,12 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
+
 /**
  * A set of {@link Function}s that transforms a {@link Client} into another.
  */
@@ -113,7 +119,8 @@ public final class ClientDecoration {
      */
     public HttpClient decorate(HttpClient client) {
         for (Function<? super HttpClient, ? extends HttpClient> decorator : decorators) {
-            client = decorator.apply(client);
+            final HttpClient previous = client;
+            client = maybeWrap(previous, decorator.apply(client));
         }
         return client;
     }
@@ -125,8 +132,33 @@ public final class ClientDecoration {
      */
     public RpcClient rpcDecorate(RpcClient client) {
         for (Function<? super RpcClient, ? extends RpcClient> decorator : rpcDecorators) {
-            client = decorator.apply(client);
+            final RpcClient previous = client;
+            client = maybeWrapRpc(previous, decorator.apply(client));
         }
         return client;
+    }
+
+    private static HttpClient maybeWrap(HttpClient previous, HttpClient decorated) {
+        if (decorated == previous || decorated instanceof AbstractUnwrappable) {
+            return decorated;
+        }
+        return new SimpleDecoratingHttpClient(previous) {
+            @Override
+            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+                return decorated.execute(ctx, req);
+            }
+        };
+    }
+
+    private static RpcClient maybeWrapRpc(RpcClient previous, RpcClient decorated) {
+        if (decorated == previous || decorated instanceof AbstractUnwrappable) {
+            return decorated;
+        }
+        return new SimpleDecoratingRpcClient(previous) {
+            @Override
+            public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
+                return decorated.execute(ctx, req);
+            }
+        };
     }
 }

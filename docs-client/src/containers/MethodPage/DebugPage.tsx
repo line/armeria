@@ -23,11 +23,11 @@ import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, {
-  Dispatch,
   useCallback,
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
 } from 'react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -48,6 +48,7 @@ import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import { jsonPrettify, validateJsonObject } from '../../lib/json-util';
+import { redactSensitiveHeaders } from '../../lib/settings';
 import {
   extractUrlPath,
   Method,
@@ -58,6 +59,7 @@ import {
 import { TRANSPORTS } from '../../lib/transports';
 import { ResponseData, SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
+import useGraphqlDebugState from './useGraphqlDebugState';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -82,9 +84,10 @@ interface OwnProps {
   exactPathMapping: boolean;
   useRequestBody: boolean;
   debugFormIsOpen: boolean;
-  setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
+  setDebugFormIsOpen: (open: boolean) => void;
   jsonSchemas: any;
   docServiceRoute?: Route;
+  sensitiveHeaders: string[];
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -180,6 +183,37 @@ const ResponseStatusBar: React.FC<{
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
+const getRequestBody = (
+  method: Method,
+  useRequestBody: boolean,
+  search: string,
+): string => {
+  const params = new URLSearchParams(search);
+  const urlRequestBody =
+    useRequestBody && params.has('request_body')
+      ? jsonPrettify(params.get('request_body')!)
+      : '';
+  return urlRequestBody || method.exampleRequests[0] || '';
+};
+
+const serializeDebugFormSearchParams = (
+  params: URLSearchParams | string,
+): string => {
+  const debugFormParams = new URLSearchParams(params);
+  debugFormParams.delete('debug_form_is_open');
+  return debugFormParams.toString();
+};
+
+const errorResponseData = (error: unknown): ResponseData => ({
+  body:
+    error instanceof Object ? error.toString?.() ?? '<unknown>' : '<unknown>',
+  headers: [],
+  status: undefined,
+  executionTime: 0,
+  size: 0,
+  timestamp: new Date().toLocaleString(),
+});
+
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
   exampleHeaders,
@@ -188,15 +222,21 @@ const DebugPage: React.FunctionComponent<Props> = ({
   serviceType,
   history,
   location,
-  match,
   method,
   useRequestBody,
   debugFormIsOpen,
   setDebugFormIsOpen,
   jsonSchemas,
   docServiceRoute,
+  sensitiveHeaders,
 }) => {
-  const [requestBody, setRequestBody] = useState('');
+  const debugFormSearch = serializeDebugFormSearchParams(location.search);
+  const initialRequestBody = getRequestBody(
+    method,
+    useRequestBody,
+    debugFormSearch,
+  );
+  const [requestBody, setRequestBody] = useState(initialRequestBody);
   const [additionalQueries, setAdditionalQueries] = useState('');
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [additionalPath, setAdditionalPath] = useState('');
@@ -204,15 +244,20 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [keepDebugResponse, toggleKeepDebugResponse] = useReducer(
-    toggle,
-    false,
-  );
 
-  const [currentApiId, setCurrentApiId] = useState<string>(method.id);
-  const [responseCache, setResponseCache] = useState<
-    Record<string, ResponseData>
-  >({});
+  const responseCache = useRef<Record<string, ResponseData>>({});
+  // Tracks URL state created by a submission so form fields can preserve their in-memory values.
+  const submittedSearchParams = useRef<string | null>(null);
+  const currentMethodId = useRef(method.id);
+  const isMounted = useRef(true);
+  currentMethodId.current = method.id;
+
+  useEffect(
+    () => () => {
+      isMounted.current = false;
+    },
+    [],
+  );
 
   const classes = useStyles();
 
@@ -221,30 +266,22 @@ const DebugPage: React.FunctionComponent<Props> = ({
     throw new Error("This method doesn't have a debug transport.");
   }
 
-  useEffect(() => {
-    const apiId = method.id;
-    if (apiId !== currentApiId) {
-      setCurrentApiId(apiId);
-      if (responseCache[apiId]) {
-        setResponseData(responseCache[apiId]);
-      } else {
-        setResponseData(null);
-      }
-    }
-  }, [method, currentApiId, responseCache]);
+  const {
+    editorState: graphqlEditorState,
+    serializeRequestBody: serializeGraphqlRequestBody,
+    synchronizeWithRequestBody: synchronizeGraphqlWithRequestBody,
+  } = useGraphqlDebugState({
+    method,
+    serviceType,
+    initialRequestBody,
+  });
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
+    setResponseData(responseCache.current[method.id] ?? null);
+  }, [method.id]);
 
-    let urlRequestBody = '';
-    if (useRequestBody && urlParams.has('request_body')) {
-      urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-    }
-
-    let urlDebugFormIsOpen = false;
-    if (urlParams.has('debug_form_is_open')) {
-      urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
-    }
+  useEffect(() => {
+    const urlParams = new URLSearchParams(debugFormSearch);
 
     let urlPath;
     if (
@@ -267,35 +304,36 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const urlQueries =
       serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
-    if (!keepDebugResponse) {
-      setResponseData(null);
-      toggleKeepDebugResponse(false);
-    }
     setSnackbarOpen(false);
-    setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
+    if (serviceType === ServiceType.GRAPHQL) {
+      synchronizeGraphqlWithRequestBody(initialRequestBody, method.id);
+    } else {
+      setRequestBody(initialRequestBody);
+      synchronizeGraphqlWithRequestBody('', method.id);
+    }
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
-
-    if (urlDebugFormIsOpen) {
-      setDebugFormIsOpen(urlDebugFormIsOpen);
-    }
   }, [
     exactPathMapping,
     exampleQueries.length,
     serviceType,
-    location.search,
-    match.params,
+    debugFormSearch,
     method,
     transport,
     useRequestBody,
-    keepDebugResponse,
-    docServiceRoute,
-    setDebugFormIsOpen,
+    initialRequestBody,
+    synchronizeGraphqlWithRequestBody,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
+    if (submittedSearchParams.current === debugFormSearch) {
+      submittedSearchParams.current = null;
+      return;
+    }
+    submittedSearchParams.current = null;
+
+    const urlParams = new URLSearchParams(debugFormSearch);
 
     if (urlParams.has('sticky_headers')) {
       toggleStickyHeaders(true);
@@ -309,7 +347,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       headers = stickyHeaders ? additionalHeaders : '';
     }
     setAdditionalHeaders(headers);
-  }, [match.params]);
+  }, [method.id, debugFormSearch]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const showSnackbar = useCallback((text: string) => {
@@ -323,8 +361,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const onExport = useCallback(() => {
     try {
+      const exportedRequestBody =
+        serviceType === ServiceType.GRAPHQL
+          ? serializeGraphqlRequestBody()
+          : requestBody;
       if (useRequestBody) {
-        validateJsonObject(requestBody, 'request body');
+        validateJsonObject(exportedRequestBody, 'request body');
       }
 
       if (additionalHeaders) {
@@ -371,7 +413,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       const body = transport.getCurlBody(
         endpoint,
         method,
-        escapeSingleQuote(requestBody),
+        escapeSingleQuote(exportedRequestBody),
       );
 
       const headers = new Headers();
@@ -401,18 +443,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       copyTextToClipboard(curlCommand);
       showSnackbar('The curl command has been copied to the clipboard.');
     } catch (e) {
-      if (e instanceof Object) {
-        setResponseData({
-          body: e.toString?.() ?? '<unknown>',
-          headers: [],
-          status: undefined,
-          executionTime: 0,
-          size: 0,
-          timestamp: new Date().toLocaleString(),
-        });
-      } else {
-        setResponseData(null);
-      }
+      setResponseData(errorResponseData(e));
     }
   }, [
     useRequestBody,
@@ -420,6 +451,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     method,
     transport,
     requestBody,
+    serializeGraphqlRequestBody,
     serviceType,
     showSnackbar,
     additionalQueries,
@@ -438,10 +470,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   const onClear = useCallback(() => {
     setResponseData(null);
-  }, []);
+    delete responseCache.current[method.id];
+  }, [method.id]);
 
   const executeRequest = useCallback(
-    async (params: URLSearchParams) => {
+    async (params: URLSearchParams, headers: { [name: string]: string }) => {
       let executedRequestBody;
       if (useRequestBody) {
         executedRequestBody = params.get('request_body');
@@ -461,8 +494,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         executedEndpointPath = params.get('endpoint_path') || undefined;
       }
 
-      const headersText = params.get('headers');
-      const headers = headersText ? JSON.parse(headersText) : {};
+      const requestMethodId = method.id;
 
       try {
         const debugResponseData = await transport.send(
@@ -473,13 +505,17 @@ const DebugPage: React.FunctionComponent<Props> = ({
           executedEndpointPath,
           queries,
         );
-        setResponseData(debugResponseData);
-        setResponseCache((prev) => ({
-          ...prev,
-          [currentApiId]: debugResponseData,
-        }));
+        if (!isMounted.current) {
+          return;
+        }
+        if (currentMethodId.current === requestMethodId) {
+          setResponseData(debugResponseData);
+        }
+        responseCache.current[requestMethodId] = debugResponseData;
       } catch (e) {
-        setResponseData(null);
+        if (isMounted.current && currentMethodId.current === requestMethodId) {
+          setResponseData(errorResponseData(e));
+        }
       }
     },
     [
@@ -489,13 +525,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
       method,
       transport,
       docServiceRoute,
-      currentApiId,
     ],
   );
 
   const onSubmit = useCallback(async () => {
     const queries = additionalQueries;
     const headers = additionalHeaders;
+    let requestHeaders: { [name: string]: string } = {};
     const params = new URLSearchParams(location.search);
 
     try {
@@ -504,7 +540,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
         // See: https://github.com/line/armeria/issues/273
 
         // For some reason jsonMinify minifies {} as empty string, so work around it.
-        params.set('request_body', jsonMinify(requestBody) || '{}');
+        const submittedRequestBody =
+          serviceType === ServiceType.GRAPHQL
+            ? serializeGraphqlRequestBody()
+            : requestBody;
+        params.set('request_body', jsonMinify(submittedRequestBody) || '{}');
       }
 
       if (serviceType === ServiceType.HTTP) {
@@ -526,7 +566,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
       if (headers) {
         validateJsonObject(headers, 'HTTP headers');
-        let minifiedHeaders = jsonMinify(headers);
+        requestHeaders = JSON.parse(headers);
+        const redactedHeaders = redactSensitiveHeaders(
+          requestHeaders,
+          sensitiveHeaders,
+        );
+        let minifiedHeaders = JSON.stringify(redactedHeaders);
         if (minifiedHeaders === '{}') {
           minifiedHeaders = '';
         }
@@ -539,18 +584,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         params.delete('headers');
       }
     } catch (e) {
-      if (e instanceof Object) {
-        setResponseData({
-          body: e.toString?.() ?? '<unknown>',
-          headers: [],
-          status: undefined,
-          executionTime: 0,
-          size: 0,
-          timestamp: new Date().toLocaleString(),
-        });
-      } else {
-        setResponseData(null);
-      }
+      setResponseData(errorResponseData(e));
       return;
     }
 
@@ -562,11 +596,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     const serializedParams = `?${params.toString()}`;
     if (serializedParams !== location.search) {
-      // executeRequest may throw error before useEffect, we need to avoid useEffect cleanup the debug response.
-      toggleKeepDebugResponse(true);
+      submittedSearchParams.current = serializeDebugFormSearchParams(params);
       history.push(`${location.pathname}${serializedParams}`);
     }
-    await executeRequest(params);
+    await executeRequest(params, requestHeaders);
   }, [
     additionalQueries,
     additionalHeaders,
@@ -577,11 +610,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     serviceType,
     requestBody,
+    serializeGraphqlRequestBody,
     exactPathMapping,
     additionalPath,
     history,
     method,
     transport,
+    sensitiveHeaders,
   ]);
 
   const supportedExamplePaths = useMemo(() => {
@@ -640,6 +675,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                 additionalHeaders={additionalHeaders}
                 setAdditionalHeaders={setAdditionalHeaders}
                 jsonSchemas={jsonSchemas}
+                graphqlEditorState={graphqlEditorState}
                 stickyHeaders={stickyHeaders}
                 toggleStickyHeaders={toggleStickyHeaders}
                 requestBody={requestBody}
@@ -762,6 +798,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   additionalHeaders={additionalHeaders}
                   setAdditionalHeaders={setAdditionalHeaders}
                   jsonSchemas={jsonSchemas}
+                  graphqlEditorState={graphqlEditorState}
                   stickyHeaders={stickyHeaders}
                   toggleStickyHeaders={toggleStickyHeaders}
                   requestBody={requestBody}

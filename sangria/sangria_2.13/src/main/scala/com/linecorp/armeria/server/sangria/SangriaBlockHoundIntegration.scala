@@ -29,5 +29,7 @@ final class SangriaBlockHoundIntegration extends BlockHoundIntegration {
   override def applyTo(builder: BlockHound.Builder): Unit = {
     builder.allowBlockingCallsInside("sangria.parser.QueryParser$", "parse")
     builder.allowBlockingCallsInside("com.thoughtworks.paranamer.CachingParanamer", "lookupParameterNames")
+    // Scala loads its cached version properties from a JAR during initialization.
+    builder.allowBlockingCallsInside("scala.util.Properties$", "<clinit>")
   }
 }

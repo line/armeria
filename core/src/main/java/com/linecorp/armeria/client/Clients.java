@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.ClientBuilderParamsUtil;
 import com.linecorp.armeria.internal.client.ClientThreadLocalState;
 import com.linecorp.armeria.internal.client.ClientUtil;
+import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -240,7 +241,16 @@ public final class Clients {
      *                                  {@code clientType} is unsupported for the {@link URI}'s scheme
      */
     public static ClientBuilder builder(URI uri) {
-        return new ClientBuilder(requireNonNull(uri, "uri"));
+        requireNonNull(uri, "uri");
+        final SchemePreprocessorRegistry.Match match = SchemePreprocessorRegistry.find(uri.getScheme());
+        if (match != null) {
+            final ClientPreprocessors preprocessors = ClientPreprocessors.builder()
+                    .add(match.provider().preprocessor(uri))
+                    .addRpc(match.provider().rpcPreprocessor(uri))
+                    .build();
+            return new ClientBuilder(match.serializationFormat(), preprocessors, null);
+        }
+        return new ClientBuilder(uri);
     }
 
     /**

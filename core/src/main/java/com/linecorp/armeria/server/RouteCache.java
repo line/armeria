@@ -140,6 +140,7 @@ final class RouteCache {
 
             final Routed<V> result = delegate.find(routingCtx);
             if (result.isPresent() && result.route().isCacheable() &&
+                routingCtx.isRouteSelectionCacheable() &&
                 !dynamicPredicateRoutes.contains(result.route())) {
                 findCache.put(routingCtx, result.value());
             }

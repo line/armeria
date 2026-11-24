@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
 
 /**
  * Creates a new gRPC client that connects to a {@link URI} or an {@link EndpointGroup}.
@@ -176,7 +177,12 @@ public final class GrpcClients {
      *                                  contains an invalid {@link SerializationFormat}.
      */
     public static GrpcClientBuilder builder(URI uri) {
-        return new GrpcClientBuilder(requireNonNull(uri, "uri"));
+        requireNonNull(uri, "uri");
+        final SchemePreprocessorRegistry.Match match = SchemePreprocessorRegistry.find(uri.getScheme());
+        if (match != null) {
+            return new GrpcClientBuilder(match.serializationFormat(), match.provider().preprocessor(uri));
+        }
+        return new GrpcClientBuilder(uri);
     }
 
     /**

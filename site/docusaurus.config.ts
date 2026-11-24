@@ -5,6 +5,7 @@ import remarkGithub from 'remark-github';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import remarkApiLink from './src/remark/remark-api-link';
+import remarkBobSvg from './src/remark/remark-bob-svg';
 import remarkReleaseDate from './src/remark/remark-release-date';
 import {
   compareVersions,
@@ -85,7 +86,7 @@ export default async function createConfigAsync() {
             sidebarPath: './sidebars.ts',
             path: 'src/content/docs',
             editUrl: 'https://github.com/line/armeria/edit/main/site/',
-            remarkPlugins: [remarkApiLink, remarkGithub],
+            remarkPlugins: [remarkApiLink, remarkBobSvg, remarkGithub],
           },
           blog: {
             path: 'src/content/news',
@@ -106,7 +107,7 @@ export default async function createConfigAsync() {
             onInlineTags: 'warn',
             onInlineAuthors: 'warn',
             onUntruncatedBlogPosts: 'warn',
-            remarkPlugins: [remarkApiLink, remarkGithub],
+            remarkPlugins: [remarkApiLink, remarkBobSvg, remarkGithub],
           },
           theme: {
             customCss: [
@@ -251,7 +252,7 @@ export default async function createConfigAsync() {
           routeBasePath: 'community',
           sidebarPath: './sidebarsCommunity.ts',
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          remarkPlugins: [remarkApiLink, remarkGithub],
+          remarkPlugins: [remarkApiLink, remarkBobSvg, remarkGithub],
         },
       ],
       [
@@ -268,7 +269,12 @@ export default async function createConfigAsync() {
             return sortReleaseNoteSidebarItems(sidebarItems);
           },
           editUrl: 'https://github.com/line/armeria/edit/main/site/',
-          remarkPlugins: [remarkApiLink, remarkGithub, remarkReleaseDate],
+          remarkPlugins: [
+            remarkApiLink,
+            remarkBobSvg,
+            remarkGithub,
+            remarkReleaseDate,
+          ],
         },
       ],
       [

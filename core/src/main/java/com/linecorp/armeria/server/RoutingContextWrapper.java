@@ -132,6 +132,16 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
+    public void markRouteSelectionUncacheable() {
+        delegate.markRouteSelectionUncacheable();
+    }
+
+    @Override
+    public boolean isRouteSelectionCacheable() {
+        return delegate.isRouteSelectionCacheable();
+    }
+
+    @Override
     public boolean hasResult() {
         return delegate.hasResult();
     }

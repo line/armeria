@@ -23,8 +23,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
@@ -49,31 +50,46 @@ class GrpcMessageLengthTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcService grpcService =
-                    GrpcService.builder()
-                               .addService(new TestServiceImpl(
-                                       Executors.newSingleThreadScheduledExecutor()))
-                               .maxRequestMessageLength(1000)
-                               .maxResponseMessageLength(1000)
-                               .exceptionHandler((ctx, status, cause, metadata) -> {
-                                   if (cause instanceof StatusRuntimeException) {
-                                       assertThat(((StatusRuntimeException) cause).getStatus().getCode())
-                                               .isEqualTo(status.getCode());
-                                   } else if (cause instanceof StatusException) {
-                                       assertThat(((StatusException) cause).getStatus().getCode())
-                                               .isEqualTo(status.getCode());
-                                   }
-                                   return status.withDescription(
-                                           status.getDescription() + ": exception handled");
-                               })
-                               .build();
-            sb.service(grpcService);
+            sb.service(newGrpcService(false));
         }
     };
 
-    @Test
-    void shouldHandleExceedingRequestLength() {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+    // Messages are deserialized and serialized on the blocking task executor instead of the event loop.
+    @RegisterExtension
+    static ServerExtension blockingServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service(newGrpcService(true));
+        }
+    };
+
+    private static GrpcService newGrpcService(boolean useBlockingTaskExecutor) {
+        return GrpcService.builder()
+                          .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                          .maxRequestMessageLength(1000)
+                          .maxResponseMessageLength(1000)
+                          .useBlockingTaskExecutor(useBlockingTaskExecutor)
+                          .exceptionHandler((ctx, status, cause, metadata) -> {
+                              if (cause instanceof StatusRuntimeException) {
+                                  assertThat(((StatusRuntimeException) cause).getStatus().getCode())
+                                          .isEqualTo(status.getCode());
+                              } else if (cause instanceof StatusException) {
+                                  assertThat(((StatusException) cause).getStatus().getCode())
+                                          .isEqualTo(status.getCode());
+                              }
+                              return status.withDescription(status.getDescription() + ": exception handled");
+                          })
+                          .build();
+    }
+
+    private static ServerExtension server(boolean useBlockingTaskExecutor) {
+        return useBlockingTaskExecutor ? blockingServer : server;
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void shouldHandleExceedingRequestLength(boolean useBlockingTaskExecutor) {
+        final TestServiceBlockingStub client = GrpcClients.builder(server(useBlockingTaskExecutor).httpUri())
                                                           .build(TestServiceBlockingStub.class);
         final Payload payload = Payload.newBuilder()
                                        .setBody(ByteString.copyFrom(Strings.repeat("a", 1001),
@@ -85,9 +101,10 @@ class GrpcMessageLengthTest {
         assertResourceExhausted(() -> client.unaryCall(request));
     }
 
-    @Test
-    void shouldHandleExceedingResponseLength() {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void shouldHandleExceedingResponseLength(boolean useBlockingTaskExecutor) {
+        final TestServiceBlockingStub client = GrpcClients.builder(server(useBlockingTaskExecutor).httpUri())
                                                           .build(TestServiceBlockingStub.class);
         final Payload payload = Payload.newBuilder()
                                        .build();
@@ -98,9 +115,10 @@ class GrpcMessageLengthTest {
         assertResourceExhausted(() -> client.unaryCall(request));
     }
 
-    @Test
-    void shouldHandleExceedingRequestLength_streaming() {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void shouldHandleExceedingRequestLength_streaming(boolean useBlockingTaskExecutor) {
+        final TestServiceBlockingStub client = GrpcClients.builder(server(useBlockingTaskExecutor).httpUri())
                                                           .build(TestServiceBlockingStub.class);
         final Payload payload = Payload.newBuilder()
                                        .setBody(ByteString.copyFrom(Strings.repeat("a", 1001),
@@ -118,9 +136,10 @@ class GrpcMessageLengthTest {
         });
     }
 
-    @Test
-    void shouldHandleExceedingResponseLength_streaming() {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void shouldHandleExceedingResponseLength_streaming(boolean useBlockingTaskExecutor) {
+        final TestServiceBlockingStub client = GrpcClients.builder(server(useBlockingTaskExecutor).httpUri())
                                                           .build(TestServiceBlockingStub.class);
         final ResponseParameters parameters = ResponseParameters.newBuilder()
                                                                 .setSize(1001)

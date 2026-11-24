@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.protobuf.ProtobufResponseConverterFunc
 import static java.lang.invoke.MethodType.methodType;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -34,6 +35,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableCollection;
@@ -41,6 +43,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.JsonFormat.Parser;
@@ -156,11 +159,13 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
             if (isProtobuf(contentType)) {
                 try (InputStream is = request.content().toInputStream()) {
                     return messageBuilder.mergeFrom(is, extensionRegistry).build();
+                } catch (InvalidProtocolBufferException e) {
+                    throw new IllegalArgumentException("failed to parse a Protobuf message: " + e, e);
                 }
             }
 
             if (isJson(contentType)) {
-                jsonParser.merge(request.content(charset), messageBuilder);
+                mergeJson(request.content(charset), messageBuilder);
                 return messageBuilder.build();
             }
         }
@@ -180,7 +185,12 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
 
         final Type[] typeArguments = expectedParameterizedResultType.getActualTypeArguments();
         final String content = request.content(charset);
-        final JsonNode jsonNode = mapper.readTree(content);
+        final JsonNode jsonNode;
+        try {
+            jsonNode = mapper.readTree(content);
+        } catch (JsonProcessingException e) {
+            throw newJsonConversionException(e);
+        }
 
         switch (resultType) {
             case LIST_PROTOBUF:
@@ -195,7 +205,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
 
                     for (JsonNode node : jsonNode) {
                         final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[0]);
-                        jsonParser.merge(mapper.writeValueAsString(node), msgBuilder);
+                        mergeJson(mapper.writeValueAsString(node), msgBuilder);
                         builder.add(msgBuilder.build());
                     }
                     return builder.build();
@@ -209,7 +219,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                     for (final Iterator<Entry<String, JsonNode>> i = jsonNode.fields(); i.hasNext();) {
                         final Entry<String, JsonNode> e = i.next();
                         final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[1]);
-                        jsonParser.merge(mapper.writeValueAsString(e.getValue()), msgBuilder);
+                        mergeJson(mapper.writeValueAsString(e.getValue()), msgBuilder);
                         builder.put(e.getKey(), msgBuilder.build());
                     }
                     return builder.build();
@@ -218,6 +228,18 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         }
 
         return RequestConverterFunction.fallthrough();
+    }
+
+    private void mergeJson(String json, Message.Builder builder) {
+        try {
+            jsonParser.merge(json, builder);
+        } catch (InvalidProtocolBufferException e) {
+            throw newJsonConversionException(e);
+        }
+    }
+
+    private static IllegalArgumentException newJsonConversionException(IOException e) {
+        return new IllegalArgumentException("failed to parse a JSON document: " + e, e);
     }
 
     static boolean isProtobuf(@Nullable MediaType contentType) {

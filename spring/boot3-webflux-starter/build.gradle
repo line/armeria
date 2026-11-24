@@ -1,7 +1,3 @@
 dependencies {
     api project(':spring:boot3-webflux-autoconfigure')
 }
-
-tasks.withType(Test).configureEach {
-    failOnNoDiscoveredTests = false
-}

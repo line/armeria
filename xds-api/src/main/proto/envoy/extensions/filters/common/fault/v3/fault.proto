@@ -52,7 +52,10 @@ message FaultDelay {
     // the JSON/YAML Duration mapping. For HTTP/Mongo, the specified
     // delay will be injected before a new request/operation.
     // This is required if type is FIXED.
-    option (armeria.xds.supported.oneof_field) = 3;
+    option (armeria.xds.supported.oneof_field) = {
+        number: 3,
+        since: "1.41.0"
+    };
     google.protobuf.Duration fixed_delay = 3 [(validate.rules).duration = {gt {}}];
 
     // Fault delays are controlled via an HTTP header (if applicable).
@@ -60,7 +63,10 @@ message FaultDelay {
   }
 
   // The percentage of operations/connections/requests on which the delay will be injected.
-  option (armeria.xds.supported.field) = 4;
+  option (armeria.xds.supported.field) = {
+      number: 4,
+      since: "1.41.0"
+  };
   type.v3.FractionalPercent percentage = 4;
 }
 

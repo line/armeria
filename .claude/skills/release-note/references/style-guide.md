@@ -133,6 +133,13 @@ Rules:
 - Use the library's common name, not Maven artifact IDs
 - Group multi-version bumps: `- Spring 6.2.14 → 6.2.15, 7.0.2 → 7.0.3`
 - Omit build-only dependencies (anything under the `- Build` section in the raw dependency PR)
+- Omit **test-only** dependencies (e.g., Apache HttpClient, OkHttp, DGS) — only used in
+  `testImplementation` and not in published POMs
+- Omit **shaded** dependencies (e.g., Guava, Bouncy Castle, JCTools) — relocated into Armeria
+  JARs and invisible to users
+- Omit dependencies that are **not transitive** in any published artifact (e.g., Jsoup)
+- When unsure, check `dependencies.toml` for scope and whether the dep appears in a published
+  module's `api` or `implementation` configuration
 - Sort alphabetically (A → Z)
 - Strip trailing release qualifiers from version numbers — `.Final`, `.RELEASE`, `-GA`,
   `.vYYYYMMDD` and the like. They add no information a reader acts on:

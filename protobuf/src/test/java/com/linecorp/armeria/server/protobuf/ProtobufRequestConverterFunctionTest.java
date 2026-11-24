@@ -34,7 +34,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -162,6 +164,65 @@ class ProtobufRequestConverterFunctionTest {
     }
 
     @Test
+    void invalidProtobuf() {
+        final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
+        // A truncated varint tag.
+        final AggregatedHttpRequest req =
+                AggregatedHttpRequest.of(ctx.request().headers()
+                                            .withMutations(
+                                                    builder -> builder.contentType(MediaType.PROTOBUF)),
+                                         HttpData.wrap(new byte[] { (byte) 0xFF, (byte) 0xFF }));
+        assertThatThrownBy(() -> converter.convertRequest(ctx, req, SimpleRequest.class, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(InvalidProtocolBufferException.class);
+    }
+
+    @ValueSource(strings = { "\"payload\":\"Armeria\"}", "{\"payload\": {}}" })
+    @ParameterizedTest
+    void invalidJson(String json) {
+        final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
+        assertThatThrownBy(() -> converter.convertRequest(ctx, jsonRequest(json), SimpleRequest.class, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(InvalidProtocolBufferException.class);
+    }
+
+    @Test
+    void invalidJsonList() {
+        final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
+        final TypeToken<List<SimpleRequest>> typeToken = new TypeToken<List<SimpleRequest>>() {};
+        final ParameterizedType type = (ParameterizedType) typeToken.getType();
+
+        // Not a JSON array.
+        assertThatThrownBy(() -> converter.convertRequest(ctx, jsonRequest("[{"),
+                                                          typeToken.getRawType(), type))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(JsonProcessingException.class);
+        // A JSON array with an invalid message.
+        assertThatThrownBy(() -> converter.convertRequest(ctx, jsonRequest("[{\"size\": \"one\"}]"),
+                                                          typeToken.getRawType(), type))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(InvalidProtocolBufferException.class);
+    }
+
+    @Test
+    void invalidJsonMap() {
+        final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
+        final TypeToken<Map<String, SimpleRequest>> typeToken = new TypeToken<Map<String, SimpleRequest>>() {};
+        final ParameterizedType type = (ParameterizedType) typeToken.getType();
+
+        // Not a JSON object.
+        assertThatThrownBy(() -> converter.convertRequest(ctx, jsonRequest("{\"json1\":"),
+                                                          typeToken.getRawType(), type))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(JsonProcessingException.class);
+        // A JSON object with an invalid message.
+        assertThatThrownBy(() -> converter.convertRequest(ctx, jsonRequest("{\"json1\": {\"size\": \"one\"}}"),
+                                                          typeToken.getRawType(), type))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(InvalidProtocolBufferException.class);
+    }
+
+    @Test
     void nestedProtobufParameter() {
         final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
         final ProtobufRequestConverterFunctionProvider provider =
@@ -236,6 +297,12 @@ class ProtobufRequestConverterFunctionTest {
                                                 .withMutations(builder -> builder.contentType(MediaType.JSON)),
                                              HttpData.ofUtf8(printer.print(simpleRequest))));
         }
+    }
+
+    private static AggregatedHttpRequest jsonRequest(String json) {
+        return AggregatedHttpRequest.of(ctx.request().headers()
+                                           .withMutations(builder -> builder.contentType(MediaType.JSON)),
+                                        HttpData.ofUtf8(json));
     }
 
     private static String toJson(List<SimpleRequest> simpleRequests) {

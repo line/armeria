@@ -34,6 +34,11 @@ const useStyles = makeStyles((theme: Theme) =>
       width: 800,
       backgroundColor: theme.palette.primary.light,
       borderRadius: theme.spacing(2),
+      [theme.breakpoints.down('sm')]: {
+        marginLeft: theme.spacing(1),
+        marginRight: theme.spacing(1),
+        width: '45vw',
+      },
     },
     inputRoot: {
       padding: theme.spacing(0.25, 1.25),

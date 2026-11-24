@@ -51,6 +51,10 @@ import reactor.core.publisher.Flux;
 
 class HttpServerRequestTimeoutTest {
 
+    private static final Duration EXTENDED_TIMEOUT = Duration.ofSeconds(2);
+    // Keep the stream longer than the initial timeout so extension is required.
+    private static final int STREAM_ELEMENTS = 15;
+
     private static final AtomicReference<RequestLog> accessLog = new AtomicReference<>();
     @Nullable
     private static CompletableFuture<Throwable> timeoutFuture;
@@ -61,20 +65,24 @@ class HttpServerRequestTimeoutTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.requestTimeoutMillis(600)
               .accessLogWriter(accessLog::set, false)
-              .service("/extend-timeout-from-now", (ctx, req) -> {
+              .route().path("/extend-timeout-from-now")
+              .requestTimeout(EXTENDED_TIMEOUT)
+              .build((ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
                               .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
-                                                                   Duration.ofMillis(500)));
-                  return JsonTextSequences.fromPublisher(publisher.take(5));
+                                                                   EXTENDED_TIMEOUT));
+                  return JsonTextSequences.fromPublisher(publisher.take(STREAM_ELEMENTS));
               })
-              .service("/extend-timeout-from-start", (ctx, req) -> {
+              .route().path("/extend-timeout-from-start")
+              .requestTimeout(EXTENDED_TIMEOUT)
+              .build((ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
                               .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofMillis(200)));
-                  return JsonTextSequences.fromPublisher(publisher.take(5));
+                  return JsonTextSequences.fromPublisher(publisher.take(STREAM_ELEMENTS));
               })
               .service("/timeout-while-writing", (ctx, req) -> {
                   final Flux<Long> publisher = Flux.interval(Duration.ofMillis(200)).onBackpressureDrop();
@@ -131,8 +139,8 @@ class HttpServerRequestTimeoutTest {
                           Flux.interval(Duration.ofMillis(200))
                               .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
-                                                                   Duration.ofMillis(500)));
-                  return JsonTextSequences.fromPublisher(publisher.take(5));
+                                                                   EXTENDED_TIMEOUT));
+                  return JsonTextSequences.fromPublisher(publisher.take(STREAM_ELEMENTS));
               })
               .service("/timeout-now", (ctx, req) -> {
                   ctx.timeoutNow();

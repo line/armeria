@@ -30,7 +30,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
-import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -38,7 +37,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
 import com.linecorp.armeria.xds.client.endpoint.XdsRpcPreprocessor;
@@ -110,7 +108,7 @@ class RetryFilterInvocationTest {
         final HttpFilterFactory mockFactory = mockUpstreamFactory();
 
         final Bootstrap bootstrap = XdsResourceReader.fromYaml(
-                bootstrapYaml("reset"), Bootstrap.class);
+                bootstrapYaml("5xx"), Bootstrap.class);
 
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.builder(bootstrap)
                                                      .extensionFactories(downstreamFactory, upstreamFactory,
@@ -236,14 +234,10 @@ class RetryFilterInvocationTest {
                 return new XdsHttpFilter() {
                     @Override
                     public DecoratingHttpClientFunction httpDecorator() {
-                        return (delegate, ctx, req) ->
-                                HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
-                    }
-
-                    @Override
-                    public DecoratingRpcClientFunction rpcDecorator() {
-                        return (delegate, ctx, req) ->
-                                RpcResponse.ofFailure(new TException("always fail"));
+                        return (delegate, ctx, req) -> {
+                            req.abort();
+                            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+                        };
                     }
                 };
             }
@@ -262,14 +256,6 @@ class RetryFilterInvocationTest {
                 return new XdsHttpFilter() {
                     @Override
                     public DecoratingHttpClientFunction httpDecorator() {
-                        return (delegate, ctx, req) -> {
-                            counter.incrementAndGet();
-                            return delegate.execute(ctx, req);
-                        };
-                    }
-
-                    @Override
-                    public DecoratingRpcClientFunction rpcDecorator() {
                         return (delegate, ctx, req) -> {
                             counter.incrementAndGet();
                             return delegate.execute(ctx, req);

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.concurrent.CompletableFuture;
@@ -49,10 +51,44 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
 class HttpFileTest {
+
+    @Test
+    void responseRetainsPooledContent() {
+        final ByteBuf buf = Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8);
+        final HttpData content = HttpData.wrap(buf).withEndOfStream();
+        final AggregatedHttpFile file = AggregatedHttpFile.of(content);
+        final AggregatedHttpResponse response = requireNonNull(file.response());
+
+        content.close();
+
+        try {
+            assertThat(response.contentUtf8()).isEqualTo("foo");
+            assertThat(response.content().isEndOfStream()).isTrue();
+            assertThat(buf.refCnt()).isOne();
+        } finally {
+            response.content().close();
+        }
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
+    void responseTransfersPooledContentToHttpResponse() {
+        final ByteBuf buf = Unpooled.copiedBuffer("foo", StandardCharsets.UTF_8);
+        final HttpData content = HttpData.wrap(buf);
+        final AggregatedHttpFile file = AggregatedHttpFile.of(content);
+        final HttpResponse response = requireNonNull(file.response()).toHttpResponse();
+
+        content.close();
+
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("foo");
+        assertThat(buf.refCnt()).isZero();
+    }
 
     @Test
     void additionalHeaders() {

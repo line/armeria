@@ -586,10 +586,14 @@ class DataSourceTest {
             await().during(Duration.ofSeconds(2))
                    .untilAsserted(() -> assertThat(snapshotRef.get()).isNull());
 
-            Files.copy(certificate1.privateKeyFile().toPath(), privateKeyFile.toPath(),
+            final Path tempKey = Files.createTempFile(tempDir.toPath(), "key", ".tmp");
+            Files.copy(certificate1.privateKeyFile().toPath(), tempKey,
                        StandardCopyOption.REPLACE_EXISTING);
-            Files.copy(certificate1.certificateFile().toPath(), certificateFile.toPath(),
+            Files.move(tempKey, privateKeyFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
+            final Path tempCert = Files.createTempFile(tempDir.toPath(), "cert", ".tmp");
+            Files.copy(certificate1.certificateFile().toPath(), tempCert,
                        StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tempCert, certificateFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
 
             await().untilAsserted(() -> assertThat(snapshotRef.get()).isNotNull());
             final ListenerSnapshot listenerSnapshot = snapshotRef.get();

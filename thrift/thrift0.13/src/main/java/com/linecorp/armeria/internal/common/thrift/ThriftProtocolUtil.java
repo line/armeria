@@ -17,87 +17,75 @@
 package com.linecorp.armeria.internal.common.thrift;
 
 import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolException;
-import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.common.thrift.AbstractTByteBufTransport.ReadBytesNotAvailableException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 public final class ThriftProtocolUtil {
 
-    private static final boolean SUPPORT_BINARY_MESSAGE_LENGTH_LIMIT;
+    private static final boolean SUPPORTS_BINARY_MESSAGE_LENGTH_LIMIT = supportsBinaryMessageLengthLimit();
 
-    static {
-        boolean supportMessageLengthLimit = false;
-        final TProtocolFactory binaryFactory =
-                ThriftSerializationFormats.protocolFactory(ThriftSerializationFormats.BINARY, 5, 0);
-        final ByteBuf buf = Unpooled.buffer();
-        // Set a larger length than the message.
-        buf.writeInt(6);
-        buf.writeBytes("Hello".getBytes());
-        final TByteBufTransport transport = new TByteBufTransport(buf);
-        final TProtocol protocol = binaryFactory.getProtocol(transport);
-        try {
-            protocol.readMessageBegin();
-        } catch (TException e) {
-            if (e instanceof TProtocolException &&
-                ((TProtocolException) e).getType() == TProtocolException.SIZE_LIMIT) {
-                supportMessageLengthLimit = true;
+    /**
+     * Reads a message header, preserving the protocol length limit when the message name is also truncated.
+     */
+    public static TMessage readMessageBegin(TProtocol protocol, SerializationFormat serializationFormat,
+                                           ByteBuf buf, int maxStringLength) throws TException {
+        // Older Thrift versions do not limit unversioned binary message names.
+        // A negative first integer denotes a versioned header, whose name follows it.
+        if (!SUPPORTS_BINARY_MESSAGE_LENGTH_LIMIT &&
+            serializationFormat == ThriftSerializationFormats.BINARY &&
+            maxStringLength > 0 && buf.readableBytes() >= Integer.BYTES) {
+            final int length = buf.getInt(buf.readerIndex());
+            if (length > maxStringLength) {
+                throw new TProtocolException(TProtocolException.SIZE_LIMIT,
+                                             "Length exceeded max allowed: " + length);
             }
         }
-        SUPPORT_BINARY_MESSAGE_LENGTH_LIMIT = supportMessageLengthLimit;
-    }
 
-    /**
-     * Optionally validates the length a Thrift's message if the {@link SerializationFormat} is
-     * {@link ThriftSerializationFormats#BINARY} and the Thrift runtime does not validate the length for
-     * `readMessageBegin()`.
-     */
-    public static void maybeCheckMessageLength(SerializationFormat serializationFormat, ByteBuf buf,
-                                               int maxStringLength) throws TProtocolException {
-        if (supportsMessageLengthLimit(serializationFormat) || maxStringLength <= 0) {
-            return;
-        }
+        try {
+            return protocol.readMessageBegin();
+        } catch (ReadBytesNotAvailableException e) {
+            // BINARY and COMPACT headers contain one variable-length field: the message name.
+            // Thrift checks availability before its length limit, so preserve SIZE_LIMIT for names
+            // that exceed both the available bytes and the configured limit.
+            if ((serializationFormat == ThriftSerializationFormats.BINARY ||
+                 serializationFormat == ThriftSerializationFormats.COMPACT) &&
+                maxStringLength > 0 && e.requestedBytes() > maxStringLength) {
+                throw new TProtocolException(TProtocolException.SIZE_LIMIT,
+                                             "Length exceeded max allowed: " + e.requestedBytes());
+            }
 
-        if (buf.readableBytes() < 4) {
-            // Delegate the malformed message to readMessageBegin() to handle it.
-            return;
-        }
-
-        final int length = buf.getInt(buf.readerIndex());
-        if (length < 0) {
-            // A negative value means tbinary protocol V1 for which TBinaryProtocol correctly validates
-            // the message length before creating an array.
-            // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L225
-            // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L358
-            return;
-        }
-
-        if (length > maxStringLength) {
-            // Follow the error format of the upstream so that users get the same error regardless of
-            // Thrift versions.
-            // https://github.com/apache/thrift/blob/5b158389b01d028e98e59f0ea41c01d625a84242/lib/java/src/main/java/org/apache/thrift/protocol/TBinaryProtocol.java#L442
-            throw new TProtocolException(TProtocolException.SIZE_LIMIT,
-                                         "Length exceeded max allowed: " + length);
+            throw e;
         }
     }
 
-    /**
-     * Returns whether the current `libthrift` runtime implementation limits the numbers of bytes to
-     * read for `TBinaryProtocol`.
-     * Thrift 0.9.x, 0.10.x does not support a correct validation of `readMessageBegin()` for `TBinaryProtocol`.
-     * See: <a href="https://github.com/apache/thrift/pull/1398#issuecomment-339360568">
-     * THRIFT-4362 check "read length" in readStringBody(int)</a>
-     */
-    private static boolean supportsMessageLengthLimit(SerializationFormat serializationFormat) {
-        if (serializationFormat != ThriftSerializationFormats.BINARY) {
-            return true;
+    private static boolean supportsBinaryMessageLengthLimit() {
+        final ByteBuf buf = Unpooled.buffer();
+
+        try {
+            // A complete unversioned header with a two-byte name exceeding the one-byte limit.
+            buf.writeInt(2).writeShort(0).writeByte(TMessageType.CALL).writeInt(0);
+            final TProtocol protocol = ThriftProtocolFactories
+                    .binary(1, 0)
+                    .getProtocol(new TByteBufTransport(buf));
+            protocol.readMessageBegin();
+            return false;
+        } catch (TProtocolException e) {
+            return e.getType() == TProtocolException.SIZE_LIMIT;
+        } catch (TException e) {
+            return false;
+        } finally {
+            buf.release();
         }
-        return SUPPORT_BINARY_MESSAGE_LENGTH_LIMIT;
     }
 
     private ThriftProtocolUtil() {}

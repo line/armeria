@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.client.SchemePreprocessorRegistry;
 
 /**
  * Creates a new Thrift client that connects to a {@link URI} or an {@link EndpointGroup}.
@@ -230,7 +231,12 @@ public final class ThriftClients {
      *                                  contains an invalid {@link SerializationFormat}.
      */
     public static ThriftClientBuilder builder(URI uri) {
-        return new ThriftClientBuilder(requireNonNull(uri, "uri"));
+        requireNonNull(uri, "uri");
+        final SchemePreprocessorRegistry.Match match = SchemePreprocessorRegistry.find(uri.getScheme());
+        if (match != null) {
+            return new ThriftClientBuilder(match.serializationFormat(), match.provider().rpcPreprocessor(uri));
+        }
+        return new ThriftClientBuilder(uri);
     }
 
     /**

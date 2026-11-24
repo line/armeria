@@ -252,7 +252,7 @@ internal class HttpServerNestedContextPathTest {
             TEST_URLS["/api/d3/e3/prefix-test/\"?\""] =
                 StatusCodeAndBody(HttpStatus.OK, "200 OK")
             TEST_URLS["/api/d3/e3/prefix-test/.\\"] =
-                StatusCodeAndBody(HttpStatus.OK, "200 OK")
+                StatusCodeAndBody(HttpStatus.BAD_REQUEST, "ignore body")
 
             TEST_URLS["/api/d3/e3/prefix-test/.."] =
                 StatusCodeAndBody(HttpStatus.BAD_REQUEST, "ignore body")
@@ -359,7 +359,7 @@ internal class HttpServerNestedContextPathTest {
             VIRTUAL_HOST_TEST_URLS["/k2/q2/prefix-match/\"?\""] =
                 StatusCodeAndBody(HttpStatus.OK, "200 OK")
             VIRTUAL_HOST_TEST_URLS["/k2/q2/prefix-match/.\\"] =
-                StatusCodeAndBody(HttpStatus.OK, "200 OK")
+                StatusCodeAndBody(HttpStatus.BAD_REQUEST, "ignore body")
 
             VIRTUAL_HOST_TEST_URLS["/k2/q2/prefix-match/.."] =
                 StatusCodeAndBody(HttpStatus.BAD_REQUEST, "ignore body")

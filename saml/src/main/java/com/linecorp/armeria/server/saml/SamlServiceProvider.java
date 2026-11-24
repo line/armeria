@@ -79,6 +79,7 @@ public final class SamlServiceProvider {
     private final SamlSingleSignOnHandler ssoHandler;
     private final SamlSingleLogoutHandler sloHandler;
     private final boolean signatureRequired;
+    private final int maxInflatedMessageLength;
     private final SamlAssertionIdCache assertionIdCache;
 
     /**
@@ -101,6 +102,7 @@ public final class SamlServiceProvider {
                         SamlSingleSignOnHandler ssoHandler,
                         SamlSingleLogoutHandler sloHandler,
                         boolean signatureRequired,
+                        int maxInflatedMessageLength,
                         SamlAssertionIdCache assertionIdCache) {
         this.authorizer = requireNonNull(authorizer, "authorizer");
         this.entityId = requireNonNull(entityId, "entityId");
@@ -119,6 +121,7 @@ public final class SamlServiceProvider {
         this.ssoHandler = requireNonNull(ssoHandler, "ssoHandler");
         this.sloHandler = requireNonNull(sloHandler, "sloHandler");
         this.signatureRequired = signatureRequired;
+        this.maxInflatedMessageLength = maxInflatedMessageLength;
         this.assertionIdCache = requireNonNull(assertionIdCache, "assertionIdCache");
 
         defaultAcsConfig = acsConfigs.stream().filter(SamlAssertionConsumerConfig::isDefault).findFirst()
@@ -255,6 +258,14 @@ public final class SamlServiceProvider {
      */
     boolean isSignatureRequired() {
         return signatureRequired;
+    }
+
+    /**
+     * The maximum number of bytes a SAML message received via the HTTP-Redirect binding is allowed to
+     * occupy after being inflated.
+     */
+    int maxInflatedMessageLength() {
+        return maxInflatedMessageLength;
     }
 
     /**

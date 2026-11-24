@@ -34,6 +34,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class XdsBootstrapImpl implements XdsBootstrap {
     private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
+    private boolean closed;
 
     private final XdsClusterManager clusterManager;
     private final ListenerManager listenerManager;
@@ -99,8 +100,14 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         return bootstrap;
     }
 
+    @VisibleForTesting
+    boolean isClosed() {
+        return closed;
+    }
+
     @Override
     public void close() {
+        closed = true;
         controlPlaneClientManager.close();
         clusterManager.close();
         listenerManager.close();

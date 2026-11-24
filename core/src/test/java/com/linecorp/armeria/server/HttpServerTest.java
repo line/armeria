@@ -810,13 +810,14 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testExpect100ContinueDoesNotBreakHttp1Decoder(WebClient client, SessionProtocol protocol)
+    void testExpect100ContinueWithoutContentDoesNotBreakHttp1Decoder(WebClient client,
+                                                                     SessionProtocol protocol)
             throws Exception {
         assumeThat(protocol).isSameAs(H1C);
 
         final int port = server.httpPort();
         try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
-            s.setSoTimeout(Integer.MAX_VALUE);
+            s.setSoTimeout(10000);
             final InputStream in = s.getInputStream();
             final OutputStream out = s.getOutputStream();
             // Send 4 pipelined requests with 'Expect: 100-continue' header.
@@ -830,8 +831,7 @@ class HttpServerTest {
 
             final StringBuilder responses = new StringBuilder();
             for (int i = 0; i < 4; i++) {
-                responses.append("HTTP/1.1 100 Continue\r\n\r\n")
-                         .append("HTTP/1.1 200 OK\r\n")
+                responses.append("HTTP/1.1 200 OK\r\n")
                          .append("content-type: text/plain; charset=utf-8\r\n")
                          .append("content-length: 6\r\n");
                 if (i == 3) {
@@ -839,7 +839,7 @@ class HttpServerTest {
                 }
                 responses.append("\r\n200 OK");
             }
-            // '100 Continue' responses must appear once for each '200 OK' response.
+            // '100 Continue' responses must not be sent for the requests without content.
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo(responses.toString());
         }

@@ -10,6 +10,37 @@ configuration.
 
 ## Basics
 
+The simplest way to create an xDS-backed client is with the `xds:///` URI scheme:
+
+**HTTP:**
+
+```java
+WebClient client = WebClient.of("xds:///my-listener");
+```
+
+**gRPC:**
+
+```java
+MyServiceBlockingStub stub = GrpcClients.newClient("gproto+xds:///my-listener", MyServiceBlockingStub.class);
+```
+
+**Thrift:**
+
+```java
+HelloService.Iface iface = ThriftClients.newClient("tbinary+xds:///my-listener", HelloService.Iface.class);
+```
+
+The URI path is the listener name. The `xds:///` scheme resolves the bootstrap
+automatically via [XdsBootstrapProvider](type) SPI — see
+[Bootstrap — Managed bootstraps](/docs/advanced/xds/bootstrap#managed-bootstraps) for details.
+
+### Explicit preprocessor
+
+If you need more control — for example, to use [XdsHttpPreprocessor#whenReady()](type)
+or to manage the preprocessor lifecycle explicitly — create a preprocessor directly.
+See [Bootstrap — XdsBootstrap](/docs/advanced/xds/bootstrap#xdsbootstrap) for how to
+create an [XdsBootstrap](type) instance.
+
 **HTTP:**
 
 ```java

@@ -77,6 +77,12 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
         builder.allowBlockingCallsInside("io.envoyproxy.controlplane.cache.SimpleCache", "createWatch");
         builder.allowBlockingCallsInside("io.envoyproxy.controlplane.cache.SimpleCache", "createDeltaWatch");
         builder.allowBlockingCallsInside("io.grpc.netty.shaded.io.netty.util.Version", "identify");
+        // Kubernetes mock-server cleanup briefly locks the Vert.x worker queue.
+        builder.allowBlockingCallsInside("io.vertx.core.impl.WorkerPool", "close");
+        builder.allowBlockingCallsInside("io.fabric8.kubernetes.client.server.mock.WatchEventsListener",
+                                         "onClosed");
+        builder.allowBlockingCallsInside("io.fabric8.kubernetes.client.server.mock.WatchEventsListener",
+                                         "onFailure");
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(this::writeBlockingMethod);

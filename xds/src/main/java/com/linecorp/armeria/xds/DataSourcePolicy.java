@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -62,13 +63,45 @@ public final class DataSourcePolicy {
         return new DataSourcePolicyBuilder();
     }
 
+    /**
+     * Returns whether this policy restricts which files may be read.
+     */
+    boolean hasFileRestrictions() {
+        return !allowedRootDirs.isEmpty();
+    }
+
+    /**
+     * Returns whether the specified path is under an allowed root directory.
+     */
     boolean isFileAllowed(Path path) {
-        // All paths are expected to be absolute/normalized.
         if (allowedRootDirs.isEmpty()) {
             return true;
         }
         for (Path root : allowedRootDirs) {
             if (path.startsWith(root)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns whether the specified real path is under an allowed root directory, resolving symbolic
+     * links before comparing.
+     */
+    boolean isRealPathAllowed(Path realPath) {
+        if (allowedRootDirs.isEmpty()) {
+            return true;
+        }
+        for (Path root : allowedRootDirs) {
+            final Path realRoot;
+            try {
+                realRoot = root.toRealPath();
+            } catch (IOException e) {
+                // A root that cannot be resolved (e.g. it does not exist) cannot contain the path.
+                continue;
+            }
+            if (realPath.startsWith(realRoot)) {
                 return true;
             }
         }

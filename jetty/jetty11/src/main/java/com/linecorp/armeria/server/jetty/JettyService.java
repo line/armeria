@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -89,6 +90,17 @@ import io.netty.util.AsciiString;
 public final class JettyService implements HttpService {
 
     static final Logger logger = LoggerFactory.getLogger(JettyService.class);
+
+    static {
+        if (Flags.allowSemicolonInPathComponent()) {
+            logger.warn("allowSemicolonInPathComponent is enabled with " +
+                        "JettyService; Jetty strips matrix variables and " +
+                        "normalizes '.'/'..' segments, so a path-prefix route or " +
+                        "decorator may not match the path Jetty serves " +
+                        "(e.g. '/admin;a=b/x' bypasses a decorator on '/admin'). " +
+                        "Do not rely on path-prefix matching for authorization here.");
+        }
+    }
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.

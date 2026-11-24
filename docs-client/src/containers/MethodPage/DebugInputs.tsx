@@ -15,13 +15,14 @@
  */
 
 import React, { ChangeEvent, Dispatch, useCallback, useReducer } from 'react';
-import { extractUrlPath, Method, ServiceType } from '../../lib/specification';
+import { Method, ServiceType } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
 import GraphqlRequestBody from './GraphqlRequestBody';
+import { GraphqlEditorState } from './useGraphqlDebugState';
 
 interface OwnProps {
   exactPathMapping: boolean;
@@ -33,6 +34,7 @@ interface OwnProps {
   useRequestBody: boolean;
   requestBody: string;
   jsonSchemas: any;
+  graphqlEditorState: GraphqlEditorState;
   setRequestBody: Dispatch<React.SetStateAction<string>>;
   additionalPath: string;
   setAdditionalPath: Dispatch<React.SetStateAction<string>>;
@@ -70,6 +72,7 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
   requestBody,
   setRequestBody,
   jsonSchemas,
+  graphqlEditorState,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [additionalQueriesOpen, toggleAdditionalQueriesOpen] = useReducer(
@@ -140,6 +143,32 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
     [setRequestBody],
   );
 
+  let requestBodyInput: React.ReactNode = null;
+  if (useRequestBody && serviceType === ServiceType.GRAPHQL) {
+    requestBodyInput = (
+      <GraphqlRequestBody
+        requestBodyOpen={requestBodyOpen}
+        onEditRequestBodyClick={toggleRequestBodyOpen}
+        methodId={method.id}
+        editorState={graphqlEditorState}
+      />
+    );
+  } else if (useRequestBody) {
+    requestBodyInput = (
+      <RequestBody
+        exampleRequests={method.exampleRequests}
+        onSelectedRequestBodyChange={onSelectedRequestBodyChange}
+        requestBodyOpen={requestBodyOpen}
+        requestBody={requestBody}
+        onEditRequestBodyClick={toggleRequestBodyOpen}
+        onDebugFormChange={onDebugFormChange}
+        method={method}
+        serviceType={serviceType}
+        jsonSchemas={jsonSchemas}
+      />
+    );
+  }
+
   return (
     <>
       <EndpointPath
@@ -172,27 +201,7 @@ const DebugInputs: React.FunctionComponent<OwnProps> = ({
         onHeadersFormChange={onHeadersFormChange}
         onStickyHeadersChange={toggleStickyHeaders}
       />
-      {useRequestBody && serviceType === ServiceType.GRAPHQL ? (
-        <GraphqlRequestBody
-          requestBodyOpen={requestBodyOpen}
-          requestBody={requestBody}
-          onEditRequestBodyClick={toggleRequestBodyOpen}
-          onDebugFormChange={onDebugFormChange}
-          schemaUrlPath={extractUrlPath(method)}
-        />
-      ) : (
-        <RequestBody
-          exampleRequests={method.exampleRequests}
-          onSelectedRequestBodyChange={onSelectedRequestBodyChange}
-          requestBodyOpen={requestBodyOpen}
-          requestBody={requestBody}
-          onEditRequestBodyClick={toggleRequestBodyOpen}
-          onDebugFormChange={onDebugFormChange}
-          method={method}
-          serviceType={serviceType}
-          jsonSchemas={jsonSchemas}
-        />
-      )}
+      {requestBodyInput}
     </>
   );
 };

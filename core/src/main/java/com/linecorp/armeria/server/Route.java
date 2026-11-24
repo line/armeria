@@ -73,6 +73,12 @@ public interface Route {
     /**
      * Matches the specified {@link RoutingContext} and extracts the path parameters from it if exists.
      *
+     * <p>Implementations must call {@link RoutingContext#markRouteSelectionUncacheable()} before evaluating
+     * conditions that depend on query parameters or arbitrary headers, which are not part of the route
+     * cache key. This is required even if the condition rejects this route, because it may affect the
+     * selection of another route. Returning {@code false} from {@link #isCacheable()} alone does not
+     * prevent caching the selection of another route.
+     *
      * @param routingCtx a context to find the {@link HttpService}
      * @param isRouteDecorator {@code true} if this method is called for route decorators.
      *                         {@code false} if this method is called for services.

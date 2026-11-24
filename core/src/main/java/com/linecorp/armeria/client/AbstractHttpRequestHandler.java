@@ -284,7 +284,13 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             return;
         }
 
-        if (responseHeaders.status() == HttpStatus.CONTINUE) {
+        final HttpStatus status = responseHeaders.status();
+        if (status != HttpStatus.CONTINUE && status.isInformational()) {
+            // Keep waiting for '100 Continue' or a final response, e.g. after '103 Early Hints'.
+            return;
+        }
+
+        if (status == HttpStatus.CONTINUE) {
             state = State.NEEDS_DATA_OR_TRAILERS;
             resume();
             // TODO(minwoox): reset the timeout
