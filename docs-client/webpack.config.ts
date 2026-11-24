@@ -125,6 +125,7 @@ const config: Configuration = {
           pathname.endsWith('specification.json') ||
           pathname.endsWith('versions.json') ||
           pathname.endsWith('schemas.json') ||
+          pathname.endsWith('settings.json') ||
           pathname.endsWith('injected.js'),
         target: `http://127.0.0.1:${armeriaPort}`,
         changeOrigin: true,
