@@ -81,6 +81,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
+    @Nullable
+    private final ServiceErrorHandler serviceOptionsErrorHandler;
     private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
@@ -101,6 +103,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
         if (options.requestAutoAbortDelayMillis() != -1) {
             requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
         }
+        serviceOptionsErrorHandler = options.errorHandler();
     }
 
     void addMappedRoute(Route mappedRoute) {
@@ -353,9 +356,15 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                         String baseContextPath, Supplier<AutoCloseable> contextHook) {
-        ServiceErrorHandler errorHandler =
-                serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
-                                            : defaultServiceErrorHandler;
+        // A handler set on the binding is consulted first, then the one the service declared via
+        // ServiceOptions, then the server-wide default.
+        ServiceErrorHandler errorHandler = defaultServiceErrorHandler;
+        if (serviceOptionsErrorHandler != null) {
+            errorHandler = serviceOptionsErrorHandler.orElse(errorHandler);
+        }
+        if (serviceErrorHandler != null) {
+            errorHandler = serviceErrorHandler.orElse(errorHandler);
+        }
         if (unloggedExceptionsReporter != null) {
             errorHandler = new ExceptionReportingServiceErrorHandler(errorHandler,
                                                                      unloggedExceptionsReporter);

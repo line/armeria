@@ -65,9 +65,11 @@ import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscoderBuilder.HttpJsonGrpcMethod;
 
@@ -96,6 +98,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     static final AttributeKey<Boolean> GRPC_USE_BLOCKING_EXECUTOR =
             AttributeKey.valueOf(FramedGrpcService.class, "GRPC_USE_BLOCKING_EXECUTOR");
+
+    /**
+     * Set when a {@link GrpcTimeoutPolicy} decided the deadline this request is scheduled against.
+     */
+    private static final AttributeKey<Boolean> DEADLINE_FROM_POLICY =
+            AttributeKey.valueOf(FramedGrpcService.class, "DEADLINE_FROM_POLICY");
 
     private static Map<String, GrpcJsonMarshaller> getJsonMarshallers(
             HandlerRegistry registry,
@@ -142,6 +150,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean lookupMethodFromAttribute;
     private final boolean autoCompression;
     private final boolean enableEnvoyHttp1Bridge;
+    private final ServiceOptions serviceOptions;
 
     FramedGrpcService(HandlerRegistry registry,
                       DecompressorRegistry decompressorRegistry,
@@ -195,6 +204,51 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 })
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
         this.grpcHealthCheckService = grpcHealthCheckService;
+        serviceOptions = ServiceOptions.builder()
+                                       .errorHandler(this::onServiceException)
+                                       .build();
+    }
+
+    @Override
+    public ServiceOptions options() {
+        return serviceOptions;
+    }
+
+    /**
+     * Renders a {@link RequestTimeoutException} as gRPC trailers.
+     *
+     * <p>A request may be timed out before gRPC installs its own cancellation listener, e.g. while a
+     * blocking interceptor is running. The request is then aborted before a response has started, which
+     * the default handler renders as an HTTP 503 that a gRPC client reports as {@code UNAVAILABLE},
+     * suggesting the call is safe to retry.
+     */
+    @Nullable
+    private HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+        if (!(cause instanceof RequestTimeoutException)) {
+            return null;
+        }
+        if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            // A response has already started, so gRPC has installed its cancellation listener and reports
+            // the timeout through the call itself.
+            return null;
+        }
+        if (Boolean.TRUE.equals(ctx.attr(UnframedGrpcSupport.IS_UNFRAMED_GRPC))) {
+            // An unframed request expects a plain HTTP response, which UnframedGrpcResponseHandler builds
+            // from the status the default handler renders.
+            return null;
+        }
+        final SerializationFormat serializationFormat = findSerializationFormat(ctx.request().contentType());
+        if (serializationFormat == null) {
+            return null;
+        }
+        // What expired decides the status. A deadline the policy decided, whether it came from the client
+        // or from the 'max' it is bounded by, is a gRPC deadline, so report DEADLINE_EXCEEDED; that is also
+        // what a negative offset promises, which a client cannot derive on its own because its own deadline
+        // has not passed yet. Otherwise the server timeout cancelled the request, which gRPC reports as
+        // CANCELLED, and a client whose deadline has expired turns that into DEADLINE_EXCEEDED on its side.
+        final Status status = Boolean.TRUE.equals(ctx.attr(DEADLINE_FROM_POLICY)) ? Status.DEADLINE_EXCEEDED
+                                                                                 : Status.CANCELLED;
+        return failRequest(ctx, serializationFormat, status.withCause(cause));
     }
 
     @Override
@@ -297,6 +351,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (timeout.isZero()) {
             return false;
         }
+        ctx.setAttr(DEADLINE_FROM_POLICY, true);
         ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, timeout);
         return true;
     }

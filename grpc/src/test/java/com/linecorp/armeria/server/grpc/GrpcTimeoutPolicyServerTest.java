@@ -28,14 +28,26 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Metadata;
+import io.grpc.ServerCall;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -132,6 +144,125 @@ class GrpcTimeoutPolicyServerTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension slowInterceptorServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(0);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(MAX))
+                                  .addService(new TimeoutReportingService())
+                                  .useBlockingTaskExecutor(true)
+                                  .intercept(slowInterceptor())
+                                  .build());
+        }
+    };
+
+    /**
+     * Times out inside a blocking interceptor like {@link #slowInterceptorServer}, but with the service
+     * timeout rather than a client deadline.
+     */
+    @RegisterExtension
+    static ServerExtension slowInterceptorWithoutDeadlineServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(300);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useServiceTimeout())
+                                  .addService(new TimeoutReportingService())
+                                  .useBlockingTaskExecutor(true)
+                                  .intercept(slowInterceptor())
+                                  .build());
+        }
+    };
+
+    /** The same window, reached by an unframed request. */
+    @RegisterExtension
+    static ServerExtension slowInterceptorUnframedServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(300);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useServiceTimeout())
+                                  .addService(new TimeoutReportingService())
+                                  .enableUnframedRequests(true)
+                                  .useBlockingTaskExecutor(true)
+                                  .intercept(slowInterceptor())
+                                  .build());
+        }
+    };
+
+    /** Shortens the client deadline by 500ms and burns 400ms before the service sees the request. */
+    @RegisterExtension
+    static ServerExtension offsetDelayedServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(0);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(
+                                          MAX, Duration.ofMillis(-500)))
+                                  .addService(new TimeoutReportingService())
+                                  .build());
+            sb.decorator((delegate, ctx, req) -> {
+                final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                ctx.eventLoop().schedule(() -> {
+                    try {
+                        responseFuture.complete(delegate.serve(ctx, req));
+                    } catch (Throwable cause) {
+                        responseFuture.completeExceptionally(cause);
+                    }
+                }, 400, TimeUnit.MILLISECONDS);
+                return HttpResponse.of(responseFuture);
+            });
+        }
+    };
+
+    /** A bounded policy short enough to expire inside the interceptor even for a client asking for none. */
+    @RegisterExtension
+    static ServerExtension slowInterceptorBoundedServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(0);
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(
+                                          Duration.ofMillis(300)))
+                                  .addService(new TimeoutReportingService())
+                                  .useBlockingTaskExecutor(true)
+                                  .intercept(slowInterceptor())
+                                  .build());
+        }
+    };
+
+    /** Fails with something other than a timeout, which must take the usual gRPC error path. */
+    @RegisterExtension
+    static ServerExtension throwingServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service(GrpcService.builder()
+                                  .timeoutPolicy(GrpcTimeoutPolicy.useGrpcTimeoutHeader(MAX))
+                                  .addService(new TestServiceImplBase() {
+                                      @Override
+                                      public void unaryCall(SimpleRequest request,
+                                                            StreamObserver<SimpleResponse> observer) {
+                                          throw new IllegalStateException("not a timeout");
+                                      }
+                                  })
+                                  .build());
+        }
+    };
+
+    /** Holds up the call on the blocking executor so that a deadline expires before gRPC starts it. */
+    private static ServerInterceptor slowInterceptor() {
+        return new ServerInterceptor() {
+            @Override
+            public <I, O> ServerCall.Listener<I> interceptCall(
+                    ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
+                Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(1));
+                return next.startCall(call, headers);
+            }
+        };
+    }
+
     @Test
     void longClientTimeoutIsCapped() {
         final TestServiceBlockingStub client =
@@ -162,6 +293,108 @@ class GrpcTimeoutPolicyServerTest {
         final CompletableFuture<Throwable> cancellation = delayedRequestCancellation.get();
         assertThat(cancellation).isNotNull();
         assertThat(cancellation.get(1, TimeUnit.SECONDS)).isInstanceOf(RequestTimeoutException.class);
+    }
+
+    @Test
+    void deadlineAlreadyExhaustedFailsWithDeadlineExceeded() {
+        // The pipeline takes 400ms before the service, so a 300ms deadline is already past when the timeout
+        // is applied. That must fail the same way a policy returning Duration.ZERO does, rather than being
+        // cancelled before a response has started - which a client sees as UNAVAILABLE.
+        final TestServiceBlockingStub client = GrpcClients.builder(delayedServer.httpUri())
+                                                          .responseTimeoutMillis(0)
+                                                          .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "300m")
+                                                          .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                });
+    }
+
+    @Test
+    void deadlineExpiresWhileBlockingInterceptorIsRunning() {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(slowInterceptorServer.httpUri())
+                           .responseTimeoutMillis(0)
+                           .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "300m")
+                           .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                });
+    }
+
+    @Test
+    void deadlineExpiresWhileBlockingInterceptorIsRunningWithoutClientDeadline() {
+        // No 'grpc-timeout', so there is no client deadline to exceed and gRPC reports CANCELLED.
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(slowInterceptorWithoutDeadlineServer.httpUri())
+                           .responseTimeoutMillis(0)
+                           .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+                });
+    }
+
+    @Test
+    void unframedRequestKeepsRenderingAPlainHttpResponse() {
+        // An unframed request must not be answered with gRPC trailers, so the timeout is left to the
+        // default error handler.
+        final AggregatedHttpResponse res =
+                WebClient.builder(slowInterceptorUnframedServer.httpUri())
+                         .responseTimeoutMillis(0)
+                         .build()
+                         .blocking()
+                         .execute(RequestHeaders.builder(HttpMethod.POST,
+                                                         "/armeria.grpc.testing.TestService/UnaryCall")
+                                                .contentType(MediaType.JSON_UTF_8)
+                                                .build(),
+                                  "{}");
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        // gRPC trailers would carry a 'grpc-status', which an unframed client cannot read.
+        assertThat(res.headers().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
+    }
+
+    @Test
+    void zeroClientTimeoutStillGetsTheBoundedDeadline() {
+        // 'grpc-timeout: 0S' asks for no deadline, so the policy's 'max' becomes the deadline and
+        // exceeding it is a gRPC deadline, not a server-side cancellation.
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(slowInterceptorBoundedServer.httpUri())
+                           .responseTimeoutMillis(0)
+                           .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "0S")
+                           .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                });
+    }
+
+    @Test
+    void negativeOffsetReportsDeadlineExceededBeforeTheClientDeadline() {
+        // 700ms shifted by -500ms leaves 200ms, which the 400ms pipeline has already consumed. The client
+        // deadline itself has not passed, so only the server can tell the client its deadline is lost.
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(offsetDelayedServer.httpUri())
+                           .responseTimeoutMillis(0)
+                           .setHeader(GrpcHeaderNames.GRPC_TIMEOUT, "700m")
+                           .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> requestTimeoutMillis(client))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+                });
+    }
+
+    @Test
+    void anExceptionOtherThanATimeoutIsLeftAlone() {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(throwingServer.httpUri())
+                           .responseTimeoutMillis(0)
+                           .build(TestServiceBlockingStub.class);
+        assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                    assertThat(cause.getStatus().getCode()).isEqualTo(Code.UNKNOWN);
+                });
     }
 
     @Test

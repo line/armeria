@@ -22,6 +22,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -50,13 +51,16 @@ public final class ServiceOptions {
     private final long maxRequestLength;
     private final long requestAutoAbortDelayMillis;
     private final long closeHttp2StreamDelayMillis;
+    @Nullable
+    private final ServiceErrorHandler errorHandler;
 
     ServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis,
-                   long closeHttp2StreamDelayMillis) {
+                   long closeHttp2StreamDelayMillis, @Nullable ServiceErrorHandler errorHandler) {
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.closeHttp2StreamDelayMillis = closeHttp2StreamDelayMillis;
+        this.errorHandler = errorHandler;
     }
 
     /**
@@ -92,6 +96,19 @@ public final class ServiceOptions {
         return closeHttp2StreamDelayMillis;
     }
 
+    /**
+     * Returns the {@link ServiceErrorHandler} that an {@link HttpService} uses to handle its own
+     * exceptions. {@code null} if not set.
+     *
+     * <p>A handler set with {@link ServiceConfigSetters#errorHandler(ServiceErrorHandler)} takes
+     * precedence over this one, which in turn takes precedence over the {@link ServerErrorHandler}
+     * configured for the {@link Server}.
+     */
+    @Nullable
+    public ServiceErrorHandler errorHandler() {
+        return errorHandler;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -106,13 +123,14 @@ public final class ServiceOptions {
         return requestTimeoutMillis == that.requestTimeoutMillis &&
                maxRequestLength == that.maxRequestLength &&
                requestAutoAbortDelayMillis == that.requestAutoAbortDelayMillis &&
-               closeHttp2StreamDelayMillis == that.closeHttp2StreamDelayMillis;
+               closeHttp2StreamDelayMillis == that.closeHttp2StreamDelayMillis &&
+               Objects.equals(errorHandler, that.errorHandler);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
-                            closeHttp2StreamDelayMillis);
+                            closeHttp2StreamDelayMillis, errorHandler);
     }
 
     @Override
@@ -122,6 +140,7 @@ public final class ServiceOptions {
                           .add("maxRequestLength", maxRequestLength)
                           .add("requestAutoAbortDelayMillis", requestAutoAbortDelayMillis)
                           .add("closeHttp2StreamDelayMillis", closeHttp2StreamDelayMillis)
+                          .add("errorHandler", errorHandler)
                           .toString();
     }
 }

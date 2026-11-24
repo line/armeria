@@ -17,9 +17,11 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -31,6 +33,8 @@ public final class ServiceOptionsBuilder {
     private long maxRequestLength = -1;
     private long requestAutoAbortDelayMillis = -1;
     private long closeHttp2StreamDelayMillis;
+    @Nullable
+    private ServiceErrorHandler errorHandler;
 
     ServiceOptionsBuilder() {}
 
@@ -77,10 +81,22 @@ public final class ServiceOptionsBuilder {
     }
 
     /**
+     * Sets the {@link ServiceErrorHandler} that the {@link HttpService} uses to handle its own
+     * exceptions. The handler is consulted after one set with
+     * {@link ServiceConfigSetters#errorHandler(ServiceErrorHandler)} and before the
+     * {@link ServerErrorHandler} configured for the {@link Server}. Returning {@code null} from the
+     * handler falls back to the next one.
+     */
+    public ServiceOptionsBuilder errorHandler(ServiceErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link ServiceOptions} based on the properties of this builder.
      */
     public ServiceOptions build() {
         return new ServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
-                                  closeHttp2StreamDelayMillis);
+                                  closeHttp2StreamDelayMillis, errorHandler);
     }
 }
