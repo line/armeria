@@ -347,8 +347,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         } else if (decodedReq.isOpen()) {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
-                decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                written = true;
+                written = decodedReq.tryWrite(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw Http2Exception.streamError(streamId, INTERNAL_ERROR, t,
