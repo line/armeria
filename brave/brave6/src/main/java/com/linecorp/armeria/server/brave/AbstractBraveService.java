@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.brave.TraceContextUtil;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -52,7 +53,7 @@ abstract class AbstractBraveService<BI extends brave.Request, BO extends brave.R
 
     @Override
     public final O serve(ServiceRequestContext ctx, I req) throws Exception {
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)) {
+        if (!TransientServiceUtil.transientServiceOptions(ctx).contains(TransientServiceOption.WITH_TRACING)) {
             return unwrap().serve(ctx, req);
         }
         final BI braveReq = braveRequest(ctx);

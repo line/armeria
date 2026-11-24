@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -63,9 +64,8 @@ public final class LoggingUtils {
 
     private static boolean isTransientService(RequestContext ctx) {
         return ctx instanceof ServiceRequestContext &&
-               !((ServiceRequestContext) ctx).config()
-                                             .transientServiceOptions()
-                                             .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
+               !TransientServiceUtil.transientServiceOptions((ServiceRequestContext) ctx)
+                                    .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
     }
 
     private LoggingUtils() {}

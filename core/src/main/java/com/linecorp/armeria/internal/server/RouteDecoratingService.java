@@ -35,6 +35,7 @@ import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
@@ -167,12 +168,33 @@ public final class RouteDecoratingService implements HttpService {
 
         private final Router<RouteDecoratingService> router;
         private final List<RouteDecoratingService> routeDecoratingServices;
+        private final boolean hasTransientServiceDecorator;
 
         InitialDispatcherService(HttpService delegate, Router<RouteDecoratingService> router,
                                  List<RouteDecoratingService> routeDecoratingServices) {
             super(delegate);
             this.router = router;
             this.routeDecoratingServices = routeDecoratingServices;
+            boolean hasTransientServiceDecorator = false;
+            for (RouteDecoratingService routeDecoratingService : routeDecoratingServices) {
+                final TransientService<?, ?> transientService =
+                        routeDecoratingService.decorator().as(TransientService.class);
+                if (transientService != null) {
+                    // Validate here so that a bad decorator fails when the server is built
+                    // rather than in the middle of handling a request.
+                    requireNonNull(transientService.transientServiceOptions(),
+                                   "transientServiceOptions() returned null by " + transientService);
+                    hasTransientServiceDecorator = true;
+                }
+            }
+            this.hasTransientServiceDecorator = hasTransientServiceDecorator;
+        }
+
+        /**
+         * Returns {@code true} if any of the route decorators is a {@link TransientService}.
+         */
+        public boolean hasTransientServiceDecorator() {
+            return hasTransientServiceDecorator;
         }
 
         @Override
@@ -202,9 +224,14 @@ public final class RouteDecoratingService implements HttpService {
             return service.serve(ctx, req);
         }
 
+        /**
+         * Finds the service of the specified type from the route decorators matching the request first,
+         * and then from the decorated service. Unlike {@link ServiceRequestContext#findService(Class)},
+         * this method is not limited to {@link HttpService} so that it can also look up a non-HTTP
+         * interface such as {@code TransientService}.
+         */
         @Nullable
-        public <T extends HttpService> T findService(ServiceRequestContext ctx,
-                                                     Class<? extends T> serviceClass) {
+        public <T> T findService(ServiceRequestContext ctx, Class<? extends T> serviceClass) {
             for (Routed<RouteDecoratingService> routed : router.findAll(ctx.routingContext())) {
                 if (routed.isPresent()) {
                     final T service = routed.value().decorator().as(serviceClass);
