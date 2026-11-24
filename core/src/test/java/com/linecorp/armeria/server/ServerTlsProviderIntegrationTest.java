@@ -18,10 +18,8 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,8 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -39,16 +35,11 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.ReferenceCountUtil;
 
 class ServerTlsProviderIntegrationTest {
 
@@ -244,48 +235,5 @@ class ServerTlsProviderIntegrationTest {
                     .isInstanceOf(UnprocessedRequestException.class)
                     .hasCauseInstanceOf(ClosedChannelException.class);
         }
-    }
-
-    @Test
-    void providerReturnsBadHttp2Ciphers_handshakeFails() {
-        final String badCipher = getBadCipher();
-        assumeThat(badCipher).isNotNull();
-
-        providerRef.set(ServerTlsProvider.of(ctx ->
-                ServerTlsSpec.builder()
-                             .tlsKeyPair(defaultKeyPair)
-                             .ciphers(badCipher)
-                             .build()));
-
-        try (ClientFactory factory = ClientFactory.builder().tlsNoVerify().build()) {
-            final BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTPS))
-                                                      .factory(factory)
-                                                      .build()
-                                                      .blocking();
-            assertThatThrownBy(() -> client.get("/"))
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .hasCauseInstanceOf(ClosedChannelException.class);
-        }
-    }
-
-    private static final List<String> BAD_HTTP2_CIPHERS =
-            ImmutableList.of("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
-                             "TLS_RSA_WITH_AES_128_GCM_SHA256",
-                             "TLS_RSA_WITH_AES_128_CBC_SHA");
-
-    @Nullable
-    private static String getBadCipher() {
-        for (String cipher : BAD_HTTP2_CIPHERS) {
-            try {
-                final SslContext sslCtx = SslContextBuilder.forServer(defaultKeyPair.privateKey(),
-                                                                      defaultKeyPair.certificateChain())
-                                                           .ciphers(ImmutableList.of(cipher))
-                                                           .build();
-                ReferenceCountUtil.release(sslCtx);
-                return cipher;
-            } catch (Exception ignored) {
-            }
-        }
-        return null;
     }
 }

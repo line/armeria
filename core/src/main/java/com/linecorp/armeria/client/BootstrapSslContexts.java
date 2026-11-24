@@ -16,16 +16,12 @@
 
 package com.linecorp.armeria.client;
 
-import javax.net.ssl.SSLEngine;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.ReferenceCountUtil;
 
 final class BootstrapSslContexts {
 
@@ -53,32 +49,8 @@ final class BootstrapSslContexts {
             meterIdPrefix = options.tlsConfig().meterIdPrefix();
         }
         sslContextFactory = new SslContextFactory(meterIdPrefix, options.meterRegistry());
-
-        SslContext http1OnlySslCtx = null;
-        SslContext sslCtx = null;
-        boolean success = false;
-        try {
-            http1OnlySslCtx = sslContextFactory.getOrCreate(http1OnlyTlsSpec);
-            sslCtx = sslContextFactory.getOrCreate(defaultTlsSpec);
-            SSLEngine engine = null;
-            try {
-                engine = sslCtx.newEngine(ByteBufAllocator.DEFAULT);
-            } finally {
-                ReferenceCountUtil.release(engine);
-            }
-            success = true;
-        } finally {
-            if (!success) {
-                if (sslCtx != null) {
-                    sslContextFactory.release(sslCtx);
-                }
-                if (http1OnlySslCtx != null) {
-                    sslContextFactory.release(http1OnlySslCtx);
-                }
-            }
-        }
-        this.http1OnlySslCtx = http1OnlySslCtx;
-        this.sslCtx = sslCtx;
+        http1OnlySslCtx = sslContextFactory.getOrCreate(http1OnlyTlsSpec);
+        sslCtx = sslContextFactory.getOrCreate(defaultTlsSpec);
     }
 
     SslContextFactory sslContextFactory() {
