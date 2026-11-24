@@ -232,6 +232,18 @@ public final class RouteDecoratingService implements HttpService {
          */
         @Nullable
         public <T> T findService(ServiceRequestContext ctx, Class<? extends T> serviceClass) {
+            final T service = findRouteDecorator(ctx, serviceClass);
+            if (service != null) {
+                return service;
+            }
+            return unwrap().as(serviceClass);
+        }
+
+        /**
+         * Finds the service of the specified type only from the route decorators matching the request.
+         */
+        @Nullable
+        public <T> T findRouteDecorator(ServiceRequestContext ctx, Class<? extends T> serviceClass) {
             for (Routed<RouteDecoratingService> routed : router.findAll(ctx.routingContext())) {
                 if (routed.isPresent()) {
                     final T service = routed.value().decorator().as(serviceClass);
@@ -240,7 +252,7 @@ public final class RouteDecoratingService implements HttpService {
                     }
                 }
             }
-            return unwrap().as(serviceClass);
+            return null;
         }
 
         @Override

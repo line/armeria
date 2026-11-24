@@ -37,7 +37,8 @@ import io.netty.util.AttributeKey;
  * as a route decorator, e.g. {@code ServerBuilder.decorator(path, TransientHttpService.newDecorator())}.
  * The route decorators matching a request are only known at request time, so the {@link TransientService}
  * is resolved lazily per request by looking up the matching route decorators first and then the service,
- * in the same order as {@link ServiceRequestContext#findService(Class)}. The first {@link TransientService}
+ * in the same order as {@link ServiceRequestContext#findService(Class)}. If it is the service, the options
+ * computed from the {@link ServiceConfig#service()} in advance are used. The first {@link TransientService}
  * found wins and the result is cached in the {@link ServiceRequestContext}. If none of the route decorators
  * is a {@link TransientService}, the value computed from the {@link ServiceConfig#service()} in advance is
  * used without looking up the route decorators.
@@ -97,10 +98,17 @@ public final class TransientServiceUtil {
             return cached;
         }
 
-        final TransientService<?, ?> transientService = service.findService(ctx, TransientService.class);
+        final TransientService<?, ?> transientService =
+                service.findRouteDecorator(ctx, TransientService.class);
         final ResolvedTransientService resolved;
         if (transientService == null) {
-            resolved = ResolvedTransientService.NON_TRANSIENT_SERVICE;
+            // No matching route decorator is a TransientService. Use the value extracted from the service
+            // in advance, as if there were no TransientService route decorators.
+            if (service.as(TransientService.class) == null) {
+                resolved = ResolvedTransientService.NON_TRANSIENT_SERVICE;
+            } else {
+                resolved = new ResolvedTransientService(true, ctx.config().transientServiceOptions());
+            }
         } else {
             final Set<TransientServiceOption> transientServiceOptions = requireNonNull(
                     transientService.transientServiceOptions(),

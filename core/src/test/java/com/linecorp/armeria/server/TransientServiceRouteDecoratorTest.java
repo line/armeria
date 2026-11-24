@@ -32,6 +32,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
@@ -92,6 +94,10 @@ class TransientServiceRouteDecoratorTest {
 
     private static final HttpService fooService = (ctx, req) -> HttpResponse.of("foo");
 
+    // Flipped after the server is built so that a TransientService can return different options
+    // after the server is built.
+    private static volatile boolean serverStarted;
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -145,6 +151,10 @@ class TransientServiceRouteDecoratorTest {
             sb.service("/route-transient-non-matching", fooService);
             sb.decorator("/non-matching", TransientHttpService.newDecorator());
 
+            // The options of a TransientService are read when the server is built, even if the service
+            // returns different options later and there are TransientService route decorators.
+            sb.service("/changing-options", new ChangingOptionsService());
+
             // HealthCheckService is a TransientService without any TransientServiceOptions by default.
             sb.service("/health", HealthCheckService.of());
             sb.service("/health-with-access-logging", HealthCheckService.of());
@@ -160,6 +170,7 @@ class TransientServiceRouteDecoratorTest {
         observedPaths.clear();
         meterRegistry.clear();
         MicrometerUtil.clear();
+        serverStarted = true;
     }
 
     @CsvSource({
@@ -175,6 +186,7 @@ class TransientServiceRouteDecoratorTest {
             "/route-transient-non-matching,           true,  true,  true,  true",
             "/health,                                 false, false, false, false",
             "/health-with-access-logging,             true,  false, false, false",
+            "/changing-options,                       true,  false, false, false",
     })
     @ParameterizedTest
     void routeDecorator(String path, boolean accessLogging, boolean metricCollection,
@@ -283,6 +295,20 @@ class TransientServiceRouteDecoratorTest {
         @SuppressWarnings("NullAway")
         public Set<TransientServiceOption> transientServiceOptions() {
             return null;
+        }
+    }
+
+    private static final class ChangingOptionsService implements TransientHttpService {
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.of("foo");
+        }
+
+        @Override
+        public Set<TransientServiceOption> transientServiceOptions() {
+            return serverStarted ? ImmutableSet.of()
+                                 : ImmutableSet.of(TransientServiceOption.WITH_ACCESS_LOGGING);
         }
     }
 }
