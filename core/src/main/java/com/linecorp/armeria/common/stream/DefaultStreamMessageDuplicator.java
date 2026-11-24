@@ -399,7 +399,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 final CompletableFuture<Void> future = s.whenComplete();
                 completionFutures.add(future);
             });
-            downstreamSubscriptions.clear();
             CompletableFutures.successfulAsList(completionFutures, unused -> null)
                               .handle((unused1, unused2) -> {
                                   signals.clear(cause);

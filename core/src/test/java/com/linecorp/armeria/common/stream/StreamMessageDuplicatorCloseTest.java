@@ -16,12 +16,19 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -29,6 +36,7 @@ import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -81,6 +89,58 @@ class StreamMessageDuplicatorCloseTest {
 
         for (int i = 0; i < 60; i++) {
             assertThat(byteBufs.get(i).refCnt()).isZero();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void abortedDuplicator_waitsForQueuedChildAbort(boolean childAbortsFirst) {
+        final Queue<Runnable> tasks = new LinkedList<>();
+        final AtomicBoolean inEventLoop = new AtomicBoolean(true);
+        final EventExecutor downstreamExecutor = mock(EventExecutor.class);
+        when(downstreamExecutor.inEventLoop()).thenAnswer(unused -> inEventLoop.get());
+        doAnswer(invocation -> {
+            tasks.add(invocation.getArgument(0));
+            return null;
+        }).when(downstreamExecutor).execute(any(Runnable.class));
+
+        final ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(4).writeInt(1);
+        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        publisher.write(HttpData.wrap(byteBuf));
+        final StreamMessageDuplicator<HttpData> duplicator =
+                publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
+        final StreamMessage<HttpData> child = duplicator.duplicate();
+        final IllegalStateException cause = new IllegalStateException("abort");
+        try {
+            child.subscribe(new QueueingSubscriber(new LinkedList<>()), downstreamExecutor);
+            assertThat(byteBuf.refCnt()).isOne();
+
+            inEventLoop.set(false);
+            if (childAbortsFirst) {
+                child.abort(cause);
+            }
+            duplicator.abort(cause);
+            assertThat(child.whenComplete()).isNotDone();
+            assertThat(byteBuf.refCnt()).isOne();
+
+            inEventLoop.set(true);
+            while (!tasks.isEmpty()) {
+                tasks.remove().run();
+            }
+
+            assertThat(child.whenComplete()).isCompletedExceptionally();
+            assertThat(child.whenComplete()).hasFailedWithThrowableThat().isSameAs(cause);
+            assertThat(byteBuf.refCnt()).isZero();
+        } finally {
+            inEventLoop.set(true);
+            while (!tasks.isEmpty()) {
+                tasks.remove().run();
+            }
+            publisher.abort();
+            duplicator.abort();
+            if (byteBuf.refCnt() > 0) {
+                byteBuf.release();
+            }
         }
     }
 

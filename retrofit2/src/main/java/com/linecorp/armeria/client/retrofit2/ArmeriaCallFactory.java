@@ -15,18 +15,29 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.Clients.withContextCustomizer;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.RequestOptionsBuilder;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -34,6 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.RequestCancellation;
 
 import okhttp3.Call;
 import okhttp3.Call.Factory;
@@ -107,8 +119,9 @@ final class ArmeriaCallFactory implements Factory {
 
         private final Request request;
 
-        @Nullable
-        private volatile HttpResponse httpResponse;
+        private final RequestCancellation cancellation = new RequestCancellation();
+
+        private volatile boolean executed;
 
         @SuppressWarnings("FieldMayBeFinal")
         private volatile ExecutionState executionState = ExecutionState.IDLE;
@@ -118,7 +131,11 @@ final class ArmeriaCallFactory implements Factory {
             this.request = request;
         }
 
-        private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
+        private HttpResponse doCall(boolean interruptible) throws IOException {
+            final Throwable cancellationCause = cancellationCause(interruptible);
+            if (cancellationCause != null) {
+                return HttpResponse.ofFailure(cancellationCause);
+            }
             final HttpUrl httpUrl = request.url();
             final WebClient webClient = callFactory.getWebClient(httpUrl);
             final String absolutePathRef;
@@ -137,13 +154,21 @@ final class ArmeriaCallFactory implements Factory {
                             requestHeaders.value(i));
             }
 
+            final RequestOptionsBuilder optionsBuilder =
+                    RequestOptions.builder().exchangeType(ExchangeType.RESPONSE_STREAMING);
+            cancellation.attach(optionsBuilder);
+            final RequestOptions options = optionsBuilder.build();
             final RequestBody body = request.body();
             final Invocation invocation = request.tag(Invocation.class);
             if (body == null) {
+                final Throwable dispatchCancellationCause = cancellationCause(interruptible);
+                if (dispatchCancellationCause != null) {
+                    return HttpResponse.ofFailure(dispatchCancellationCause);
+                }
                 // Without a body.
                 try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> InvocationUtil.setInvocation(ctx, invocation))) {
-                    return webClient.execute(headers.build());
+                        ctx -> customizeContext(ctx, invocation))) {
+                    return webClient.execute(HttpRequest.of(headers.build()), options);
                 }
             }
 
@@ -155,15 +180,40 @@ final class ArmeriaCallFactory implements Factory {
 
             try (Buffer contentBuffer = new Buffer()) {
                 body.writeTo(contentBuffer);
+                final Throwable dispatchCancellationCause = cancellationCause(interruptible);
+                if (dispatchCancellationCause != null) {
+                    return HttpResponse.ofFailure(dispatchCancellationCause);
+                }
 
                 try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> InvocationUtil.setInvocation(ctx, invocation))) {
-                    return webClient.execute(headers.build(), contentBuffer.readByteArray());
+                        ctx -> customizeContext(ctx, invocation))) {
+                    return webClient.execute(HttpRequest.of(headers.build(),
+                                                            HttpData.wrap(contentBuffer.readByteArray())),
+                                             options);
                 }
-            } catch (IOException e) {
-                throw new IllegalArgumentException(
-                        "Failed to convert RequestBody to HttpData. " + request.method(), e);
             }
+        }
+
+        @Nullable
+        private Throwable cancellationCause(boolean interruptible) {
+            final Throwable cause = cancellation.cause();
+            if (cause != null) {
+                return cause;
+            }
+            return interruptible && Thread.currentThread().isInterrupted() ? new InterruptedException() : null;
+        }
+
+        private void customizeContext(ClientRequestContext ctx, @Nullable Invocation invocation) {
+            if (RequestCancellation.get(ctx) != cancellation) {
+                return;
+            }
+            InvocationUtil.setInvocation(ctx, invocation);
+            cancellation.onCancel(ctx::cancel, ctx.log().whenComplete());
+        }
+
+        private HttpResponse ownResponse(HttpResponse response) {
+            cancellation.onCancel(response::abort, response.whenComplete());
+            return response;
         }
 
         @Override
@@ -171,42 +221,106 @@ final class ArmeriaCallFactory implements Factory {
             return request;
         }
 
-        private synchronized HttpResponse createRequest() {
-            if (httpResponse != null) {
-                throw new IllegalStateException("executed already");
-            }
+        private synchronized void claimExecution() {
+            checkState(!executed, "executed already");
+            // Prevent another execution after an encoding failure or interruption.
+            executed = true;
             executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            final HttpResponse newResponse = doCall(callFactory, request);
-            httpResponse = newResponse;
-            return newResponse;
         }
 
         @Override
         public Response execute() throws IOException {
-            final CompletableCallback completableCallback = new CompletableCallback();
-            enqueue(completableCallback);
+            claimExecution();
+            final CompletableCallback callback = new CompletableCallback();
+            HttpResponse response = null;
             try {
-                return completableCallback.join();
+                if (Thread.interrupted()) {
+                    throw new InterruptedException();
+                }
+                response = ownResponse(doCall(true));
+                response.subscribe(callFactory.subscriberFactory.create(this, callback, request));
+                if (Thread.interrupted()) {
+                    throw new InterruptedException();
+                }
+                final Response result = callback.get();
+                if (Thread.interrupted()) {
+                    throw new InterruptedException();
+                }
+                return result;
+            } catch (InterruptedException e) {
+                throw cancelOnInterrupt(e, callback, response);
+            } catch (IOException e) {
+                if (isEncodingInterrupted(e)) {
+                    throw cancelOnInterrupt(e, callback, response);
+                }
+                throw new IllegalArgumentException(
+                        "Failed to convert RequestBody to HttpData. " + request.method(), e);
             } catch (CancellationException e) {
                 throw new IOException(e);
-            } catch (CompletionException e) {
+            } catch (ExecutionException e) {
                 throw new IOException(Exceptions.peel(e));
             }
         }
 
+        private static boolean isEncodingInterrupted(IOException cause) {
+            if (Thread.currentThread().isInterrupted()) {
+                return true;
+            }
+            final Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+            for (Throwable current = cause; current != null && seen.add(current);
+                 current = current.getCause()) {
+                if (current instanceof InterruptedException) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private InterruptedIOException cancelOnInterrupt(Throwable cause, CompletableCallback callback,
+                                                         @Nullable HttpResponse response) {
+            final InterruptedIOException interrupted = new InterruptedIOException("interrupted");
+            interrupted.initCause(cause);
+            cancel(interrupted);
+            try {
+                callback.abandon(interrupted);
+            } finally {
+                try {
+                    if (response != null) {
+                        response.abort(interrupted);
+                    }
+                } finally {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            return interrupted;
+        }
+
         @Override
         public void enqueue(Callback callback) {
-            createRequest().subscribe(callFactory.subscriberFactory.create(this, callback, request));
+            claimExecution();
+            final HttpResponse response;
+            try {
+                response = ownResponse(doCall(false));
+            } catch (IOException e) {
+                throw new IllegalArgumentException(
+                        "Failed to convert RequestBody to HttpData. " + request.method(), e);
+            }
+            response.subscribe(callFactory.subscriberFactory.create(this, callback, request));
         }
 
         @Override
         public void cancel() {
+            cancel(new IOException("cancelled"));
+        }
+
+        private void cancel(Throwable cause) {
             executionStateUpdater.set(this, ExecutionState.CANCELED);
+            cancellation.cancel(cause);
         }
 
         @Override
         public boolean isExecuted() {
-            return httpResponse != null;
+            return executed;
         }
 
         @Override

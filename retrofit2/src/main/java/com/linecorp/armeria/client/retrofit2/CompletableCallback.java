@@ -31,6 +31,14 @@ final class CompletableCallback extends CompletableFuture<Response> implements C
 
     @Override
     public void onResponse(Call call, Response response) {
-        complete(response);
+        if (!complete(response)) {
+            response.close();
+        }
+    }
+
+    void abandon(IOException cause) {
+        if (!completeExceptionally(cause)) {
+            thenAccept(Response::close);
+        }
     }
 }
