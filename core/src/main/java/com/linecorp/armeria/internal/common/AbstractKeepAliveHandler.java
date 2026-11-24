@@ -533,13 +533,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             if (hasRequestsInProgress(ctx)) {
                 return true;
             }
+            // A replacement that never serves a request is not replaced, which bounds the extra connections
+            // for an endpoint without traffic. PINGs do not count, so a connection kept open only by PINGs
+            // is not replaced either.
             if (!hasSentRequest) {
                 return false;
             }
-            // PINGs do not count, so a connection kept open only by PINGs is not replaced.
-            final long recentNanos = connectionIdleTimeNanos > 0 ? connectionIdleTimeNanos
-                                                                 : replacementLeadTimeNanos;
-            return System.nanoTime() - lastRequestTimeNanos <= recentNanos;
+            return connectionIdleTimeNanos == 0 ||
+                   System.nanoTime() - lastRequestTimeNanos <= connectionIdleTimeNanos;
         }
     }
 }

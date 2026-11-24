@@ -60,8 +60,9 @@ public final class MaxConnectionAgeConfigBuilder {
      * <p>The replacement is best effort:
      * <ul>
      *   <li>Only a connection that has a request in progress, or sent a request within the idle timeout
-     *       (within the lead time if the idle timeout is disabled), is replaced. An idle connection, including
-     *       one kept open only by PINGs, is left to close at its max age.</li>
+     *       (at any time if the idle timeout is disabled), is replaced. An idle connection, including one kept
+     *       open only by PINGs, and a replacement that never served a request are left to close at their max
+     *       age.</li>
      *   <li>For HTTP/2, a connection attempt already in progress for the same endpoint is shared instead of
      *       opening another connection.</li>
      *   <li>If the replacement is not connected by the max age, the old connection still closes, and

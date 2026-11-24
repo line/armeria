@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientFactoryOptions.CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -63,52 +62,78 @@ class MaxConnectionAgeConfigTest {
     }
 
     @Test
-    void rejectsLeadTimeLongerThanTheFinalMaxAge() {
-        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
-                                                                    .replacementLeadTimeMillis(10_000)
-                                                                    .build();
-        // A later setter shortens the max age below the lead time.
-        assertThatThrownBy(() -> ClientFactory.builder()
-                                              .maxConnectionAge(config)
-                                              .maxConnectionAgeMillis(5000)
-                                              .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("connectionReplacementLeadTimeMillis");
-        // The option is set directly.
-        assertThatThrownBy(() -> ClientFactory.builder()
-                                              .maxConnectionAgeMillis(5000)
-                                              .option(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS, 10_000L)
-                                              .build())
-                .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> ClientFactory.builder()
-                                              .option(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS, -1L)
-                                              .build())
-                .isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    void allowsLeadTimeWhenTheMaxAgeIsDisabledLater() {
-        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
-                                                                    .replacementLeadTimeMillis(10_000)
-                                                                    .build();
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .maxConnectionAge(config)
-                                                  .maxConnectionAgeMillis(0)
-                                                  .build()) {
-            assertThat(factory.options().maxConnectionAgeMillis()).isZero();
-        }
-    }
-
-    @Test
     void setsFactoryOptions() {
         final MaxConnectionAgeConfig config =
                 MaxConnectionAgeConfig.builder(Duration.ofMinutes(10))
                                       .replacementLeadTime(Duration.ofSeconds(5))
                                       .build();
         try (ClientFactory factory = ClientFactory.builder().maxConnectionAge(config).build()) {
+            assertThat(factory.options().maxConnectionAgeConfig()).isEqualTo(config);
             assertThat(factory.options().maxConnectionAgeMillis())
                     .isEqualTo(Duration.ofMinutes(10).toMillis());
-            assertThat(factory.options().connectionReplacementLeadTimeMillis()).isEqualTo(5000);
         }
+    }
+
+    @Test
+    void laterMaxAgeSetterOverridesTheConfig() {
+        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
+                                                                    .replacementLeadTimeMillis(10_000)
+                                                                    .build();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .maxConnectionAge(config)
+                                                  .maxConnectionAgeMillis(5000)
+                                                  .build()) {
+            assertThat(factory.options().maxConnectionAgeMillis()).isEqualTo(5000);
+            assertThat(factory.options().maxConnectionAgeConfig())
+                    .isEqualTo(MaxConnectionAgeConfig.builder(5000).build());
+        }
+    }
+
+    @Test
+    void laterConfigOverridesTheMaxAgeSetter() {
+        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
+                                                                    .replacementLeadTimeMillis(10_000)
+                                                                    .build();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .maxConnectionAgeMillis(5000)
+                                                  .maxConnectionAge(config)
+                                                  .build()) {
+            assertThat(factory.options().maxConnectionAgeMillis()).isEqualTo(60_000);
+            assertThat(factory.options().maxConnectionAgeConfig()).isEqualTo(config);
+        }
+    }
+
+    @Test
+    void maxAgeOptionOverridesTheConfig() {
+        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
+                                                                    .replacementLeadTimeMillis(10_000)
+                                                                    .build();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .maxConnectionAge(config)
+                                                  .option(ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS, 5000L)
+                                                  .build()) {
+            assertThat(factory.options().maxConnectionAgeMillis()).isEqualTo(5000);
+            assertThat(factory.options().maxConnectionAgeConfig().replacementLeadTimeMillis()).isZero();
+        }
+    }
+
+    @Test
+    void copiedOptionsKeepTheConfig() {
+        final MaxConnectionAgeConfig config = MaxConnectionAgeConfig.builder(60_000)
+                                                                    .replacementLeadTimeMillis(10_000)
+                                                                    .build();
+        try (ClientFactory original = ClientFactory.builder().maxConnectionAge(config).build();
+             ClientFactory copy = ClientFactory.builder().options(original.options()).build()) {
+            assertThat(copy.options().maxConnectionAgeMillis()).isEqualTo(60_000);
+            assertThat(copy.options().maxConnectionAgeConfig()).isEqualTo(config);
+        }
+    }
+
+    @Test
+    void defaultsMatchTheMaxAgeOption() {
+        final ClientFactoryOptions options = ClientFactoryOptions.of();
+        assertThat(options.maxConnectionAgeConfig().maxConnectionAgeMillis())
+                .isEqualTo(options.maxConnectionAgeMillis());
+        assertThat(options.maxConnectionAgeConfig().replacementLeadTimeMillis()).isZero();
     }
 }

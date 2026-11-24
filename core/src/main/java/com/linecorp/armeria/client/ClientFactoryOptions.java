@@ -245,16 +245,16 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
     /**
-     * How long before a connection reaches its max age the client opens a replacement connection to the same
-     * endpoint, in milliseconds. {@code 0}, the default, disables the replacement. It must not be greater
-     * than {@link #MAX_CONNECTION_AGE_MILLIS} unless the max age is disabled, or
-     * {@link ClientFactoryBuilder#build()} fails.
+     * The client-side max age of a connection, and how a connection is replaced before it reaches that age.
+     * {@link ClientFactoryBuilder} keeps it consistent with {@link #MAX_CONNECTION_AGE_MILLIS}.
+     * By default, the replacement is disabled.
      *
-     * @see MaxConnectionAgeConfigBuilder#replacementLeadTimeMillis(long)
+     * @see ClientFactoryBuilder#maxConnectionAge(MaxConnectionAgeConfig)
      */
     @UnstableApi
-    public static final ClientFactoryOption<Long> CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS =
-            ClientFactoryOption.define("CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS", 0L);
+    public static final ClientFactoryOption<MaxConnectionAgeConfig> MAX_CONNECTION_AGE_CONFIG =
+            ClientFactoryOption.define("MAX_CONNECTION_AGE_CONFIG",
+                                       new MaxConnectionAgeConfig(clampedDefaultMaxClientConnectionAge(), 0));
 
     /**
      * The {@link OutlierDetection} which is used to detect unhealthy connections.
@@ -620,14 +620,14 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns how long before a connection reaches its max age the client opens a replacement connection to
-     * the same endpoint, in milliseconds. {@code 0} means the replacement is disabled.
+     * Returns the client-side max age of a connection, and how a connection is replaced before it reaches
+     * that age.
      *
-     * @see #CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS
+     * @see #MAX_CONNECTION_AGE_CONFIG
      */
     @UnstableApi
-    public long connectionReplacementLeadTimeMillis() {
-        return get(CONNECTION_REPLACEMENT_LEAD_TIME_MILLIS);
+    public MaxConnectionAgeConfig maxConnectionAgeConfig() {
+        return get(MAX_CONNECTION_AGE_CONFIG);
     }
 
     /**

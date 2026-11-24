@@ -186,7 +186,7 @@ final class HttpClientFactory implements ClientFactory {
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
-        connectionReplacementLeadTimeMillis = options.connectionReplacementLeadTimeMillis();
+        connectionReplacementLeadTimeMillis = options.maxConnectionAgeConfig().replacementLeadTimeMillis();
         maxNumRequestsPerConnection = options.maxNumRequestsPerConnection();
         channelPipelineCustomizer = options.channelPipelineCustomizer();
         this.autoCloseConnectionPoolListener = autoCloseConnectionPoolListener;

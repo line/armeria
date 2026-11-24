@@ -148,17 +148,23 @@ class ClientConnectionReplacementTest {
 
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     @ParameterizedTest
-    void idleConnectionIsNotReplaced(SessionProtocol protocol) {
+    void replacementThatServesNoRequestIsNotReplaced(SessionProtocol protocol) {
         final ConnectionEvents connections = new ConnectionEvents();
         try (ClientFactory factory = factoryBuilder(connections).build()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(factory).build();
-            // Without an idle timeout, a request counts as recent only within the lead time.
+            // Without an idle timeout, any earlier request makes a connection worth replacing.
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
-            await().untilAsserted(() -> assertThat(connections.closed()).isEqualTo(1));
-            assertThat(connections.opened())
-                    .as("a connection without recent requests closes at its max age without a replacement")
-                    .isEqualTo(1);
+            await().untilAsserted(() -> assertThat(connections.closed()).isEqualTo(2));
+            final List<ConnectionEvent> events = connections.events();
+            final int first = events.get(0).localPort;
+            final int replacement = events.get(1).localPort;
+            assertThat(events)
+                    .extracting(ConnectionEvent::toString)
+                    .as("the used connection is replaced, and its unused replacement closes at its own max " +
+                        "age without a replacement of its own")
+                    .containsExactly("opened " + first, "opened " + replacement,
+                                     "closed " + first, "closed " + replacement);
         }
     }
 

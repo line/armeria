@@ -294,8 +294,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (isWebSocket() || !isAcquirable()) {
             return;
         }
-        assert protocol != null;
-        channelPool.connectReplacement(desiredProtocol, serializationFormat, poolKey, protocol.isMultiplex());
+        channelPool.connectReplacement(desiredProtocol, serializationFormat, poolKey);
     }
 
     @Override
