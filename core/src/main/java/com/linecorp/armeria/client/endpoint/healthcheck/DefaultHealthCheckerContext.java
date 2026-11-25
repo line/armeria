@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.healthCheckAttributes;
 
 import java.util.IdentityHashMap;
@@ -110,8 +111,9 @@ final class DefaultHealthCheckerContext
     }
 
     private CompletableFuture<Void> destroy() {
-        assert handle != null : handle;
-        return handle.closeAsync().handle((unused1, unused2) -> {
+        final CompletableFuture<?> closeFuture =
+                handle != null ? handle.closeAsync() : completedFuture(null);
+        return closeFuture.handle((unused1, unused2) -> {
             lock.lock();
             try {
                 if (destroyed) {

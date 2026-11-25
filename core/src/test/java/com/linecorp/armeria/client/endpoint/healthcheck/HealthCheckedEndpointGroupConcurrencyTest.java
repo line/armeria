@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,36 @@ class HealthCheckedEndpointGroupConcurrencyTest {
                                       .isNotSameAs(Thread.currentThread())
                                       .isInstanceOf(FastThreadLocalThread.class);
             assertThat(((FastThreadLocalThread) executorThread).permitBlockingCalls()).isTrue();
+        }
+    }
+
+    @Test
+    void failsReadinessAndClosesStartedCheckerWhenFactoryThrows() throws Exception {
+        final AssertionError failure = new AssertionError("checker creation failed");
+        final AtomicInteger started = new AtomicInteger();
+        final CompletableFuture<Void> checkerClosed = new CompletableFuture<>();
+        final TestBuilder builder = new TestBuilder(EndpointGroup.of(A, B)) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    if (started.incrementAndGet() == 2) {
+                        throw failure;
+                    }
+                    ctx.updateHealth(1, null, null, null);
+                    return AsyncCloseableSupport.of(future -> {
+                        checkerClosed.complete(null);
+                        future.complete(null);
+                    });
+                };
+            }
+        };
+        final HealthCheckedEndpointGroup group = builder.build();
+        try {
+            assertThatThrownBy(() -> group.whenReady().get(10, TimeUnit.SECONDS)).hasCauseReference(failure);
+            group.whenClosed().get(10, TimeUnit.SECONDS);
+            assertThat(checkerClosed).isCompleted();
+        } finally {
+            group.closeAsync();
         }
     }
 

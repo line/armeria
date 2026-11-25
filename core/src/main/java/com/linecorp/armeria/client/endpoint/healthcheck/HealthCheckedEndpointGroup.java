@@ -155,7 +155,18 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 requireNonNull(healthCheckedEndpointPredicate, "healthCheckedEndpointPredicate");
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
-        delegate.addListener(unused -> executor.execute(() -> setCandidates(delegate.endpoints())), true);
+        delegate.addListener(unused -> executor.execute(() -> {
+            try {
+                setCandidates(delegate.endpoints());
+            } catch (Throwable cause) {
+                if (whenReady().isDone()) {
+                    logger.warn("Failed to update health check candidates.", cause);
+                    return;
+                }
+                failInit(cause);
+                closeAsync();
+            }
+        }), true);
     }
 
     private void setCandidates(List<Endpoint> endpoints) {
