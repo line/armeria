@@ -142,7 +142,7 @@ class SnappyStreamDecoderTest {
         final ByteBuf framed = encode(plain);
         final ByteBufAllocator failingAlloc = new DelegatingByteBufAllocator() {
             @Override
-            public CompositeByteBuf compositeBuffer() {
+            public CompositeByteBuf compositeBuffer(int maxNumComponents) {
                 throw new OutOfMemoryError("simulated oom");
             }
         };
@@ -173,7 +173,7 @@ class SnappyStreamDecoderTest {
 
         final ByteBufAllocator failingAlloc = new DelegatingByteBufAllocator() {
             @Override
-            public CompositeByteBuf compositeBuffer() {
+            public CompositeByteBuf compositeBuffer(int maxNumComponents) {
                 return failingComposite;
             }
         };
@@ -203,7 +203,7 @@ class SnappyStreamDecoderTest {
 
         final ByteBufAllocator failingAlloc = new DelegatingByteBufAllocator() {
             @Override
-            public CompositeByteBuf compositeBuffer() {
+            public CompositeByteBuf compositeBuffer(int maxNumComponents) {
                 return failingComposite;
             }
         };

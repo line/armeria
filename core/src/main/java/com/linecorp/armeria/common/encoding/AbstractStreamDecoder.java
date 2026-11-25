@@ -114,7 +114,7 @@ class AbstractStreamDecoder implements StreamDecoder {
                     }
                 } else {
                     try {
-                        composite = alloc.compositeBuffer();
+                        composite = alloc.compositeBuffer(Integer.MAX_VALUE);
                     } catch (Throwable t) {
                         decoded.release();
                         buf.release();
