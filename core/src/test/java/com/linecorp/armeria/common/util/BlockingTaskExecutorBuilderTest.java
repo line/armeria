@@ -29,7 +29,8 @@ class BlockingTaskExecutorBuilderTest {
     @Test
     void testDefault() {
         final ScheduledThreadPoolExecutor pool =
-                (ScheduledThreadPoolExecutor) BlockingTaskExecutor.builder().build().unwrap();
+                BlockingTaskExecutor.builder().build().as(ScheduledThreadPoolExecutor.class);
+        assertThat(pool).isNotNull();
         assertThat(pool.allowsCoreThreadTimeOut()).isTrue();
         assertThat(pool.getKeepAliveTime(TimeUnit.MILLISECONDS)).isEqualTo(60 * 1000);
         assertThat(pool.getCorePoolSize()).isEqualTo(Flags.numCommonBlockingTaskThreads());
@@ -41,12 +42,13 @@ class BlockingTaskExecutorBuilderTest {
         final int numThreads = 42;
 
         final ScheduledThreadPoolExecutor pool =
-                (ScheduledThreadPoolExecutor) BlockingTaskExecutor
+                BlockingTaskExecutor
                         .builder()
                         .keepAliveTimeMillis(keepAliveTime)
                         .numThreads(numThreads)
                         .build()
-                        .unwrap();
+                        .as(ScheduledThreadPoolExecutor.class);
+        assertThat(pool).isNotNull();
 
         assertThat(pool.allowsCoreThreadTimeOut()).isTrue();
         assertThat(pool.getKeepAliveTime(TimeUnit.MILLISECONDS)).isEqualTo(keepAliveTime);
@@ -58,11 +60,12 @@ class BlockingTaskExecutorBuilderTest {
         final long keepAliveTime = 0;
 
         final ScheduledThreadPoolExecutor pool =
-                (ScheduledThreadPoolExecutor) BlockingTaskExecutor
+                BlockingTaskExecutor
                         .builder()
                         .keepAliveTimeMillis(keepAliveTime)
                         .build()
-                        .unwrap();
+                        .as(ScheduledThreadPoolExecutor.class);
+        assertThat(pool).isNotNull();
 
         assertThat(pool.allowsCoreThreadTimeOut()).isFalse();
     }

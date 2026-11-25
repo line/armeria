@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.throttling;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.common.Request;
@@ -30,37 +31,53 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A {@link ThrottlingStrategy} that provides a throttling strategy based on the number of pending tasks
- * of the {@link BlockingTaskExecutor}.
+ * queued in a {@link BlockingTaskExecutor}.
  *
  * @see ThrottlingStrategy#blockingTaskLimiting(int)
  * @see ThrottlingStrategy#blockingTaskLimiting(int, String)
  * @see ThrottlingStrategy#blockingTaskLimiting(IntSupplier)
  * @see ThrottlingStrategy#blockingTaskLimiting(IntSupplier, String)
+ * @see ThrottlingStrategy#blockingTaskLimiting(BlockingTaskExecutor, int)
+ * @see ThrottlingStrategy#blockingTaskLimiting(BlockingTaskExecutor, int, String)
+ * @see ThrottlingStrategy#blockingTaskLimiting(BlockingTaskExecutor, IntSupplier)
+ * @see ThrottlingStrategy#blockingTaskLimiting(BlockingTaskExecutor, IntSupplier, String)
  */
 @UnstableApi
 final class BlockingTaskLimitingThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
 
+    private final ThreadPoolExecutor pool;
     private final IntSupplier limitSupplier;
 
     /**
-     * Creates a new strategy with the specified limit and name.
+     * Creates a new strategy with the specified {@link BlockingTaskExecutor}, limit, and name.
      */
-    BlockingTaskLimitingThrottlingStrategy(IntSupplier limitSupplier, @Nullable String name) {
+    BlockingTaskLimitingThrottlingStrategy(BlockingTaskExecutor blockingTaskExecutor,
+                                           IntSupplier limitSupplier,
+                                           @Nullable String name) {
         super(name);
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.limitSupplier = requireNonNull(limitSupplier, "limitSupplier");
+        final ThreadPoolExecutor pool = blockingTaskExecutor.as(ThreadPoolExecutor.class);
+        if (pool == null) {
+            throw new IllegalArgumentException(
+                    "blockingTaskExecutor: " + blockingTaskExecutor +
+                    " (expected: unwrappable to ThreadPoolExecutor)");
+        }
+        this.pool = pool;
     }
 
     /**
-     * Creates a new strategy with the specified limit.
+     * Creates a new strategy with the specified {@link BlockingTaskExecutor} and limit.
      */
-    BlockingTaskLimitingThrottlingStrategy(IntSupplier limitSupplier) {
-        this(limitSupplier, null);
+    BlockingTaskLimitingThrottlingStrategy(BlockingTaskExecutor blockingTaskExecutor,
+                                           IntSupplier limitSupplier) {
+        this(blockingTaskExecutor, limitSupplier, null);
     }
 
     @Override
     public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
         final int limit = limitSupplier.getAsInt();
-        if (limit <= 0 || ctx.blockingTaskExecutor().numPendingTasks() >= limit) {
+        if (limit <= 0 || pool.getQueue().size() >= limit) {
             return UnmodifiableFuture.completedFuture(false);
         }
         return UnmodifiableFuture.completedFuture(true);

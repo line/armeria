@@ -17,157 +17,68 @@
 package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ThreadPoolExecutor;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 class DefaultBlockingTaskExecutorTest {
 
-    private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
-    private BlockingTaskExecutor executor;
-
-    @BeforeEach
-    void setUp() {
-        scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(2);
-        executor = new DefaultBlockingTaskExecutor(scheduledThreadPoolExecutor);
-    }
-
-    @AfterEach
-    void tearDown() {
-        executor.shutdownNow();
+    @Test
+    void unwrapDefaultBlockingTaskExecutor() {
+        final ScheduledThreadPoolExecutor pool = new ScheduledThreadPoolExecutor(1);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.of(pool);
+        try {
+            assertThat(executor.unwrap()).isSameAs(executor);
+            assertThat(executor.unwrapAll()).isSameAs(pool);
+            assertThat(executor.as(BlockingTaskExecutor.class)).isSameAs(executor);
+            assertThat(executor.as(ScheduledThreadPoolExecutor.class)).isSameAs(pool);
+            assertThat(executor.as(ThreadPoolExecutor.class)).isSameAs(pool);
+            assertThat(executor.as(String.class)).isNull();
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
-    void executeTracksNumPendingTasks() throws Exception {
-        assertThat(executor.numPendingTasks()).isZero();
-
-        final CountDownLatch startLatch = new CountDownLatch(1);
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-
-        executor.execute(() -> {
-            startLatch.countDown();
-            try {
-                finishLatch.await();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-
-        startLatch.await();
-        assertThat(executor.numPendingTasks()).isOne();
-
-        finishLatch.countDown();
-        await().untilAsserted(() -> assertThat(executor.numPendingTasks()).isZero());
+    void unwrapNonThreadPoolExecutor() {
+        final ScheduledExecutorService singleThread = Executors.newSingleThreadScheduledExecutor();
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.of(singleThread);
+        try {
+            assertThat(executor.unwrap()).isSameAs(executor);
+            assertThat(executor.unwrapAll()).isSameAs(singleThread);
+            assertThat(executor.as(ThreadPoolExecutor.class)).isNull();
+            assertThat(executor.as(ScheduledExecutorService.class)).isSameAs(executor);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
-    void submitTracksNumPendingTasksAndCancellation() throws Exception {
-        final CountDownLatch blockLatch = new CountDownLatch(1);
-        final CountDownLatch startLatch = new CountDownLatch(2);
-
-        // Fill both threads
-        executor.submit(() -> {
-            startLatch.countDown();
-            blockLatch.await();
-            return null;
-        });
-        executor.submit(() -> {
-            startLatch.countDown();
-            blockLatch.await();
-            return null;
-        });
-
-        startLatch.await();
-        assertThat(executor.numPendingTasks()).isEqualTo(2);
-
-        // Submit a third task that is queued
-        final Future<String> queuedFuture = executor.submit(() -> "done");
-        assertThat(executor.numPendingTasks()).isEqualTo(3);
-
-        // Cancel the queued task before it starts running
-        assertThat(queuedFuture.cancel(false)).isTrue();
-        assertThat(executor.numPendingTasks()).isEqualTo(2);
-
-        blockLatch.countDown();
-        await().untilAsserted(() -> assertThat(executor.numPendingTasks()).isZero());
-    }
-
-    @Test
-    void scheduleTracksNumPendingTasksAndCancellation() {
-        assertThat(executor.numPendingTasks()).isZero();
-
-        final ScheduledFuture<?> future = executor.schedule(() -> {}, 1, TimeUnit.HOURS);
-        assertThat(executor.numPendingTasks()).isOne();
-
-        assertThat(future.cancel(false)).isTrue();
-        assertThat(executor.numPendingTasks()).isZero();
-    }
-
-    @Test
-    void scheduleAtFixedRateTracksNumPendingTasks() throws Exception {
-        assertThat(executor.numPendingTasks()).isZero();
-
-        final CountDownLatch countLatch = new CountDownLatch(3);
-        final ScheduledFuture<?> future = executor.scheduleAtFixedRate(
-                countLatch::countDown, 0, 10, TimeUnit.MILLISECONDS);
-
-        // Stays 1 even after multiple runs
-        countLatch.await();
-        assertThat(executor.numPendingTasks()).isOne();
-
-        future.cancel(true);
-        assertThat(executor.numPendingTasks()).isZero();
-    }
-
-    @Test
-    void scheduleAtFixedRateDecrementsOnUncaughtException() {
-        assertThat(executor.numPendingTasks()).isZero();
-
-        executor.scheduleAtFixedRate(() -> {
-            throw new RuntimeException("boom");
-        }, 0, 10, TimeUnit.MILLISECONDS);
-
-        await().untilAsserted(() -> assertThat(executor.numPendingTasks()).isZero());
-    }
-
-    @Test
-    void invokeAllTracksNumPendingTasks() throws Exception {
-        assertThat(executor.numPendingTasks()).isZero();
-
-        final List<Callable<String>> tasks = Arrays.asList(
-                () -> "a",
-                () -> "b",
-                () -> "c"
-        );
-
-        final List<Future<String>> results = executor.invokeAll(tasks);
-        assertThat(results).hasSize(3);
-        assertThat(executor.numPendingTasks()).isZero();
-    }
-
-    @Test
-    void invokeAnyTracksNumPendingTasks() throws Exception {
-        assertThat(executor.numPendingTasks()).isZero();
-
-        final List<Callable<String>> tasks = Arrays.asList(
-                () -> "result",
-                () -> "other"
-        );
-
-        final String result = executor.invokeAny(tasks);
-        assertThat(result).isNotNull();
-        await().untilAsserted(() -> assertThat(executor.numPendingTasks()).isZero());
+    void unwrapContextAwareBlockingTaskExecutor() {
+        final BlockingTaskExecutor base = BlockingTaskExecutor.builder().numThreads(1).build();
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        try {
+            final ContextAwareBlockingTaskExecutor contextAware =
+                    ContextAwareBlockingTaskExecutor.of(ctx, base);
+            assertThat(contextAware.unwrap()).isSameAs(base);
+            assertThat(contextAware.unwrapAll()).isInstanceOf(ScheduledThreadPoolExecutor.class);
+            assertThat(contextAware.as(ThreadPoolExecutor.class))
+                    .isSameAs(base.as(ThreadPoolExecutor.class));
+            assertThat(ctx.blockingTaskExecutor().unwrap())
+                    .isSameAs(CommonPools.blockingTaskExecutor());
+        } finally {
+            base.shutdownNow();
+        }
     }
 }

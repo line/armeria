@@ -18,9 +18,13 @@ package com.linecorp.armeria.server.throttling;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
@@ -34,7 +38,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class BlockingTaskLimitingThrottlingStrategyTest {
@@ -42,11 +45,11 @@ class BlockingTaskLimitingThrottlingStrategyTest {
     private static final AtomicInteger dynamicLimit = new AtomicInteger(1);
     private static final BlockingTaskExecutor blockingTaskExecutor =
             BlockingTaskExecutor.builder()
-                                .numThreads(2)
+                                .numThreads(1)
                                 .threadNamePrefix("throttling-blocking-test")
                                 .build();
 
-    private static final CountDownLatch taskStartedLatch = new CountDownLatch(1);
+    private static final CountDownLatch task1StartedLatch = new CountDownLatch(1);
     private static final CountDownLatch taskBlockLatch = new CountDownLatch(1);
 
     @RegisterExtension
@@ -54,14 +57,28 @@ class BlockingTaskLimitingThrottlingStrategyTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.blockingTaskExecutor(blockingTaskExecutor, true);
-            sb.service("/block", (ctx, req) -> {
+            sb.service("/block1", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
                 ctx.blockingTaskExecutor().execute(() -> {
-                    taskStartedLatch.countDown();
+                    task1StartedLatch.countDown();
                     try {
                         taskBlockLatch.await();
-                        future.complete(HttpResponse.of("unblocked"));
+                        future.complete(HttpResponse.of("unblocked1"));
                     } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        future.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                    }
+                });
+                return HttpResponse.of(future);
+            });
+            sb.service("/block2", (ctx, req) -> {
+                final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                ctx.blockingTaskExecutor().execute(() -> {
+                    try {
+                        taskBlockLatch.await();
+                        future.complete(HttpResponse.of("unblocked2"));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                         future.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
                     }
                 });
@@ -69,7 +86,8 @@ class BlockingTaskLimitingThrottlingStrategyTest {
             });
             sb.service("/test", (ctx, req) -> HttpResponse.of("ok"));
             sb.decorator(ThrottlingService.newDecorator(
-                    ThrottlingStrategy.blockingTaskLimiting((IntSupplier) dynamicLimit::get)));
+                    ThrottlingStrategy.blockingTaskLimiting(
+                            blockingTaskExecutor, (IntSupplier) dynamicLimit::get)));
         }
     };
 
@@ -87,23 +105,39 @@ class BlockingTaskLimitingThrottlingStrategyTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ThrottlingStrategy.blockingTaskLimiting((IntSupplier) null))
                 .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> ThrottlingStrategy.blockingTaskLimiting((BlockingTaskExecutor) null, 1))
+                .isInstanceOf(NullPointerException.class);
+
+        final ScheduledExecutorService nonThreadPool = Executors.newSingleThreadScheduledExecutor();
+        try {
+            final BlockingTaskExecutor wrapped = BlockingTaskExecutor.of(nonThreadPool);
+            assertThatThrownBy(() -> ThrottlingStrategy.blockingTaskLimiting(wrapped, 1))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("ThreadPoolExecutor");
+        } finally {
+            nonThreadPool.shutdownNow();
+        }
     }
 
     @Test
-    void throttlingBasedOnPendingTasks() throws Exception {
+    void throttlingBasedOnQueuedTasks() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
+        final ThreadPoolExecutor pool = blockingTaskExecutor.as(ThreadPoolExecutor.class);
+        assertThat(pool).isNotNull();
 
-        // Baseline: No blocking tasks, should succeed
+        // Baseline: No pending tasks in queue, should succeed
         assertThat(client.get("/test").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
-        // Start a blocking task in the executor
-        final CompletableFuture<AggregatedHttpResponse> blockingReq = client.get("/block").aggregate();
-        taskStartedLatch.await();
+        // Occupy the single worker thread
+        final CompletableFuture<AggregatedHttpResponse> blockingReq1 = client.get("/block1").aggregate();
+        task1StartedLatch.await();
+        assertThat(pool.getQueue()).isEmpty();
 
-        // While task is running, numPendingTasks == 1, which reaches limit 1
-        assertThat(blockingTaskExecutor.numPendingTasks()).isOne();
+        // Queue a 2nd task while the worker thread is occupied
+        final CompletableFuture<AggregatedHttpResponse> blockingReq2 = client.get("/block2").aggregate();
+        await().untilAsserted(() -> assertThat(pool.getQueue()).hasSize(1));
 
-        // New request must be throttled
+        // Queue size == 1 reaches limit 1, so /test must be throttled
         final AggregatedHttpResponse throttledRes = client.get("/test").aggregate().join();
         assertThat(throttledRes.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
@@ -117,15 +151,12 @@ class BlockingTaskLimitingThrottlingStrategyTest {
         final AggregatedHttpResponse throttledAgain = client.get("/test").aggregate().join();
         assertThat(throttledAgain.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        // Unblock the initial task
+        // Unblock both tasks and verify queue drains and requests succeed again
         taskBlockLatch.countDown();
-        assertThat(blockingReq.join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(blockingReq1.join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(blockingReq2.join().status()).isEqualTo(HttpStatus.OK);
+        await().untilAsserted(() -> assertThat(pool.getQueue()).isEmpty());
 
-        // Wait until task counter returns to 0
-        org.awaitility.Awaitility.await()
-                                .untilAsserted(() -> assertThat(blockingTaskExecutor.numPendingTasks()).isZero());
-
-        // Now requests succeed again
         assertThat(client.get("/test").aggregate().join().status()).isEqualTo(HttpStatus.OK);
     }
 }
