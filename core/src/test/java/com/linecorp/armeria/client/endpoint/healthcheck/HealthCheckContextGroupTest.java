@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_ENDPOINT_PREDICATE;
 import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
+import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroupTest.newDirectExecutor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -57,7 +58,7 @@ class HealthCheckContextGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(contexts).hasSize(2);
@@ -126,7 +127,7 @@ class HealthCheckContextGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(contexts).hasSize(2);

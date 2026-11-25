@@ -45,6 +45,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.ThreadFactories;
+
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.OrderedEventExecutor;
 
 /**
  * A skeletal builder implementation for creating a new {@link HealthCheckedEndpointGroup}.
@@ -53,6 +58,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
         <SELF extends AbstractHealthCheckedEndpointGroupBuilder<SELF>>
         extends AbstractDynamicEndpointGroupBuilder<SELF> {
 
+    private static final EventExecutor DEFAULT_EXECUTOR = EventLoopGroups.newEventLoopGroup(
+            1, ThreadFactories.newThreadFactory("armeria-health-check-executor", true)).next();
+
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
     @VisibleForTesting
     static final Predicate<Endpoint> DEFAULT_ENDPOINT_PREDICATE =
@@ -60,6 +68,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
 
     private final EndpointGroup delegate;
 
+    private EventExecutor executor = DEFAULT_EXECUTOR;
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Backoff retryBackoff = DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
     private ClientOptionsBuilder clientOptionsBuilder = ClientOptions.builder();
@@ -90,6 +99,22 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
      */
     public SELF clientFactory(ClientFactory clientFactory) {
         clientOptionsBuilder.factory(requireNonNull(clientFactory, "clientFactory"));
+        return self();
+    }
+
+    /**
+     * Sets the {@link EventExecutor} that updates the endpoint list and notifies endpoint group listeners.
+     * By default, a single daemon thread shared by all health checked endpoint groups is used.
+     * The specified executor must implement {@link OrderedEventExecutor} and execute tasks asynchronously.
+     * It must remain available until the endpoint group is closed.
+     * The executor is not shut down when the endpoint group is closed.
+     */
+    @UnstableApi
+    public SELF executor(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        checkArgument(executor instanceof OrderedEventExecutor,
+                      "executor: %s (expected: an OrderedEventExecutor)", executor);
+        this.executor = executor;
         return self();
     }
 
@@ -418,7 +443,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
         return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(),
                                               initialSelectionTimeoutMillis, selectionTimeoutMillis,
                                               protocol, port, retryBackoff,
-                                              clientOptionsBuilder.build(),
+                                              clientOptionsBuilder.build(), executor,
                                               newCheckerFactory(), healthCheckStrategy,
                                               healthCheckedEndpointPredicate);
     }

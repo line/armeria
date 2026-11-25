@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 public class HealthCheckedEndpointGroupBuilderTest {
     private static final String PATH = "testPath";
 
@@ -39,6 +41,14 @@ public class HealthCheckedEndpointGroupBuilderTest {
     void defaultHealthCheckStrategy() {
         final HealthCheckedEndpointGroup group = new HealthCheckedEndpointGroupBuilder(delegate, PATH).build();
         assertThat(group.healthCheckStrategy).isSameAs(HealthCheckStrategy.all());
+    }
+
+    @Test
+    void executorMustPreserveTaskOrder() {
+        assertThatThrownBy(() -> HealthCheckedEndpointGroup.builder(delegate, PATH)
+                                                          .executor(ImmediateEventExecutor.INSTANCE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("OrderedEventExecutor");
     }
 
     @Test

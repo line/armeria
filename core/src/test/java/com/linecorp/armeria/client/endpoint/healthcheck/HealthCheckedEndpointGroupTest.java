@@ -76,12 +76,19 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.NonStickyEventExecutorGroup;
 import io.netty.util.concurrent.ScheduledFuture;
 
 class HealthCheckedEndpointGroupTest {
 
     private static final double UNHEALTHY = 0;
     private static final double HEALTHY = 1;
+
+    static EventExecutor newDirectExecutor() {
+        return new NonStickyEventExecutorGroup(ImmediateEventExecutor.INSTANCE).next();
+    }
 
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
@@ -118,7 +125,7 @@ class HealthCheckedEndpointGroupTest {
                     return AsyncCloseableSupport.of();
                 };
             }
-        }.build();
+        }.executor(newDirectExecutor()).build();
     }
 
     @Test
@@ -138,7 +145,7 @@ class HealthCheckedEndpointGroupTest {
                     return AsyncCloseableSupport.of();
                 };
             }
-        }.build()) {
+        }.executor(newDirectExecutor()).build()) {
             assertThat(group.whenReady().get(10, TimeUnit.SECONDS)).isEmpty();
         }
     }
@@ -159,7 +166,7 @@ class HealthCheckedEndpointGroupTest {
                     return AsyncCloseableSupport.of();
                 };
             }
-        }.build()) {
+        }.executor(newDirectExecutor()).build()) {
 
             // Check the initial state.
             final HealthCheckerContext ctx = ctxCapture.get();
@@ -210,7 +217,7 @@ class HealthCheckedEndpointGroupTest {
                     return AsyncCloseableSupport.of();
                 };
             }
-        }.build()) {
+        }.executor(newDirectExecutor()).build()) {
 
             // Check the initial state.
             final HealthCheckerContext ctx = ctxCapture.get(endpoint1);
@@ -262,7 +269,7 @@ class HealthCheckedEndpointGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
 
@@ -293,7 +300,7 @@ class HealthCheckedEndpointGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
 
@@ -325,7 +332,7 @@ class HealthCheckedEndpointGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(counter.get()).isEqualTo(2);
@@ -350,7 +357,7 @@ class HealthCheckedEndpointGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
@@ -385,7 +392,7 @@ class HealthCheckedEndpointGroupTest {
                     return checkerCloseable;
                 };
             }
-        }.clientFactory(factory).build();
+        }.clientFactory(factory).executor(newDirectExecutor()).build();
 
         // When the ClientFactory is closed, the health checkers must be closed as well.
         factory.close();
@@ -413,7 +420,7 @@ class HealthCheckedEndpointGroupTest {
                     return checkerCloseable;
                 };
             }
-        }.build();
+        }.executor(newDirectExecutor()).build();
 
         checkerContextRef.get().updateHealth(1, null, null, null);
         assertThat(group.whenReady().join()).containsExactly(delegate);
@@ -558,7 +565,7 @@ class HealthCheckedEndpointGroupTest {
                                                     10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                                    ClientOptions.of(), checkFactory,
+                                                    ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE)) {
             endpointGroup.addListener(endpointsListener, true);
@@ -622,7 +629,7 @@ class HealthCheckedEndpointGroupTest {
                                                10000, 10000,
                                                SessionProtocol.HTTP, 80,
                                                DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
-                                               ClientOptions.of(), checkFactory,
+                                               ClientOptions.of(), newDirectExecutor(), checkFactory,
                                                HealthCheckStrategy.all(),
                                                DEFAULT_ENDPOINT_PREDICATE);
         assertThat(counter.get()).isEqualTo(2);
@@ -664,7 +671,7 @@ class HealthCheckedEndpointGroupTest {
                             return AsyncCloseableSupport.of();
                         };
                     }
-                }.build();
+                }.executor(newDirectExecutor()).build();
         await().until(() -> !group.endpoints().isEmpty());
 
         // Close the group in a separate thread so we can observe blocking behaviour.
