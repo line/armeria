@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.new
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
+import static io.netty.handler.codec.http2.Http2Exception.streamError;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,8 +230,8 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
 
         if (!written) {
-            throw connectionError(INTERNAL_ERROR, newClosedStreamException(ctx),
-                                  "failed to consume a HEADERS frame");
+            throw streamError(streamId, INTERNAL_ERROR, newClosedStreamException(ctx),
+                              "failed to consume a HEADERS frame");
         }
 
         if (endOfStream) {
@@ -279,8 +280,8 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
 
         if (!res.tryWriteData(HttpData.wrap(data.retain()).withEndOfStream(endOfStream))) {
-            throw connectionError(INTERNAL_ERROR, newClosedSessionException(ctx),
-                                  "failed to consume a DATA frame");
+            throw streamError(streamId, INTERNAL_ERROR, newClosedSessionException(ctx),
+                              "failed to consume a DATA frame");
         }
 
         if (endOfStream) {
