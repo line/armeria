@@ -16,8 +16,10 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 
@@ -180,8 +182,12 @@ final class ArmeriaCallFactory implements Factory {
                 throw new IllegalStateException("executed already");
             }
             executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            final HttpResponse newResponse = doCall(callFactory, request);
+            final HttpResponse newResponse = isCanceled() ? HttpResponse.ofFailure(
+                    AbstractSubscriber.newCancelledException()) : doCall(callFactory, request);
             httpResponse = newResponse;
+            if (isCanceled()) {
+                newResponse.abort();
+            }
             return newResponse;
         }
 
@@ -190,10 +196,19 @@ final class ArmeriaCallFactory implements Factory {
             final CompletableCallback completableCallback = new CompletableCallback();
             enqueue(completableCallback);
             try {
-                return completableCallback.join();
+                return completableCallback.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                cancel();
+                completableCallback.thenAccept(Response::close);
+                final InterruptedIOException cause =
+                        new InterruptedIOException("Interrupted while waiting for a response");
+                cause.initCause(e);
+                throw cause;
             } catch (CancellationException e) {
+                cancel();
                 throw new IOException(e);
-            } catch (CompletionException e) {
+            } catch (CompletionException | ExecutionException e) {
                 throw new IOException(Exceptions.peel(e));
             }
         }
@@ -206,6 +221,10 @@ final class ArmeriaCallFactory implements Factory {
         @Override
         public void cancel() {
             executionStateUpdater.set(this, ExecutionState.CANCELED);
+            final HttpResponse response = httpResponse;
+            if (response != null) {
+                response.abort();
+            }
         }
 
         @Override

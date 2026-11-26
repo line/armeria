@@ -197,11 +197,23 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return;
         }
 
+        CompletableFuture.anyOf(redirectCtx.responseWhenComplete(),
+                                derivedCtx.log().whenComplete().thenApply(unused -> null))
+                         .exceptionally(cause -> {
+                             derivedCtx.cancel(ClientUtil.normalizeCancellationCause(cause));
+                             return null;
+                         });
+
         final HttpRequest req = derivedCtx.request();
         assert req != null;
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause),
                                                           req, true);
+        CompletableFuture.anyOf(redirectCtx.responseWhenComplete(), response.whenComplete())
+                         .exceptionally(cause -> {
+                             response.abort(ClientUtil.normalizeCancellationCause(cause));
+                             return null;
+                         });
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 final Throwable cause = log.responseCause();

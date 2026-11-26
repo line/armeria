@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class ConcurrencyLimitingClientTest {
@@ -74,6 +77,24 @@ class ConcurrencyLimitingClientTest {
 
         assertThat(res.isOpen()).isFalse();
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
+    }
+
+    @Test
+    void abortedResponseDoesNotExecuteWhenPermitArrives() throws Exception {
+        final HttpRequest req = newReq();
+        final ClientRequestContext ctx = newContext();
+        final CompletableFuture<SafeCloseable> acquisition = new CompletableFuture<>();
+        final AtomicInteger releasedPermits = new AtomicInteger();
+        final ConcurrencyLimitingClient client = newDecorator(unused -> acquisition).apply(delegate);
+        final HttpResponse response = client.execute(ctx, req);
+        response.abort();
+        assertThatThrownBy(() -> response.whenComplete().get(5, TimeUnit.SECONDS)).hasCauseInstanceOf(
+                AbortedStreamException.class);
+        acquisition.complete(releasedPermits::incrementAndGet);
+        waitForEventLoop();
+        verify(delegate, never()).execute(ctx, req);
+        assertThat(releasedPermits).hasValue(1);
+        assertThat(client.numActiveRequests()).isZero();
     }
 
     /**

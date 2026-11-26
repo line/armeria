@@ -108,6 +108,8 @@ class RetryingClientTest {
 
     private final AtomicInteger subscriberCancelServiceCallCounter = new AtomicInteger();
 
+    private final CompletableFuture<Void> subscriberCancelServiceInvoked = new CompletableFuture<>();
+
     private AtomicInteger reqCount;
 
     @RegisterExtension
@@ -304,7 +306,9 @@ class RetryingClientTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    if (subscriberCancelServiceCallCounter.getAndIncrement() < 2) {
+                    final int count = subscriberCancelServiceCallCounter.getAndIncrement();
+                    subscriberCancelServiceInvoked.complete(null);
+                    if (count < 2) {
                         return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
                         return HttpResponse.of("Succeeded after retry");
@@ -716,7 +720,7 @@ class RetryingClientTest {
                 new Subscriber<HttpObject>() {
                     @Override
                     public void onSubscribe(Subscription s) {
-                        s.cancel(); // Cancel as soon as getting the subscription.
+                        subscriberCancelServiceInvoked.thenRun(s::cancel);
                     }
 
                     @Override

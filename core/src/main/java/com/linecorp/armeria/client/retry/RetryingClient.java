@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -314,6 +315,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             return;
         }
 
+        CompletableFuture.anyOf(returnedRes.whenComplete(),
+                                derivedCtx.log().whenComplete().thenApply(unused -> null))
+                         .exceptionally(cause -> {
+                             derivedCtx.cancel(ClientUtil.normalizeCancellationCause(cause));
+                             return null;
+                         });
+
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!initialAttempt) {
             final boolean shouldRetry = config.retryLimiter().shouldRetry(derivedCtx);
@@ -341,6 +349,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             response = executeWithFallback(unwrap(), derivedCtx,
                                            (context, cause) -> HttpResponse.ofFailure(cause), ctxReq, false);
         }
+
+        CompletableFuture.anyOf(returnedRes.whenComplete(), response.whenComplete())
+                         .exceptionally(cause -> {
+                             response.abort(ClientUtil.normalizeCancellationCause(cause));
+                             return null;
+                         });
 
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {

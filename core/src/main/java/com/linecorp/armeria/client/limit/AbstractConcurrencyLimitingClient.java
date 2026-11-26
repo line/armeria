@@ -111,6 +111,10 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                                 resFuture.completeExceptionally(t);
                                 return null;
                             }
+                            if (deferred.whenComplete().isDone()) {
+                                permit.close();
+                                return null;
+                            }
                             numActiveRequests.incrementAndGet();
                             try (SafeCloseable ignored = ctx.replace()) {
                                 try {

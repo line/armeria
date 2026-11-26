@@ -32,6 +32,10 @@ import retrofit2.Retrofit;
 
 /**
  * Provides various ways to create a {@link Retrofit} which uses {@link WebClient} for sending requests.
+ *
+ * <p>Interrupting a thread waiting for an HTTP response in {@link retrofit2.Call#execute()} cancels
+ * the call and throws an {@link java.io.InterruptedIOException}, preserving the interrupt status.
+ * Interruption during request encoding or response conversion depends on the converter.
  */
 public final class ArmeriaRetrofit {
 
