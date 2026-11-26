@@ -24,8 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Meter;
@@ -152,6 +154,35 @@ public final class MicrometerUtil {
             registrationState.pendingRegistrations.add(
                     new PendingRegistration<>(registry, idPrefix, type, factory));
         }
+    }
+
+    /**
+     * Unregisters the object associated with the specified {@link MeterIdPrefix} in the
+     * {@code registry}.
+     *
+     * @return the removed object, or {@code null} if not found
+     */
+    @Nullable
+    public static Object unregister(MeterRegistry registry, MeterIdPrefix idPrefix) {
+        requireNonNull(registry, "registry");
+        requireNonNull(idPrefix, "idPrefix");
+        final ConcurrentMap<MeterIdPrefix, Object> objects = map.get(registry);
+        return objects != null ? objects.remove(idPrefix) : null;
+    }
+
+    @VisibleForTesting
+    static boolean contains(MeterRegistry registry, MeterIdPrefix idPrefix) {
+        requireNonNull(registry, "registry");
+        requireNonNull(idPrefix, "idPrefix");
+        final ConcurrentMap<MeterIdPrefix, Object> objects = map.get(registry);
+        return objects != null && objects.containsKey(idPrefix);
+    }
+
+    @VisibleForTesting
+    static int size(MeterRegistry registry) {
+        requireNonNull(registry, "registry");
+        final ConcurrentMap<MeterIdPrefix, Object> objects = map.get(registry);
+        return objects != null ? objects.size() : 0;
     }
 
     /**

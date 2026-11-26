@@ -19,8 +19,12 @@ package com.linecorp.armeria.internal.common.metric;
 import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
@@ -34,10 +38,12 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.common.metric.RequestMetricLimiter.Entry;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
@@ -51,10 +57,23 @@ public final class RequestMetricSupport {
     /**
      * Sets up request metrics.
      */
+    @VisibleForTesting
     public static void setup(
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
             SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+        setup(ctx, requestMetricsSetKey, meterIdPrefixFunction, server, successFunction,
+              distributionStatisticConfig, null);
+    }
+
+    /**
+     * Sets up request metrics with the specified {@link RequestMetricLimiter}.
+     */
+    public static void setup(
+            RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
+            MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -68,35 +87,63 @@ public final class RequestMetricSupport {
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction,
-                                        distributionStatisticConfig));
+                                        distributionStatisticConfig, metricLimiter));
     }
 
     private static void onRequest(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable RequestMetricLimiter metricLimiter) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
                 meterIdPrefixFunction.activeRequestPrefix(registry, log).append("active.requests");
 
+        final Entry limiterEntry;
+        if (metricLimiter != null) {
+            limiterEntry = metricLimiter.acquire(activeRequestsId);
+            if (limiterEntry == null) {
+                return;
+            }
+        } else {
+            limiterEntry = null;
+        }
+
         final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
                 registry, activeRequestsId, ActiveRequestMetrics.class,
-                (reg, prefix) ->
-                        reg.gauge(prefix.name(), prefix.tags(),
-                                  new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
+                (reg, prefix) -> {
+                    final ActiveRequestMetrics metrics = new ActiveRequestMetrics();
+                    metrics.gauge(Gauge.builder(prefix.name(), metrics, ActiveRequestMetrics::doubleValue)
+                                       .tags(prefix.tags())
+                                       .register(reg));
+                    return metrics;
+                });
+        if (limiterEntry != null) {
+            limiterEntry.track(registry, activeRequestsId, () -> {
+                MicrometerUtil.unregister(registry, activeRequestsId);
+                activeRequestMetrics.unregister(registry);
+            });
+        }
         activeRequestMetrics.increment();
+
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction, distributionStatisticConfig);
+            onResponse(requestLog, meterIdPrefixFunction, server, successFunction,
+                       distributionStatisticConfig, limiterEntry);
             activeRequestMetrics.decrement();
         });
     }
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig,
+            @Nullable Entry limiterEntry) {
+        if (limiterEntry != null && limiterEntry.isEvicted()) {
+            return;
+        }
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+
         final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         if (server) {
@@ -104,6 +151,12 @@ public final class RequestMetricSupport {
                     registry, idPrefix,
                     ServiceRequestMetrics.class,
                     (reg, idp) -> new DefaultServiceRequestMetrics(reg, idp, distributionStatisticConfig));
+            if (limiterEntry != null) {
+                limiterEntry.track(registry, idPrefix, () -> {
+                    MicrometerUtil.unregister(registry, idPrefix);
+                    metrics.unregister(registry);
+                });
+            }
             updateMetrics(log, metrics, isSuccess);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
@@ -115,6 +168,12 @@ public final class RequestMetricSupport {
                 registry, idPrefix,
                 ClientRequestMetrics.class,
                 (reg, idp) -> new DefaultClientRequestMetrics(reg, idp, distributionStatisticConfig));
+        if (limiterEntry != null) {
+            limiterEntry.track(registry, idPrefix, () -> {
+                MicrometerUtil.unregister(registry, idPrefix);
+                metrics.unregister(registry);
+            });
+        }
         updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
@@ -206,6 +265,8 @@ public final class RequestMetricSupport {
         DistributionSummary responseLength();
 
         Timer totalDuration();
+
+        void unregister(MeterRegistry registry);
     }
 
     private interface ClientRequestMetrics extends RequestMetrics {
@@ -236,7 +297,21 @@ public final class RequestMetricSupport {
         Counter requestTimeouts();
     }
 
-    private static final class ActiveRequestMetrics extends LongAdder {}
+    private static final class ActiveRequestMetrics extends LongAdder {
+        @Nullable
+        private volatile Gauge gauge;
+
+        void gauge(Gauge gauge) {
+            this.gauge = gauge;
+        }
+
+        void unregister(MeterRegistry registry) {
+            final Gauge gauge = this.gauge;
+            if (gauge != null) {
+                registry.remove(gauge);
+            }
+        }
+    }
 
     private abstract static class AbstractRequestMetrics implements RequestMetrics {
 
@@ -306,6 +381,17 @@ public final class RequestMetricSupport {
         public Timer totalDuration() {
             return totalDuration;
         }
+
+        @Override
+        public void unregister(MeterRegistry registry) {
+            registry.remove(success);
+            registry.remove(failure);
+            registry.remove(requestDuration);
+            registry.remove(requestLength);
+            registry.remove(responseDuration);
+            registry.remove(responseLength);
+            registry.remove(totalDuration);
+        }
     }
 
     private static class DefaultClientRequestMetrics
@@ -323,13 +409,15 @@ public final class RequestMetricSupport {
         private final Counter responseTimeouts;
 
         @Nullable
-        private Counter actualRequests;
+        private volatile Counter actualRequests;
 
         @Nullable
-        private DistributionSummary successAttempts;
+        private volatile DistributionSummary successAttempts;
 
         @Nullable
-        private DistributionSummary failureAttempts;
+        private volatile DistributionSummary failureAttempts;
+
+        private final Set<Counter> actualRequestsCauses = ConcurrentHashMap.newKeySet();
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
                                     DistributionStatisticConfig distributionStatisticConfig) {
@@ -426,9 +514,38 @@ public final class RequestMetricSupport {
         @Override
         public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
             final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
-            return parent.counter(
+            final Counter counter = parent.counter(
                     idPrefix.name("actual.requests.failure"),
                     idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
+            actualRequestsCauses.add(counter);
+            return counter;
+        }
+
+        @Override
+        public void unregister(MeterRegistry registry) {
+            super.unregister(registry);
+            registry.remove(connectionAcquisitionDuration);
+            registry.remove(dnsResolutionDuration);
+            registry.remove(socketConnectDuration);
+            registry.remove(tlsHandshakeDuration);
+            registry.remove(pendingAcquisitionDuration);
+            registry.remove(writeTimeouts);
+            registry.remove(responseTimeouts);
+            final Counter actualRequests = this.actualRequests;
+            if (actualRequests != null) {
+                registry.remove(actualRequests);
+            }
+            final DistributionSummary successAttempts = this.successAttempts;
+            if (successAttempts != null) {
+                registry.remove(successAttempts);
+            }
+            final DistributionSummary failureAttempts = this.failureAttempts;
+            if (failureAttempts != null) {
+                registry.remove(failureAttempts);
+            }
+            for (Counter causeCounter : actualRequestsCauses) {
+                registry.remove(causeCounter);
+            }
         }
     }
 
@@ -447,6 +564,12 @@ public final class RequestMetricSupport {
         @Override
         public Counter requestTimeouts() {
             return requestTimeouts;
+        }
+
+        @Override
+        public void unregister(MeterRegistry registry) {
+            super.unregister(registry);
+            registry.remove(requestTimeouts);
         }
     }
 }
