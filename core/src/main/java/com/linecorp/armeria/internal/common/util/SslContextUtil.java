@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServerTlsSpec;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -84,9 +86,9 @@ public final class SslContextUtil {
 
     public static final List<String> DEFAULT_PROTOCOLS = ImmutableList.of("TLSv1.3", "TLSv1.2");
 
-    private static final String ESSENTIAL_HTTP2_CIPHER_SUITE = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
+    private static final String ESSENTIAL_HTTP2_TLS12_CIPHER_SUITE = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     private static final String MISSING_ESSENTIAL_CIPHER_SUITE_MESSAGE =
-            "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_CIPHER_SUITE +
+            "Attempted to configure TLS without the " + ESSENTIAL_HTTP2_TLS12_CIPHER_SUITE +
             " cipher suite enabled. It must be enabled for proper HTTP/2 support.";
     private static final ImmutableSet<String> tlsVersion23 = ImmutableSet.of("TLSv1.3", "TLSv1.2");
     private static final ImmutableSet<String> tlsVersion2 = ImmutableSet.of("TLSv1.2");
@@ -181,7 +183,13 @@ public final class SslContextUtil {
                    "SSLContext has no cipher suites enabled. " +
                    "You must specify at least one cipher suite.");
         if (sslContext.applicationProtocolNegotiator().protocols().contains(ApplicationProtocolNames.HTTP_2)) {
-            validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers);
+            final SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            try {
+                final Set<String> protocols = ImmutableSet.copyOf(engine.getEnabledProtocols());
+                validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers, protocols);
+            } finally {
+                ReferenceCountUtil.release(engine);
+            }
         }
     }
 
@@ -202,8 +210,13 @@ public final class SslContextUtil {
         }
     }
 
-    static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers) {
-        if (!ciphers.contains(ESSENTIAL_HTTP2_CIPHER_SUITE)) {
+    static void validateHttp2Ciphers(Set<String> ciphers, boolean tlsAllowUnsafeCiphers,
+                                     Set<String> protocols) {
+        final boolean tls13Only =
+                protocols.contains("TLSv1.3") &&
+                protocols.stream().allMatch(protocol -> "TLSv1.3".equals(protocol) ||
+                                                        "SSLv2Hello".equals(protocol));
+        if (!tls13Only && !ciphers.contains(ESSENTIAL_HTTP2_TLS12_CIPHER_SUITE)) {
             if (tlsAllowUnsafeCiphers) {
                 if (!warnedMissingEssentialCipherSuite) {
                     warnedMissingEssentialCipherSuite = true;

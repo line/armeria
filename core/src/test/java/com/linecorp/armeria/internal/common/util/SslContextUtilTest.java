@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.common.util;
 
 import static com.linecorp.armeria.internal.common.util.SslContextUtil.BAD_HTTP2_CIPHERS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -25,8 +26,11 @@ import java.util.Set;
 import javax.net.ssl.SSLException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientTlsSpec;
@@ -34,7 +38,9 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -99,6 +105,100 @@ class SslContextUtilTest {
                              .allowUnsafeCiphers(true)
                              .build());
         ReferenceCountUtil.release(sslContext);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TlsEngineType.class, names = { "JDK", "OPENSSL" })
+    void tls13OnlyDoesNotRequireTls12Cipher(TlsEngineType engineType) {
+        if (engineType == TlsEngineType.OPENSSL) {
+            assumeThat(OpenSsl.isAvailable()).isTrue();
+        }
+        assumeThat(SslContextUtil.supportedTlsVersions(engineType.sslProvider())).contains("TLSv1.3");
+
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .tlsEngineType(engineType)
+                             .tlsCustomizer(builder -> {
+                                 builder.protocols("TLSv1.3");
+                                 builder.ciphers(ImmutableList.of("TLS_AES_256_GCM_SHA384"));
+                             })
+                             .build();
+        factory.close();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TlsEngineType.class, names = { "JDK", "OPENSSL" })
+    void tls12OnlyRequiresTls12Cipher(TlsEngineType engineType) {
+        if (engineType == TlsEngineType.OPENSSL) {
+            assumeThat(OpenSsl.isAvailable()).isTrue();
+        }
+        assumeThat(SslContextUtil.supportedTlsVersions(engineType.sslProvider())).contains("TLSv1.3");
+
+        assertThatThrownBy(() -> {
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsEngineType(engineType)
+                                 .tlsCustomizer(builder -> {
+                                     builder.protocols("TLSv1.2");
+                                     builder.ciphers(ImmutableList.of("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"));
+                                 })
+                                 .build();
+            factory.close();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TlsEngineType.class, names = { "JDK", "OPENSSL" })
+    void bothProtocolsRequireTls12Cipher(TlsEngineType engineType) {
+        if (engineType == TlsEngineType.OPENSSL) {
+            assumeThat(OpenSsl.isAvailable()).isTrue();
+        }
+        assumeThat(SslContextUtil.supportedTlsVersions(engineType.sslProvider())).contains("TLSv1.3");
+
+        assertThatThrownBy(() -> {
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsEngineType(engineType)
+                                 .tlsCustomizer(builder -> {
+                                     builder.protocols("TLSv1.2", "TLSv1.3");
+                                     builder.ciphers(ImmutableList.of("TLS_AES_128_GCM_SHA256"));
+                                 })
+                                 .build();
+            factory.close();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+    }
+
+    @Test
+    void validateHttp2Ciphers() {
+        assertThatCode(() -> {
+            SslContextUtil.validateHttp2Ciphers(
+                    ImmutableSet.of("TLS_AES_256_GCM_SHA384"), false, ImmutableSet.of("TLSv1.3"));
+            SslContextUtil.validateHttp2Ciphers(
+                    ImmutableSet.of("TLS_AES_256_GCM_SHA384"), false,
+                    ImmutableSet.of("SSLv2Hello", "TLSv1.3"));
+        }).doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> {
+            SslContextUtil.validateHttp2Ciphers(
+                    ImmutableSet.of("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"), false,
+                    ImmutableSet.of("TLSv1.2"));
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
+
+        assertThatCode(() -> {
+            SslContextUtil.validateHttp2Ciphers(
+                    ImmutableSet.of("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"), true,
+                    ImmutableSet.of("TLSv1.2"));
+        }).doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> {
+            SslContextUtil.validateHttp2Ciphers(
+                    ImmutableSet.of("TLS_AES_128_GCM_SHA256"), false,
+                    ImmutableSet.of("TLSv1.2", "TLSv1.3"));
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
     }
 
     @Nullable
