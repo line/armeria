@@ -48,6 +48,7 @@ import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import { jsonPrettify, validateJsonObject } from '../../lib/json-util';
+import { redactSensitiveHeaders } from '../../lib/settings';
 import {
   extractUrlPath,
   Method,
@@ -86,6 +87,7 @@ interface OwnProps {
   setDebugFormIsOpen: (open: boolean) => void;
   jsonSchemas: any;
   docServiceRoute?: Route;
+  sensitiveHeaders: string[];
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -194,6 +196,14 @@ const getRequestBody = (
   return urlRequestBody || method.exampleRequests[0] || '';
 };
 
+const serializeDebugFormSearchParams = (
+  params: URLSearchParams | string,
+): string => {
+  const debugFormParams = new URLSearchParams(params);
+  debugFormParams.delete('debug_form_is_open');
+  return debugFormParams.toString();
+};
+
 const errorResponseData = (error: unknown): ResponseData => ({
   body:
     error instanceof Object ? error.toString?.() ?? '<unknown>' : '<unknown>',
@@ -218,10 +228,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
   setDebugFormIsOpen,
   jsonSchemas,
   docServiceRoute,
+  sensitiveHeaders,
 }) => {
-  const debugFormSearchParams = new URLSearchParams(location.search);
-  debugFormSearchParams.delete('debug_form_is_open');
-  const debugFormSearch = debugFormSearchParams.toString();
+  const debugFormSearch = serializeDebugFormSearchParams(location.search);
   const initialRequestBody = getRequestBody(
     method,
     useRequestBody,
@@ -237,6 +246,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const responseCache = useRef<Record<string, ResponseData>>({});
+  // Tracks URL state created by a submission so form fields can preserve their in-memory values.
+  const submittedSearchParams = useRef<string | null>(null);
   const currentMethodId = useRef(method.id);
   const isMounted = useRef(true);
   currentMethodId.current = method.id;
@@ -316,6 +327,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
+    if (submittedSearchParams.current === debugFormSearch) {
+      submittedSearchParams.current = null;
+      return;
+    }
+    submittedSearchParams.current = null;
+
     const urlParams = new URLSearchParams(debugFormSearch);
 
     if (urlParams.has('sticky_headers')) {
@@ -457,7 +474,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   }, [method.id]);
 
   const executeRequest = useCallback(
-    async (params: URLSearchParams) => {
+    async (params: URLSearchParams, headers: { [name: string]: string }) => {
       let executedRequestBody;
       if (useRequestBody) {
         executedRequestBody = params.get('request_body');
@@ -477,8 +494,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
         executedEndpointPath = params.get('endpoint_path') || undefined;
       }
 
-      const headersText = params.get('headers');
-      const headers = headersText ? JSON.parse(headersText) : {};
       const requestMethodId = method.id;
 
       try {
@@ -516,6 +531,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const onSubmit = useCallback(async () => {
     const queries = additionalQueries;
     const headers = additionalHeaders;
+    let requestHeaders: { [name: string]: string } = {};
     const params = new URLSearchParams(location.search);
 
     try {
@@ -550,7 +566,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
       if (headers) {
         validateJsonObject(headers, 'HTTP headers');
-        let minifiedHeaders = jsonMinify(headers);
+        requestHeaders = JSON.parse(headers);
+        const redactedHeaders = redactSensitiveHeaders(
+          requestHeaders,
+          sensitiveHeaders,
+        );
+        let minifiedHeaders = JSON.stringify(redactedHeaders);
         if (minifiedHeaders === '{}') {
           minifiedHeaders = '';
         }
@@ -575,9 +596,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     const serializedParams = `?${params.toString()}`;
     if (serializedParams !== location.search) {
+      submittedSearchParams.current = serializeDebugFormSearchParams(params);
       history.push(`${location.pathname}${serializedParams}`);
     }
-    await executeRequest(params);
+    await executeRequest(params, requestHeaders);
   }, [
     additionalQueries,
     additionalHeaders,
@@ -594,6 +616,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     history,
     method,
     transport,
+    sensitiveHeaders,
   ]);
 
   const supportedExamplePaths = useMemo(() => {

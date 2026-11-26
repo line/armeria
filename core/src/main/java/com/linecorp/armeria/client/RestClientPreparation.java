@@ -262,6 +262,18 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     @Override
+    public RestClientPreparation name(String name) {
+        delegate.name(name);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation name(String serviceName, String name) {
+        delegate.name(serviceName, name);
+        return this;
+    }
+
+    @Override
     public RestClientPreparation responseTimeoutMillis(long responseTimeoutMillis) {
         delegate.responseTimeoutMillis(responseTimeoutMillis);
         return this;

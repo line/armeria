@@ -331,6 +331,16 @@ public final class WebClientRequestPreparation
             exchangeType(exchangeType);
         }
 
+        final String name = requestOptions.name();
+        if (name != null) {
+            final String serviceName = requestOptions.serviceName();
+            if (serviceName != null) {
+                name(serviceName, name);
+            } else {
+                name(name);
+            }
+        }
+
         final ResponseTimeoutMode responseTimeoutMode = requestOptions.responseTimeoutMode();
         if (responseTimeoutMode != null) {
             responseTimeoutMode(responseTimeoutMode);
@@ -381,6 +391,20 @@ public final class WebClientRequestPreparation
     @Override
     public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         requestOptionsBuilder().attr(key, value);
+        return this;
+    }
+
+    @Override
+    @UnstableApi
+    public WebClientRequestPreparation name(String name) {
+        requestOptionsBuilder().name(name);
+        return this;
+    }
+
+    @Override
+    @UnstableApi
+    public WebClientRequestPreparation name(String serviceName, String name) {
+        requestOptionsBuilder().name(serviceName, name);
         return this;
     }
 

@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeKey;
 
@@ -103,6 +104,22 @@ public interface RequestOptions {
      * Returns the {@link Map} of all attributes this {@link RequestOptions} contains.
      */
     Map<AttributeKey<?>, Object> attrs();
+
+    /**
+     * Returns the service name of the {@link RequestLog}, or {@code null} if unspecified.
+     */
+    @Nullable
+    default String serviceName() {
+        return null;
+    }
+
+    /**
+     * Returns the name of the {@link RequestLog}, or {@code null} if unspecified.
+     */
+    @Nullable
+    default String name() {
+        return null;
+    }
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or

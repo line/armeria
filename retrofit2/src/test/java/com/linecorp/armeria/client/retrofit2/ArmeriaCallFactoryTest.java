@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpPreprocessor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -57,6 +59,8 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -68,6 +72,7 @@ import okhttp3.HttpUrl;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Converter;
+import retrofit2.Invocation;
 import retrofit2.Response;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.http.Body;
@@ -583,6 +588,10 @@ class ArmeriaCallFactoryTest {
                 WebClient.builder("h1c://127.0.0.1:" + server.httpPort())
                          .decorator((delegate, ctx, req) -> {
                              defaultCounter.incrementAndGet();
+                             final RequestLogAccess log = ctx.log();
+                             assertThat(InvocationUtil.getInvocation(log)).isNotNull();
+                             assertThat(log.partial().serviceName()).isEqualTo(Service.class.getName());
+                             assertThat(log.partial().name()).isEqualTo("pojo");
                              return delegate.execute(ctx, req);
                          })
                          .build();
@@ -596,6 +605,11 @@ class ArmeriaCallFactoryTest {
                                 .builder("h2c://127.0.0.1:" + server.httpPort())
                                 .decorator((delegate, ctx, req) -> {
                                     customCounter.incrementAndGet();
+                                    final RequestLogAccess log = ctx.log();
+                                    assertThat(InvocationUtil.getInvocation(log)).isNotNull();
+                                    assertThat(log.partial().serviceName())
+                                            .isEqualTo(Service.class.getName());
+                                    assertThat(log.partial().name()).isEqualTo("fullUrl");
                                     return delegate.execute(ctx, req);
                                 })
                                 .build();
@@ -611,6 +625,45 @@ class ArmeriaCallFactoryTest {
         service.fullUrl("http://not-default/pojo").get();
         assertThat(defaultCounter.get()).isOne();
         assertThat(customCounter.get()).isOne();
+    }
+
+    @Test
+    void invocationAndLogNameAreAvailableToContextCustomizers() {
+        final AtomicInteger customized = new AtomicInteger();
+        final Service service = ArmeriaRetrofit.builder(server.httpUri())
+                .addConverterFactory(converterFactory)
+                .contextCustomizer(ctx -> {
+                    final RequestLogAccess log = ctx.log();
+                    final Invocation invocation = InvocationUtil.getInvocation(log);
+                    assertThat(invocation).isNotNull();
+                    assertThat(log.isAvailable(RequestLogProperty.NAME)).isTrue();
+                    assertThat(log.partial().serviceName()).isEqualTo(Service.class.getName());
+                    assertThat(log.partial().name()).isEqualTo(invocation.method().getName());
+                    customized.incrementAndGet();
+                }).build().create(Service.class);
+        service.pojo().join();
+        service.post(new Pojo("Cony", 26)).join();
+        assertThat(customized).hasValue(2);
+    }
+
+    @Test
+    void invocationDoesNotLeakToIndependentRequests() throws Exception {
+        final WebClient independentClient = WebClient.builder(server.httpUri())
+                .decorator((delegate, ctx, req) -> {
+                    assertThat(InvocationUtil.getInvocation(ctx.log())).isNull();
+                    assertThat(ctx.log().isAvailable(RequestLogProperty.NAME)).isFalse();
+                    return delegate.execute(ctx, req);
+                }).build();
+        final AtomicReference<CompletableFuture<AggregatedHttpResponse>> independent = new AtomicReference<>();
+        final Service service = ArmeriaRetrofit.builder(server.httpUri())
+                .addConverterFactory(converterFactory)
+                .decorator((delegate, ctx, req) -> {
+                    assertThat(InvocationUtil.getInvocation(ctx.log())).isNotNull();
+                    independent.set(independentClient.get("/pojo").aggregate());
+                    return delegate.execute(ctx, req);
+                }).build().create(Service.class);
+        service.pojo().join();
+        assertThat(independent.get().get(5, TimeUnit.SECONDS).status()).isEqualTo(HttpStatus.OK);
     }
 
     /**

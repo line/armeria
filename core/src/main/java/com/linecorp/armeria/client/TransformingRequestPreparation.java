@@ -106,6 +106,18 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
         return this;
     }
 
+    @Override
+    public TransformingRequestPreparation<T, R> name(String name) {
+        delegate.name(name);
+        return this;
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> name(String serviceName, String name) {
+        delegate.name(serviceName, name);
+        return this;
+    }
+
     /**
      * Sets the specified {@link ResponseAs} that converts the {@code T} type object into another.
      */

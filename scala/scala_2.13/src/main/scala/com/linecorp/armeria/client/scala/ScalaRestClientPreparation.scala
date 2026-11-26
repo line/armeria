@@ -65,6 +65,16 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
     this
   }
 
+  override def name(name: String): ScalaRestClientPreparation = {
+    delegate.name(name)
+    this
+  }
+
+  override def name(serviceName: String, name: String): ScalaRestClientPreparation = {
+    delegate.name(serviceName, name)
+    this
+  }
+
   override def pathParam(name: String, value: Any): ScalaRestClientPreparation = {
     delegate.pathParam(name, value)
     this

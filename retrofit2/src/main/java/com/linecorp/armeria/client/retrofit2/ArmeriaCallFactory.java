@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
-import static com.linecorp.armeria.client.Clients.withContextCustomizer;
-
 import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
@@ -24,16 +22,19 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.RequestOptionsBuilder;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import okhttp3.Call;
 import okhttp3.Call.Factory;
@@ -139,12 +140,16 @@ final class ArmeriaCallFactory implements Factory {
 
             final RequestBody body = request.body();
             final Invocation invocation = request.tag(Invocation.class);
+            final RequestOptionsBuilder optionsBuilder = RequestOptions.builder()
+                    .attr(InvocationUtil.RETROFIT_INVOCATION, invocation);
+            if (invocation != null) {
+                optionsBuilder.name(invocation.method().getDeclaringClass().getName(),
+                                    invocation.method().getName());
+            }
+            final RequestOptions options = optionsBuilder.build();
             if (body == null) {
                 // Without a body.
-                try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> InvocationUtil.setInvocation(ctx, invocation))) {
-                    return webClient.execute(headers.build());
-                }
+                return webClient.execute(HttpRequest.of(headers.build()), options);
             }
 
             // With a body.
@@ -156,10 +161,9 @@ final class ArmeriaCallFactory implements Factory {
             try (Buffer contentBuffer = new Buffer()) {
                 body.writeTo(contentBuffer);
 
-                try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> InvocationUtil.setInvocation(ctx, invocation))) {
-                    return webClient.execute(headers.build(), contentBuffer.readByteArray());
-                }
+                return webClient.execute(HttpRequest.of(headers.build(),
+                                                        HttpData.wrap(contentBuffer.readByteArray())),
+                                         options);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Failed to convert RequestBody to HttpData. " + request.method(), e);
