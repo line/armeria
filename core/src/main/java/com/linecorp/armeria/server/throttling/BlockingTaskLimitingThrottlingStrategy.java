@@ -66,14 +66,6 @@ final class BlockingTaskLimitingThrottlingStrategy<T extends Request> extends Th
         this.pool = pool;
     }
 
-    /**
-     * Creates a new strategy with the specified {@link BlockingTaskExecutor} and limit.
-     */
-    BlockingTaskLimitingThrottlingStrategy(BlockingTaskExecutor blockingTaskExecutor,
-                                           IntSupplier limitSupplier) {
-        this(blockingTaskExecutor, limitSupplier, null);
-    }
-
     @Override
     public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
         final int limit = limitSupplier.getAsInt();

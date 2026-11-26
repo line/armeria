@@ -608,6 +608,7 @@ class ServerBuilderTest {
               .meterRegistry(registry)
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
+        assertThat(registry.find("armeria.executor.queued").meters()).isNotEmpty();
         Schedulers.enableMetrics();
         Schedulers.decorateExecutorService(Schedulers.single(), Executors.newSingleThreadScheduledExecutor());
     }

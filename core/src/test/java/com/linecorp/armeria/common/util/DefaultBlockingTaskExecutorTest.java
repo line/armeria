@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Proxy;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -32,6 +33,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class DefaultBlockingTaskExecutorTest {
+
+    private interface UnwrappableScheduledExecutorService extends ScheduledExecutorService, Unwrappable {}
 
     @Test
     void unwrapDefaultBlockingTaskExecutor() {
@@ -64,6 +67,33 @@ class DefaultBlockingTaskExecutorTest {
     }
 
     @Test
+    void unwrapUnwrappableDelegate() {
+        final ScheduledThreadPoolExecutor pool = new ScheduledThreadPoolExecutor(1);
+        final UnwrappableScheduledExecutorService unwrappableDelegate =
+                (UnwrappableScheduledExecutorService) Proxy.newProxyInstance(
+                        DefaultBlockingTaskExecutorTest.class.getClassLoader(),
+                        new Class<?>[] { UnwrappableScheduledExecutorService.class },
+                        (proxy, method, args) -> {
+                            final String name = method.getName();
+                            if ("as".equals(name)) {
+                                final Class<?> type = (Class<?>) args[0];
+                                return type.isInstance(pool) ? type.cast(pool) : null;
+                            }
+                            if ("unwrapAll".equals(name)) {
+                                return pool;
+                            }
+                            return method.invoke(pool, args);
+                        });
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.of(unwrappableDelegate);
+        try {
+            assertThat(executor.as(ThreadPoolExecutor.class)).isSameAs(pool);
+            assertThat(executor.unwrapAll()).isSameAs(pool);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
     void unwrapContextAwareBlockingTaskExecutor() {
         final BlockingTaskExecutor base = BlockingTaskExecutor.builder().numThreads(1).build();
         final ServiceRequestContext ctx =
@@ -73,6 +103,7 @@ class DefaultBlockingTaskExecutorTest {
                     ContextAwareBlockingTaskExecutor.of(ctx, base);
             assertThat(contextAware.unwrap()).isSameAs(base);
             assertThat(contextAware.unwrapAll()).isInstanceOf(ScheduledThreadPoolExecutor.class);
+            assertThat(contextAware.as(ContextAwareBlockingTaskExecutor.class)).isSameAs(contextAware);
             assertThat(contextAware.as(ThreadPoolExecutor.class))
                     .isSameAs(base.as(ThreadPoolExecutor.class));
             assertThat(ctx.blockingTaskExecutor().unwrap())

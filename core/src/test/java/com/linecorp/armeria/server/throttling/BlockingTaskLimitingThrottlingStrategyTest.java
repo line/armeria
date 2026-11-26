@@ -25,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
@@ -34,10 +35,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class BlockingTaskLimitingThrottlingStrategyTest {
@@ -120,6 +124,34 @@ class BlockingTaskLimitingThrottlingStrategyTest {
     }
 
     @Test
+    void factoryOverloads() {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+
+        final ThrottlingStrategy<HttpRequest> s1 = ThrottlingStrategy.blockingTaskLimiting(5);
+        final ThrottlingStrategy<HttpRequest> s2 = ThrottlingStrategy.blockingTaskLimiting(5, "custom-1");
+        final ThrottlingStrategy<HttpRequest> s3 =
+                ThrottlingStrategy.blockingTaskLimiting((IntSupplier) () -> 5);
+        final ThrottlingStrategy<HttpRequest> s4 =
+                ThrottlingStrategy.blockingTaskLimiting((IntSupplier) () -> 5, "custom-2");
+        final ThrottlingStrategy<HttpRequest> s5 =
+                ThrottlingStrategy.blockingTaskLimiting(blockingTaskExecutor, 5);
+        final ThrottlingStrategy<HttpRequest> s6 =
+                ThrottlingStrategy.blockingTaskLimiting(blockingTaskExecutor, 5, "custom-3");
+        final ThrottlingStrategy<HttpRequest> s7 =
+                ThrottlingStrategy.blockingTaskLimiting(blockingTaskExecutor, () -> 0, "custom-4");
+
+        assertThat(s1.accept(ctx, req).toCompletableFuture().join()).isTrue();
+        assertThat(s2.name()).isEqualTo("custom-1");
+        assertThat(s3.accept(ctx, req).toCompletableFuture().join()).isTrue();
+        assertThat(s4.name()).isEqualTo("custom-2");
+        assertThat(s5.accept(ctx, req).toCompletableFuture().join()).isTrue();
+        assertThat(s6.name()).isEqualTo("custom-3");
+        assertThat(s7.name()).isEqualTo("custom-4");
+        assertThat(s7.accept(ctx, req).toCompletableFuture().join()).isFalse();
+    }
+
+    @Test
     void throttlingBasedOnQueuedTasks() throws Exception {
         final WebClient client = WebClient.of(server.httpUri());
         final ThreadPoolExecutor pool = blockingTaskExecutor.as(ThreadPoolExecutor.class);
@@ -128,9 +160,14 @@ class BlockingTaskLimitingThrottlingStrategyTest {
         // Baseline: No pending tasks in queue, should succeed
         assertThat(client.get("/test").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
+        // Non-positive dynamic limit throttles immediately even when queue is empty
+        dynamicLimit.set(0);
+        assertThat(client.get("/test").aggregate().join().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        dynamicLimit.set(1);
+
         // Occupy the single worker thread
         final CompletableFuture<AggregatedHttpResponse> blockingReq1 = client.get("/block1").aggregate();
-        task1StartedLatch.await();
+        assertThat(task1StartedLatch.await(10, TimeUnit.SECONDS)).isTrue();
         assertThat(pool.getQueue()).isEmpty();
 
         // Queue a 2nd task while the worker thread is occupied
