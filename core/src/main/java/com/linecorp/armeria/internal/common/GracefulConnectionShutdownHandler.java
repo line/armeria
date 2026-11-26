@@ -40,6 +40,7 @@ public abstract class GracefulConnectionShutdownHandler {
     private static final Logger logger = LoggerFactory.getLogger(GracefulConnectionShutdownHandler.class);
 
     private boolean started;
+    private boolean drainEnded;
     @Nullable
     private ScheduledFuture<?> drainFuture;
 
@@ -61,6 +62,13 @@ public abstract class GracefulConnectionShutdownHandler {
      * Code executed on the connection drain end. Executed at most once.
      */
     protected abstract void onDrainEnd(ChannelHandlerContext ctx) throws Exception;
+
+    /**
+     * Returns whether the drain has ended.
+     */
+    public boolean isDrainEnded() {
+        return drainEnded;
+    }
 
     public void start(ChannelHandlerContext ctx, ChannelPromise promise) {
         final Channel ch = ctx.channel();
@@ -84,6 +92,9 @@ public abstract class GracefulConnectionShutdownHandler {
     }
 
     private void run(ChannelHandlerContext ctx) {
+        if (drainEnded) {
+            return;
+        }
         if (drainFuture != null) {
             final boolean cancelled;
             if (drainFuture.getDelay(TimeUnit.MICROSECONDS) > drainDurationMicros) {
@@ -113,6 +124,7 @@ public abstract class GracefulConnectionShutdownHandler {
     }
 
     private void finish(ChannelHandlerContext ctx) {
+        drainEnded = true;
         try {
             onDrainEnd(ctx);
         } catch (Exception e) {

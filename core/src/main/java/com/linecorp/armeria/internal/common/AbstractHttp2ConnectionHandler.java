@@ -208,12 +208,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (!closing) {
-            closing = true;
-
-            if (needsImmediateDisconnection()) {
-                closeActiveStreams();
-            }
+        closing = true;
+        if (needsImmediateDisconnection()) {
+            closeActiveStreams();
         }
 
         // Send final GOAWAY frame with the latest stream ID.
