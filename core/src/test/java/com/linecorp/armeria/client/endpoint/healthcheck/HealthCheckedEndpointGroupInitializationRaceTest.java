@@ -17,6 +17,7 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroupTest.newDirectExecutor;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -64,8 +65,10 @@ class HealthCheckedEndpointGroupInitializationRaceTest {
         final SettableEndpointGroup group = new SettableEndpointGroup();
         group.updateEndpoints(ImmutableList.of(server0.httpEndpoint(), server0.httpEndpoint(),
                                                server1.httpEndpoint(), server1.httpEndpoint()));
-        final HealthCheckedEndpointGroup healthGroup = HealthCheckedEndpointGroup.of(group,
-                                                                                     "/health");
+        final HealthCheckedEndpointGroup healthGroup =
+                HealthCheckedEndpointGroup.builder(group, "/health")
+                                          .executor(newDirectExecutor())
+                                          .build();
         Queue<HealthCheckContextGroup> contextGroupChain = healthGroup.contextGroupChain();
         assertThat(contextGroupChain).hasSize(1);
         assertThat(contextGroupChain.peek().contexts().values())
