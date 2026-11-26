@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -46,6 +47,7 @@ public final class OAuth2AuthorizationGrantBuilder {
     private static final Predicate<? super GrantedOAuth2AccessToken> DEFAULT_REFRESH_IF =
             toRefreshIf(DEFAULT_REFRESH_BEFORE);
     private boolean preload;
+    private long tokenLoadTimeoutMillis;
 
     private static Predicate<? super GrantedOAuth2AccessToken> toRefreshIf(Duration refreshBefore) {
         return token -> !token.isValid(Instant.now().plus(refreshBefore));
@@ -162,6 +164,29 @@ public final class OAuth2AuthorizationGrantBuilder {
     }
 
     /**
+     * Sets the timeout for loading a new access token, including background refreshes and preloading.
+     * If not set or set to {@link Duration#ZERO}, the timeout is disabled.
+     * The duration is truncated to milliseconds, so positive durations below 1 millisecond disable the timeout.
+     */
+    public OAuth2AuthorizationGrantBuilder tokenLoadTimeout(Duration tokenLoadTimeout) {
+        requireNonNull(tokenLoadTimeout, "tokenLoadTimeout");
+        checkArgument(!tokenLoadTimeout.isNegative(),
+                      "tokenLoadTimeout: %s (expected: >= 0)", tokenLoadTimeout);
+        return tokenLoadTimeoutMillis(tokenLoadTimeout.toMillis());
+    }
+
+    /**
+     * Sets the timeout in milliseconds for loading a new access token.
+     * If not set or set to {@code 0}, the timeout is disabled.
+     */
+    public OAuth2AuthorizationGrantBuilder tokenLoadTimeoutMillis(long tokenLoadTimeoutMillis) {
+        checkArgument(tokenLoadTimeoutMillis >= 0,
+                      "tokenLoadTimeoutMillis: %s (expected: >= 0)", tokenLoadTimeoutMillis);
+        this.tokenLoadTimeoutMillis = tokenLoadTimeoutMillis;
+        return this;
+    }
+
+    /**
      * Sets whether to acquire an access token proactively when the {@link OAuth2AuthorizationGrant} is built.
      * This option is disabled by default and the client will acquire an access token lazily when the first
      * request is made with the {@link OAuth2AuthorizationGrant}.
@@ -178,6 +203,6 @@ public final class OAuth2AuthorizationGrantBuilder {
         checkState(requestSupplier != null, "accessTokenRequest() is not set.");
         return new DefaultOAuth2AuthorizationGrant(
                 accessTokenEndpoint, accessTokenEndpointPath, requestSupplier, responseHandler, refreshIf,
-                fallbackTokenProvider, newTokenConsumer, preload);
+                fallbackTokenProvider, newTokenConsumer, tokenLoadTimeoutMillis, preload);
     }
 }

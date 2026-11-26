@@ -28,6 +28,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.yahoo.athenz.auth.AuthorityConsts;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.auth.oauth2.AccessTokenRequest;
 import com.linecorp.armeria.client.auth.oauth2.OAuth2AuthorizationGrant;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -70,10 +71,12 @@ final class AccessTokenClient implements AthenzTokenClient {
         }
         final AccessTokenRequest tokenRequest = AccessTokenRequest.ofClientCredentials(
                 NoopClientAuthentication.INSTANCE, scopeBuilder.build());
-        authorizationGrant = OAuth2AuthorizationGrant.builder(ztsBaseClient.webClient(),
-                                                              "/oauth2/token")
+        final WebClient webClient = ztsBaseClient.webClient();
+        final long loadTimeoutMillis = AthenzTokenClientBuilder.tokenLoadTimeoutMillis(webClient);
+        authorizationGrant = OAuth2AuthorizationGrant.builder(webClient, "/oauth2/token")
                                                      .accessTokenRequest(tokenRequest)
                                                      .refreshIf(this::shouldRefreshToken)
+                                                     .tokenLoadTimeoutMillis(loadTimeoutMillis)
                                                      .preload(preload)
                                                      .build();
     }
