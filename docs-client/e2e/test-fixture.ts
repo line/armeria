@@ -26,16 +26,32 @@ import {
   test as base,
 } from '@playwright/test';
 
+interface ConsoleError {
+  message: string;
+  url?: string;
+}
+
 interface BrowserIssues {
-  consoleErrors: string[];
+  consoleErrors: ConsoleError[];
   pageErrors: string[];
   requestFailures: string[];
 }
 
-export function expectConsoleError(testInfo: TestInfo, message: string) {
+function matchesConsoleError(error: ConsoleError, expected: ConsoleError) {
+  return (
+    error.message.includes(expected.message) &&
+    (expected.url === undefined || error.url === expected.url)
+  );
+}
+
+export function expectConsoleError(
+  testInfo: TestInfo,
+  message: string,
+  url?: string,
+) {
   testInfo.annotations.push({
     type: 'expected-console-error',
-    description: message,
+    description: JSON.stringify({ message, url }),
   });
 }
 
@@ -72,7 +88,10 @@ export const test = base.extend<{ browserGuard: void }>({
       });
       page.on('console', (message: ConsoleMessage) => {
         if (message.type() === 'error') {
-          issues.consoleErrors.push(message.text());
+          issues.consoleErrors.push({
+            message: message.text(),
+            url: message.location().url,
+          });
         }
       });
       page.on('pageerror', (error: Error) =>
@@ -142,18 +161,20 @@ export const test = base.extend<{ browserGuard: void }>({
         },
       );
 
-      const expectedConsoleErrors = testInfo.annotations
+      const expectedConsoleErrors: ConsoleError[] = testInfo.annotations
         .filter((annotation) => annotation.type === 'expected-console-error')
-        .map((annotation) => annotation.description!);
+        .map((annotation) => JSON.parse(annotation.description!));
       for (const expectedError of expectedConsoleErrors) {
         expect(
-          issues.consoleErrors.some((error) => error.includes(expectedError)),
-          `Expected a console error containing: ${expectedError}`,
+          issues.consoleErrors.some((error) =>
+            matchesConsoleError(error, expectedError),
+          ),
+          `Expected a matching console error: ${JSON.stringify(expectedError)}`,
         ).toBe(true);
       }
       const unexpectedConsoleErrors = issues.consoleErrors.filter((error) => {
         return !expectedConsoleErrors.some((expectedError) =>
-          error.includes(expectedError),
+          matchesConsoleError(error, expectedError),
         );
       });
       const expectedRequestFailures = testInfo.annotations
