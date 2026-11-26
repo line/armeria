@@ -91,7 +91,8 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http1ClientKeepAliveHandler(
                     channel, this, keepAliveTimer, idleTimeoutMillis,
-                    pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                    pingIntervalMillis, maxConnectionAgeMillis,
+                    clientFactory.connectionReplacementLeadTimeMillis(), maxNumRequestsPerConnection,
                     keepAliveOnPing);
         } else {
             keepAliveHandler = new NoopKeepAliveHandler();

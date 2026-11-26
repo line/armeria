@@ -245,6 +245,18 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
     /**
+     * The client-side max age of a connection, and how a connection is replaced before it reaches that age.
+     * {@link ClientFactoryBuilder} keeps it consistent with {@link #MAX_CONNECTION_AGE_MILLIS}.
+     * By default, the replacement is disabled.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAge(MaxConnectionAgeConfig)
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<MaxConnectionAgeConfig> MAX_CONNECTION_AGE_CONFIG =
+            ClientFactoryOption.define("MAX_CONNECTION_AGE_CONFIG",
+                                       new MaxConnectionAgeConfig(clampedDefaultMaxClientConnectionAge(), 0));
+
+    /**
      * The {@link OutlierDetection} which is used to detect unhealthy connections.
      * If an unhealthy connection is detected, it is disabled and a new connection will be created.
      * This option is disabled by default.
@@ -605,6 +617,17 @@ public final class ClientFactoryOptions
      */
     public long maxConnectionAgeMillis() {
         return get(MAX_CONNECTION_AGE_MILLIS);
+    }
+
+    /**
+     * Returns the client-side max age of a connection, and how a connection is replaced before it reaches
+     * that age.
+     *
+     * @see #MAX_CONNECTION_AGE_CONFIG
+     */
+    @UnstableApi
+    public MaxConnectionAgeConfig maxConnectionAgeConfig() {
+        return get(MAX_CONNECTION_AGE_CONFIG);
     }
 
     /**

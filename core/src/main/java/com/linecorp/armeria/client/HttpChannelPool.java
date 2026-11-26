@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.NonBlocking;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
@@ -315,6 +316,34 @@ final class HttpChannelPool implements AsyncCloseable {
             connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
         }
         return promise;
+    }
+
+    /**
+     * Opens a new connection for {@code key} with no request behind it, so that requests move to it before
+     * an existing connection reaches its max age. Like a request, it shares an HTTP/2 connection attempt that
+     * is already in progress for {@code key} instead of opening another connection.
+     */
+    void connectReplacement(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+                            PoolKey key) {
+        assert eventLoop.inEventLoop();
+        if (closeable.isClosing()) {
+            return;
+        }
+        acquireLater(desiredProtocol, serializationFormat, key, ClientConnectionTimings.builder())
+                .handle((pch, cause) -> {
+                    if (pch == null) {
+                        logger.debug("Failed to open a replacement connection for {}", key, cause);
+                        return null;
+                    }
+                    // An acquired channel has a response reserved for the request that acquired it, but
+                    // a replacement has no such request.
+                    HttpSession.get(pch.get()).decrementNumUnfinishedResponses();
+                    if (!pch.protocol().isMultiplex()) {
+                        // An HTTP/1 channel enters the pool when it is released.
+                        pch.release();
+                    }
+                    return null;
+                });
     }
 
     /**

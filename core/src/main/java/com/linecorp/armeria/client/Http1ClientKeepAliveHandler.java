@@ -46,11 +46,11 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
     Http1ClientKeepAliveHandler(Channel channel, Http1ResponseDecoder decoder,
                                 Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
-                                boolean keepAliveOnPing) {
+                                long maxConnectionAgeMillis, long replacementLeadTimeMillis,
+                                int maxNumRequestsPerConnection, boolean keepAliveOnPing) {
         super(channel, "client", keepAliveTimer, idleTimeoutMillis,
-              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing,
-              ConnectionEventListener.get(channel));
+              pingIntervalMillis, maxConnectionAgeMillis, replacementLeadTimeMillis,
+              maxNumRequestsPerConnection, keepAliveOnPing, ConnectionEventListener.get(channel));
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.decoder = requireNonNull(decoder, "decoder");
     }
@@ -79,6 +79,14 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
         return httpSession.hasUnfinishedResponses();
+    }
+
+    @Override
+    protected void onMaxConnectionAgeApproaching(ChannelHandlerContext ctx) {
+        final HttpSessionHandler sessionHandler = ctx.pipeline().get(HttpSessionHandler.class);
+        if (sessionHandler != null) {
+            sessionHandler.connectReplacement();
+        }
     }
 
     boolean isPing(int id) {

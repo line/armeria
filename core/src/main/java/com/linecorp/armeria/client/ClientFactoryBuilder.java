@@ -117,6 +117,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
+    @Nullable
+    private MaxConnectionAgeConfig maxConnectionAgeConfig;
 
     // Netty-related properties:
     @Nullable
@@ -841,15 +843,15 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * after the specified {@code maxConnectionAgeMillis} since the connection was established.
      * This option is disabled by default, which means unlimited.
      *
+     * <p>This overrides a {@link MaxConnectionAgeConfig} set earlier with
+     * {@link #maxConnectionAge(MaxConnectionAgeConfig)}, which disables its connection replacement.
+     *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
      *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
-        checkArgument(maxConnectionAgeMillis >= MIN_MAX_CONNECTION_AGE_MILLIS || maxConnectionAgeMillis == 0,
-                      "maxConnectionAgeMillis: %s (expected: >= %s or == 0)",
-                      maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
-        option(ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS, maxConnectionAgeMillis);
+        maxConnectionAgeConfig = MaxConnectionAgeConfig.builder(maxConnectionAgeMillis).build();
         return this;
     }
 
@@ -858,12 +860,36 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * after the specified {@code maxConnectionAge} since the connection was established.
      * This option is disabled by default, which means unlimited.
      *
+     * <p>This overrides a {@link MaxConnectionAgeConfig} set earlier with
+     * {@link #maxConnectionAge(MaxConnectionAgeConfig)}, which disables its connection replacement.
+     *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
      *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive, and how a connection is replaced before
+     * it reaches that age. This and {@link #maxConnectionAge(Duration)} or
+     * {@link #maxConnectionAgeMillis(long)} override each other, so the last call wins.
+     *
+     * <pre>{@code
+     * ClientFactory.builder()
+     *              .maxConnectionAge(MaxConnectionAgeConfig.builder(Duration.ofHours(1))
+     *                                                      .replacementLeadTime(Duration.ofSeconds(5))
+     *                                                      .build())
+     *              .build();
+     * }</pre>
+     *
+     * @see MaxConnectionAgeConfigBuilder
+     */
+    @UnstableApi
+    public ClientFactoryBuilder maxConnectionAge(MaxConnectionAgeConfig maxConnectionAgeConfig) {
+        this.maxConnectionAgeConfig = requireNonNull(maxConnectionAgeConfig, "maxConnectionAgeConfig");
+        return this;
     }
 
     /**
@@ -1049,6 +1075,16 @@ public final class ClientFactoryBuilder implements TlsSetters {
             final Map<ChannelOption<?>, Object> channelOptions =
                     (Map<ChannelOption<?>, Object>) optionValue.value();
             channelOptions(channelOptions);
+        } else if (ClientFactoryOptions.MAX_CONNECTION_AGE_CONFIG == optionValue.option()) {
+            maxConnectionAgeConfig = (MaxConnectionAgeConfig) optionValue.value();
+        } else if (ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS == optionValue.option()) {
+            final long maxConnectionAgeMillis = (Long) optionValue.value();
+            // options(ClientFactoryOptions) adds the values in no particular order, so a max age that matches
+            // the current config must keep the config's other settings.
+            if (maxConnectionAgeConfig == null ||
+                maxConnectionAgeConfig.maxConnectionAgeMillis() != maxConnectionAgeMillis) {
+                maxConnectionAgeConfig = new MaxConnectionAgeConfig(maxConnectionAgeMillis, 0);
+            }
         } else {
             options.put(optionValue.option(), optionValue);
         }
@@ -1106,6 +1142,14 @@ public final class ClientFactoryBuilder implements TlsSetters {
             if (tlsConfig != null) {
                 option(ClientFactoryOptions.TLS_CONFIG, tlsConfig);
             }
+        }
+
+        if (maxConnectionAgeConfig != null) {
+            options.put(ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS,
+                        ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS.newValue(
+                                maxConnectionAgeConfig.maxConnectionAgeMillis()));
+            options.put(ClientFactoryOptions.MAX_CONNECTION_AGE_CONFIG,
+                        ClientFactoryOptions.MAX_CONNECTION_AGE_CONFIG.newValue(maxConnectionAgeConfig));
         }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
