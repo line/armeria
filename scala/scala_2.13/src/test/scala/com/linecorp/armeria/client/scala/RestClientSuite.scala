@@ -161,6 +161,27 @@ class RestClientSuite extends FunSuite with ServerSuite {
       })
   }
 
+  test("should configure request log names") {
+    val restClient = server.webClient().asScalaRestClient()
+    for (serviceName <- Seq(Some("example.Service"), None)) {
+      val captor = Clients.newContextCaptor()
+      try {
+        val preparation = restClient.get("/future")
+        val named = serviceName match {
+          case Some(value) => preparation.name(value, "fetch")
+          case None        => preparation.name("fetch")
+        }
+        assert(named eq preparation)
+        Await.result(named.execute[TestRestResponse](), Duration.Inf)
+        val log = captor.get().log().whenComplete().join()
+        assertEquals(log.name(), "fetch")
+        assertEquals(Option(log.serviceName()), serviceName)
+      } finally {
+        captor.close()
+      }
+    }
+  }
+
   test("should derive a new client") {
     val webClient = WebClient
       .builder("http://example.com")

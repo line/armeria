@@ -377,6 +377,18 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> name(String name) {
+        delegate.name(name);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> name(String serviceName, String name) {
+        delegate.name(serviceName, name);
+        return this;
+    }
+
+    @Override
     public FutureTransformingRequestPreparation<T> responseTimeoutMillis(long responseTimeoutMillis) {
         delegate.responseTimeoutMillis(responseTimeoutMillis);
         return this;

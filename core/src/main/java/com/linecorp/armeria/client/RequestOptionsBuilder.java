@@ -54,6 +54,10 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     private ClientTlsSpec clientTlsSpec;
     @Nullable
     private InetSocketAddress localBindAddress;
+    @Nullable
+    private String serviceName;
+    @Nullable
+    private String name;
 
     RequestOptionsBuilder(@Nullable RequestOptions options) {
         if (options != null) {
@@ -69,6 +73,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             responseTimeoutMode = options.responseTimeoutMode();
             clientTlsSpec = options.clientTlsSpec();
             localBindAddress = options.localBindAddress();
+            serviceName = options.serviceName();
+            name = options.name();
         }
     }
 
@@ -134,6 +140,28 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Override
+    @UnstableApi
+    public RequestOptionsBuilder name(String name) {
+        requireNonNull(name, "name");
+        checkArgument(!name.isEmpty(), "name is empty.");
+        serviceName = null;
+        this.name = name;
+        return this;
+    }
+
+    @Override
+    @UnstableApi
+    public RequestOptionsBuilder name(String serviceName, String name) {
+        requireNonNull(serviceName, "serviceName");
+        checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
+        requireNonNull(name, "name");
+        checkArgument(!name.isEmpty(), "name is empty.");
+        this.serviceName = serviceName;
+        this.name = name;
+        return this;
+    }
+
     @Nullable
     ExchangeType exchangeType() {
         return exchangeType;
@@ -177,7 +205,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
             maxResponseLength < 0 && requestAutoAbortDelayMillis == null && attributes == null &&
             exchangeType == null && responseTimeoutMode == null && clientTlsSpec == null &&
-            localBindAddress == null) {
+            localBindAddress == null && name == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -189,7 +217,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
                                              maxResponseLength, requestAutoAbortDelayMillis,
                                              attributes, exchangeType, responseTimeoutMode,
-                                             clientTlsSpec, localBindAddress);
+                                             clientTlsSpec, localBindAddress, serviceName, name);
         }
     }
 }

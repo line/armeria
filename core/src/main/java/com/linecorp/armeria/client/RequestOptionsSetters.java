@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeKey;
 
@@ -92,6 +93,22 @@ public interface RequestOptionsSetters {
      * by the specified value.
      */
     <V> RequestOptionsSetters attr(AttributeKey<V> key, @Nullable V value);
+
+    /**
+     * Sets the name of the {@link RequestLog} and clears any previously configured service name.
+     * The name is applied before context customizers and decorators run.
+     *
+     * @throws IllegalArgumentException if {@code name} is empty
+     */
+    RequestOptionsSetters name(String name);
+
+    /**
+     * Sets the service name and name of the {@link RequestLog}.
+     * The names are applied before context customizers and decorators run.
+     *
+     * @throws IllegalArgumentException if {@code serviceName} or {@code name} is empty
+     */
+    RequestOptionsSetters name(String serviceName, String name);
 
     /**
      * Sets the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or

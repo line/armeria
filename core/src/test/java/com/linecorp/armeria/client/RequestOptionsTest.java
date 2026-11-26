@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetAddress;
@@ -27,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,11 +37,21 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -50,12 +63,17 @@ class RequestOptionsTest {
 
     final AttributeKey<String> foo = AttributeKey.valueOf("foo");
     final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+    private static final AtomicInteger retryAttempts = new AtomicInteger();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/ping", (ctx, req) -> HttpResponse.of("pong"));
+            sb.service("/retryName", (ctx, req) -> HttpResponse.of(
+                    retryAttempts.getAndIncrement() == 0 ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.OK));
+            sb.service("/redirectName", (ctx, req) -> HttpResponse.of(
+                    ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT, HttpHeaderNames.LOCATION, "/ping")));
         }
     };
 
@@ -64,6 +82,7 @@ class RequestOptionsTest {
     @BeforeEach
     void setUp() {
         client = WebClient.of(server.httpUri());
+        retryAttempts.set(0);
     }
 
     @CsvSource({ "true", "false" })
@@ -86,6 +105,122 @@ class RequestOptionsTest {
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.ownAttr(foo)).isEqualTo("bar");
             assertThat(res.join().contentUtf8()).isEqualTo("pong");
+        }
+    }
+
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void setLogName(boolean usePreparation) {
+        final WebClient client = WebClient.builder(server.httpUri())
+                .decorator((delegate, ctx, req) -> {
+                    final RequestLogAccess log = ctx.log();
+                    assertThat(log.isAvailable(RequestLogProperty.NAME)).isTrue();
+                    assertThat(log.partial().serviceName()).isEqualTo("example.Service");
+                    assertThat(log.partial().name()).isEqualTo("ping");
+                    return delegate.execute(ctx, req);
+                }).build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            if (usePreparation) {
+                client.prepare().get("/ping").name("example.Service", "ping").execute().aggregate().join();
+            } else {
+                client.execute(HttpRequest.of(HttpMethod.GET, "/ping"),
+                               RequestOptions.builder().name("example.Service", "ping").build())
+                      .aggregate().join();
+            }
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.serviceName()).isEqualTo("example.Service");
+            assertThat(log.name()).isEqualTo("ping");
+        }
+    }
+
+    @Test
+    void logNameOptions() {
+        assertThat(RequestOptions.of().serviceName()).isNull();
+        assertThat(RequestOptions.of().name()).isNull();
+        assertThat(RequestOptions.builder().build()).isSameAs(RequestOptions.of());
+        final RequestOptions options = RequestOptions.builder().name("example.Service", "ping").build();
+        assertThat(options.serviceName()).isEqualTo("example.Service");
+        assertThat(options.name()).isEqualTo("ping");
+        assertThat(options.toBuilder().build()).isEqualTo(options).hasSameHashCodeAs(options);
+        assertThat(options.toString()).contains("serviceName=example.Service", "name=ping");
+        assertThat(RequestOptions.builder().name("other.Service", "ping").build()).isNotEqualTo(options);
+        assertThat(RequestOptions.builder().name("example.Service", "other").build()).isNotEqualTo(options);
+        final RequestOptions methodOnly = options.toBuilder().name("other").build();
+        assertThat(methodOnly.serviceName()).isNull();
+        assertThat(methodOnly.name()).isEqualTo("other");
+    }
+
+    @Test
+    void invalidLogNames() {
+        assertThatNullPointerException().isThrownBy(() -> RequestOptions.builder().name(null));
+        assertThatNullPointerException().isThrownBy(() -> RequestOptions.builder().name(null, "ping"));
+        assertThatNullPointerException().isThrownBy(() -> RequestOptions.builder().name("service", null));
+        assertThatThrownBy(() -> RequestOptions.builder().name(""))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> RequestOptions.builder().name("", "ping"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> RequestOptions.builder().name("service", ""))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void copyLogNameIntoPreparation() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.prepare().get("/ping").name("old.Service", "old")
+                  .requestOptions(RequestOptions.builder().name("ping").build())
+                  .execute().aggregate().join();
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.serviceName()).isNull();
+            assertThat(log.name()).isEqualTo("ping");
+        }
+    }
+
+    @Test
+    void transformedAndBlockingLogNames() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.prepare().get("/ping").asString().name("future").execute().join();
+            client.blocking().prepare().get("/ping").name("blocking").execute();
+            client.blocking().prepare().get("/ping").asString().name("transformed").execute();
+            RestClient.of(client).get("/ping").name("rest").execute(ResponseAs.string()).join();
+            assertThat(captor.getAll()).extracting(ctx -> ctx.log().whenComplete().join().name())
+                                      .containsExactly("future", "blocking", "transformed", "rest");
+        }
+    }
+
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void logNamePropagatesToAttempts(boolean retry) {
+        final WebClientBuilder builder = WebClient.builder(server.httpUri());
+        if (retry) {
+            builder.decorator(RetryingClient.newDecorator(
+                    RetryRule.onServerErrorStatus(Backoff.withoutDelay())));
+        } else {
+            builder.followRedirects();
+        }
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            builder.build().prepare().get(retry ? "/retryName" : "/redirectName")
+                   .name("example.Service", "ping").attr(foo, "bar").execute().aggregate().join();
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.serviceName()).isEqualTo("example.Service");
+            assertThat(log.name()).isEqualTo("ping");
+            assertThat(log.children()).hasSize(2);
+            for (RequestLogAccess child : log.children()) {
+                final RequestLog childLog = child.whenComplete().join();
+                assertThat(childLog.serviceName()).isEqualTo("example.Service");
+                assertThat(childLog.name()).isEqualTo("ping");
+                assertThat(childLog.context().attr(foo)).isEqualTo("bar");
+            }
+        }
+    }
+
+    @Test
+    void explicitNameTakesPrecedenceOverContextCustomizer() {
+        final WebClient client = WebClient.builder(server.httpUri())
+                .contextCustomizer(ctx -> ctx.logBuilder().name("customizer"))
+                .build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.prepare().get("/ping").name("explicit").execute().aggregate().join();
+            assertThat(captor.get().log().whenComplete().join().name()).isEqualTo("explicit");
         }
     }
 
