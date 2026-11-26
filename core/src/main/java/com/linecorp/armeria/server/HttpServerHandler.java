@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
@@ -211,8 +212,37 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        if (gracefulShutdownSupport.isHandingOver()) {
+            // The connection was not ready when the handover started, e.g. it was negotiating TLS.
+            handOver(ctx.channel());
+        }
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         cleanup(ctx.channel(), false, null);
+    }
+
+    /**
+     * Stops accepting new requests on the connection while letting the unfinished requests complete.
+     * For HTTP/2, this sends GOAWAY frames, so that the requests sent before the client receives them are
+     * still served. The connection is closed when the unfinished requests complete.
+     */
+    void handOver(Channel channel) {
+        channel.eventLoop().execute(() -> {
+            if (!channel.isActive()) {
+                return;
+            }
+            if (!protocol.isMultiplex() && unfinishedRequests.isEmpty()) {
+                // HTTP/1 has no way to tell a client to stop sending requests, so close an idle connection.
+                channel.close();
+            } else {
+                // HTTP/2: The connection is closed after the drain and all active streams end.
+                // HTTP/1: The connection is closed after sending the response with 'Connection: close'.
+                channel.pipeline().fireUserEventTriggered(InitiateConnectionShutdown.of());
+            }
+        });
     }
 
     CompletableFuture<Void> shutdown(Channel channel) {
@@ -226,6 +256,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void cleanup(Channel ch, boolean shutdown, @Nullable CompletableFuture<Void> completionFuture) {
         if (isClosing) {
+            if (completionFuture != null) {
+                completionFuture.complete(null);
+            }
             return;
         }
         isClosing = true;
@@ -292,6 +325,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             unfinishedRequests.clear();
+        } else if (completionFuture != null) {
+            completionFuture.complete(null);
         }
     }
 
@@ -348,6 +383,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final int initialWindow = config.http2InitialConnectionWindowSize();
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
+        }
+
+        if (gracefulShutdownSupport.isHandingOver()) {
+            // The connection has been upgraded to HTTP/2 after the handover started.
+            handOver(ctx.channel());
         }
     }
 

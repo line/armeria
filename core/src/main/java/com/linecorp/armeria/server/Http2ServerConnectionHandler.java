@@ -91,7 +91,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulShutdownSupport.isShuttingDown() ||
+        return gracefulShutdownSupport.isTerminating() ||
                requestDecoder.goAwayHandler().receivedErrorGoAway() || keepAliveHandler().isClosing();
     }
 
@@ -153,6 +153,10 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (gracefulConnectionShutdownHandler.isDrainEnded()) {
+            super.close(ctx, promise);
+            return;
+        }
         if (keepAliveHandler().needsDisconnection()) {
             // Connection timed out or exceeded maximum number of requests.
             setGoAwayDebugMessage("max-age");
@@ -181,9 +185,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         @Override
         public void onDrainEnd(ChannelHandlerContext ctx) throws Exception {
             Http2ServerConnectionHandler.super.close(ctx, ctx.newPromise());
-            // Cancel scheduled tasks after the call to the super class above to avoid triggering
-            // needsImmediateDisconnection.
-            cancelScheduledTasks();
+            gracefulConnectionShutdownHandler.cancel();
         }
     }
 }

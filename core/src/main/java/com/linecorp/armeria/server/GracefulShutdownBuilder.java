@@ -73,6 +73,9 @@ public final class GracefulShutdownBuilder {
      * Sets the amount of time to wait before shutting down the server regardless of active requests.
      * This should be set to a time greater than {@code quietPeriod} to ensure the server shuts down even
      * if there is a stuck request.
+     * Note that the HTTP/2 connections which have not been drained yet start to drain when the timeout
+     * is reached, so the server may take up to {@link ServerBuilder#connectionDrainDuration(Duration)}
+     * longer to shut down.
      *
      * <p>The default is {@link Duration#ZERO}.
      */
@@ -86,6 +89,9 @@ public final class GracefulShutdownBuilder {
      * Sets the amount of time to wait before shutting down the server regardless of active requests.
      * This should be set to a time greater than {@code quietPeriod} to ensure the server shuts down even
      * if there is a stuck request.
+     * Note that the HTTP/2 connections which have not been drained yet start to drain when the timeout
+     * is reached, so the server may take up to {@link ServerBuilder#connectionDrainDuration(Duration)}
+     * longer to shut down.
      *
      * <p>The default is {@link Duration#ZERO}.
      */

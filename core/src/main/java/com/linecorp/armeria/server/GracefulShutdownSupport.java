@@ -42,6 +42,8 @@ abstract class GracefulShutdownSupport {
     }
 
     private final LongAdder pendingResponses = new LongAdder();
+    private volatile boolean handingOver;
+    private volatile boolean terminating;
 
     /**
      * Increases the number of pending responses.
@@ -68,6 +70,38 @@ abstract class GracefulShutdownSupport {
      * Returns {@code true} if the graceful shutdown has started (or finished).
      */
     abstract boolean isShuttingDown();
+
+    /**
+     * Marks the start of the connection handover, after which the accepted connections stop accepting
+     * new requests while completing the requests they have accepted already.
+     */
+    final void startHandover() {
+        handingOver = true;
+    }
+
+    /**
+     * Returns {@code true} if the connection handover has started, so that a connection which becomes
+     * ready to serve requests afterwards, e.g. after a TLS handshake, should be handed over as well.
+     */
+    final boolean isHandingOver() {
+        return handingOver;
+    }
+
+    /**
+     * Marks the end of the graceful shutdown. Unfinished requests and connections are closed
+     * without waiting any longer.
+     */
+    final void terminate() {
+        terminating = true;
+    }
+
+    /**
+     * Returns {@code true} if the graceful shutdown has ended and unfinished requests and connections
+     * should be closed immediately.
+     */
+    final boolean isTerminating() {
+        return terminating;
+    }
 
     /**
      * Indicates the quiet period duration has passed since the last request.
