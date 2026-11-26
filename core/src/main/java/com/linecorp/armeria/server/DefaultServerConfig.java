@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -366,10 +367,13 @@ final class DefaultServerConfig implements ServerConfig {
 
     private static BlockingTaskExecutor monitorBlockingTaskExecutor(BlockingTaskExecutor executor,
                                                                     MeterRegistry meterRegistry) {
-        new ExecutorServiceMetrics(
-                executor.unwrap(),
-                "blockingTaskExecutor", "armeria", ImmutableList.of())
-                .bindTo(meterRegistry);
+        final Object unwrapped = executor.unwrapAll();
+        if (unwrapped instanceof ExecutorService) {
+            new ExecutorServiceMetrics(
+                    (ExecutorService) unwrapped,
+                    "blockingTaskExecutor", "armeria", ImmutableList.of())
+                    .bindTo(meterRegistry);
+        }
         return executor;
     }
 

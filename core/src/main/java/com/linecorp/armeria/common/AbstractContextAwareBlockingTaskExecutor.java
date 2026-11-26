@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 abstract class AbstractContextAwareBlockingTaskExecutor
@@ -22,5 +23,22 @@ abstract class AbstractContextAwareBlockingTaskExecutor
         implements BlockingTaskExecutor {
     AbstractContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
         super(executor);
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(Class<T> type) {
+        final T result = BlockingTaskExecutor.super.as(type);
+        return result != null ? result : unwrap().as(type);
+    }
+
+    @Override
+    public BlockingTaskExecutor unwrap() {
+        return withoutContext();
+    }
+
+    @Override
+    public Object unwrapAll() {
+        return unwrap().unwrapAll();
     }
 }

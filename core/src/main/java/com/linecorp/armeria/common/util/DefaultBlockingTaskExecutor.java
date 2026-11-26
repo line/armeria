@@ -26,6 +26,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
 
     private final ScheduledExecutorService delegate;
@@ -125,8 +127,24 @@ final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
         delegate.execute(command);
     }
 
+    @Nullable
     @Override
-    public ScheduledExecutorService unwrap() {
+    public <T> T as(Class<T> type) {
+        final T result = BlockingTaskExecutor.super.as(type);
+        if (result != null) {
+            return result;
+        }
+        if (delegate instanceof Unwrappable) {
+            return ((Unwrappable) delegate).as(type);
+        }
+        return type.isInstance(delegate) ? type.cast(delegate) : null;
+    }
+
+    @Override
+    public Object unwrapAll() {
+        if (delegate instanceof Unwrappable) {
+            return ((Unwrappable) delegate).unwrapAll();
+        }
         return delegate;
     }
 }

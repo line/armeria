@@ -21,11 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Provides an executor interface which is used for potentially long-running tasks which may block I/O threads.
  */
-public interface BlockingTaskExecutor extends ScheduledExecutorService {
+public interface BlockingTaskExecutor extends ScheduledExecutorService, Unwrappable {
 
     /**
      * Returns the default {@link BlockingTaskExecutor} with a 60s timeout and unbounded work
@@ -56,11 +57,18 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
         return new BlockingTaskExecutorBuilder();
     }
 
+    @Nullable
+    @Override
+    default <T> T as(Class<T> type) {
+        return Unwrappable.super.as(type);
+    }
+
     /**
-     * Unwraps this {@link BlockingTaskExecutor} and returns the
-     * {@link ScheduledExecutorService} being decorated.
+     * Unwraps this {@link BlockingTaskExecutor} and returns the object being decorated.
+     * If this {@link BlockingTaskExecutor} is the innermost object, this method returns itself.
      */
-    default ScheduledExecutorService unwrap() {
-        return this;
+    @Override
+    default BlockingTaskExecutor unwrap() {
+        return (BlockingTaskExecutor) Unwrappable.super.unwrap();
     }
 }
