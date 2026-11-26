@@ -28,11 +28,14 @@ import com.codahale.metrics.json.MetricsModule;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.TransientService;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -330,6 +333,12 @@ public class ArmeriaSettings {
         private List<InternalServiceId> exclude = ImmutableList.of();
 
         /**
+         * The {@link TransientServiceOption}s to enable for the actuator endpoints.
+         */
+        @Nullable
+        private List<TransientServiceOption> actuatorTransientServiceOptions;
+
+        /**
          * Returns the {@code include} property to secure the HTTP endpoints from normal
          * {@linkplain #getPorts() ports}.
          */
@@ -393,6 +402,25 @@ public class ArmeriaSettings {
          */
         public void setExclude(List<InternalServiceId> exclude) {
             this.exclude = exclude;
+        }
+
+        /**
+         * Returns the {@link TransientServiceOption}s to enable for the actuator endpoints.
+         */
+        @Nullable
+        public List<TransientServiceOption> getActuatorTransientServiceOptions() {
+            return actuatorTransientServiceOptions;
+        }
+
+        /**
+         * Sets the {@link TransientServiceOption}s to enable for the actuator endpoints. The actuator
+         * endpoints are served as {@link TransientService}s, so they are not logged, traced or collected
+         * into metrics unless the corresponding options are specified. If not set,
+         * {@link Flags#transientServiceOptions()} is used.
+         */
+        public void setActuatorTransientServiceOptions(
+                List<TransientServiceOption> actuatorTransientServiceOptions) {
+            this.actuatorTransientServiceOptions = actuatorTransientServiceOptions;
         }
     }
 

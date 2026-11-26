@@ -1,0 +1,7 @@
+armeria.internal-services:
+  include: actuator
+  port: 0
+  actuator-transient-service-options: with-metric-collection, with-access-logging
+management.endpoint.health.group.custom:
+  include: ping
+  additional-path: "server:/custom-health"

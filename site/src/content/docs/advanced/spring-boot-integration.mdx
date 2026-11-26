@@ -380,6 +380,17 @@ armeria:
     include: actuator
 ```
 
+The actuator endpoints are served as [TransientService](type)s, so the requests to them are not logged, traced or
+collected into metrics by default. Use `armeria.internal-services.actuator-transient-service-options` to enable
+the [TransientServiceOption](type)s you need.
+
+```yaml title="application.yml"
+armeria:
+  internal-services:
+    include: actuator
+    actuator-transient-service-options: with-metric-collection, with-access-logging
+```
+
 ## Other bean configurations
 
 We will provide an explanation of some additional bean configurations that can be helpful to know.
