@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServerBuilder;
 
 /**
  * Builds a new {@link CorsService} or its decorator function.
@@ -110,7 +111,10 @@ public final class CorsServiceBuilder {
      *
      * @param pathPattern the path pattern that this policy is supposed to be applied to
      * @throws IllegalArgumentException if the path pattern is not valid
+     * @deprecated Use {@link ServerBuilder#routeDecorator()} to apply a {@link CorsService} to
+     *             the specific paths.
      */
+    @Deprecated
     public CorsServiceBuilder route(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
         firstPolicyBuilder.route(pathPattern);
