@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -34,7 +35,34 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+
 class DynamicEndpointGroupTest {
+
+    @Test
+    void logsEndpointUpdatesWithConcreteGroupClass() {
+        final DynamicEndpointGroup group = new TestEndpointGroup();
+        final Logger logger = (Logger) LoggerFactory.getLogger(TestEndpointGroup.class);
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111)));
+
+            assertThat(appender.list).singleElement().satisfies(event -> {
+                assertThat(event.getLoggerName()).isEqualTo(TestEndpointGroup.class.getName());
+                assertThat(event.getFormattedMessage()).startsWith("New endpoints have been set: ");
+            });
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+            group.close();
+        }
+    }
+
+    private static final class TestEndpointGroup extends DynamicEndpointGroup {}
 
     @Test
     void updateEndpoints() {
