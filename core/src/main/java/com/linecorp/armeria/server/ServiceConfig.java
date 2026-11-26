@@ -30,6 +30,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -382,6 +383,15 @@ public final class ServiceConfig {
      * This method always returns {@link TransientServiceOption#allOf()} for a non-{@link TransientService}
      * because only a {@link TransientService} can opt in and out using
      * {@link TransientServiceBuilder#transientServiceOptions(TransientServiceOption...)}.
+     *
+     * <p>Note that this method only takes the {@link #service()} into account. If a {@link TransientService}
+     * is added as a route decorator, e.g. {@link ServerBuilder#decorator(String, Function)}, the
+     * {@link TransientServiceOption}s of the first {@link TransientService} found from the route decorators
+     * matching a request take precedence over the ones returned by this method for that request.
+     * The matching route decorators are looked up in the order they are applied to a request, i.e.
+     * the outermost one first. See {@link Flags#useLegacyRouteDecoratorOrdering()}.
+     * A decorator added for all services, e.g. {@link ServerBuilder#decorator(Function)}, is also
+     * a route decorator that matches every request.
      */
     public Set<TransientServiceOption> transientServiceOptions() {
         return transientServiceOptions;

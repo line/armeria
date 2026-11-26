@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -26,12 +27,12 @@ final class AccessLogWriterUtil {
 
     /**
      * Writes an access log if the {@link TransientServiceOption#WITH_ACCESS_LOGGING} option is enabled
-     * for the {@link ServiceConfig#transientServiceOptions()} and the {@link ServiceConfig#accessLogWriter()}
+     * for the {@link TransientService} that handles the request and the {@link ServiceConfig#accessLogWriter()}
      * is not {@link AccessLogWriter#disabled()} for the given {@link ServiceRequestContext#config()}.
      */
     static void maybeWriteAccessLog(ServiceRequestContext reqCtx) {
         final ServiceConfig config = reqCtx.config();
-        if (shouldWriteAccessLog(config)) {
+        if (shouldWriteAccessLog(reqCtx, config)) {
             reqCtx.log().whenComplete().thenAccept(log -> {
                 try (SafeCloseable ignored = reqCtx.push()) {
                     config.accessLogWriter().log(log);
@@ -44,9 +45,10 @@ final class AccessLogWriterUtil {
      * Returns whether an access log should be written.
      *
      */
-    private static boolean shouldWriteAccessLog(ServiceConfig config) {
+    private static boolean shouldWriteAccessLog(ServiceRequestContext reqCtx, ServiceConfig config) {
         return config.accessLogWriter() != AccessLogWriter.disabled() &&
-                config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING);
+               TransientServiceUtil.transientServiceOptions(reqCtx)
+                                   .contains(TransientServiceOption.WITH_ACCESS_LOGGING);
     }
 
     private AccessLogWriterUtil() {}

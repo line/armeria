@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -109,7 +110,8 @@ public final class ObservationService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Set<TransientServiceOption> transientServiceOptions = ctx.config().transientServiceOptions();
+        final Set<TransientServiceOption> transientServiceOptions =
+                TransientServiceUtil.transientServiceOptions(ctx);
         if (!transientServiceOptions.contains(TransientServiceOption.WITH_TRACING) ||
             !transientServiceOptions.contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
             return unwrap().serve(ctx, req);

@@ -71,6 +71,7 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -468,8 +469,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         // Keep track of the number of unfinished requests and
         // clean up the request stream when response stream ends.
-        final boolean isTransientService =
-                serviceCfg.service().as(TransientService.class) != null;
+        final boolean isTransientService = TransientServiceUtil.isTransientService(reqCtx);
         if (!isTransientService) {
             gracefulShutdownSupport.inc();
         }

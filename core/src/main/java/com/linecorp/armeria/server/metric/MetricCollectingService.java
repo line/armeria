@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
@@ -110,7 +111,8 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     }
 
     private boolean shouldRecordMetrics(ServiceRequestContext ctx) {
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
+        if (!TransientServiceUtil.transientServiceOptions(ctx)
+                                 .contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
             return false;
         }
 
