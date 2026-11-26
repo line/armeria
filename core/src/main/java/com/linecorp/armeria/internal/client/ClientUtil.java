@@ -41,6 +41,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -196,6 +198,11 @@ public final class ClientUtil {
         try (SafeCloseable ignored = ctx.push()) {
             return delegate.execute(ctx, req);
         }
+    }
+
+    public static Throwable normalizeCancellationCause(Throwable cause) {
+        final Throwable peeled = Exceptions.peel(cause);
+        return peeled instanceof CancelledSubscriptionException ? AbortedStreamException.get() : peeled;
     }
 
     private static <O extends Response> void completeLogIfIncomplete(ClientRequestContext ctx, O response) {
