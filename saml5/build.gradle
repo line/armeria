@@ -1,0 +1,52 @@
+dependencies {
+    api libs.jwt
+    implementation libs.caffeine
+    api libs.opensaml5.core.api
+    implementation libs.opensaml5.core.impl
+    api libs.opensaml5.saml.api
+    implementation libs.opensaml5.saml.impl
+    api libs.opensaml5.messaging.api
+    implementation libs.opensaml5.messaging.impl
+    api libs.opensaml5.security.api
+    api libs.opensaml5.soap.api
+    implementation libs.opensaml5.soap.impl
+    api libs.opensaml5.xmlsec.api
+    testImplementation libs.jsoup
+}
+
+// Copy identical sources from ':saml', keeping OpenSAML 5-specific files in this module.
+def samlProjectDir = project(':saml').projectDir
+def generateSources = tasks.register('generateSources', Sync) {
+    from("${samlProjectDir}/src/main/java") {
+        exclude '**/HttpPostBindingUtil.java'
+        exclude '**/HttpRedirectBindingUtil.java'
+        exclude '**/SamlAssertionConsumerFunction.java'
+        exclude '**/SamlDecorator.java'
+        exclude '**/SamlMessageUtil.java'
+        exclude '**/SamlMetadataServiceFunction.java'
+        exclude '**/SamlServiceProviderBuilder.java'
+        exclude '**/SamlSingleLogoutFunction.java'
+        exclude '**/SamlSingleLogoutHandler.java'
+        exclude '**/SamlSingleSignOnHandler.java'
+        // Checkstyle requires this file beside the maintained sources.
+        exclude '**/package-info.java'
+    }
+    into "${project.ext.genSrcDir}/main/java"
+}
+
+def generateTestSources = tasks.register('generateTestSources', Sync) {
+    from("${samlProjectDir}/src/test/java") {
+        exclude '**/HttpRedirectBindingUtilTest.java'
+        exclude '**/KeyStoreCredentialResolverBuilderTest.java'
+        exclude '**/SamlServiceProviderTest.java'
+    }
+    into "${project.ext.genSrcDir}/test/java"
+}
+
+// Task-backed source directories also wire generation into compilation, Javadoc and sourcesJar.
+sourceSets.main.java.srcDir(generateSources)
+sourceSets.test.java.srcDir(generateTestSources)
+
+tasks.processResources.from "${samlProjectDir}/src/main/resources"
+tasks.processTestResources.from "${samlProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${samlProjectDir}/src/main/resources"
