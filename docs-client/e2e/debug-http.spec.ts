@@ -146,9 +146,8 @@ test('sends path, query, headers, body, and injected headers in a POST', async (
 
   await textInputs(dialog).nth(0).fill('/echo/browser');
   await textInputs(dialog).nth(1).fill('page=2&sort=id');
-  await headerInput(dialog).fill(
-    '{"x-e2e-injected":"manual","x-custom":"value"}',
-  );
+  const headers = '{"x-e2e-injected":"manual","x-custom":"value"}';
+  await headerInput(dialog).fill(headers);
   await setMonacoValue(
     dialog.locator('.monaco-editor'),
     '{"name":"browser","details":{"count":3}}',
@@ -179,9 +178,8 @@ test('sends path, query, headers, body, and injected headers in a POST', async (
   await goTo.fill('HttpService#hello');
   await goTo.press('Enter');
   const helloDialog = await openDebug(page);
-  await expect(headerInput(helloDialog)).toHaveValue(
-    /"x-e2e-injected": "manual"[\s\S]*"x-custom": "value"/,
-  );
+  await expect(textInputs(helloDialog).first()).toHaveValue('/hello');
+  await expect(headerInput(helloDialog)).toHaveValue(headers);
 });
 
 test('keeps unsent HTTP inputs when opening and closing Debug', async ({
@@ -211,20 +209,20 @@ test('redacts sensitive headers in URL state and after refresh', async ({
 }) => {
   await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
   const dialog = await openDebug(page);
+  await textInputs(dialog).first().fill('/echo');
   const headers =
     '{"Authorization":"Bearer super-secret","Test-Header":"custom-secret","x-custom":"visible"}';
   await headerInput(dialog).fill(headers);
-  const requestPromise = page.waitForRequest(
-    (request) =>
-      request.method() === 'POST' &&
-      new URL(request.url()).pathname === '/echo',
-  );
-  await dialog.getByRole('button', { name: 'Submit' }).click();
+  const [request] = await Promise.all([
+    page.waitForRequest((candidate) => candidate.method() === 'POST'),
+    dialog.getByRole('button', { name: 'Submit' }).click(),
+  ]);
 
-  const request = await requestPromise;
+  expect(new URL(request.url()).pathname).toBe('/echo');
   expect(request.headers().authorization).toBe('Bearer super-secret');
   expect(request.headers()['test-header']).toBe('custom-secret');
   expect(request.headers()['x-custom']).toBe('visible');
+  await expect(dialog).toContainText('Status: 200');
   await expect(page).toHaveURL(/REDACTED/);
   expect(page.url()).not.toContain('super-secret');
   expect(page.url()).not.toContain('custom-secret');
@@ -237,22 +235,43 @@ test('redacts sensitive headers in URL state and after refresh', async ({
 });
 
 test('defaults to redacting authorization when settings fail', async ({
+  baseURL,
   page,
-}) => {
-  await page.route('**/settings.json', async (route) => {
+}, testInfo) => {
+  const settingsUrl = new URL('/docs/settings.json', baseURL).href;
+  expectConsoleError(
+    testInfo,
+    'Failed to load resource: the server responded with a status of 500 (Internal Server Error)',
+    settingsUrl,
+  );
+  await page.route(settingsUrl, async (route) => {
     await route.fulfill({
       status: 500,
-      contentType: 'application/json',
-      body: '{}',
+      json: { sensitiveHeaders: ['test-header'] },
     });
   });
   await gotoMethod(page, 'example.HttpService', 'echo', 'POST');
   const dialog = await openDebug(page);
-  await headerInput(dialog).fill('{"Authorization":"Bearer fallback-secret"}');
+  await textInputs(dialog).first().fill('/echo');
+  await headerInput(dialog).fill(
+    '{"Authorization":"Bearer fallback-secret","Test-Header":"fallback-visible"}',
+  );
   await dialog.getByRole('button', { name: 'Submit' }).click();
 
-  await expect(page).toHaveURL(/REDACTED/);
-  expect(page.url()).not.toContain('fallback-secret');
+  await expect(dialog).toContainText('Status: 200');
+  await expect(dialog).toContainText('"method": "POST"');
+  await expect(dialog).toContainText('"path": "/echo"');
+  await expect(dialog).toContainText(
+    '"authorization": "Bearer fallback-secret"',
+  );
+
+  const url = new URL(page.url());
+  const params = new URLSearchParams(url.hash.split('?')[1]);
+  expect(JSON.parse(params.get('headers') ?? '{}')).toEqual({
+    Authorization: 'REDACTED',
+    'Test-Header': 'fallback-visible',
+  });
+  expect(url.href).not.toContain('fallback-secret');
 });
 
 test('validates prefix, regex, and regex-with-prefix endpoint paths', async ({
