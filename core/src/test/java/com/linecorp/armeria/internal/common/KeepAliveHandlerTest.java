@@ -95,7 +95,7 @@ class KeepAliveHandlerTest {
         final AtomicInteger counter = new AtomicInteger();
 
         final AbstractKeepAliveHandler idleTimeoutScheduler =
-                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0, 0, false,
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0, 0.0, 0, false,
                                              ConnectionEventListener.NOOP) {
 
                     @Override
@@ -139,7 +139,7 @@ class KeepAliveHandlerTest {
         final Stopwatch stopwatch = Stopwatch.createStarted();
 
         final AbstractKeepAliveHandler idleTimeoutScheduler =
-                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0, 0, false,
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0, 0.0, 0, false,
                                              ConnectionEventListener.NOOP) {
 
                     @Override
@@ -180,7 +180,7 @@ class KeepAliveHandlerTest {
         final long maxConnectionAgeMillis = 0;
         final AbstractKeepAliveHandler
                 keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
-                                                                maxConnectionAgeMillis, 0, false,
+                                                                maxConnectionAgeMillis, 0.0, 0, false,
                                                                 ConnectionEventListener.NOOP) {
             @Override
             public boolean isHttp2() {
@@ -216,7 +216,7 @@ class KeepAliveHandlerTest {
         final long maxConnectionAgeMillis = 500;
         final AbstractKeepAliveHandler
                 keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
-                                                                maxConnectionAgeMillis, 0, false,
+                                                                maxConnectionAgeMillis, 0.0, 0, false,
                                                                 ConnectionEventListener.NOOP) {
             @Override
             public boolean isHttp2() {
@@ -256,7 +256,7 @@ class KeepAliveHandlerTest {
 
         final AbstractKeepAliveHandler pingScheduler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0,
-                                             pingInterval, 0, 0, false,
+                                             pingInterval, 0, 0.0, 0, false,
                                              ConnectionEventListener.NOOP) {
 
                     @Override
@@ -306,7 +306,7 @@ class KeepAliveHandlerTest {
 
         final AbstractKeepAliveHandler idleTimeoutScheduler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout,
-                                             0, 0, 0, false, ConnectionEventListener.NOOP) {
+                                             0, 0, 0.0, 0, false, ConnectionEventListener.NOOP) {
 
                     @Override
                     public boolean isHttp2() {
@@ -358,7 +358,8 @@ class KeepAliveHandlerTest {
 
         final AbstractKeepAliveHandler idleTimeoutScheduler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout,
-                                             0, 0, 0, keepAliveOnPing, ConnectionEventListener.NOOP) {
+                                             0, 0, 0.0, 0, keepAliveOnPing,
+                                             ConnectionEventListener.NOOP) {
 
                     @Override
                     public boolean isHttp2() {
@@ -409,7 +410,8 @@ class KeepAliveHandlerTest {
 
         final AbstractKeepAliveHandler keepAliveHandler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                             maxConnectionAgeMillis, 0, false, ConnectionEventListener.NOOP) {
+                                             maxConnectionAgeMillis, 0.0, 0, false,
+                                             ConnectionEventListener.NOOP) {
                     @Override
                     public boolean isHttp2() {
                         return false;
@@ -463,7 +465,8 @@ class KeepAliveHandlerTest {
         final int maxNumRequestsPerConnection = 0;
         final AbstractKeepAliveHandler keepAliveHandler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                             maxConnectionAgeMillis, maxNumRequestsPerConnection, false,
+                                             maxConnectionAgeMillis, 0.0,
+                                             maxNumRequestsPerConnection, false,
                                              ConnectionEventListener.NOOP) {
                     @Override
                     public boolean isHttp2() {
@@ -521,7 +524,8 @@ class KeepAliveHandlerTest {
         final ChannelPromise promise = channel.newPromise();
         final AbstractKeepAliveHandler keepAliveHandler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                             maxConnectionAgeMillis, maxNumRequestsPerConnection, false,
+                                             maxConnectionAgeMillis, 0.0,
+                                             maxNumRequestsPerConnection, false,
                                              ConnectionEventListener.NOOP) {
                     @Override
                     public boolean isHttp2() {

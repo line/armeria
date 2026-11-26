@@ -90,8 +90,9 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
-                                       boolean keepAliveOnPing, ConnectionEventListener listener) {
+                                       long maxConnectionAgeMillis, double maxConnectionAgeJitterRate,
+                                       long maxNumRequestsPerConnection, boolean keepAliveOnPing,
+                                       ConnectionEventListener listener) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
@@ -115,7 +116,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         if (maxConnectionAgeMillis <= 0) {
             maxConnectionAgeNanos = 0;
         } else {
-            maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
+            maxConnectionAgeNanos = KeepAliveHandlerUtil.jitteredMaxConnectionAgeNanos(
+                    TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis), maxConnectionAgeJitterRate);
         }
     }
 

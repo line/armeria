@@ -265,6 +265,43 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
+    void maxConnectionAgeJitterRate() {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .maxConnectionAgeJitterRate(0.1)
+                                                  .build()) {
+            assertThat(factory.options().maxConnectionAgeJitterRate()).isEqualTo(0.1);
+        }
+    }
+
+    @Test
+    void maxConnectionAgeJitterRateDefaultsToZero() {
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            assertThat(factory.options().maxConnectionAgeJitterRate()).isZero();
+        }
+    }
+
+    @Test
+    void invalidMaxConnectionAgeJitterRate() {
+        assertThatThrownBy(() -> ClientFactory.builder().maxConnectionAgeJitterRate(-0.1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+        assertThatThrownBy(() -> ClientFactory.builder().maxConnectionAgeJitterRate(1.1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+        assertThatThrownBy(() -> ClientFactory.builder().maxConnectionAgeJitterRate(Double.NaN))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+    }
+
+    @Test
+    void invalidMaxConnectionAgeJitterRateOption() {
+        assertThatThrownBy(() -> ClientFactory.builder().option(
+                ClientFactoryOptions.MAX_CONNECTION_AGE_JITTER_RATE, 1.1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("expected: >= 0.0 and <= 1.0");
+    }
+
+    @Test
     void defaultTcpUserTimeoutSet() {
         assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
