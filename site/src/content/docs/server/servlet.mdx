@@ -39,12 +39,14 @@ For more information, please refer to the API documentation of [TomcatService](t
 
 ## Embedding Jetty
 
+The `armeria-jetty9` integration supports Jetty 9.4. Support for Jetty 9.3 has ended.
+
 You need `armeria-jetty9`, additional `jetty` dependencies and bootstrap code due to its modular design:
 
 <RequiredDependencies
   boms={[
     { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' },
-    { groupId: 'org.eclipse.jetty', artifactId: 'jetty-bom' },
+    { groupId: 'org.eclipse.jetty', artifactId: 'jetty-bom', version: '9.4.58.v20250814' },
   ]}
   dependencies={[
     { groupId: 'com.linecorp.armeria', artifactId: 'armeria-jetty9' },
